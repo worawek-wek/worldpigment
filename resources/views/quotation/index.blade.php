@@ -126,106 +126,361 @@
 
     <!-- Table -->
     <div class="card">
-        <div class="card-header border-bottom">
-            <div class="row align-items-center g-3">
 
-                <div class="col-md-3">
-                    <input type="text" class="form-control"
-                        placeholder="ค้นหาเลขที่ใบเสนอราคา">
-                </div>
+    <!-- Header -->
+    <div class="card-header d-flex justify-content-between align-items-center">
 
-                <div class="col-md-2">
-                    <select class="form-select">
-                        <option>ทั้งหมด</option>
-                        <option>Draft</option>
-                        <option>Pending</option>
-                        <option>Approved</option>
-                    </select>
-                </div>
+        <div>
+            <h4 class="mb-0">
+                ใบเสนอราคา
+            </h4>
 
-                <div class="col-md-2">
-                    <input type="date" class="form-control">
-                </div>
+            <small class="text-muted">
+                รายการใบเสนอราคาทั้งหมด
+            </small>
+        </div>
+
+        <button class="btn btn-primary"
+            data-bs-toggle="modal"
+            data-bs-target="#quotationModal">
+
+            <i class="ti ti-plus me-1"></i>
+            สร้างใบเสนอราคา
+
+        </button>
+
+    </div>
+
+    <!-- Filter -->
+    <div class="card-body border-bottom">
+
+        <div class="row g-3">
+
+            <div class="col-md-2">
+
+                <label class="form-label">
+                    เลขที่เอกสาร
+                </label>
+
+                <input type="text"
+                    class="form-control"
+                    placeholder="ค้นหาเลขที่">
 
             </div>
+
+            <div class="col-md-3">
+
+                <label class="form-label">
+                    ลูกค้า
+                </label>
+
+                <input type="text"
+                    class="form-control"
+                    placeholder="ค้นหาลูกค้า">
+
+            </div>
+
+            <div class="col-md-2">
+
+                <label class="form-label">
+                    ชนิดสินค้า
+                </label>
+
+                <select class="form-select">
+
+                    <option value="">
+                        ทั้งหมด
+                    </option>
+
+                    <option>
+                        MB
+                    </option>
+
+                    <option>
+                        DB
+                    </option>
+
+                    <option>
+                        CP
+                    </option>
+
+                </select>
+
+            </div>
+
+            <div class="col-md-2">
+
+                <label class="form-label">
+                    วันที่เริ่มต้น
+                </label>
+
+                <input type="date"
+                    class="form-control">
+
+            </div>
+
+            <div class="col-md-2">
+
+                <label class="form-label">
+                    วันที่สิ้นสุด
+                </label>
+
+                <input type="date"
+                    class="form-control">
+
+            </div>
+
+            <div class="col-md-1 d-flex align-items-end">
+
+                <button class="btn btn-label-primary w-100">
+
+                    <i class="ti ti-search"></i>
+
+                </button>
+
+            </div>
+
         </div>
 
-        <div class="table-responsive text-nowrap">
-            <table class="table table-hover">
-                <thead class="table-light">
-                    <tr>
-                        <th>เลขที่เอกสาร</th>
-                        <th>ลูกค้า</th>
-                        <th>Revision</th>
-                        <th>ราคารวม</th>
-                        <th>สถานะ</th>
-                        <th>วันที่</th>
-                        <th width="120">จัดการ</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-
-                    <tr>
-                        <td>
-                            <strong>QT-2026-0001</strong>
-                        </td>
-                        <td>Customer A</td>
-                        <td>
-                            <span class="badge bg-label-info">
-                                Rev.03
-                            </span>
-                        </td>
-                        <td>125,000 บาท</td>
-                        <td>
-                            <span class="badge bg-label-success">
-                                Approved
-                            </span>
-                        </td>
-                        <td>07/05/2026</td>
-                        <td>
-                            <button class="btn btn-sm btn-icon btn-label-primary">
-                                <i class="ti ti-eye"></i>
-                            </button>
-
-                            <button class="btn btn-sm btn-icon btn-label-warning">
-                                <i class="ti ti-edit"></i>
-                            </button>
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>
-                            <strong>QT-2026-0002</strong>
-                        </td>
-                        <td>Customer B</td>
-                        <td>
-                            <span class="badge bg-label-info">
-                                Rev.01
-                            </span>
-                        </td>
-                        <td>80,000 บาท</td>
-                        <td>
-                            <span class="badge bg-label-warning">
-                                Pending
-                            </span>
-                        </td>
-                        <td>07/05/2026</td>
-                        <td>
-                            <button class="btn btn-sm btn-icon btn-label-primary">
-                                <i class="ti ti-eye"></i>
-                            </button>
-
-                            <button class="btn btn-sm btn-icon btn-label-warning">
-                                <i class="ti ti-edit"></i>
-                            </button>
-                        </td>
-                    </tr>
-
-                </tbody>
-            </table>
-        </div>
     </div>
+
+    <!-- Table -->
+    <div class="table-responsive">
+
+        <table class="table table-bordered table-hover align-middle mb-0">
+
+            <thead class="table-light">
+
+                <tr>
+
+                    <th width="60" class="text-center">
+                        #
+                    </th>
+
+                    <th width="150">
+                        เลขที่ใบเสนอราคา
+                    </th>
+
+                    <th width="120">
+                        วันที่
+                    </th>
+
+                    <th>
+                        ลูกค้า
+                    </th>
+
+                    <th width="100" class="text-center">
+                        ชนิดสินค้า
+                    </th>
+
+                    <th width="120" class="text-end">
+                        จำนวนรายการ
+                    </th>
+
+                    <th width="140" class="text-end">
+                        มูลค่ารวม
+                    </th>
+
+                    <th width="120" class="text-center">
+                        สถานะ
+                    </th>
+
+                    <th width="180" class="text-center">
+                        จัดการ
+                    </th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                <tr>
+
+                    <td class="text-center">
+                        1
+                    </td>
+
+                    <td class="fw-bold text-primary">
+                        WH690270
+                    </td>
+
+                    <td>
+                        22/05/2026
+                    </td>
+
+                    <td>
+                        บริษัท วนวิทย์ แมนูแฟคเจอริ่ง จำกัด
+                    </td>
+
+                    <td class="text-center">
+                        MB
+                    </td>
+
+                    <td class="text-end">
+                        5
+                    </td>
+
+                    <td class="text-end fw-bold">
+                        58,450.00
+                    </td>
+
+                    <td class="text-center">
+
+                        <span class="badge bg-label-success">
+                            ใช้งาน
+                        </span>
+
+                    </td>
+
+                    <td class="text-center">
+
+                        <div class="d-flex justify-content-center gap-1">
+
+                            <button class="btn btn-sm btn-icon btn-label-primary">
+
+                                <i class="ti ti-eye"></i>
+
+                            </button>
+
+                            <button class="btn btn-sm btn-icon btn-label-warning">
+
+                                <i class="ti ti-edit"></i>
+
+                            </button>
+
+                            <button class="btn btn-sm btn-icon btn-label-danger">
+
+                                <i class="ti ti-trash"></i>
+
+                            </button>
+
+                            <button class="btn btn-sm btn-icon btn-label-info">
+
+                                <i class="ti ti-printer"></i>
+
+                            </button>
+
+                        </div>
+
+                    </td>
+
+                </tr>
+
+                <tr>
+
+                    <td class="text-center">
+                        2
+                    </td>
+
+                    <td class="fw-bold text-primary">
+                        WH690271
+                    </td>
+
+                    <td>
+                        22/05/2026
+                    </td>
+
+                    <td>
+                        บริษัท ไทยโพลีเมอร์ จำกัด
+                    </td>
+
+                    <td class="text-center">
+                        DB
+                    </td>
+
+                    <td class="text-end">
+                        2
+                    </td>
+
+                    <td class="text-end fw-bold">
+                        12,800.00
+                    </td>
+
+                    <td class="text-center">
+
+                        <span class="badge bg-label-secondary">
+                            ยกเลิก
+                        </span>
+
+                    </td>
+
+                    <td class="text-center">
+
+                        <div class="d-flex justify-content-center gap-1">
+
+                            <button class="btn btn-sm btn-icon btn-label-primary">
+
+                                <i class="ti ti-eye"></i>
+
+                            </button>
+
+                            <button class="btn btn-sm btn-icon btn-label-warning">
+
+                                <i class="ti ti-edit"></i>
+
+                            </button>
+
+                            <button class="btn btn-sm btn-icon btn-label-danger">
+
+                                <i class="ti ti-trash"></i>
+
+                            </button>
+
+                            <button class="btn btn-sm btn-icon btn-label-info">
+
+                                <i class="ti ti-printer"></i>
+
+                            </button>
+
+                        </div>
+
+                    </td>
+
+                </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="card-footer d-flex justify-content-between align-items-center">
+
+        <div class="text-muted">
+            แสดง 1 ถึง 2 จากทั้งหมด 2 รายการ
+        </div>
+
+        <nav>
+
+            <ul class="pagination pagination-sm mb-0">
+
+                <li class="page-item disabled">
+                    <a class="page-link">
+                        Previous
+                    </a>
+                </li>
+
+                <li class="page-item active">
+                    <a class="page-link">
+                        1
+                    </a>
+                </li>
+
+                <li class="page-item disabled">
+                    <a class="page-link">
+                        Next
+                    </a>
+                </li>
+
+            </ul>
+
+        </nav>
+
+    </div>
+
+</div>
 
 </div>
                     <!-- / Content -->
@@ -249,7 +504,7 @@
     </div>
     <!--add  Modal -->
 <!-- Quotation Modal -->
-<div class="modal fade" id="quotationModal" tabindex="-1" aria-hidden="true">
+<div class="modal modalHeadDecor fade" id="quotationModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
 
@@ -262,75 +517,309 @@
                     data-bs-dismiss="modal"></button>
             </div>
 
-            <div class="modal-body">
+            <div class="modal-body px-5">
 
-                <div class="row g-3">
+{{-- ////////////////////////////////////////////////////////////////////////////////////////// --}}
+            <!-- Top Form -->
+            <div class="row g-3">
 
-                    <div class="col-md-3">
-                        <label class="form-label">เลขที่เอกสาร</label>
-                        <input type="text" class="form-control"
-                            value="QT-2026-0003">
+                <div class="col-md-4">
+                    <label class="form-label">
+                        เลขที่ใบเสนอราคา
+                    </label>
+
+                    <input type="text"
+                        class="form-control"
+                        placeholder="กรอกเลขที่ใบเสนอราคา"
+                        value="WH690270">
+                </div>
+                <div class="col-md-8">
+
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">
+                        วันที่เสนอราคา
+                    </label>
+
+                    <input type="date"
+                        class="form-control">
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label text-danger">
+                        Revise Date
+                    </label>
+
+                    <input type="date"
+                        class="form-control">
+                </div>
+
+
+                <div class="col-md-8"></div>
+                <div class="col-md-2">
+                    <label class="form-label">
+                        ชนิดสินค้า
+                    </label>
+
+                    <select class="form-select">
+                        <option>MB</option>
+                        <option>DB</option>
+                        <option>CP</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <div class="form-check">
+
+                        <input class="form-check-input" id="example"
+                            type="checkbox">
+
+                        <label class="form-check-label" for="example">
+                            พร้อมตัวอย่าง
+                        </label>
+
                     </div>
+                </div>
+                <div class="col-md-8"></div>
 
-                    <div class="col-md-3">
-                        <label class="form-label">Revision</label>
-                        <input type="text" class="form-control"
-                            value="Rev.01">
-                    </div>
+                <div class="col-md-2">
+                    <label class="form-label">
+                        รหัสพนักงานขาย
+                    </label>
+                    <input type="text"
+                            class="form-control"
+                            value="9961">
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">
+                        &nbsp;
+                    </label>
+                        <input type="text"
+                            class="form-control text-center"
+                            value="8">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">
+                        &nbsp;
+                    </label>
+                        <input type="text"
+                            class="form-control"
+                            value="มานะ พงษ์ชูธนโชคภากร">
 
-                    <div class="col-md-3">
-                        <label class="form-label">วันที่</label>
-                        <input type="date" class="form-control">
-                    </div>
+                </div>
+                <div class="col-md-5"></div>
+                <div class="col-md-2">
+                    <label class="form-label">
+                        รหัสลูกค้า
+                    </label>
 
-                    <div class="col-md-3">
-                        <label class="form-label">สถานะ</label>
-                        <select class="form-select">
-                            <option>Draft</option>
-                            <option>Pending</option>
-                            <option>Approved</option>
-                        </select>
-                    </div>
+                    <select class="form-select">
+                        <option>36017</option>
+                    </select>
+                </div>
 
-                    <div class="col-md-6">
-                        <label class="form-label">ลูกค้า</label>
-                        <select class="form-select">
-                            <option>Customer A</option>
-                            <option>Customer B</option>
-                        </select>
-                    </div>
+                <div class="col-md-9">
+                    <label class="form-label">
+                        ชื่อลูกค้า
+                    </label>
 
-                    <div class="col-md-6">
-                        <label class="form-label">รหัสสินค้า</label>
-                        <input type="text" class="form-control">
-                    </div>
+                    <input type="text"
+                        class="form-control text-primary fw-bold"
+                        value="บริษัท วนวิทย์ แมนูแฟคเจอริ่ง จำกัด">
+                </div>
 
-                    <div class="col-md-3">
-                        <label class="form-label">ค่าสินค้า</label>
-                        <input type="number" class="form-control">
-                    </div>
+            </div>
 
-                    <div class="col-md-3">
-                        <label class="form-label">ค่าแรง</label>
-                        <input type="number" class="form-control">
-                    </div>
+            <!-- Price Buttons -->
+            <div class="row mt-4">
 
-                    <div class="col-md-3">
-                        <label class="form-label">ค่าสี</label>
-                        <input type="number" class="form-control">
-                    </div>
+                <div class="col-md-12">
 
-                    <div class="col-md-3">
-                        <label class="form-label">ค่าเม็ด</label>
-                        <input type="number" class="form-control">
-                    </div>
+                    <div class="d-flex flex-wrap gap-2">
 
-                    <div class="col-md-12">
-                        <label class="form-label">รายละเอียดเพิ่มเติม</label>
-                        <textarea class="form-control" rows="4"></textarea>
+                        <button class="btn btn-label-primary">
+                            ใบเสนอราคา &lt; 12 รายการ
+                        </button>
+
+                        <button class="btn btn-label-primary">
+                            ใบเสนอราคา 13 - 15 รายการ
+                        </button>
+
+                        <button class="btn btn-danger">
+                            ขึ้นราคา &lt; 5 รายการ
+                        </button>
+
+                        <button class="btn btn-danger">
+                            ขึ้นราคา 6-10 รายการ
+                        </button>
+
                     </div>
 
                 </div>
+
+            </div>
+
+            <!-- Product Table -->
+            <div class="table-responsive mt-4">
+
+                <table class="table table-bordered align-middle">
+
+                    <thead class="table-light">
+
+                        <tr>
+
+                            <th width="150">
+                                รหัสสินค้า
+                            </th>
+
+                            <th>
+                                ชื่อสินค้า
+                            </th>
+
+                            <th width="150">
+                                ราคาเก่า
+                            </th>
+
+                            <th width="150">
+                                ราคาใหม่
+                            </th>
+
+                            <th width="150">
+                                ราคารวมภาษี
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        <tr>
+
+                            <td>
+                                <input type="text"
+                                    class="form-control"
+                                    value="1908053">
+                            </td>
+
+                            <td>
+                                <input type="text"
+                                    class="form-control"
+                                    value="MB BLUE-J [MB POM RAL 2308520]">
+                            </td>
+
+                            <td>
+                                <input type="number"
+                                    class="form-control text-end"
+                                    value="275.00">
+                            </td>
+
+                            <td>
+                                <input type="number"
+                                    class="form-control text-end"
+                                    value="285.00">
+                            </td>
+
+                            <td>
+                                <input type="number"
+                                    class="form-control text-end"
+                                    value="304.95">
+                            </td>
+
+                        </tr>
+
+                        <tr>
+
+                            <td>
+                                <input type="text"
+                                    class="form-control">
+                            </td>
+
+                            <td>
+                                <input type="text"
+                                    class="form-control">
+                            </td>
+
+                            <td>
+                                <input type="number"
+                                    class="form-control text-end"
+                                    value="0.00">
+                            </td>
+
+                            <td>
+                                <input type="number"
+                                    class="form-control text-end"
+                                    value="0.00">
+                            </td>
+
+                            <td>
+                                <input type="number"
+                                    class="form-control text-end"
+                                    value="0.00">
+                            </td>
+
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            <!-- Bottom Form -->
+            <div class="row g-3 mt-3">
+
+                <div class="col-md-3">
+                    <label class="form-label">
+                        MB ควรกำหนดยอดซื้อขั้นต่ำ (ก.ก.)
+                    </label>
+
+                    <input type="text"
+                        class="form-control text-center"
+                        value="-">
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">
+                        Payment Term
+                    </label>
+
+                    <input type="text"
+                        class="form-control text-center"
+                        value="90 วัน">
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">
+                        ยืนราคาถึงวันที่
+                    </label>
+
+                    <input type="date"
+                        class="form-control">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">
+                        ผู้เสนอราคา
+                    </label>
+
+                    <input type="text"
+                        class="form-control"
+                        value="Wanawit Manufacturing">
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">
+                        ส่งสินค้าได้ภายใน
+                    </label>
+
+                    <input type="text"
+                        class="form-control"
+                        placeholder="วัน">
+                </div>
+
+            </div>
+
+{{-- ////////////////////////////////////////////////////////////////////////////////////////// --}}
 
             </div>
 
@@ -342,7 +831,7 @@
                 </button>
 
                 <button class="btn btn-primary">
-                    บันทึกข้อมูล
+                    บันทึกใบเสนอราคา
                 </button>
 
             </div>
