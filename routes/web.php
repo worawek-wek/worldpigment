@@ -34,9 +34,9 @@ Route::get('/clc', function() {
 	Artisan::call('config:cache');
 	Artisan::call('view:clear');
     Artisan::call('route:clear');
-  
+
 	return "Cleared!";
-  
+
   });
 
 Route::get('/', function () {
@@ -94,18 +94,13 @@ Route::middleware('auth')->group(function() {
     });
     Route::controller(CategoryController::class)->group(function() {                    //////////////////////////
         ////////////////
-        Route::get('category', 'index');    //////////////////////////
-        Route::get('category/color-matching', 'color_matching');    //////////////////////////
-        Route::get('category/order', 'order');    //////////////////////////
+        Route::get('category', 'index')->name('category.index');    //////////////////////////
+        Route::get('category/color-matching', 'color_matching')->name('category.color_matching');    //////////////////////////
+        Route::get('category/order', 'order')->name('category.order');    //////////////////////////
         Route::get('category/production-planning', 'production_planning');    //////////////////////////
-        Route::get('category/customer', 'customer');    //////////////////////////
-        Route::get('category/report', 'report');    //////////////////////////
-        Route::get('category/permission', 'permission');    //////////////////////////
-        
-
-
-
-
+        Route::get('category/customer', 'customer')->name('category.customer');    //////////////////////////
+        Route::get('category/report', 'report')->name('category.report');    //////////////////////////
+        Route::get('category/permission', 'permission')->name('category.permission');    //////////////////////////
 
         Route::get('category/datatable', 'datatable')->name('category-datatable');    //////////////////////////
         Route::post('category/insert', 'insert')->name('category-insert');    //////////////////////////
@@ -117,7 +112,7 @@ Route::middleware('auth')->group(function() {
         Route::delete('category/{id}', 'delete')->name('category-delete');    //////////////////////////
         ////////////////
     });
-    Route::controller(EquipmentController::class)->group(function() {                    ////////////////////////// 
+    Route::controller(EquipmentController::class)->group(function() {                    //////////////////////////
         ////////////////
         Route::get('equipments', 'index')->name('equipments');    //////////////////////////
         Route::get('equipments/datatable', 'datatable')->name('equipments-datatable');    //////////////////////////
@@ -130,7 +125,7 @@ Route::middleware('auth')->group(function() {
         Route::delete('equipments/{id}', 'delete')->name('equipments-delete');    //////////////////////////
         ////////////////
     });
-    Route::controller(EquiptrackController::class)->group(function() {                    ////////////////////////// 
+    Route::controller(EquiptrackController::class)->group(function() {                    //////////////////////////
         ////////////////
         Route::get('equiptrack', 'index')->name('equiptrack');    //////////////////////////
         Route::get('equiptrack/datatable', 'datatable')->name('equiptrack-datatable');    //////////////////////////
@@ -144,7 +139,7 @@ Route::middleware('auth')->group(function() {
         ////////////////
     });
     Route::controller(PDFController::class)->group(function() {                    //////////////////////////
-        // Route::get('pdf', 'index')->name('dashboard');    ////////////////////////// 
+        // Route::get('pdf', 'index')->name('dashboard');    //////////////////////////
         Route::get('pdf/receipt_all/{receipt_id}', 'receipt_all')->name('pdf.receipt');    //////////////////////////
         Route::get('pdf/receipt_all_download/{receipt_id}', 'receipt_all_download')->name('pdf.receipt');    //////////////////////////
         Route::get('pdf/invoice_all/{invoice_id}', 'invoice_all')->name('pdf.invoice');    //////////////////////////
@@ -171,9 +166,9 @@ Route::middleware('auth')->group(function() {
         Route::get('user/check-user/{email}', 'check_user')->name('user.check-user');    //////////////////////////
         Route::get('user/{id}', 'edit')->name('user');    //////////////////////////
         // Route::post('user/{id}', 'update')->name('user.update');    //////////////////////////
-        Route::get('user/export/excel', 'exportExcel')->name('pdf.userPdf'); 
+        Route::get('user/export/excel', 'exportExcel')->name('pdf.userPdf');
     });
-    
+
     Route::get('logout', [AuthController::class, 'logout'])->name('logout');
 
     Route::controller(ExportExcelController::class)->group(function() {                    //////////////////////////
@@ -183,7 +178,12 @@ Route::middleware('auth')->group(function() {
     });
 
 
-/////////////// Ajax ////////////////
-Route::get('change_date_format/{date}', [UserController::class, 'ChangeDateFormat'])->name('change_date_format');    //////////////////////////
+    /////////////// Ajax ////////////////
+    Route::get('change_date_format/{date}', [UserController::class, 'ChangeDateFormat'])->name('change_date_format');    //////////////////////////
+
+
+
+    // Production
+    @include_once('production.php');
 
 });

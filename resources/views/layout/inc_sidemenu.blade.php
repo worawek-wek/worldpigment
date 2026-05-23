@@ -3,95 +3,131 @@
         color: #ffffff !important; /* เปลี่ยนสีของไอคอนใน <li> ที่มีคลาส active */
     }
 </style>
-<aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme pt-2">
+<aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
     <div class="app-brand">
-        <div class="app-brand-link d-block text-center w-100">
+        <a href="javascript:void(0)" class="app-brand-link">
             <img src="assets/img/illustrations/main.png" alt="" class="mw-100" height="100%">
-        </div>
+        </a>
 
-        <a href="javascript:void(0);" class="layout-menu-toggle text-large ms-auto" style="color: white;">
+        <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">
             <i class="ti menu-toggle-icon d-none d-xl-block ti-sm align-middle"></i>
             <i class="ti ti-x d-block d-xl-none ti-sm align-middle"></i>
-          </a>
+        </a>
     </div>
 
-    {{-- <div class="menu-inner-shadow"></div> --}}
+    <div class="menu-inner-shadow"></div>
 
-    <ul class="menu-inner py-3">
-        {{-- <li class="menu-item">
-            <a href="/user" class="menu-link">
-                <i class="menu-icon tf-icons ti ti-copy"></i>
-                <div data-i18n="บุคลากร">บุคลากร</div>
-            </a>
-        </li> --}}
+    <ul class="menu-inner py-1">
+
+        @php
+            $pageName = request()->route()->getName();
+        @endphp
+
+        @foreach (config('menu') as $menuKey => $menu)
+            {{-- กรณีเป็น Header --}}
+            @if(isset($menu['type']) && $menu['type'] === 'header')
+                <li class="menu-header small">
+                    <span class="menu-header-text">{{ $menu['title'] }}</span>
+                </li>
+                @continue
+            @endif
+
+            @php
+                $menu_role = isset($menu['role']) ? $menu['role'] : '';
+                $menu_name = isset($menu['route_name']) ? $menu['route_name'] : '';
+                $menu_toggle = isset($menu['sub_menu']) ? 'menu-toggle' : '';
+                $menu_active = $pageName == $menu_name ? 'active' : '';
+
+                if(isset($menu['sub_menu'])){
+                    foreach ($menu['sub_menu'] as $subMenuKey => $subMenu){
+                        if($subMenu['route_name'] == $pageName){
+                            if($subMenu['menu_parent'] == $menuKey){
+                                $menu_active = 'open';
+                            }
+                        }
+                    }
+                }
+            @endphp
+            @if($menu_role == 'superadmin')
+                @if(Auth::guard('admin')->user()->hasRole('superadmin'))
+                <li class="menu-item {{ $menu_active }}">
+                    <a href="{{ isset($menu['route_name']) ? route($menu['route_name']) : 'javascript:void(0);' }}"
+                        class="menu-link {{ $menu_toggle }}">
+                        <i class="menu-icon tf-icons ti {{ isset($menu['icon']) ? $menu['icon'] : '' }}"></i>
+                        <div>{{ $menu['title'] }}</div>
+                    </a>
+                    @if(isset($menu['sub_menu']))
+                        <ul class="menu-sub">
+                            @foreach ($menu['sub_menu'] as $subMenuKey => $subMenu)
+                                @php
+                                    $submenu_name = isset($subMenu['route_name']) ? $subMenu['route_name'] : '';
+                                    $submenu_active = $pageName == $submenu_name ? 'active' : '';
+                                    $menu_toggle = isset($subMenu['sub_menu']) ? 'menu-toggle' : '';
+                                @endphp
+                                <li class="menu-item {{ $submenu_active}}">
+                                    <a href="{{ route($submenu_name) }}" class="menu-link">
+                                        <div>{{ $subMenu['title'] }}</div>
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </li>
+                @endif
+            @else
+                <li class="menu-item {{ $menu_active }}">
+                    <a href="{{ isset($menu['route_name']) ? route($menu['route_name']) : 'javascript:void(0);' }}"
+                        class="menu-link {{ $menu_toggle }}">
+                        <i class="menu-icon tf-icons ti {{ isset($menu['icon']) ? $menu['icon'] : '' }}"></i>
+                        <div>{{ $menu['title'] }}</div>
+                    </a>
+                    @if(isset($menu['sub_menu']))
+                        <ul class="menu-sub">
+                            @foreach ($menu['sub_menu'] as $subMenuKey => $subMenu)
+                                @php
+                                    $submenu_name = isset($subMenu['route_name']) ? $subMenu['route_name'] : '';
+                                    $submenu_active = $pageName == $submenu_name ? 'active' : '';
+                                    $menu_toggle = isset($subMenu['sub_menu']) ? 'menu-toggle' : '';
+                                @endphp
+                                <li class="menu-item {{ $submenu_active}}">
+                                    <a href="{{ route($submenu_name) }}" class="menu-link">
+                                        <div>{{ $subMenu['title'] }}</div>
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </li>
+            @endif
+        @endforeach
+
+        <!-- Misc -->
+        {{-- <li class="menu-header small text-uppercase">
+            <span class="menu-header-text" data-i18n="Misc">Misc</span>
+        </li>
         <li class="menu-item">
-            <a href="/category/color-matching" class="menu-link">
-                <i class="menu-icon tf-icons ti ti-receipt-tax"></i>
-                <div data-i18n="เทียบสี">เทียบสี</div>
+            <a href="https://pixinvent.ticksy.com/" target="_blank" class="menu-link">
+                <i class="menu-icon tf-icons ti ti-lifebuoy"></i>
+                <div data-i18n="Support">Support</div>
             </a>
         </li>
         <li class="menu-item">
-            <a href="/category" class="menu-link">
-                <i class="menu-icon tf-icons ti ti-receipt-tax"></i>
-                <div data-i18n="ใบเสนอราคา">ใบเสนอราคา</div>
-            </a>
-        </li>
-        <li class="menu-item">
-            <a href="/category/order" class="menu-link">
-                <i class="menu-icon tf-icons ti ti-receipt-tax"></i>
-                <div data-i18n="Order">Order</div>
-            </a>
-        </li>
-        <li class="menu-item">
-            <a href="/category/production-planning" class="menu-link">
-                <i class="menu-icon tf-icons ti ti-receipt-tax"></i>
-                <div data-i18n="วางแผนการผลิต">วางแผนการผลิต</div>
-            </a>
-        </li>
-        <li class="menu-item">
-            <a href="/category/customer" class="menu-link">
-                <i class="menu-icon tf-icons ti ti-receipt-tax"></i>
-                <div data-i18n="ฐานข้อมูลลูกค้า">ฐานข้อมูลลูกค้า</div>
-            </a>
-        </li>
-        <li class="menu-item">
-            <a href="/category/report" class="menu-link">
-                <i class="menu-icon tf-icons ti ti-receipt-tax"></i>
-                <div data-i18n="รายงาน">รายงาน</div>
-            </a>
-        </li>
-        <li class="menu-item">
-            <a href="/category/permission" class="menu-link">
-                <i class="menu-icon tf-icons ti ti-receipt-tax"></i>
-                <div data-i18n="สิทธิ์การใช้งาน">สิทธิ์การใช้งาน</div>
-            </a>
-        </li>
-        {{-- <li class="menu-item">
-            <a href="/equipments" class="menu-link">
-                <i class="menu-icon tf-icons ti ti-receipt-tax"></i>
-                <div data-i18n="อุปกรณ์">อุปกรณ์</div>
-            </a>
-        </li>
-        <li class="menu-item">
-            <a href="/equiptrack" class="menu-link">
-                <i class="menu-icon tf-icons ti ti-receipt-tax"></i>
-                <div data-i18n="ยืม-คืน">ยืม-คืน</div>
-            </a>
-        </li>
-        <li class="menu-item">
-            <a href="report/borrow" class="menu-link">
-                <i class="menu-icon tf-icons ti ti-receipt-tax"></i>
-                <div data-i18n="รายงานการยืมรายเดือน">รายงานการยืมรายเดือน</div>
-            </a>
-        </li>
-        <li class="menu-item">
-            <a href="report/return" class="menu-link">
-                <i class="menu-icon tf-icons ti ti-receipt-tax"></i>
-                <div data-i18n="รายงานการคืนรายเดือน">รายงานการคืนรายเดือน</div>
+            <a href="https://demos.pixinvent.com/vuexy-html-admin-template/documentation/" target="_blank"
+                class="menu-link">
+                <i class="menu-icon tf-icons ti ti-file-description"></i>
+                <div data-i18n="Documentation">Documentation</div>
             </a>
         </li> --}}
     </ul>
 </aside>
+
+<div class="menu-mobile-toggler d-xl-none rounded-1">
+    <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large text-bg-secondary p-2 rounded-1">
+        <i class="ti tabler-menu icon-base"></i>
+        <i class="ti tabler-chevron-right icon-base"></i>
+    </a>
+</div>
+
 
 <script>
     document.addEventListener("DOMContentLoaded", function () {
