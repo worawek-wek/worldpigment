@@ -11,7 +11,7 @@ use App\Models\Morder;
 
 class OrderController extends Controller
 {
-    public function inde()
+    public function index()
     {
         return view('production-planning.order');
     }
