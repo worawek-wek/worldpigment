@@ -29,7 +29,7 @@ return [
                 'title' => 'Order สั่งผลิต',
                 'icon' => '',
                 'menu_parent' => 'Production',
-                'route_name' => 'production.order',
+                'route_name' => 'production.order.index',
                 'permission' => 'production read',
             ],
             'ProductionPlanning' => [

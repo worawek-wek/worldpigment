@@ -4,7 +4,7 @@
     data-theme="theme-default" data-assets-path="assets/" data-template="vertical-menu-template">
 
 <head>
-    @include('layout/inc_header')
+    @include('layout.inc_header')
     <title>Dashboard - CRM | Vuexy - Bootstrap Admin Template</title>
 
 </head>
@@ -14,18 +14,19 @@
     <div class="layout-wrapper layout-content-navbar">
         <div class="layout-container">
             <!-- Menu -->
-            @include('layout/inc_sidemenu')
+            @include('layout.inc_sidemenu')
             <!-- / Menu -->
 
             <!-- Layout container -->
             <div class="layout-page">
-                <!-- Navbar -->
-
-                @include('layout/inc_topmenu')
+                @include('layout.inc_topmenu')
 
                 @yield('content')
+
+                @include('layout.inc_footer')
             </div>
             <!-- / Layout page -->
+
         </div>
 
         <!-- Overlay -->
@@ -34,8 +35,11 @@
         <!-- Drag Target Area To SlideIn Menu On Small Screens -->
         <div class="drag-target"></div>
     </div>
-    @include('layout/inc_js')
-        <!-- Helpers -->
-        @yield('script')
+    @include('layout.inc_js')
+
+    <!-- Helpers -->
+    @yield('script')
+
 </body>
-@endsection
+
+</html>

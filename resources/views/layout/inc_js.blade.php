@@ -1,7 +1,7 @@
-    
+
             <div class="modal fade modalHeadDecor" id="insurance_2" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-lg" role="document" id="user_view">
-                    
+
                 </div>
             </div>
 
@@ -28,7 +28,7 @@
                   });
               }
           </script>
-    
+
     <!-- Core JS -->
     <!-- build:js assets/vendor/js/core.js -->
 
@@ -68,18 +68,19 @@
     <!-- <script src="assets/js/dashboards-crm.js"></script> -->
     <script src="assets/js/forms-selects.js"></script>
     {{-- <script src="assets/js/forms-pickers.js"></script> --}}
-    
+
     <script>
-            get_summary_menu()
-            function get_summary_menu(){
-                $.ajax({
-                    type: "GET",
-                    url: "get-summary-menu",
-                    success: function(data) {
-                        $("#countBill").html(data.overdue_bill);
-                        $("#countBookingRoom").html(data.booking_room);
-                    }
-                });
-            }
+            // get_summary_menu()
+            // function get_summary_menu(){
+            //     $.ajax({
+            //         type: "GET",
+            //         url: "get-summary-menu",
+            //         success: function(data) {
+            //             $("#countBill").html(data.overdue_bill);
+            //             $("#countBookingRoom").html(data.booking_room);
+            //         }
+            //     });
+            // }
 
     </script>
+
