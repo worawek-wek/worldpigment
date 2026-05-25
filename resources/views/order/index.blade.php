@@ -529,13 +529,12 @@
     var page = "{{$page_url}}/datatable";
         var searchData = {};
         loadData(page);
-        
+
         function loadData(pages){
-            
             $('.p_search').each(function() {
                 var inputName = $(this).attr('name'); // ดึงชื่อ attribute 'name' ของ input
                 var inputValue = $(this).val(); // ดึงค่า value ของ input
-                
+
                 searchData[inputName] = inputValue; // เก็บข้อมูลลงในออบเจ็กต์ searchData
             });
 
@@ -664,7 +663,7 @@
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
-                    
+
                     // ใช้ FormData แทน serialize เพื่อส่งไฟล์ได้
                     let form = document.getElementById('update_category');
                     let formData = new FormData(form);
@@ -715,7 +714,7 @@
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
-                    
+
                     // ใช้ FormData แทน serialize เพื่อส่งไฟล์ได้
                     let form = document.getElementById('update_equipment_stocks');
                     let formData = new FormData(form);
@@ -744,7 +743,7 @@
                 }
             });
         });
-        
+
         function Delete(id){
                 Swal.fire({
                     title: 'ยืนยันการดำเนินการ?',
