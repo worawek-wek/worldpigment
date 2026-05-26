@@ -26,13 +26,14 @@ class OrderController extends Controller
                 return $row->rownum;
             })
             ->addColumn('btnedit', function($row) {
+                $btn_view = '<button class="btn btn-sm btn-icon btn-info me-2 btn_view" data-member_id="'.$row->Orderno.'" title ="ลบ">
+                    <i class="ti ti-eye text-white ti-sm"></i>
+                </button>';
                 $btn_edit = '<button class="btn btn-sm btn-icon btn-warning me-2 btn_edit" data-member_id="'.$row->Orderno.'" title ="แก้ไข">
                     <i class="ti ti-pencil text-white ti-sm"></i>
                 </button>';
-                $btn_delete = '<button class="btn btn-sm btn-icon btn-danger me-2 btn_delete" data-member_id="'.$row->Orderno.'" title ="ลบ">
-                    <i class="ti ti-trash text-white ti-sm"></i>
-                </button>';
-                return $btn_edit.$btn_delete;
+
+                return $btn_view.$btn_edit;
             })
             ->rawColumns(['btnedit']) // 👈 บอกให้ column นี้ render HTML
             ->make(true);
@@ -41,6 +42,7 @@ class OrderController extends Controller
     public function dataQuery()
     {
         $search = request('search');
+        $company = request('company');
 
         $data = Morder::select([
                 'morder.*',
@@ -53,13 +55,10 @@ class OrderController extends Controller
                         ->orWhere('morder.Custname', 'LIKE', '%'.$search.'%');
                 });
             })
+             ->when(!empty($company), function ($query) use ($company) {
+                $query->where('morder.Company', 'LIKE', '%'.$company.'%');
+            })
             ->orderby('morder.Mdate', 'desc');
-
-        // $data = $data->get();
-
-        // foreach($data as $value){
-        //     dd($value->suborders);
-        // }
 
         return $data;
     }

@@ -33,6 +33,15 @@
                                 placeholder="ค้นหาเลขที่ใบสั่งซื้อ, รหัสลูกค้า, ขื่อลูกค้า">
                             </div>
                             <div class="col-md-2">
+                                <select id="searchCompany" class="form-select">
+                                    <option value="">ทุกแผนก</option>
+                                    <option value="CP">CP</option>
+                                    <option value="DB">DB</option>
+                                    <option value="MB">MB</option>
+                                    <option value="SPP">SPP</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
                                 <select class="form-select">
                                     <option>ทุกสถานะ</option>
                                     <option>Pending</option>
@@ -87,6 +96,7 @@
                 url: "{{ route('production.order.datatable') }}",
                 data: function(d) {
                     d.search = $('#searchInput').val();
+                    d.company = $('#searchCompany').val();
                 },
                 error: function(xhr, error, thrown) {
                     console.error('AJAX Error:', error, thrown);
@@ -117,6 +127,11 @@
         e.preventDefault();
         oTable.draw();
     });
+    $(document).on('change', '#searchCompany', function(e){
+        e.preventDefault();
+        oTable.draw();
+    });
+
 
 </script>
 @endsection
