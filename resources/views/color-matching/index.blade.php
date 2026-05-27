@@ -342,144 +342,403 @@
 
 {{-- ฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝ --}}
 <!-- Modal -->
-<div class="modal fade" id="colorMatchingModal" tabindex="-1" aria-hidden="true">
 
+<div class="modal modalHeadDecor fade" id="colorMatchingModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl">
-
+        
         <div class="modal-content">
 
+            <!-- Header -->
             <div class="modal-header">
 
                 <h5 class="modal-title">
-                    สร้างงานเทียบสี
+                    เทียบสี (Color Matching)
                 </h5>
-
-                <button type="button"
-                    class="btn-close"
+                <button type="button" class="btn-close"
                     data-bs-dismiss="modal"></button>
-
             </div>
 
-            <div class="modal-body">
+            <!-- Body -->
+            <div class="modal-body px-5">
 
+                <!-- Top Form -->
                 <div class="row g-3">
-
                     <div class="col-md-3">
                         <label class="form-label">
-                            เลขที่เอกสาร
+                            เลขที่ใบนำส่งเทียบสี
                         </label>
 
                         <input type="text"
                             class="form-control"
-                            value="CM-2026-0003">
+                            value="68/0255">
                     </div>
 
-                    <div class="col-md-3">
+                    <div class="col-md-2">
+                        <label class="form-label text-danger">
+                            ชื่อสี
+                        </label>
+
+                        <input type="text"
+                            class="form-control">
+                    </div>
+
+                    <div class="col-md-2">
                         <label class="form-label">
-                            วันที่
+                            วันที่ส่งเทียบสี
                         </label>
 
                         <input type="date"
                             class="form-control">
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-md-2">
                         <label class="form-label">
-                            ลูกค้า
+                            ประเภทงาน
                         </label>
 
                         <select class="form-select">
-                            <option>Customer A</option>
-                            <option>Customer B</option>
+                            <option>INJ</option>
                         </select>
                     </div>
 
+                    <div class="col-md-3">
+                        <label class="form-label">
+                            สี
+                        </label>
+
+                        <select class="form-select">
+                            <option>
+                                DB PINK-Y AS50%+ABS50%
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">
+                            คุณสมบัติ
+                        </label>
+
+                        <select class="form-select">
+                            <option></option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">
+                            นำไปทำชิ้นงาน
+                        </label>
+
+                        <select class="form-select">
+                            <option>ตลับแป้ง</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">
+                            Start Date
+                        </label>
+
+                        <input type="date"
+                            class="form-control">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">
+                            Sample Date
+                        </label>
+
+                        <input type="date"
+                            class="form-control">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">
+                            Ready Date
+                        </label>
+
+                        <input type="date"
+                            class="form-control">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">
+                            ผู้รับเอกสาร
+                        </label>
+
+                        <select class="form-select">
+                            <option>วารุณี</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">
+                            เลขที่ใบรายงานผล
+                        </label>
+
+                        <input type="text"
+                            class="form-control bg-label-secondary"
+                            value="68/0255">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">
+                            RminWating
+                        </label>
+
+                        <input type="text"
+                            class="form-control">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">
+                            Color Matcher
+                        </label>
+
+                        <input type="text"
+                            class="form-control"
+                            value="เมทตา">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label text-danger">
+                            ปรับแก้ไขครั้งที่
+                        </label>
+
+                        <select class="form-select">
+                            <option>New</option>
+                            <option>Revise 1</option>
+                            <option>Revise 2</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">
+                            กำหนดเทียบสีเสร็จ
+                        </label>
+
+                        <input type="date"
+                            class="form-control">
+                    </div>
+
+                    <div class="col-md-9">
+                        <label class="form-label">
+                            หมายเหตุ
+                        </label>
+
+                        <input type="text"
+                            class="form-control">
+                    </div>
+
+                </div>
+
+                <hr class="my-4">
+
+                <!-- Customer Section -->
+                <div class="row g-3">
+
+                    <div class="col-md-3">
+                        <label class="form-label text-danger">
+                            เลขที่ใบส่ง ต.ย. ให้ลูกค้า
+                        </label>
+
+                        <input type="text"
+                            class="form-control"
+                            value="52871-DB">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">
+                            วันที่เบิก
+                        </label>
+
+                        <input type="date"
+                            class="form-control">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">
+                            รหัสลูกค้า
+                        </label>
+
+                        <input type="text"
+                            class="form-control"
+                            value="00221">
+                    </div>
+
+                    <div class="col-md-5">
+                        <label class="form-label">
+                            บริษัท
+                        </label>
+
+                        <input type="text"
+                            class="form-control"
+                            value="บริษัท เมทเทิล พลาสติก จำกัด">
+                    </div>
+
+                    <div class="col-md-5">
+                        <label class="form-label">
+                            รายละเอียด
+                        </label>
+
+                        <input type="text"
+                            class="form-control bg-label-secondary"
+                            value="DB PINK-Y AS50%+ABS50% สี/">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">
+                            ประเภท
+                        </label>
+
+                        <select class="form-select">
+                            <option>2</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-5">
+                        <label class="form-label">
+                            สีผง
+                        </label>
+
+                        <input type="text"
+                            class="form-control">
+                    </div>
+
                     <div class="col-md-4">
+                        <label class="form-label">
+                            Resin (Match)
+                        </label>
+
+                        <input type="text"
+                            class="form-control bg-label-secondary"
+                            value="AS50%+ABS50%=">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">
+                            PHR
+                        </label>
+
+                        <input type="number"
+                            class="form-control text-end"
+                            value="1.0000">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">
+                            Lot No.
+                        </label>
+
+                        <input type="text"
+                            class="form-control bg-dark text-white"
+                            value="680731/55">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">
+                            Saleman Code
+                        </label>
+
+                        <input type="text"
+                            class="form-control"
+                            value="1">
+                    </div>
+
+                    <div class="col-md-5 d-flex align-items-end">
+
+                        <div class="form-check">
+
+                            <input class="form-check-input"
+                                type="checkbox">
+
+                            <label class="form-check-label text-danger">
+                                cancel / วัตถุดิบแก้ไข Lot
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">
+                            น้ำหนัก กรัม
+                        </label>
+
+                        <input type="number"
+                            class="form-control"
+                            value="100">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">
+                            ตัวอย่างลูกค้า
+                        </label>
+
+                        <select class="form-select">
+                            <option>ตลับแป้ง</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            สาเหตุที่ยกเลิก
+                        </label>
+
+                        <input type="text"
+                            class="form-control bg-label-secondary">
+                    </div>
+
+                    <div class="col-md-3">
                         <label class="form-label">
                             รหัสสินค้า
                         </label>
 
                         <input type="text"
-                            class="form-control">
+                            class="form-control bg-label-secondary">
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">
-                            ชื่อสินค้า
-                        </label>
-
-                        <input type="text"
-                            class="form-control">
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">
-                            สี
-                        </label>
-
-                        <input type="text"
-                            class="form-control">
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label">
-                            ผู้รับผิดชอบ
-                        </label>
-
-                        <select class="form-select">
-                            <option>สมชาย</option>
-                            <option>วิชัย</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label">
-                            สถานะ
-                        </label>
-
-                        <select class="form-select">
-                            <option>รอดำเนินการ</option>
-                            <option>กำลังเทียบสี</option>
-                            <option>เสร็จสิ้น</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-12">
+                    <div class="col-md-9">
                         <label class="form-label">
                             หมายเหตุ
                         </label>
 
                         <textarea class="form-control"
-                            rows="4"></textarea>
-                    </div>
-
-                    <div class="col-md-12">
-                        <label class="form-label">
-                            แนบรูปตัวอย่างสี
-                        </label>
-
-                        <input type="file"
-                            class="form-control">
+                            rows="3"></textarea>
                     </div>
 
                 </div>
 
             </div>
 
-            <div class="modal-footer">
+            <!-- Footer -->
+            <div class="modal-footer justify-content-between flex-wrap gap-2">
 
-                <button class="btn btn-label-secondary"
-                    data-bs-dismiss="modal">
+                <div class="d-flex gap-2 flex-wrap">
 
-                    ยกเลิก
+                    <button class="btn btn-label-primary">
+                        ค้นหาเลขที่ส่ง
+                    </button>
 
-                </button>
+                    <button class="btn btn-label-primary">
+                        ค้นหารหัสสี
+                    </button>
 
-                <button class="btn btn-primary">
+                </div>
 
-                    บันทึกข้อมูล
+                <div class="d-flex gap-2">
 
-                </button>
+                    <button class="btn btn-label-secondary"
+                        data-bs-dismiss="modal">
+
+                        ปิด
+
+                    </button>
+
+                    <button class="btn btn-success px-5">
+                        ลงข้อมูล
+                    </button>
+
+                </div>
 
             </div>
 
