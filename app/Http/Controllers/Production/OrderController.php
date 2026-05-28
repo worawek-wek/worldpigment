@@ -30,7 +30,7 @@ class OrderController extends Controller
                     <i class="ti ti-eye ti-sm"></i>
                 </button>';
                 $btn_edit = '<button class="btn btn-sm btn-icon btn-label-warning btn_edit" data-orderno="'.$row->Orderno.'" title ="แก้ไข">
-                    <i class="ti ti-pencil ti-sm"></i>
+                    <i class="ti ti-download ti-sm"></i>
                 </button>';
 
                 return $btn_view.$btn_edit;
