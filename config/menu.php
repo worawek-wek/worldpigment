@@ -26,7 +26,7 @@ return [
         'permission' => 'production read',
         'sub_menu' => [
             'ProductionOrder' => [
-                'title' => 'Order สั่งผลิต',
+                'title' => 'Sale Order',
                 'icon' => '',
                 'menu_parent' => 'Production',
                 'route_name' => 'production.order.index',
@@ -36,7 +36,7 @@ return [
                 'title' => 'วางแผนการผลิต',
                 'icon' => '',
                 'menu_parent' => 'Production',
-                'route_name' => 'production.planning',
+                'route_name' => 'production.planning.index',
                 'permission' => 'productionplanning read',
             ],
         ],

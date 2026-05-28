@@ -13,7 +13,7 @@ class OrderController extends Controller
 {
     public function index()
     {
-        return view('production-planning.order');
+        return view('production-planning.order.index');
     }
 
     public function datatable()
@@ -26,11 +26,11 @@ class OrderController extends Controller
                 return $row->rownum;
             })
             ->addColumn('btnedit', function($row) {
-                $btn_view = '<button class="btn btn-sm btn-icon btn-info me-2 btn_view" data-member_id="'.$row->Orderno.'" title ="ลบ">
-                    <i class="ti ti-eye text-white ti-sm"></i>
+                $btn_view = '<button class="btn btn-sm btn-icon btn-label-primary me-2 btn_view" data-orderno="'.$row->Orderno.'" title ="ลบ">
+                    <i class="ti ti-eye ti-sm"></i>
                 </button>';
-                $btn_edit = '<button class="btn btn-sm btn-icon btn-warning me-2 btn_edit" data-member_id="'.$row->Orderno.'" title ="แก้ไข">
-                    <i class="ti ti-pencil text-white ti-sm"></i>
+                $btn_edit = '<button class="btn btn-sm btn-icon btn-label-warning btn_edit" data-orderno="'.$row->Orderno.'" title ="แก้ไข">
+                    <i class="ti ti-pencil ti-sm"></i>
                 </button>';
 
                 return $btn_view.$btn_edit;
@@ -61,5 +61,19 @@ class OrderController extends Controller
             ->orderby('morder.Mdate', 'desc');
 
         return $data;
+    }
+
+    public function detail()
+    {
+        $orderno =  request('orderno');
+
+        $order = Morder::where('Orderno', $orderno)->first();
+
+        $html = view('production-planning.order.order-detail',compact('order'))->render();
+
+        return response()->json([
+            'status' => 200,
+            'data' => $html
+        ]);
     }
 }

@@ -79,6 +79,29 @@
 
         </div>
     </div>
+
+
+    <!-- Sale Order Modal -->
+    <div class="modal fade" id="saleorderModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title" style="padding: 1.25rem 1.5rem 1.25rem; color: white; background-color: #54BAB9; position: relative;">
+                        ใบสั่งซื้อ
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body" id="result_detail">
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <!-- Sale Order Modal -->
+
 @endsection
 
 @section('script')
@@ -127,11 +150,61 @@
         e.preventDefault();
         oTable.draw();
     });
+
     $(document).on('change', '#searchCompany', function(e){
         e.preventDefault();
         oTable.draw();
     });
 
+    $(document).on('click', '.btn_view', function(e){
+        e.preventDefault();
+        let Orderno = $(this).data('orderno');
+         $.ajax({
+            type: 'GET',
+            url: '{{ route("production.order.detail") }}',
+            dataType: 'json',
+            cache: false,
+            data: {
+                orderno: Orderno
+            },
+            success: function(response) {
+                if (response.status == 200) {
+                    $('#result_detail').html(response.data);
+                    const modal = new bootstrap.Modal(document.getElementById('saleorderModal'));
+                    modal.show();
+                }
+            },
+            error: function(response) {
+                console.log("error");
+                console.log(response.responseJSON);
+            }
+        });
+    })
 
 </script>
+
+ <style>
+    .modalHeadDecor .modal-header {
+        padding: 0;
+    }
+
+    .modalHeadDecor .modal-title {
+        padding: 1.25rem 1.5rem 1.25rem;
+        color: white;
+        background-color: #54BAB9;
+        position: relative;
+    }
+
+    .modalHeadDecor .modal-title::after {
+        position: absolute;
+        top: 0;
+        right: -65px;
+        content: '';
+        width: 0;
+        height: 0;
+        border-top: 65px solid #54BAB9;
+        border-right: 65px solid transparent;
+    }
+</style>
+
 @endsection
