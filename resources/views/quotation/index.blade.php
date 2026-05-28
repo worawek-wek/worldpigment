@@ -617,7 +617,7 @@
                     </select>
                 </div>
 
-                <div class="col-md-9">
+                <div class="col-md-5">
                     <label class="form-label">
                         ชื่อลูกค้า
                     </label>
@@ -625,6 +625,15 @@
                     <input type="text"
                         class="form-control text-primary fw-bold"
                         value="บริษัท วนวิทย์ แมนูแฟคเจอริ่ง จำกัด">
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label">
+                        ชื่อลูกค้า(ภาษาอังกฤษ)
+                    </label>
+
+                    <input type="text"
+                        class="form-control"
+                        value="Wanawit Manufacturing">
                 </div>
 
             </div>
@@ -636,20 +645,9 @@
 
                     <div class="d-flex flex-wrap gap-2">
 
-                        <button class="btn btn-label-primary">
-                            ใบเสนอราคา &lt; 12 รายการ
-                        </button>
-
-                        <button class="btn btn-label-primary">
-                            ใบเสนอราคา 13 - 15 รายการ
-                        </button>
-
-                        <button class="btn btn-danger">
-                            ขึ้นราคา &lt; 5 รายการ
-                        </button>
-
-                        <button class="btn btn-danger">
-                            ขึ้นราคา 6-10 รายการ
+                        <button class="btn btn-label-warning">
+                            <i class="fa fa-plus me-2"></i>
+                            เพิ่มรายการ
                         </button>
 
                     </div>
@@ -795,16 +793,6 @@
 
                     <input type="date"
                         class="form-control">
-                </div>
-
-                <div class="col-md-4">
-                    <label class="form-label">
-                        ผู้เสนอราคา
-                    </label>
-
-                    <input type="text"
-                        class="form-control"
-                        value="Wanawit Manufacturing">
                 </div>
 
                 <div class="col-md-3">
