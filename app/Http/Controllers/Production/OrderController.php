@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\Facades\DataTables;
 use App\Models\Morder;
+use App\Models\PlanningHeader;
+use App\Models\Planning;
 
 class OrderController extends Controller
 {
@@ -74,6 +76,46 @@ class OrderController extends Controller
         return response()->json([
             'status' => 200,
             'data' => $html
+        ]);
+    }
+
+    public function convertplanning()
+    {
+        $orderno =  request('orderno');
+
+        $order = Morder::where('Orderno', $orderno)->first();
+        $check_plan = PlanningHeader::where('orderno', $orderno)->first();
+
+        if(!is_null($check_plan)){
+            return response()->json([
+                'status' => 500,
+                'message' => 'มีการสร้าง Order นี้แล้ว'
+            ]);
+        }
+
+        $data_planning_header = [
+            'planning_code' => $order->Orderno,
+            'company' => $order->Company,
+            'orderno' => $order->Orderno,
+            'custno' => $order->Custno,
+            'saleno' => $order->Emp,
+            'netqty' => $order->netqty
+        ];
+
+        $planning_header = PlanningHeader::create($data_planning_header);
+
+        foreach($order->suborders as $suborder){
+            $planning = [
+                'planning_header_id' => $planning_header->id,
+                'itemno' => $suborder->Itemno
+            ];
+
+            Planning::create($planning);
+        }
+
+        return response()->json([
+            'status' => 200,
+            'message' => 'Success'
         ]);
     }
 }

@@ -159,7 +159,7 @@
     $(document).on('click', '.btn_view', function(e){
         e.preventDefault();
         let Orderno = $(this).data('orderno');
-         $.ajax({
+        $.ajax({
             type: 'GET',
             url: '{{ route("production.order.detail") }}',
             dataType: 'json',
@@ -180,6 +180,48 @@
             }
         });
     })
+
+    $(document).on('click', '.btn_edit', function(e){
+        e.preventDefault();
+        let Orderno = $(this).data('orderno');
+        $.ajax({
+            type: 'GET',
+            url: '{{ route("production.order.convertplanning") }}',
+            dataType: 'json',
+            cache: false,
+            data: {
+                orderno: Orderno
+            },
+            success: function(response) {
+                if (response.status == 200) {
+
+                    Swal.fire({
+                        title: "Create Complate.!",
+                        text: "successfuly create complate",
+                        icon: "success",
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+
+                }else{
+                    Swal.fire({
+                        title: "Can not save!",
+                        text: response.message,
+                        icon: "error",
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                }
+            },
+            error: function(response) {
+                console.log("error");
+                console.log(response.responseJSON);
+            }
+        });
+
+
+    });
+
 
 </script>
 
