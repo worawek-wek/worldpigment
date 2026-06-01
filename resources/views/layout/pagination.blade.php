@@ -1,7 +1,7 @@
 <div class="row">
     <div class="col-sm-12 col-md-6 ps-4">
         <div class="dataTables_info" id="DataTables_Table_1_info" role="status" aria-live="polite">
-            All &nbsp; {{$list_data->total()}} &nbsp; entries
+            ทั้งหมด &nbsp; {{ number_format($list_data->total()) }} &nbsp; รายการ
         </div>
     </div>
 

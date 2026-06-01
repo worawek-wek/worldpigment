@@ -41,7 +41,7 @@ Route::get('/clc', function() {
 
 Route::get('/', function () {
     if (Auth::check()) {
-        return redirect()->route('branch.manage'); // หรือหน้า dashboard ที่ต้องการ
+        return redirect()->route('production.planning.index'); // หน้าเริ่มต้น = วางแผนการผลิต
     }
     return redirect()->route('login.index');
 });

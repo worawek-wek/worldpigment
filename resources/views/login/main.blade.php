@@ -140,7 +140,7 @@
             email: email,
             password: password
         }).then(res => {
-            location.href = '/user'
+            location.href = '/production-planning/planning'
         }).catch(err => {
             $('#btn-login').html('Login')
 

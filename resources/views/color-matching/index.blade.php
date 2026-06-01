@@ -93,105 +93,22 @@
         </div>
     </div>
 
-    <!-- Summary -->
-    <div class="row g-4 mb-4">
-
-        <div class="col-sm-6 col-lg-3">
-            <div class="card">
-                <div class="card-body">
-                    <div class="d-flex align-items-start justify-content-between">
-                        <div class="content-left">
-                            <span class="fw-semibold text-body">งานทั้งหมด</span>
-                            <div class="d-flex align-items-center my-1">
-                                <h4 class="mb-0 me-2 fw-bold text-heading">58</h4>
-                                <small class="text-success fw-semibold">
-                                    <i class="ti ti-arrow-up"></i> 12%
-                                </small>
-                            </div>
-                            <small class="text-body-secondary">เทียบกับเดือนก่อน</small>
-                        </div>
-                        <div class="avatar">
-                            <span class="avatar-initial rounded bg-label-secondary">
-                                <i class="ti ti-files ti-md"></i>
-                            </span>
+    <!-- Summary (โหลดผ่าน AJAX จาก color-matching/summary หลัง loadData()) -->
+    <div id="summary-data" class="row g-4 mb-4">
+        {{-- placeholder ขณะรอ AJAX โหลด --}}
+        @for ($i = 0; $i < 4; $i++)
+            <div class="col-sm-6 col-lg-3">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="placeholder-glow">
+                            <span class="placeholder col-7 mb-2"></span>
+                            <h4 class="mb-1"><span class="placeholder col-4"></span></h4>
+                            <span class="placeholder col-8"></span>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="col-sm-6 col-lg-3">
-            <div class="card">
-                <div class="card-body">
-                    <div class="d-flex align-items-start justify-content-between">
-                        <div class="content-left">
-                            <span class="fw-semibold text-body">รอวัตถุดิบ / รอเทียบ</span>
-                            <div class="d-flex align-items-center my-1">
-                                <h4 class="mb-0 me-2 fw-bold text-heading">12</h4>
-                                <small class="text-warning fw-semibold">
-                                    <i class="ti ti-clock"></i>
-                                </small>
-                            </div>
-                            <small class="text-body-secondary">ค้างอยู่ในคิว</small>
-                        </div>
-                        <div class="avatar">
-                            <span class="avatar-initial rounded bg-label-warning">
-                                <i class="ti ti-hourglass ti-md"></i>
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-sm-6 col-lg-3">
-            <div class="card">
-                <div class="card-body">
-                    <div class="d-flex align-items-start justify-content-between">
-                        <div class="content-left">
-                            <span class="fw-semibold text-body">กำลังเทียบสี</span>
-                            <div class="d-flex align-items-center my-1">
-                                <h4 class="mb-0 me-2 fw-bold text-heading">20</h4>
-                                <small class="text-info fw-semibold">
-                                    <i class="ti ti-loader"></i>
-                                </small>
-                            </div>
-                            <small class="text-body-secondary">อยู่ระหว่างดำเนินการ</small>
-                        </div>
-                        <div class="avatar">
-                            <span class="avatar-initial rounded bg-label-info">
-                                <i class="ti ti-palette ti-md"></i>
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-sm-6 col-lg-3">
-            <div class="card">
-                <div class="card-body">
-                    <div class="d-flex align-items-start justify-content-between">
-                        <div class="content-left">
-                            <span class="fw-semibold text-body">ส่ง ต.ย. ให้ลูกค้าแล้ว</span>
-                            <div class="d-flex align-items-center my-1">
-                                <h4 class="mb-0 me-2 fw-bold text-heading">26</h4>
-                                <small class="text-success fw-semibold">
-                                    <i class="ti ti-check"></i>
-                                </small>
-                            </div>
-                            <small class="text-body-secondary">เดือนนี้</small>
-                        </div>
-                        <div class="avatar">
-                            <span class="avatar-initial rounded bg-label-success">
-                                <i class="ti ti-package-export ti-md"></i>
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+        @endfor
     </div>
 
     <!-- Table -->
@@ -204,311 +121,67 @@
                     <label class="form-label small text-muted mb-1">ค้นหา</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="ti ti-search"></i></span>
-                        <input type="text"
-                            class="form-control"
-                            placeholder="เลขที่ใบนำส่ง / เลขที่ใบส่ง ต.ย. / ลูกค้า">
+                        <input type="text" name="search"
+                            class="form-control p_search"
+                            placeholder="เลขที่ใบนำส่ง / เลขที่ใบส่ง ต.ย. / ลูกค้า"
+                            onkeyup="if(event.key==='Enter') loadData(page)">
                     </div>
                 </div>
 
                 <div class="col-md-2">
                     <label class="form-label small text-muted mb-1">ประเภทงาน</label>
-                    <select class="form-select">
-                        <option>ทุกประเภท</option>
-                        <option>เป่าฟิมล์</option>
-                        <option>เป่าขวด</option>
-                        <option>EXT</option>
-                        <option>ROLL</option>
-                        <option>INJ</option>
-                        <option>CY</option>
-                    </select>
-                </div>
-
-                <div class="col-md-2">
-                    <label class="form-label small text-muted mb-1">สถานะ</label>
-                    <select class="form-select">
-                        <option>ทุกสถานะ</option>
-                        <option>รอวัตถุดิบ</option>
-                        <option>กำลังเทียบสี</option>
-                        <option>เทียบสีเสร็จ</option>
-                        <option>ส่ง ต.ย. ให้ลูกค้าแล้ว</option>
+                    <select name="job_type" class="form-select p_search" onchange="loadData(page)">
+                        <option value="">ทุกประเภท</option>
+                        @foreach (['เป่าฟิมล์','เป่าขวด','EXT','ROLL','INJ','CY'] as $opt)
+                            <option value="{{ $opt }}">{{ $opt }}</option>
+                        @endforeach
                     </select>
                 </div>
 
                 <div class="col-md-2">
                     <label class="form-label small text-muted mb-1">วันที่ส่งเทียบสี</label>
-                    <input type="date" class="form-control">
+                    <input type="date" name="test_date" class="form-control p_search" onchange="loadData(page)">
                 </div>
 
                 <div class="col-md-2">
                     <label class="form-label small text-muted mb-1">ปรับแก้ไข</label>
-                    <select class="form-select">
-                        <option>ทั้งหมด</option>
-                        <option>New</option>
-                        <option>Revise 1</option>
-                        <option>Revise 2</option>
+                    <select name="revision" class="form-select p_search" onchange="loadData(page)">
+                        <option value="">ทั้งหมด</option>
+                        @foreach (['New','Revise 1','Revise 2'] as $opt)
+                            <option value="{{ $opt }}">{{ $opt }}</option>
+                        @endforeach
                     </select>
                 </div>
 
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="button" class="btn btn-label-secondary" onclick="resetFilters()">
+                        <i class="ti ti-x me-1"></i>ล้างตัวกรอง
+                    </button>
+                </div>
+
+            </div>
+
+            {{-- Row 2: Show limit selector (จัดชิดขวา) --}}
+            <div class="d-flex justify-content-end align-items-center mt-3">
+                <label class="form-label small text-muted mb-0 me-2">แสดง</label>
+                <select name="limit" class="form-select form-select-sm p_search"
+                    style="width: 90px;" onchange='loadData("{{$page_url}}/datatable")'>
+                    <option value="15">15</option>
+                    <option value="50">50</option>
+                    <option value="75">75</option>
+                    <option value="100">100</option>
+                    <option value="200">200</option>
+                </select>
+                <span class="ms-2 small text-muted">รายการ/หน้า</span>
             </div>
         </div>
 
-        <div class="table-responsive">
-
-            <table class="table table-hover align-middle">
-
-                <thead class="table-light">
-                    <tr class="align-middle">
-                        <th class="align-middle">
-                            เลขที่ใบนำส่ง
-                            <br>
-                            <small class="text-body-secondary fw-normal">วันที่ส่งเทียบสี</small>
-                        </th>
-                        <th class="align-middle">ลูกค้า</th>
-                        <th class="align-middle">ประเภทงาน</th>
-                        <th class="align-middle">สี / นำไปทำชิ้นงาน</th>
-                        <th class="align-middle">Color Matcher</th>
-                        <th class="align-middle">ปรับแก้ไข</th>
-                        <th class="align-middle">เลขที่ใบส่ง ต.ย.</th>
-                        <th class="align-middle">สถานะ</th>
-                        <th class="align-middle" width="120">จัดการ</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-
-                    <tr>
-                        <td>
-                            <strong class="text-primary">68/0255</strong>
-                            <br>
-                            <small class="text-muted">28/05/2026</small>
-                        </td>
-
-                        <td>
-                            <span class="badge bg-label-secondary mb-1">00221</span>
-                            <br>
-                            <small>บริษัท เมทเทิล พลาสติก จำกัด</small>
-                        </td>
-
-                        <td>
-                            <span class="badge bg-label-primary">INJ</span>
-                        </td>
-
-                        <td>
-                            <div class="d-flex align-items-center gap-2">
-                                <div style="width:18px;height:18px;background:#f8b4c1;border-radius:4px;border:1px solid #ddd;"></div>
-                                <div>
-                                    <div class="small fw-semibold">DB PINK-Y AS50%+ABS50%</div>
-                                    <small class="text-muted">ตลับแป้ง</small>
-                                </div>
-                            </div>
-                        </td>
-
-                        <td>เมทตา</td>
-
-                        <td>
-                            <span class="badge bg-label-info">New</span>
-                        </td>
-
-                        <td>
-                            <strong>52871-DB</strong>
-                        </td>
-
-                        <td>
-                            <span class="badge bg-label-info">
-                                <i class="ti ti-palette me-1"></i>
-                                กำลังเทียบสี
-                            </span>
-                        </td>
-
-                        <td>
-                            <button class="btn btn-sm btn-icon btn-label-primary" title="ดู">
-                                <i class="ti ti-eye"></i>
-                            </button>
-                            <button class="btn btn-sm btn-icon btn-label-warning" title="แก้ไข">
-                                <i class="ti ti-edit"></i>
-                            </button>
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>
-                            <strong class="text-primary">68/0254</strong>
-                            <br>
-                            <small class="text-muted">27/05/2026</small>
-                        </td>
-
-                        <td>
-                            <span class="badge bg-label-secondary mb-1">00185</span>
-                            <br>
-                            <small>บริษัท ไทย พลาส อินดัสตรี จำกัด</small>
-                        </td>
-
-                        <td>
-                            <span class="badge bg-label-primary">EXT</span>
-                        </td>
-
-                        <td>
-                            <div class="d-flex align-items-center gap-2">
-                                <div style="width:18px;height:18px;background:#1e1e1e;border-radius:4px;border:1px solid #ddd;"></div>
-                                <div>
-                                    <div class="small fw-semibold">BLACK PE-HD 100%</div>
-                                    <small class="text-muted">สายไฟ</small>
-                                </div>
-                            </div>
-                        </td>
-
-                        <td>วารุณี</td>
-
-                        <td>
-                            <span class="badge bg-label-warning">Revise 1</span>
-                        </td>
-
-                        <td>
-                            <strong>52870-BK</strong>
-                        </td>
-
-                        <td>
-                            <span class="badge bg-label-success">
-                                <i class="ti ti-package-export me-1"></i>
-                                ส่ง ต.ย. แล้ว
-                            </span>
-                        </td>
-
-                        <td>
-                            <button class="btn btn-sm btn-icon btn-label-primary" title="ดู">
-                                <i class="ti ti-eye"></i>
-                            </button>
-                            <button class="btn btn-sm btn-icon btn-label-warning" title="แก้ไข">
-                                <i class="ti ti-edit"></i>
-                            </button>
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>
-                            <strong class="text-primary">68/0253</strong>
-                            <br>
-                            <small class="text-muted">26/05/2026</small>
-                        </td>
-
-                        <td>
-                            <span class="badge bg-label-secondary mb-1">00342</span>
-                            <br>
-                            <small>บริษัท ออโต้พาร์ท เอเชีย จำกัด</small>
-                        </td>
-
-                        <td>
-                            <span class="badge bg-label-primary">เป่าขวด</span>
-                        </td>
-
-                        <td>
-                            <div class="d-flex align-items-center gap-2">
-                                <div style="width:18px;height:18px;background:#c4302b;border-radius:4px;border:1px solid #ddd;"></div>
-                                <div>
-                                    <div class="small fw-semibold">RED RUBY PP 80%+TALC 20%</div>
-                                    <small class="text-muted">อะไหล่รถยนต์</small>
-                                </div>
-                            </div>
-                        </td>
-
-                        <td>สมชาย</td>
-
-                        <td>
-                            <span class="badge bg-label-info">New</span>
-                        </td>
-
-                        <td>
-                            <span class="text-muted">-</span>
-                        </td>
-
-                        <td>
-                            <span class="badge bg-label-warning">
-                                <i class="ti ti-hourglass me-1"></i>
-                                รอวัตถุดิบ
-                            </span>
-                        </td>
-
-                        <td>
-                            <button class="btn btn-sm btn-icon btn-label-primary" title="ดู">
-                                <i class="ti ti-eye"></i>
-                            </button>
-                            <button class="btn btn-sm btn-icon btn-label-warning" title="แก้ไข">
-                                <i class="ti ti-edit"></i>
-                            </button>
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>
-                            <strong class="text-primary">68/0252</strong>
-                            <br>
-                            <small class="text-muted">25/05/2026</small>
-                        </td>
-
-                        <td>
-                            <span class="badge bg-label-secondary mb-1">00114</span>
-                            <br>
-                            <small>บริษัท แฮนด์ครีเอท จำกัด</small>
-                        </td>
-
-                        <td>
-                            <span class="badge bg-label-primary">ROLL</span>
-                        </td>
-
-                        <td>
-                            <div class="d-flex align-items-center gap-2">
-                                <div style="width:18px;height:18px;background:#3b6f9c;border-radius:4px;border:1px solid #ddd;"></div>
-                                <div>
-                                    <div class="small fw-semibold">NAVY BLUE PVC SOFT</div>
-                                    <small class="text-muted">หนังเทียม</small>
-                                </div>
-                            </div>
-                        </td>
-
-                        <td>เมทตา</td>
-
-                        <td>
-                            <span class="badge bg-label-danger">Revise 2</span>
-                        </td>
-
-                        <td>
-                            <strong>52865-NB</strong>
-                        </td>
-
-                        <td>
-                            <span class="badge bg-label-success">
-                                <i class="ti ti-package-export me-1"></i>
-                                ส่ง ต.ย. แล้ว
-                            </span>
-                        </td>
-
-                        <td>
-                            <button class="btn btn-sm btn-icon btn-label-primary" title="ดู">
-                                <i class="ti ti-eye"></i>
-                            </button>
-                            <button class="btn btn-sm btn-icon btn-label-warning" title="แก้ไข">
-                                <i class="ti ti-edit"></i>
-                            </button>
-                        </td>
-                    </tr>
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-        <div class="card-footer d-flex justify-content-between align-items-center">
-            <small class="text-muted">แสดง 1-4 จาก 58 รายการ</small>
-            <nav>
-                <ul class="pagination pagination-sm mb-0">
-                    <li class="page-item disabled"><a class="page-link" href="#"><i class="ti ti-chevron-left"></i></a></li>
-                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                    <li class="page-item"><a class="page-link" href="#">2</a></li>
-                    <li class="page-item"><a class="page-link" href="#">3</a></li>
-                    <li class="page-item"><a class="page-link" href="#"><i class="ti ti-chevron-right"></i></a></li>
-                </ul>
-            </nav>
+        <div id="table-data">
+            {{-- Table โหลดผ่าน AJAX จาก color-matching/datatable --}}
+            <div class="text-center py-5 text-muted">
+                <div class="spinner-border spinner-border-sm me-2"></div>
+                กำลังโหลดข้อมูล...
+            </div>
         </div>
 
     </div>
@@ -563,17 +236,22 @@
     var page = "{{$page_url}}/datatable";
         var searchData = {};
         loadData(page);
-        
-        function loadData(pages){
-            
-            $('.p_search').each(function() {
-                var inputName = $(this).attr('name'); // ดึงชื่อ attribute 'name' ของ input
-                var inputValue = $(this).val(); // ดึงค่า value ของ input
-                
-                searchData[inputName] = inputValue; // เก็บข้อมูลลงในออบเจ็กต์ searchData
-            });
 
-            // alert(page);
+        // เก็บ filter ที่กรอกใน UI เป็น object — ใช้ทั้ง loadData() และ loadSummary()
+        function collectSearchData(){
+            var data = {};
+            $('.p_search').each(function() {
+                var inputName = $(this).attr('name');
+                var inputValue = $(this).val();
+                if (inputValue !== '' && inputValue !== null) {
+                    data[inputName] = inputValue;
+                }
+            });
+            return data;
+        }
+
+        function loadData(pages){
+            searchData = collectSearchData();
             page = pages;
             $.ajax({
                 type: "GET",
@@ -581,9 +259,25 @@
                 data: searchData,
                 success: function(data) {
                     $("#table-data").html(data);
+                    loadSummary(); // โหลด summary ต่อ ให้สอดคล้องกับ filter ปัจจุบัน
                 }
             });
-            // alert(page);
+        }
+
+        function loadSummary(){
+            $.ajax({
+                type: "GET",
+                url: "{{$page_url}}/summary",
+                data: collectSearchData(),
+                success: function(data) {
+                    $("#summary-data").html(data);
+                }
+            });
+        }
+
+        function resetFilters() {
+            $('.p_search').val('');
+            loadData("{{$page_url}}/datatable");
         }
         var update_id = 999999999999;
         function view(id){
