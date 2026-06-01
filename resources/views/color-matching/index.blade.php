@@ -72,13 +72,19 @@
                         </p>
                     </div>
 
-                    <div>
+                    <div class="d-flex gap-2 flex-wrap">
                         <button class="btn btn-primary"
                             data-bs-toggle="modal"
                             data-bs-target="#colorMatchingModal">
+                            <i class="ti ti-file-text me-1"></i>
+                            สร้างใบนำส่งเทียบสี
+                        </button>
 
-                            <i class="ti ti-plus me-1"></i>
-                            สร้างงานเทียบสี
+                        <button class="btn btn-label-primary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#sampleDeliveryModal">
+                            <i class="ti ti-package me-1"></i>
+                            สร้างใบส่ง ต.ย. ให้ลูกค้า
                         </button>
                     </div>
 
@@ -532,7 +538,8 @@
 <!-- Quotation Modal -->
 
 
-    @include('color-matching.modal')
+    @include('color-matching.modal-cm')
+    @include('color-matching.modal-sd')
 
 
     <!--edit  Modal -->
