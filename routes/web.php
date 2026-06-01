@@ -92,25 +92,24 @@ Route::middleware('auth')->group(function() {
         Route::get('report/rent-bill/excel', 'rent_bill_excel')->name('report.rent-bill-excel');    //////////////////////////
         Route::get('report/move-in/excel', 'move_in_excel')->name('report.move-in-excel');    //////////////////////////
     });
-    Route::controller(CategoryController::class)->group(function() {                    //////////////////////////
-        ////////////////
-        Route::get('category', 'index')->name('category.index');    //////////////////////////
-        Route::get('category/color-matching', 'color_matching')->name('category.color_matching');    //////////////////////////
-        Route::get('category/order', 'order')->name('category.order');    //////////////////////////
-        Route::get('category/production-planning', 'production_planning');    //////////////////////////
-        Route::get('category/customer', 'customer')->name('category.customer');    //////////////////////////
-        Route::get('category/report', 'report')->name('category.report');    //////////////////////////
-        Route::get('category/permission', 'permission')->name('category.permission');    //////////////////////////
+    // ─── Page routes (แยกแต่ละเมนูเป็นไฟล์ + controller ของตัวเอง) ─────
+    @include_once('color-matching.php');
+    @include_once('quotation.php');
+    @include_once('order.php');
+    @include_once('customer.php');
+    @include_once('report.php');
+    @include_once('permission.php');
 
-        Route::get('category/datatable', 'datatable')->name('category-datatable');    //////////////////////////
-        Route::post('category/insert', 'insert')->name('category-insert');    //////////////////////////
-        Route::get('category/import/{id}', 'get_form_import')->name('category-edit');    //////////////////////////
-        Route::get('category/history/{id}', 'get_history')->name('category-history');    //////////////////////////
-        Route::get('category/{id}', 'edit')->name('category-edit');    //////////////////////////
-        Route::post('category/update/{id}', 'update')->name('category-update');    //////////////////////////
-        Route::post('category/update_stock/{id}', 'update_stock')->name('category-update_stock');    //////////////////////////
-        Route::delete('category/{id}', 'delete')->name('category-delete');    //////////////////////////
-        ////////////////
+    // ─── Category CRUD (ยังคงไว้สำหรับ AJAX ใน views ที่ใช้ $page_url='category') ──
+    Route::controller(CategoryController::class)->group(function() {
+        Route::get('category/datatable', 'datatable')->name('category-datatable');
+        Route::post('category/insert', 'insert')->name('category-insert');
+        Route::get('category/import/{id}', 'get_form_import')->name('category-edit');
+        Route::get('category/history/{id}', 'get_history')->name('category-history');
+        Route::get('category/{id}', 'edit')->name('category-edit');
+        Route::post('category/update/{id}', 'update')->name('category-update');
+        Route::post('category/update_stock/{id}', 'update_stock')->name('category-update_stock');
+        Route::delete('category/{id}', 'delete')->name('category-delete');
     });
     Route::controller(EquipmentController::class)->group(function() {                    //////////////////////////
         ////////////////
