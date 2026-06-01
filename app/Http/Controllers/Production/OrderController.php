@@ -109,8 +109,11 @@ class OrderController extends Controller
         foreach($order->suborders as $suborder){
             $planning = [
                 'planning_header_id' => $planning_header->id,
-                'itemno' => $suborder->Itemno,
-                'plan_type' => 'ORDER',
+                'itemno'             => $suborder->Itemno,
+                'plan_type'          => 'ORDER',
+                'mdate'              => $order->Mdate    ?: null,
+                'custwant'           => $suborder->custwant ?: null,
+                'remark'             => $suborder->Remark ?: null,
             ];
 
             Planning::create($planning);

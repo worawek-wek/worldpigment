@@ -21,4 +21,22 @@ class Planning extends Model
         return $this->belongsTo(PlanningHeader::class, 'planning_header_id', 'id');
     }
 
+    public function parent()
+    {
+        return $this->belongsTo(Planning::class, 'parent_planning_id', 'id');
+    }
+
+    // sub-order headers ที่ auto-สร้างจาก planning นี้
+    public function semi_headers()
+    {
+        return $this->hasMany(PlanningHeader::class, 'parent_planning_id', 'id')
+                    ->where('plan_type', 'semi');
+    }
+
+    public function pigment_headers()
+    {
+        return $this->hasMany(PlanningHeader::class, 'parent_planning_id', 'id')
+                    ->where('plan_type', 'pigment');
+    }
+
 }

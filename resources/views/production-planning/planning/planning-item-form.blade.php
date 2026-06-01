@@ -1,0 +1,374 @@
+@php
+    // plan_type: ใช้ของ planning item ก่อน ถ้าไม่มีดึงจาก parent header
+    $default_plan_type = $planning_item?->plan_type ?? $parent_header?->plan_type ?? '';
+    // ค่า default สำหรับแถว semi/pigment ใหม่
+    $default_mdate     = $parent_header?->mdate ? substr($parent_header->mdate, 0, 10) : '';
+    $default_custno    = $parent_header?->company  ?? '';   // custno = company ของ header แม่
+    $companies = ['CP', 'MB', 'DB', 'SPP'];
+@endphp
+
+<div class="modal-header" style="background-color: #3A8EBA; padding: 1rem 1.5rem;">
+    <h5 class="modal-title text-white mb-0">
+        <i class="ti ti-{{ $planning_item ? 'pencil' : 'plus' }} me-1"></i>
+        {{ $planning_item ? 'แก้ไข Planning Item' : 'เพิ่ม Planning Item' }}
+        @if($parent_header)
+            <span class="badge bg-white text-primary ms-2 fw-normal" style="font-size:.75rem">
+                {{ $parent_header->planning_code }}
+            </span>
+        @endif
+    </h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+</div>
+
+<div class="modal-body">
+    <form id="planning_item_form">
+        <input type="hidden" name="planning_id"        value="{{ $planning_item?->id ?? '' }}">
+        <input type="hidden" name="planning_header_id" value="{{ $planning_header_id ?? '' }}">
+        <input type="hidden" name="semi_json"    id="semi_json"    value="">
+        <input type="hidden" name="pigment_json" id="pigment_json" value="">
+
+        {{-- ── ข้อมูลหลัก ── --}}
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Item No. <span class="text-danger">*</span></label>
+                <input type="text" name="itemno"
+                       value="{{ $planning_item?->itemno ?? '' }}"
+                       class="form-control" placeholder="กรอก Item No.">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Quantity</label>
+                <input type="text" name="quantity"
+                       value="{{ $planning_item?->quantity ?? '' }}"
+                       class="form-control" placeholder="0">
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Lot</label>
+                <input type="text" name="lot"
+                       value="{{ $planning_item?->lot ?? '' }}"
+                       class="form-control" placeholder="Lot">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Weight</label>
+                <input type="text" name="weight"
+                       value="{{ $planning_item?->weight ?? '' }}"
+                       class="form-control" placeholder="0.00">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Machine No.</label>
+                <input type="text" name="machine_no"
+                       value="{{ $planning_item?->machine_no ?? '' }}"
+                       class="form-control" placeholder="เครื่องจักร">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Plan Type</label>
+                {{-- auto-fill จาก planning_header.plan_type --}}
+                <input type="text" name="plan_type"
+                       value="{{ $default_plan_type }}"
+                       class="form-control bg-light" readonly
+                       placeholder="ประเภทแผน (จาก Header)">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Planning Status</label>
+                <input type="text" name="planning_status"
+                       value="{{ $planning_item?->planning_status ?? '' }}"
+                       class="form-control" placeholder="สถานะ">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Start Date</label>
+                <input type="date" name="start_date"
+                       value="{{ $planning_item?->start_date ?? '' }}"
+                       class="form-control">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label class="form-label">QC Date</label>
+                <input type="date" name="qc_date"
+                       value="{{ $planning_item?->qc_date ?? '' }}"
+                       class="form-control">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">QC Time</label>
+                <input type="text" name="qc_time"
+                       value="{{ $planning_item?->qc_time ?? '' }}"
+                       class="form-control" placeholder="HH:MM">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">QC Status</label>
+                <input type="text" name="qc_status"
+                       value="{{ $planning_item?->qc_status ?? '' }}"
+                       class="form-control" placeholder="สถานะ QC">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Packing Datetime</label>
+                <input type="text" name="packing_datetie"
+                       value="{{ $planning_item?->packing_datetie ?? '' }}"
+                       class="form-control" placeholder="วันเวลาจัดแพ็ค">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label class="form-label">วันที่สั่ง (mdate)</label>
+                <input type="date" name="mdate"
+                       value="{{ $planning_item?->mdate ? substr($planning_item->mdate, 0, 10) : '' }}"
+                       class="form-control">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">วันที่ต้องการรับ (custwant)</label>
+                <input type="date" name="custwant"
+                       value="{{ $planning_item?->custwant ? substr($planning_item->custwant, 0, 10) : '' }}"
+                       class="form-control">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">วันที่ส่งสินค้า (senddate)</label>
+                <input type="date" name="senddate"
+                       value="{{ $planning_item?->senddate ? substr($planning_item->senddate, 0, 10) : '' }}"
+                       class="form-control">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Remark</label>
+                <input type="text" name="remark"
+                       value="{{ $planning_item?->remark ?? '' }}"
+                       class="form-control" placeholder="วันเวลาจัดแพ็ค">
+            </div>
+        </div>
+
+        <hr class="my-3">
+
+        {{-- ── Semi ── --}}
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>
+                <h6 class="mb-0 text-primary d-inline">
+                    <i class="ti ti-box me-1"></i>Semi
+                </h6>
+                @if($parent_orderno)
+                <small class="text-muted ms-2">
+                    อ้างอิง Order: <strong>{{ $parent_orderno }}</strong>
+                </small>
+                @endif
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="btn_add_semi_row">
+                <i class="ti ti-plus me-1"></i>เพิ่ม Semi
+            </button>
+        </div>
+        <div class="table-responsive mb-3">
+            <table class="table table-sm table-bordered align-middle" id="table_semi">
+                <thead class="table-primary">
+                    <tr>
+                        <th class="text-center" style="width:36px">#</th>
+                        <th style="min-width:110px">Company</th>
+                        <th style="min-width:120px">วันที่สั่ง</th>
+                        <th style="min-width:120px">วันที่ต้องการรับ</th>
+                        <th style="min-width:120px">วันที่ส่งสินค้า</th>
+                        <th style="min-width:100px">Cust No.</th>
+                        <th style="min-width:130px">Item No.</th>
+                        <th style="min-width:80px">Quantity</th>
+                        <th class="text-center" style="width:46px">ลบ</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody_semi">
+                    @forelse($semi_list as $i => $row)
+                    <tr>
+                        <td class="text-center row-num">{{ $i + 1 }}</td>
+                        <td>
+                            <select class="form-select form-select-sm" data-field="company">
+                                <option value="">-- เลือก --</option>
+                                @foreach($companies as $c)
+                                <option value="{{ $c }}" {{ ($row['company'] ?? '') == $c ? 'selected' : '' }}>{{ $c }}</option>
+                                @endforeach
+                            </select>
+                        </td>
+                        <td><input type="date" class="form-control form-control-sm" data-field="mdate"    value="{{ substr($row['mdate']    ?? '', 0, 10) }}"></td>
+                        <td><input type="date" class="form-control form-control-sm" data-field="custwant" value="{{ substr($row['custwant'] ?? '', 0, 10) }}"></td>
+                        <td><input type="date" class="form-control form-control-sm" data-field="senddate" value="{{ substr($row['senddate'] ?? '', 0, 10) }}"></td>
+                        <td><input type="text" class="form-control form-control-sm bg-light" data-field="custno"   value="{{ $default_custno }}" readonly></td>
+                        <td><input type="text" class="form-control form-control-sm" data-field="itemno"   value="{{ $row['itemno']   ?? '' }}" placeholder="Item No."></td>
+                        <td><input type="text" class="form-control form-control-sm" data-field="quantity" value="{{ $row['quantity'] ?? '' }}" placeholder="0"></td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-danger btn-icon btn_remove_row">
+                                <i class="ti ti-trash ti-sm"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr class="empty-row">
+                        <td colspan="9" class="text-center text-muted py-2">ยังไม่มีรายการ Semi</td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <hr class="my-3">
+
+        {{-- ── Pigment ── --}}
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>
+                <h6 class="mb-0 text-success d-inline">
+                    <i class="ti ti-color-swatch me-1"></i>Pigment
+                </h6>
+                @if($parent_orderno)
+                <small class="text-muted ms-2">
+                    อ้างอิง Order: <strong>{{ $parent_orderno }}</strong>
+                </small>
+                @endif
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-success" id="btn_add_pigment_row">
+                <i class="ti ti-plus me-1"></i>เพิ่ม Pigment
+            </button>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered align-middle" id="table_pigment">
+                <thead class="table-success">
+                    <tr>
+                        <th class="text-center" style="width:36px">#</th>
+                        <th style="min-width:110px">Company</th>
+                        <th style="min-width:120px">วันที่สั่ง</th>
+                        <th style="min-width:120px">วันที่ต้องการรับ</th>
+                        <th style="min-width:120px">วันที่ส่งสินค้า</th>
+                        <th style="min-width:100px">Cust No.</th>
+                        <th style="min-width:130px">Item No.</th>
+                        <th style="min-width:80px">Quantity</th>
+                        <th class="text-center" style="width:46px">ลบ</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody_pigment">
+                    @forelse($pigment_list as $i => $row)
+                    <tr>
+                        <td class="text-center row-num">{{ $i + 1 }}</td>
+                        <td>
+                            <select class="form-select form-select-sm" data-field="company">
+                                <option value="">-- เลือก --</option>
+                                @foreach($companies as $c)
+                                <option value="{{ $c }}" {{ ($row['company'] ?? '') == $c ? 'selected' : '' }}>{{ $c }}</option>
+                                @endforeach
+                            </select>
+                        </td>
+                        <td><input type="date" class="form-control form-control-sm" data-field="mdate"    value="{{ substr($row['mdate']    ?? '', 0, 10) }}"></td>
+                        <td><input type="date" class="form-control form-control-sm" data-field="custwant" value="{{ substr($row['custwant'] ?? '', 0, 10) }}"></td>
+                        <td><input type="date" class="form-control form-control-sm" data-field="senddate" value="{{ substr($row['senddate'] ?? '', 0, 10) }}"></td>
+                        <td><input type="text" class="form-control form-control-sm bg-light" data-field="custno"   value="{{ $default_custno }}" readonly></td>
+                        <td><input type="text" class="form-control form-control-sm" data-field="itemno"   value="{{ $row['itemno']   ?? '' }}" placeholder="Item No."></td>
+                        <td><input type="text" class="form-control form-control-sm" data-field="quantity" value="{{ $row['quantity'] ?? '' }}" placeholder="0"></td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-danger btn-icon btn_remove_row">
+                                <i class="ti ti-trash ti-sm"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr class="empty-row">
+                        <td colspan="9" class="text-center text-muted py-2">ยังไม่มีรายการ Pigment</td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+    </form>
+</div>
+
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+        <i class="ti ti-x me-1"></i>ยกเลิก
+    </button>
+    <button type="button" class="btn btn-primary" id="btn_save_planning_item">
+        <i class="ti ti-device-floppy me-1"></i>บันทึก
+    </button>
+</div>
+
+<script>
+(function () {
+    // ── ค่า default จาก planning_header แม่ ──
+    var DEFAULT_MDATE  = '{{ $default_mdate }}';
+    var DEFAULT_CUSTNO = '{{ $default_custno }}';
+
+    var COMPANY_OPTIONS =
+        '<option value="">-- เลือก --</option>' +
+        '<option value="CP">CP</option>' +
+        '<option value="MB">MB</option>' +
+        '<option value="DB">DB</option>' +
+        '<option value="SPP">SPP</option>';
+
+    function renumber(tbodyId) {
+        $('#' + tbodyId + ' tr:not(.empty-row)').each(function (i) {
+            $(this).find('.row-num').text(i + 1);
+        });
+    }
+
+    function newRow() {
+        return '<tr>' +
+            '<td class="text-center row-num">1</td>' +
+            '<td><select class="form-select form-select-sm" data-field="company">' + COMPANY_OPTIONS + '</select></td>' +
+            '<td><input type="date" class="form-control form-control-sm" data-field="mdate"    value="' + DEFAULT_MDATE + '"></td>' +
+            '<td><input type="date" class="form-control form-control-sm" data-field="custwant" value=""></td>' +
+            '<td><input type="date" class="form-control form-control-sm" data-field="senddate" value=""></td>' +
+            '<td><input type="text" class="form-control form-control-sm bg-light" data-field="custno"   value="' + DEFAULT_CUSTNO + '" readonly placeholder="Cust No."></td>' +
+            '<td><input type="text" class="form-control form-control-sm" data-field="itemno"   value="" placeholder="Item No."></td>' +
+            '<td><input type="text" class="form-control form-control-sm" data-field="quantity" value="" placeholder="0"></td>' +
+            '<td class="text-center"><button type="button" class="btn btn-sm btn-danger btn-icon btn_remove_row"><i class="ti ti-trash ti-sm"></i></button></td>' +
+            '</tr>';
+    }
+
+    function addRow(tbodyId) {
+        var $tbody = $('#' + tbodyId);
+        $tbody.find('.empty-row').remove();
+        $tbody.append(newRow());
+        renumber(tbodyId);
+    }
+
+    function checkEmpty(tbodyId, label) {
+        if ($('#' + tbodyId + ' tr').length === 0) {
+            $('#' + tbodyId).append(
+                '<tr class="empty-row"><td colspan="8" class="text-center text-muted py-2">ยังไม่มีรายการ ' + label + '</td></tr>'
+            );
+        }
+    }
+
+    function collectRows(tbodyId) {
+        var rows = [];
+        $('#' + tbodyId + ' tr:not(.empty-row)').each(function () {
+            rows.push({
+                company:  $(this).find('[data-field="company"]').val()  || '',
+                mdate:    $(this).find('[data-field="mdate"]').val()    || '',
+                custwant: $(this).find('[data-field="custwant"]').val() || '',
+                senddate: $(this).find('[data-field="senddate"]').val() || '',
+                custno:   $(this).find('[data-field="custno"]').val()   || '',
+                itemno:   $(this).find('[data-field="itemno"]').val()   || '',
+                quantity: $(this).find('[data-field="quantity"]').val() || ''
+            });
+        });
+        return rows;
+    }
+
+    // ── Add buttons ──
+    $('#btn_add_semi_row').on('click',    function () { addRow('tbody_semi'); });
+    $('#btn_add_pigment_row').on('click', function () { addRow('tbody_pigment'); });
+
+    // ── Remove buttons ──
+    $('#tbody_semi').on('click', '.btn_remove_row', function () {
+        $(this).closest('tr').remove();
+        renumber('tbody_semi');
+        checkEmpty('tbody_semi', 'Semi');
+    });
+    $('#tbody_pigment').on('click', '.btn_remove_row', function () {
+        $(this).closest('tr').remove();
+        renumber('tbody_pigment');
+        checkEmpty('tbody_pigment', 'Pigment');
+    });
+
+    // ── hook serialize ก่อน save ──
+    $('#planning_item_form').data('serialize_fn', function () {
+        $('#semi_json').val(JSON.stringify(collectRows('tbody_semi')));
+        $('#pigment_json').val(JSON.stringify(collectRows('tbody_pigment')));
+    });
+})();
+</script>

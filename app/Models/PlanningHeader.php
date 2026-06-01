@@ -18,4 +18,10 @@ class PlanningHeader extends Model
     {
         return $this->hasMany(Planning::class, 'planning_header_id', 'id');
     }
+
+    // link กลับหา planning item แม่ (สำหรับ sub-order headers)
+    public function parent_planning()
+    {
+        return $this->belongsTo(Planning::class, 'parent_planning_id', 'id');
+    }
 }
