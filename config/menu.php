@@ -4,19 +4,19 @@ return [
     'ColorMatching' => [
         'title' => 'เทียบสี',
         'icon' => 'ti-receipt-tax',
-        'route_name' => 'category.color_matching',
+        'route_name' => 'color_matching.index',
         'permission' => 'color_matching read',
     ],
     'Quotation' => [
         'title' => 'ใบเสนอราคา',
         'icon' => 'ti-receipt-tax',
-        'route_name' => 'category.index',
+        'route_name' => 'quotation.index',
         'permission' => 'quotation read',
     ],
     'Order' => [
         'title' => 'Order',
         'icon' => 'ti-receipt-tax',
-        'route_name' => 'category.order',
+        'route_name' => 'order.index',
         'permission' => 'order read',
     ],
 
@@ -44,13 +44,13 @@ return [
     'Customer' => [
         'title' => 'ฐานข้อมูลลูกค้า',
         'icon' => 'ti-receipt-tax',
-        'route_name' => 'category.customer',
+        'route_name' => 'customer.index',
         'permission' => 'customer read',
     ],
     'Report' => [
         'title' => 'รางยงาน',
         'icon' => 'ti-receipt-tax',
-        'route_name' => 'category.report',
+        'route_name' => 'report.index',
         'permission' => 'report read',
     ],
     'MasterSettings' => [
@@ -60,7 +60,7 @@ return [
     'Permission' => [
         'title' => 'สิทธิ์การใช้งาน',
         'icon' => 'ti-receipt-tax',
-        'route_name' => 'category.permission',
+        'route_name' => 'permission.index',
         'permission' => 'permission read',
     ],
 
