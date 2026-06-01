@@ -28,6 +28,14 @@
 
                     <div class="card-header">
                         <div class="row g-3 align-items-center">
+                            <div class="col-md-12" style="text-align: right">
+                                <button class="btn btn-primary" id="btn_add">
+                                    <i class="ti ti-plus me-1"></i>
+                                    สร้างแผนการผลิต
+                                </button>
+                            </div>
+                        </div>
+                        <div class="row g-3 align-items-center">
                             <div class="col-md-3">
                                 <input id="searchInput" type="text" class="form-control"
                                 placeholder="ค้นหาเลขที่ใบสั่งซื้อ, รหัสลูกค้า, ขื่อลูกค้า">
@@ -50,8 +58,7 @@
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <input type="date"
-                                    class="form-control">
+                                <input type="date" class="form-control">
                             </div>
                         </div>
                     </div>
@@ -64,9 +71,10 @@
                                         <th class="col-1">#</th>
                                         <th class="col-1">Orderno</th>
                                         <th class="col-1">Company</th>
-                                        <th class="col-2">Custwant</th>
-                                        <th class="col-1">Custno</th>
-                                        <th class="col-3">Custname</th>
+                                        <th class="col-2">Mdate</th>
+                                        <th class="col-2">Itemno</th>
+                                        <th class="col-1">Quantity</th>
+                                        <th class="col-2">MachineNo</th>
                                         <th class="col-2">Manage</th>
                                     </tr>
                                 </thead>
@@ -79,6 +87,16 @@
 
         </div>
     </div>
+
+    <!-- Planning Modal -->
+    <div class="modal fade" id="planningModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content" id="result_detail">
+
+            </div>
+        </div>
+    </div>
+    <!-- Sale Order Modal -->
 @endsection
 
 @section('script')
@@ -104,11 +122,12 @@
             },
             columns: [
                 { 'className': "text-center", data: 'rownum', name: 'rownum', orderable: false },
-                { 'className': "text-center", data: 'order_id', name: 'order_id', orderable: false },
+                { 'className': "text-center", data: 'orderno', name: 'orderno', orderable: false },
                 { 'className': "text-center", data: 'company', name: 'company', orderable: false },
-                { 'className': "text-center", data: 'custwant', name: 'custwant', orderable: false },
-                { 'className': "text-left", data: 'Itemno', name: 'Itemno', orderable: false },
+                { 'className': "text-center", data: 'mdate', name: 'mdate', orderable: false },
+                { 'className': "text-left", data: 'itemno', name: 'itemno', orderable: false },
                 { 'className': "text-left", data: 'quantity', name: 'quantity', orderable: false },
+                { 'className': "text-left", data: 'machine_no', name: 'machine_no', orderable: false },
                 { 'className': "text-center", data: 'btnedit', name: 'btnedit', orderable: false, searchable: false },
             ],
             order: [
@@ -133,10 +152,54 @@
         oTable.draw();
     });
 
+    $(document).on('click', '#btn_add', function(e){
+        e.preventDefault();
+        let planning_id = '';
+        $.ajax({
+            type: 'GET',
+            url: '{{ route("production.planning.edit") }}',
+            dataType: 'json',
+            cache: false,
+            data: {
+                planning_id: planning_id
+            },
+            success: function(response) {
+                if (response.status == 200) {
+                    $('#result_detail').html(response.data);
+                    const modal = new bootstrap.Modal(document.getElementById('planningModal'));
+                    modal.show();
+                }
+            },
+            error: function(response) {
+                console.log("error");
+                console.log(response.responseJSON);
+            }
+        })
+    });
+
     $(document).on('click', '.btn_edit', function(e){
         e.preventDefault();
-        let Orderno = $(this).data('orderno');
-        alert(Orderno);
+        let planning_id = $(this).data('planning_id');
+        $.ajax({
+            type: 'GET',
+            url: '{{ route("production.planning.edit") }}',
+            dataType: 'json',
+            cache: false,
+            data: {
+                planning_id: planning_id
+            },
+            success: function(response) {
+                if (response.status == 200) {
+                    $('#result_detail').html(response.data);
+                    const modal = new bootstrap.Modal(document.getElementById('planningModal'));
+                    modal.show();
+                }
+            },
+            error: function(response) {
+                console.log("error");
+                console.log(response.responseJSON);
+            }
+        });
     })
 
 

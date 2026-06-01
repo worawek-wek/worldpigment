@@ -95,11 +95,13 @@ class OrderController extends Controller
 
         $data_planning_header = [
             'planning_code' => $order->Orderno,
+            'mdate' => $order->Mdate,
             'company' => $order->Company,
             'orderno' => $order->Orderno,
             'custno' => $order->Custno,
             'saleno' => $order->Emp,
-            'netqty' => $order->netqty
+            'netqty' => $order->netqty,
+            'plan_type' => 'ORDER',
         ];
 
         $planning_header = PlanningHeader::create($data_planning_header);
@@ -107,7 +109,8 @@ class OrderController extends Controller
         foreach($order->suborders as $suborder){
             $planning = [
                 'planning_header_id' => $planning_header->id,
-                'itemno' => $suborder->Itemno
+                'itemno' => $suborder->Itemno,
+                'plan_type' => 'ORDER',
             ];
 
             Planning::create($planning);

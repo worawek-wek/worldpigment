@@ -16,7 +16,7 @@ class ProductionPlanController extends Controller
     {
         $data = $this->dataQuery();
 
-        return view('production-planning.planning');
+        return view('production-planning.planning.index');
     }
 
     public function datatable()
@@ -29,10 +29,10 @@ class ProductionPlanController extends Controller
                 return $row->rownum;
             })
             ->addColumn('btnedit', function($row) {
-                $btn_view = '<button class="btn btn-sm btn-icon btn-info me-2 btn_view" data-orderno="'.$row->id.'" title ="ลบ">
+                $btn_view = '<button class="btn btn-sm btn-icon btn-info me-2 btn_view" data-planning_id="'.$row->id.'" title ="ลบ">
                     <i class="ti ti-eye text-white ti-sm"></i>
                 </button>';
-                $btn_edit = '<button class="btn btn-sm btn-icon btn-warning me-2 btn_edit" data-orderno="'.$row->id.'" title ="แก้ไข">
+                $btn_edit = '<button class="btn btn-sm btn-icon btn-warning me-2 btn_edit" data-planning_id="'.$row->id.'" title ="แก้ไข">
                     <i class="ti ti-pencil text-white ti-sm"></i>
                 </button>';
 
@@ -52,8 +52,8 @@ class ProductionPlanController extends Controller
             ->select([
                 'tb_planning.*',
                 'tb_planning_header.company',
-                'tb_planning_header.order_id',
-                'tb_planning_header.custwant',
+                'tb_planning_header.orderno',
+                'tb_planning_header.mdate',
                 DB::raw('ROW_NUMBER() OVER (ORDER BY tb_planning.id DESC) AS rownum')
             ])
             ->orderby('tb_planning.id', 'desc');
@@ -64,5 +64,32 @@ class ProductionPlanController extends Controller
         // }
 
         return $data;
+    }
+
+    public function edit()
+    {
+        $planning_id = request('planning_id');
+
+        $planning = Planning::where('id', $planning_id)->first();
+
+        $other_plannings = null;
+        if($planning){
+            $other_plannings = $planning->planning_header
+                ->plannings()
+                ->where('id', '!=', $planning_id)
+                ->get();
+        }
+
+        $data = [
+            'planning' => $planning,
+            'other_plannings' => $other_plannings
+        ];
+
+        $html = view('production-planning.planning.planning-form', $data)->render();
+
+        return response()->json([
+            'status' => 200,
+            'data' => $html
+        ]);
     }
 }
