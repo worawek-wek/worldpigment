@@ -48,7 +48,7 @@ return [
         'permission' => 'customer read',
     ],
     'Report' => [
-        'title' => 'รางยงาน',
+        'title' => 'รายงาน',
         'icon' => 'ti-receipt-tax',
         'route_name' => 'report.index',
         'permission' => 'report read',
