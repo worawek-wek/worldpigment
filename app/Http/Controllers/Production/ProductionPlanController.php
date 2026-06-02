@@ -268,9 +268,9 @@ class ProductionPlanController extends Controller
                 'plan_type'          => $type,
                 'parent_planning_id' => $parent->id,
                 'company'            => $entry['company']   ?? null,
-                'mdate'              => $entry['mdate']     ?? null,
-                'custwant'           => $entry['custwant']  ?? null,
-                'senddate'           => $entry['senddate']  ?? null,
+                'mdate'              => !empty($entry['mdate']) ? $entry['mdate'] : null,
+                'custwant'           => !empty($entry['custwant']) ? $entry['custwant'] : null,
+                'senddate'           => !empty($entry['senddate']) ? $entry['senddate'] : null,
                 'custno'             => $entry['custno']    ?? null,
                 'orderno'            => $parent_orderno,
             ]);
@@ -281,6 +281,9 @@ class ProductionPlanController extends Controller
                 'plan_type'          => $type,
                 'itemno'             => $entry['itemno']   ?? null,
                 'quantity'           => $entry['quantity'] ?? null,
+                'mdate'              => !empty($entry['mdate']) ? $entry['mdate'] : null,
+                'custwant'           => !empty($entry['custwant']) ? $entry['custwant'] : null,
+                'senddate'           => !empty($entry['senddate']) ? $entry['senddate'] : null,
             ]);
         }
     }
