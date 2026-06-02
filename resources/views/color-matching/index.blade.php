@@ -279,238 +279,209 @@
             $('.p_search').val('');
             loadData("{{$page_url}}/datatable");
         }
-        var update_id = 999999999999;
-        function view(id){
-            update_id = id;
+        // ────────────────────────────────────────────────────────
+        //  CRUD: testmain (Color Matching + Sample Delivery)
+        // ────────────────────────────────────────────────────────
+
+        const CSRF = "{{ csrf_token() }}";
+
+        // เปิด modal ใบนำส่งเทียบสีในโหมด create — เคลียร์ form
+        $('#colorMatchingModal').on('show.bs.modal', function (event) {
+            const trigger = event.relatedTarget;
+            // ถ้าเปิดจากปุ่ม + (ไม่ใช่ปุ่ม edit ที่มี data-sendno) → reset
+            if (!trigger || !trigger.dataset.sendno) {
+                $('#form_color_matching')[0].reset();
+                $('#form_color_matching [name="_mode"]').val('create');
+                $('#form_color_matching [name="_pk"]').val('');
+            }
+        });
+
+        // เปิด modal ใบส่ง ต.ย. ในโหมด create — เคลียร์ form
+        $('#sampleDeliveryModal').on('show.bs.modal', function (event) {
+            const trigger = event.relatedTarget;
+            if (!trigger || !trigger.dataset.sendno) {
+                $('#form_sample_delivery')[0].reset();
+                $('#form_sample_delivery [name="_mode"]').val('create');
+                $('#form_sample_delivery [name="_pk"]').val('');
+                $('#form_sample_delivery [name="SendNo"]').val('');
+            }
+        });
+
+        // ดู / แก้ไข — โหลด record มาเติม form แล้วเปิด modal
+        function view(sendno) {
             $.ajax({
                 type: "GET",
-                url: "{{ $page_url }}/"+id,
-                success: function(data) {
-                    $("#view").html(data);
-                    $('#exampleFormControlSelect'+id).select2({
-                        placeholder: 'เลือกผู้เช่า',
-                        allowClear: true,
-                        dropdownParent: $('#editModal'), // 💥 สำคัญมาก ถ้าอยู่ใน modal
-                        width: '100%'
-                    });
-                    // update_id = id;
+                url: "{{$page_url}}/" + encodeURIComponent(sendno),
+                success: function(row) {
+                    fillForm('#form_color_matching', row);
+                    $('#form_color_matching [name="_mode"]').val('edit');
+                    $('#form_color_matching [name="_pk"]').val(sendno);
+                    $('#colorMatchingModal').modal('show');
+                },
+                error: function() {
+                    Swal.fire('ไม่พบข้อมูล', '', 'error');
                 }
             });
         }
 
-        var import_id = 999999999999;
-        function getImportForm(id){
-            import_id = id;
+        // ดู / แก้ไข — เปิด modal SD พร้อมข้อมูล
+        function viewSampleDelivery(sendno) {
             $.ajax({
                 type: "GET",
-                url: "{{ $page_url }}/import/"+id,
-                success: function(data) {
-                    $("#importStock").html(data);
+                url: "{{$page_url}}/" + encodeURIComponent(sendno),
+                success: function(row) {
+                    fillForm('#form_sample_delivery', row);
+                    $('#form_sample_delivery [name="_mode"]').val('edit');
+                    $('#form_sample_delivery [name="_pk"]').val(sendno);
+                    $('#form_sample_delivery [name="SendNo"]').val(sendno);
+                    $('#sampleDeliveryModal').modal('show');
+                },
+                error: function() {
+                    Swal.fire('ไม่พบข้อมูล', '', 'error');
                 }
             });
         }
 
-        function getHistory(id){
-            $.ajax({
-                type: "GET",
-                url: "{{ $page_url }}/history/"+id,
-                success: function(data) {
-                    $("#history-table").html(data);
+        // เติม field ของ form ด้วย JSON record
+        function fillForm(formSelector, row) {
+            Object.keys(row).forEach(function(col) {
+                const $input = $(formSelector + ' [name="' + col + '"]');
+                if ($input.length === 0) return;
+
+                if ($input.is(':checkbox')) {
+                    $input.prop('checked', row[col] == 1);
+                } else if ($input.attr('type') === 'date' && row[col]) {
+                    // datetime / date string → 'YYYY-MM-DD'
+                    $input.val(String(row[col]).substring(0, 10));
+                } else {
+                    $input.val(row[col] ?? '');
                 }
             });
         }
 
-        $('#insert_category').on('submit', function(event) {
-            event.preventDefault(); // ป้องกันการส่งฟอร์มปกติ
-            if(!this.checkValidity()) {
-                // ถ้าฟอร์มไม่ถูกต้อง
-                this.reportValidity();
-                return console.log('ฟอร์มไม่ถูกต้อง');
-            }
-            // return alert(123);
+        // Submit ใบนำส่งเทียบสี (CM)
+        $('#form_color_matching').on('submit', function(event) {
+            event.preventDefault();
+            if (!this.checkValidity()) { this.reportValidity(); return; }
+
+            const mode = $(this).find('[name="_mode"]').val();
+            const pk   = $(this).find('[name="_pk"]').val();
+            const isEdit = mode === 'edit' && pk;
+
             Swal.fire({
                 title: 'ยืนยันการดำเนินการ?',
-                text: 'คุณต้องการเพิ่มหมวดหมู่หรือไม่?',
+                text: isEdit ? 'บันทึกการแก้ไขใบนำส่งเทียบสี?' : 'สร้างใบนำส่งเทียบสีใหม่?',
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonText: 'ตกลง',
-                cancelButtonText: 'ยกเลิก',
-                showDenyButton: false,
-                didOpen: () => {
-                    // โฟกัสที่ปุ่ม confirm
-                    Swal.getConfirmButton().focus();
-                }
+                cancelButtonText: 'ยกเลิก'
             }).then((result) => {
-                if (result.isConfirmed) {
-                    let form = document.getElementById('insert_category');
-                    let formData = new FormData(form);
-                    formData.append('_token', '{{ csrf_token() }}'); // สำหรับ Laravel CSRF
+                if (!result.isConfirmed) return;
 
-                    $.ajax({
-                        url: '{{$page_url}}/insert', // เปลี่ยน URL เป็นจุดหมายที่ต้องการ
-                        type: 'POST',
-                        data: formData,
-                        contentType: false, // ต้องมีเพื่อให้ส่ง multipart/form-data ได้
-                        processData: false,
-                        success: function(response) {
-                            if(response == true){
-                                $('#insert_category')[0].reset();
-                                Swal.fire('เพิ่มหมวดหมู่เรียบร้อยแล้ว', '', 'success');
-                                $('#addModal').modal('hide');
-                                loadData(page);
-                            }
-                        },
-                        error: function(error) {
-                            Swal.fire('เกิดข้อผิดพลาด', '', 'error');
-                            console.error('เกิดข้อผิดพลาด:', error);
-                        }
-                    });
-                } else if (result.isDismissed) {
-                    // Swal.fire('ยกเลิกการดำเนินการ', '', 'info');
-                }
-            });
-        });
-        $('#update_category').on('submit', function(event) {
-            event.preventDefault(); // ป้องกันการส่งฟอร์มปกติ
-            if(!this.checkValidity()) {
-                // ถ้าฟอร์มไม่ถูกต้อง
-                this.reportValidity();
-                return console.log('ฟอร์มไม่ถูกต้อง');
-            }
-            // return alert(123);
-            Swal.fire({
-                title: 'ยืนยันการดำเนินการ?',
-                text: 'คุณต้องการแก้ไขหมวดหมู่หรือไม่?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'ตกลง',
-                cancelButtonText: 'ยกเลิก',
-                showDenyButton: false,
-                didOpen: () => {
-                    // โฟกัสที่ปุ่ม confirm
-                    Swal.getConfirmButton().focus();
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    
-                    // ใช้ FormData แทน serialize เพื่อส่งไฟล์ได้
-                    let form = document.getElementById('update_category');
-                    let formData = new FormData(form);
-                    formData.append('_token', '{{ csrf_token() }}'); // สำหรับ Laravel CSRF
+                const fd = new FormData(this);
+                fd.append('_token', CSRF);
 
-                    $.ajax({
-                        url: '{{$page_url}}/update/'+update_id, // เปลี่ยน URL เป็นจุดหมายที่ต้องการ
-                        type: 'POST',
-                        data: formData,
-                        contentType: false, // ต้องมีเพื่อให้ส่ง multipart/form-data ได้
-                        processData: false,
-                        success: function(response) {
-                            if(response == true){
-                                Swal.fire('แก้ไขหมวดหมู่เรียบร้อยแล้ว', '', 'success');
-                                $('#editModal').modal('hide');
-                                loadData(page);
-                            }
-                        },
-                        error: function(error) {
-                            Swal.fire('เกิดข้อผิดพลาด', '', 'error');
-                            console.error('เกิดข้อผิดพลาด:', error);
-                        }
-                    });
-                } else if (result.isDismissed) {
-                    // Swal.fire('ยกเลิกการดำเนินการ', '', 'info');
-                }
-            });
-        });
-        $('#update_equipment_stocks').on('submit', function(event) {
-            event.preventDefault(); // ป้องกันการส่งฟอร์มปกติ
-            if(!this.checkValidity()) {
-                // ถ้าฟอร์มไม่ถูกต้อง
-                this.reportValidity();
-                return console.log('ฟอร์มไม่ถูกต้อง');
-            }
-            // return alert(123);
-            Swal.fire({
-                title: 'ยืนยันการดำเนินการ?',
-                text: 'คุณต้องการนำเข้าหมวดหมู่หรือไม่?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'ตกลง',
-                cancelButtonText: 'ยกเลิก',
-                showDenyButton: false,
-                didOpen: () => {
-                    // โฟกัสที่ปุ่ม confirm
-                    Swal.getConfirmButton().focus();
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    
-                    // ใช้ FormData แทน serialize เพื่อส่งไฟล์ได้
-                    let form = document.getElementById('update_equipment_stocks');
-                    let formData = new FormData(form);
-                    formData.append('_token', '{{ csrf_token() }}'); // สำหรับ Laravel CSRF
+                const url = isEdit
+                    ? '{{$page_url}}/update/' + encodeURIComponent(pk)
+                    : '{{$page_url}}/insert';
 
-                    $.ajax({
-                        url: '{{$page_url}}/update_stock/'+import_id, // เปลี่ยน URL เป็นจุดหมายที่ต้องการ
-                        type: 'POST',
-                        data: formData,
-                        contentType: false, // ต้องมีเพื่อให้ส่ง multipart/form-data ได้
-                        processData: false,
-                        success: function(response) {
-                            if(response == true){
-                                Swal.fire('นำเข้าหมวดหมู่เรียบร้อยแล้ว', '', 'success');
-                                $('#addStock').modal('hide');
-                                loadData(page);
-                            }
-                        },
-                        error: function(error) {
-                            Swal.fire('เกิดข้อผิดพลาด', '', 'error');
-                            console.error('เกิดข้อผิดพลาด:', error);
+                $.ajax({
+                    url: url, type: 'POST', data: fd,
+                    contentType: false, processData: false,
+                    success: function(resp) {
+                        if (resp && resp.ok) {
+                            Swal.fire(isEdit ? 'แก้ไขเรียบร้อย' : 'เพิ่มเรียบร้อย', '', 'success');
+                            $('#colorMatchingModal').modal('hide');
+                            loadData(page);
+                        } else {
+                            Swal.fire('เกิดข้อผิดพลาด', resp.error ?? '', 'error');
                         }
-                    });
-                } else if (result.isDismissed) {
-                    // Swal.fire('ยกเลิกการดำเนินการ', '', 'info');
-                }
-            });
-        });
-        
-        function Delete(id){
-                Swal.fire({
-                    title: 'ยืนยันการดำเนินการ?',
-                    text: 'คุณต้องการลบหมวดหมู่หรือไม่?',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'ตกลง',
-                    cancelButtonText: 'ยกเลิก',
-                    showDenyButton: false,
-                    didOpen: () => {
-                        // โฟกัสที่ปุ่ม confirm
-                        Swal.getConfirmButton().focus();
-                    }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            url: '{{$page_url}}/'+id, // เปลี่ยน URL เป็นจุดหมายที่ต้องการ
-                            type: 'DELETE',
-                            data: {
-                                _token : "{{ csrf_token() }}"
-                            },
-                            success: function(response) {
-                                if(response == true){
-                                    loadData(page);
-                                    Swal.fire('ลบหมวดหมู่เรียบร้อยแล้ว', '', 'success');
-                                }else{
-                                    Swal.fire('ไม่สามารถลบบัญชีได้', '', 'error');
-                                }
-                            },
-                            error: function(error) {
-                                Swal.fire('เกิดข้อผิดพลาด', '', 'error');
-                                console.error('เกิดข้อผิดพลาด:', error);
-                            }
-                        });
-                    } else if (result.isDismissed) {
-                        // Swal.fire('ยกเลิกการดำเนินการ', '', 'info');
+                    },
+                    error: function(xhr) {
+                        Swal.fire('เกิดข้อผิดพลาด', xhr.responseJSON?.error ?? '', 'error');
                     }
                 });
+            });
+        });
+
+        // Submit ใบส่ง ต.ย. (SD) — โดย default เป็นการ update row testmain (อ้างอิงด้วย SendNo)
+        $('#form_sample_delivery').on('submit', function(event) {
+            event.preventDefault();
+            if (!this.checkValidity()) { this.reportValidity(); return; }
+
+            const mode = $(this).find('[name="_mode"]').val();
+            const pk   = $(this).find('[name="_pk"]').val();
+            const sendNo = $(this).find('[name="SendNo"]').val();
+
+            // ถ้ามี SendNo (อ้างอิงใบ CM) → update; ถ้าไม่มี → insert
+            const isUpdate = !!(pk || sendNo);
+
+            Swal.fire({
+                title: 'ยืนยันการดำเนินการ?',
+                text: 'บันทึกใบส่ง ต.ย. ให้ลูกค้า?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ตกลง',
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (!result.isConfirmed) return;
+
+                const fd = new FormData(this);
+                fd.append('_token', CSRF);
+
+                const url = isUpdate
+                    ? '{{$page_url}}/update/' + encodeURIComponent(pk || sendNo)
+                    : '{{$page_url}}/insert';
+
+                $.ajax({
+                    url: url, type: 'POST', data: fd,
+                    contentType: false, processData: false,
+                    success: function(resp) {
+                        if (resp && resp.ok) {
+                            Swal.fire('บันทึกเรียบร้อย', '', 'success');
+                            $('#sampleDeliveryModal').modal('hide');
+                            loadData(page);
+                        } else {
+                            Swal.fire('เกิดข้อผิดพลาด', resp.error ?? '', 'error');
+                        }
+                    },
+                    error: function(xhr) {
+                        Swal.fire('เกิดข้อผิดพลาด', xhr.responseJSON?.error ?? '', 'error');
+                    }
+                });
+            });
+        });
+
+        // ลบ record
+        function Delete(sendno) {
+            Swal.fire({
+                title: 'ยืนยันการลบ?',
+                text: 'จะลบใบเทียบสี ' + sendno + ' ออกจากระบบ ไม่สามารถกู้คืนได้',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ลบ',
+                confirmButtonColor: '#d33',
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (!result.isConfirmed) return;
+
+                $.ajax({
+                    url: '{{$page_url}}/' + encodeURIComponent(sendno),
+                    type: 'DELETE',
+                    data: { _token: CSRF },
+                    success: function(resp) {
+                        if (resp && resp.ok) {
+                            Swal.fire('ลบเรียบร้อย', '', 'success');
+                            loadData(page);
+                        } else {
+                            Swal.fire('ไม่สามารถลบได้', resp.error ?? '', 'error');
+                        }
+                    },
+                    error: function(xhr) {
+                        Swal.fire('เกิดข้อผิดพลาด', xhr.responseJSON?.error ?? '', 'error');
+                    }
+                });
+            });
         }
 </script>
 </body>

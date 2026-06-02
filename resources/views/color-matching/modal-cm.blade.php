@@ -17,6 +17,10 @@
 
             <form id="form_color_matching" enctype="multipart/form-data">
                 @csrf
+                {{-- _mode = 'create' หรือ 'edit' (set by JS เมื่อเปิด modal) --}}
+                <input type="hidden" name="_mode" value="create">
+                {{-- _pk = SendNo เดิม ตอน edit --}}
+                <input type="hidden" name="_pk" value="">
 
                 <!-- Body -->
                 <div class="modal-body px-5 py-4" style="background-color: #f8f9fb;">
@@ -47,23 +51,22 @@
                                 <div class="row g-3">
                                     <div class="col-md-2">
                                         <label class="form-label small mb-1">รหัสลูกค้า</label>
-                                        <input type="text" name="customer_code" class="form-control" value="00221">
+                                        <input type="text" name="custno" class="form-control">
                                     </div>
                                     <div class="col-md-5">
                                         <label class="form-label small mb-1">
                                             <span class="badge bg-label-secondary me-1">TH</span>
                                             ชื่อบริษัท (ไทย)
                                         </label>
-                                        <input type="text" name="customer_name_th" class="form-control"
-                                            value="บริษัท เมทเทิล พลาสติก จำกัด">
+                                        <input type="text" name="custname" class="form-control">
                                     </div>
                                     <div class="col-md-5">
                                         <label class="form-label small mb-1">
                                             <span class="badge bg-label-secondary me-1">EN</span>
                                             ชื่อบริษัท (อังกฤษ)
                                         </label>
-                                        <input type="text" name="customer_name_en" class="form-control"
-                                            value="Metal Plastic Co., Ltd.">
+                                        <input type="text" name="custname_en" class="form-control"
+                                            placeholder="(ยังไม่มี column ใน DB — รอ user แจ้ง)">
                                     </div>
                                 </div>
                             </div>
@@ -81,20 +84,21 @@
                                 <div class="row g-3">
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">เลขที่ใบนำส่งเทียบสี</label>
-                                        <input type="text" name="doc_no" class="form-control" value="68/0255">
+                                        <input type="text" name="SendNo" class="form-control" required>
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">วันที่ส่งเทียบสี</label>
-                                        <input type="date" name="doc_date" class="form-control" value="{{ date('Y-m-d') }}">
+                                        <input type="date" name="TestDate" class="form-control" value="{{ date('Y-m-d') }}">
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">ประเภทงาน</label>
-                                        <select name="job_type" class="form-select">
+                                        <select name="Type_Work" class="form-select">
+                                            <option value="">-- เลือก --</option>
                                             <option>เป่าฟิมล์</option>
                                             <option>เป่าขวด</option>
                                             <option>EXT</option>
                                             <option>ROLL</option>
-                                            <option selected>INJ</option>
+                                            <option>INJ</option>
                                             <option>CY</option>
                                         </select>
                                     </div>
@@ -103,7 +107,7 @@
                                             <i class="ti ti-asterisk-simple"></i>
                                             ปรับแก้ไขครั้งที่
                                         </label>
-                                        <select name="revision" class="form-select">
+                                        <select name="Adj" class="form-select">
                                             <option>New</option>
                                             <option>Revise 1</option>
                                             <option>Revise 2</option>
@@ -125,19 +129,18 @@
                                 <div class="row g-3">
                                     <div class="col-md-5">
                                         <label class="form-label small mb-1">สี</label>
-                                        <select name="color" class="form-select">
-                                            <option>DB PINK-Y AS50%+ABS50%</option>
-                                        </select>
+                                        <input type="text" name="color" class="form-control"
+                                            placeholder="ชื่อสี เช่น DB PINK-Y AS50%+ABS50%">
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label small mb-1">คุณสมบัติ</label>
-                                        <select name="property" class="form-select">
-                                            <option></option>
-                                        </select>
+                                        <label class="form-label small mb-1">คุณสมบัติ (STD)</label>
+                                        <input type="text" name="STD" class="form-control"
+                                            placeholder="ตามสูตรที่แนบ">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label small mb-1">นำไปทำชิ้นงาน</label>
-                                        <select name="application" class="form-select">
+                                        <label class="form-label small mb-1">นำไปทำชิ้นงาน (Model)</label>
+                                        <select name="Model" class="form-select">
+                                            <option value="">-- เลือก --</option>
                                             <option>ตลับแป้ง</option>
                                             <option>สายไฟ</option>
                                             <option>สายรัด</option>
@@ -163,28 +166,31 @@
                                 <div class="row g-3">
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">ผู้รับเอกสาร</label>
-                                        <select name="receiver" class="form-select">
+                                        <select name="TNname" class="form-select">
+                                            <option value="">-- เลือก --</option>
                                             <option>วารุณี</option>
+                                            <option>สุเมธ</option>
+                                            <option>เมตตา</option>
                                         </select>
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">เลขที่ใบรายงานผล</label>
-                                        <input type="text" name="report_no" class="form-control bg-label-secondary" value="68/0255">
+                                        <input type="text" name="rptno" class="form-control">
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">รอวัตถุดิบ</label>
-                                        <input type="text" name="waiting_material" class="form-control">
+                                        <input type="text" name="RminWating" class="form-control">
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">กำหนดเทียบสีเสร็จ</label>
-                                        <input type="date" name="due_date" class="form-control">
+                                        <input type="date" name="Respdate" class="form-control">
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label small mb-1">
                                             <i class="ti ti-note me-1"></i>
                                             หมายเหตุ
                                         </label>
-                                        <input type="text" name="remark" class="form-control">
+                                        <input type="text" name="Mems" class="form-control">
                                     </div>
                                 </div>
                             </div>

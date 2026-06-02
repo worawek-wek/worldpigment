@@ -113,12 +113,19 @@
 
                     <td>
                         <button class="btn btn-sm btn-icon btn-label-primary"
-                            title="ดู" onclick="view('{{ $row->SendNo }}')">
-                            <i class="ti ti-eye"></i>
-                        </button>
-                        <button class="btn btn-sm btn-icon btn-label-warning"
-                            title="แก้ไข" data-bs-toggle="modal" data-bs-target="#colorMatchingModal">
+                            title="แก้ไขใบนำส่งเทียบสี"
+                            onclick="view('{{ $row->SendNo }}')">
                             <i class="ti ti-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-icon btn-label-info"
+                            title="แก้ไขใบส่ง ต.ย."
+                            onclick="viewSampleDelivery('{{ $row->SendNo }}')">
+                            <i class="ti ti-package"></i>
+                        </button>
+                        <button class="btn btn-sm btn-icon btn-label-danger"
+                            title="ลบ"
+                            onclick="Delete('{{ $row->SendNo }}')">
+                            <i class="ti ti-trash"></i>
                         </button>
                     </td>
                 </tr>

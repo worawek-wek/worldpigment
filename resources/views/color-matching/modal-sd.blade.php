@@ -17,6 +17,11 @@
 
             <form id="form_sample_delivery" enctype="multipart/form-data">
                 @csrf
+                {{-- _mode = 'create' หรือ 'edit' (set by JS) --}}
+                <input type="hidden" name="_mode" value="create">
+                {{-- _pk = SendNo ของ record ที่ใช้อยู่ (จำเป็นสำหรับ SD เพราะอ้างอิงใบ CM) --}}
+                <input type="hidden" name="_pk" value="">
+                <input type="hidden" name="SendNo" value="">
 
                 <!-- Body -->
                 <div class="modal-body px-5 py-4" style="background-color: #f8f9fb;">
@@ -47,23 +52,22 @@
                                 <div class="row g-3">
                                     <div class="col-md-2">
                                         <label class="form-label small mb-1">รหัสลูกค้า</label>
-                                        <input type="text" name="customer_code" class="form-control" value="00221">
+                                        <input type="text" name="custno" class="form-control">
                                     </div>
                                     <div class="col-md-5">
                                         <label class="form-label small mb-1">
                                             <span class="badge bg-label-secondary me-1">TH</span>
                                             ชื่อบริษัท (ไทย)
                                         </label>
-                                        <input type="text" name="customer_name_th" class="form-control"
-                                            value="บริษัท เมทเทิล พลาสติก จำกัด">
+                                        <input type="text" name="custname" class="form-control">
                                     </div>
                                     <div class="col-md-5">
                                         <label class="form-label small mb-1">
                                             <span class="badge bg-label-secondary me-1">EN</span>
                                             ชื่อบริษัท (อังกฤษ)
                                         </label>
-                                        <input type="text" name="customer_name_en" class="form-control"
-                                            value="Metal Plastic Co., Ltd.">
+                                        <input type="text" name="custname_en" class="form-control"
+                                            placeholder="(ยังไม่มี column ใน DB)">
                                     </div>
                                 </div>
                             </div>
@@ -81,19 +85,24 @@
                                 <div class="row g-3">
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">Start Date</label>
-                                        <input type="date" name="start_date" class="form-control">
+                                        <input type="date" name="startdate" class="form-control">
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">Sample Date</label>
-                                        <input type="date" name="sample_date" class="form-control">
+                                        <input type="date" name="SampleDate" class="form-control">
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">Ready Date</label>
-                                        <input type="date" name="ready_date" class="form-control">
+                                        <input type="date" name="ReadyDate" class="form-control">
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">Color Matcher</label>
-                                        <input type="text" name="color_matcher" class="form-control" value="เมทตา">
+                                        <select name="ColorMatcher" class="form-select">
+                                            <option value="">-- เลือก --</option>
+                                            <option>เมตตา</option>
+                                            <option>สุเมธ</option>
+                                            <option>วารุณี</option>
+                                        </select>
                                     </div>
                                 </div>
                             </div>
@@ -111,42 +120,48 @@
                                 <div class="row g-3">
                                     <div class="col-md-7">
                                         <label class="form-label small mb-1">รายละเอียด</label>
-                                        <input type="text" name="detail" class="form-control bg-label-secondary"
-                                            value="DB PINK-Y AS50%+ABS50% สี/">
+                                        <input type="text" name="TestDesc" class="form-control">
                                     </div>
                                     <div class="col-md-2">
                                         <label class="form-label small mb-1">ประเภท</label>
-                                        <select name="type" class="form-select">
-                                            <option>2</option>
+                                        <select name="TestType" class="form-select">
+                                            <option value="">-- เลือก --</option>
+                                            <option value="1">1</option>
+                                            <option value="2">2</option>
+                                            <option value="3">3</option>
                                         </select>
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">รหัสสินค้า</label>
-                                        <input type="text" name="product_code" class="form-control bg-label-secondary">
+                                        <input type="text" name="CodeNo" class="form-control">
                                     </div>
                                     <div class="col-md-5">
-                                        <label class="form-label small mb-1">สีผง</label>
-                                        <input type="text" name="powder_color" class="form-control">
+                                        <label class="form-label small mb-1">
+                                            สีผง <small class="text-muted">(จะ map เป็น color เดียวกับ CM)</small>
+                                        </label>
+                                        <input type="text" name="powder_color" class="form-control"
+                                            placeholder="(ยังไม่มี column แยก — จะ map กับ color)">
                                     </div>
                                     <div class="col-md-5">
                                         <label class="form-label small mb-1">Resin (Match)</label>
-                                        <input type="text" name="resin" class="form-control bg-label-secondary" value="AS50%+ABS50%=">
+                                        <input type="text" name="ResinMatch" class="form-control">
                                     </div>
                                     <div class="col-md-2">
                                         <label class="form-label small mb-1">PHR</label>
-                                        <input type="number" name="phr" class="form-control text-end" value="1.0000">
+                                        <input type="number" step="0.0001" name="PHR" class="form-control text-end">
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label small mb-1">Lot No.</label>
-                                        <input type="text" name="lot_no" class="form-control bg-dark text-white" value="680731/55">
+                                        <input type="text" name="lotno" class="form-control bg-dark text-white">
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label small mb-1">น้ำหนัก (กรัม)</label>
-                                        <input type="number" name="weight" class="form-control" value="100">
+                                        <input type="number" name="Wage" class="form-control">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label small mb-1">ตัวอย่างลูกค้า</label>
-                                        <select name="customer_sample" class="form-select">
+                                        <label class="form-label small mb-1">ตัวอย่างลูกค้า (pop)</label>
+                                        <select name="pop" class="form-select">
+                                            <option value="">-- เลือก --</option>
                                             <option>ตลับแป้ง</option>
                                             <option>สายไฟ</option>
                                             <option>สายรัด</option>
@@ -172,11 +187,11 @@
                                 <div class="row g-3 align-items-end">
                                     <div class="col-md-2">
                                         <label class="form-label small mb-1">Saleman Code</label>
-                                        <input type="text" name="saleman_code" class="form-control" value="1">
+                                        <input type="text" name="sale" class="form-control" maxlength="2">
                                     </div>
                                     <div class="col-md-4">
                                         <div class="form-check p-2 rounded border border-danger-subtle bg-danger-subtle">
-                                            <input class="form-check-input" type="checkbox" name="cancel">
+                                            <input class="form-check-input" type="checkbox" name="cancel" value="1">
                                             <label class="form-check-label text-danger fw-semibold ms-1">
                                                 cancel / วัตถุดิบแก้ไข Lot
                                             </label>
@@ -184,14 +199,14 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label small mb-1">สาเหตุที่ยกเลิก</label>
-                                        <input type="text" name="cancel_reason" class="form-control bg-label-secondary">
+                                        <input type="text" name="CancalRes" class="form-control bg-label-secondary">
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label small mb-1">
                                             <i class="ti ti-note me-1"></i>
                                             หมายเหตุ
                                         </label>
-                                        <textarea name="remark" class="form-control" rows="2"></textarea>
+                                        <textarea name="Mems" class="form-control" rows="2"></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -212,11 +227,11 @@
                                             <i class="ti ti-asterisk-simple"></i>
                                             เลขที่ใบส่ง ต.ย. ให้ลูกค้า
                                         </label>
-                                        <input type="text" name="doc_no" class="form-control" value="52871-DB">
+                                        <input type="text" name="Testno" class="form-control" required>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label small mb-1">วันที่เบิก</label>
-                                        <input type="date" name="withdraw_date" class="form-control">
+                                        <input type="date" name="TNDate" class="form-control">
                                     </div>
                                 </div>
                             </div>
