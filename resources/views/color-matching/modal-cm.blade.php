@@ -96,7 +96,7 @@
                                         <label class="form-label small mb-1">ประเภทงาน</label>
                                         <select name="Type_Work" class="form-select">
                                             <option value="">-- เลือก --</option>
-                                            <option>เป่าฟิมล์</option>
+                                            <option>เป่าฟิล์ม</option>
                                             <option>เป่าขวด</option>
                                             <option>EXT</option>
                                             <option>ROLL</option>
