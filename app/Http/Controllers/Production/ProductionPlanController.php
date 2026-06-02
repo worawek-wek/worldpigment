@@ -122,9 +122,9 @@ class ProductionPlanController extends Controller
                     $p = $header->plannings->first();
                     return [
                         'company'  => $header->company,
-                        'mdate'    => $header->mdate,
-                        'custwant' => $header->custwant,
-                        'senddate' => $header->senddate,
+                        'mdate'    => !empty($p->mdate) ? $p->mdate : null,
+                        'custwant' => !empty($p->custwant) ? $p->custwant : null,
+                        'senddate' => !empty($p->senddate) ? $p->senddate : null,
                         'custno'   => $header->custno,
                         'itemno'   => $p?->itemno,
                         'quantity' => $p?->quantity,
@@ -135,9 +135,9 @@ class ProductionPlanController extends Controller
                     $p = $header->plannings->first();
                     return [
                         'company'  => $header->company,
-                        'mdate'    => $header->mdate,
-                        'custwant' => $header->custwant,
-                        'senddate' => $header->senddate,
+                        'mdate'    => !empty($p->mdate) ? $p->mdate : null,
+                        'custwant' => !empty($p->custwant) ? $p->custwant : null,
+                        'senddate' => !empty($p->senddate) ? $p->senddate : null,
                         'custno'   => $header->custno,
                         'itemno'   => $p?->itemno,
                         'quantity' => $p?->quantity,
