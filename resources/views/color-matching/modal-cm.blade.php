@@ -88,7 +88,9 @@
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">วันที่ส่งเทียบสี</label>
-                                        <input type="date" name="TestDate" class="form-control" value="{{ date('Y-m-d') }}">
+                                        <input type="text" name="TestDate"
+                                            class="form-control flatpickr-date"
+                                            value="{{ date('d/m/Y') }}">
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">ประเภทงาน</label>
@@ -183,7 +185,7 @@
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">กำหนดเทียบสีเสร็จ</label>
-                                        <input type="date" name="Respdate" class="form-control">
+                                        <input type="text" name="Respdate" class="form-control flatpickr-date">
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label small mb-1">

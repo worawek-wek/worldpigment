@@ -140,7 +140,7 @@
 
                 <div class="col-md-2">
                     <label class="form-label small text-muted mb-1">วันที่ส่งเทียบสี</label>
-                    <input type="date" name="test_date" class="form-control p_search" onchange="loadData(page)">
+                    <input type="text" name="test_date" class="form-control p_search flatpickr-date" placeholder="ค้นหาวันที่">
                 </div>
 
                 <div class="col-md-2">
@@ -154,8 +154,8 @@
                 </div>
 
                 <div class="col-md-3 d-flex align-items-end">
-                    <button type="button" class="btn btn-label-secondary" onclick="resetFilters()">
-                        <i class="ti ti-x me-1"></i>ล้างตัวกรอง
+                    <button type="button" id="btnResetFilters" class="btn btn-label-secondary" onclick="resetFilters()">
+                        <i class="ti ti-x me-1"></i>ล้างตัวกรอง<span class="filter-count ms-1"></span>
                     </button>
                 </div>
 
@@ -237,6 +237,42 @@
         var searchData = {};
         loadData(page);
 
+        // ────────────────────────────────────────────────────────
+        //  Select2 + Flatpickr init
+        //  ⚠ ลำดับสำคัญ: select2 ก่อน flatpickr — เพื่อให้ flatpickr สร้าง <select> เดือน
+        //  ทีหลัง select2 จะไม่จับ (กันปัญหา UI flatpickr พังเหมือนรอบก่อน)
+        // ────────────────────────────────────────────────────────
+        $(function() {
+            // ── Select2 ── ทุก select ใน modal + filter (ยกเว้น name="limit" = ปุ่มเลือกจำนวนต่อหน้า)
+            // dropdownParent = .modal-content (position:relative) ไม่ใช่ .modal (position:fixed + scroll)
+            // เพื่อกันบั๊กตำแหน่ง dropdown เพี้ยนตอนเปิดขึ้นบน/ตอน modal scroll
+            $('#colorMatchingModal select').select2({
+                width: '100%',
+                dropdownParent: $('#colorMatchingModal .modal-content')
+            });
+            $('#sampleDeliveryModal select').select2({
+                width: '100%',
+                dropdownParent: $('#sampleDeliveryModal .modal-content')
+            });
+            // filter ของหน้าหลัก (ไม่อยู่ใน modal) → ไม่ต้องมี dropdownParent
+            $('.card-header select[name]:not([name="limit"])').select2({
+                width: '100%'
+            });
+
+            // ── Flatpickr ── หลัง select2 ──
+            flatpickr('.flatpickr-date', {
+                dateFormat: 'd/m/Y',
+                allowInput: true,
+                static: true,
+                disableMobile: true,
+                onChange: function(_, _str, instance) {
+                    if (instance.input.classList.contains('p_search')) {
+                        loadData(page);
+                    }
+                }
+            });
+        });
+
         // เก็บ filter ที่กรอกใน UI เป็น object — ใช้ทั้ง loadData() และ loadSummary()
         function collectSearchData(){
             var data = {};
@@ -250,7 +286,25 @@
             return data;
         }
 
+        // อัปเดตสีปุ่ม "ล้างตัวกรอง" ตามว่ามี filter ใช้งานอยู่กี่ตัว (ไม่นับ limit)
+        function updateFilterButtonState(){
+            var count = 0;
+            $('.p_search:not([name="limit"])').each(function(){
+                var v = $(this).val();
+                if (v !== '' && v !== null) count++;
+            });
+            var $btn = $('#btnResetFilters');
+            if (count > 0) {
+                $btn.removeClass('btn-label-secondary').addClass('btn-danger');
+                $btn.find('.filter-count').text('(' + count + ')');
+            } else {
+                $btn.removeClass('btn-danger').addClass('btn-label-secondary');
+                $btn.find('.filter-count').text('');
+            }
+        }
+
         function loadData(pages){
+            updateFilterButtonState();
             searchData = collectSearchData();
             page = pages;
             $.ajax({
@@ -276,7 +330,23 @@
         }
 
         function resetFilters() {
-            $('.p_search').val('');
+            // ไม่ล้าง name="limit" (รายการ/หน้า) — เป็นการตั้งค่าแสดงผล ไม่ใช่ตัวกรอง
+            $('.p_search:not([name="limit"])').each(function () {
+                const $input = $(this);
+                // flatpickr: เคลียร์ผ่าน instance เพื่อให้ช่องวันที่ว่างจริง
+                if ($input.hasClass('flatpickr-date')) {
+                    const fp = this._flatpickr;
+                    if (fp) fp.clear();
+                    else    $input.val('');
+                    return;
+                }
+                // select2: ต้อง trigger change.select2 เพื่อ refresh UI ไม่ให้ค้างค่าเดิม
+                if ($input.is('select')) {
+                    $input.val('').trigger('change.select2');
+                    return;
+                }
+                $input.val('');
+            });
             loadData("{{$page_url}}/datatable");
         }
         // ────────────────────────────────────────────────────────
@@ -348,14 +418,33 @@
                 const $input = $(formSelector + ' [name="' + col + '"]');
                 if ($input.length === 0) return;
 
+                const val = row[col];
+
                 if ($input.is(':checkbox')) {
-                    $input.prop('checked', row[col] == 1);
-                } else if ($input.attr('type') === 'date' && row[col]) {
-                    // datetime / date string → 'YYYY-MM-DD'
-                    $input.val(String(row[col]).substring(0, 10));
-                } else {
-                    $input.val(row[col] ?? '');
+                    $input.prop('checked', val == 1);
+                    return;
                 }
+
+                // flatpickr: ใช้ instance.setDate() ที่ parse Y-m-d ได้เลย แสดงผลเป็น d/m/Y
+                if ($input.hasClass('flatpickr-date')) {
+                    const fp = $input[0]._flatpickr;
+                    if (val) {
+                        if (fp) fp.setDate(String(val).substring(0, 10), false);
+                        else    $input.val(String(val).substring(0, 10));
+                    } else {
+                        if (fp) fp.clear();
+                        else    $input.val('');
+                    }
+                    return;
+                }
+
+                // select (รวม select2 ที่ต้อง trigger change เพื่อ refresh UI)
+                if ($input.is('select')) {
+                    $input.val(val ?? '').trigger('change.select2');
+                    return;
+                }
+
+                $input.val(val ?? '');
             });
         }
 
@@ -425,6 +514,12 @@
                 cancelButtonText: 'ยกเลิก'
             }).then((result) => {
                 if (!result.isConfirmed) return;
+
+                // ⚠ TODO(ชั่วคราว): SD create ยังไม่มี SendNo จริง (ยังไม่ได้สรุป flow ว่าผูกกับใบ CM ยังไง)
+                // gen เลขมั่วๆ ใส่ลง field ให้ insert ผ่านไปก่อน แล้วค่อยมาแก้ให้ถูกทีหลัง
+                if (!isUpdate) {
+                    $('#form_sample_delivery [name="SendNo"]').val('SD' + Date.now());
+                }
 
                 const fd = new FormData(this);
                 fd.append('_token', CSRF);

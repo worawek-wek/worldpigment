@@ -31,7 +31,7 @@
 <link rel="stylesheet" href="assets/vendor/libs/node-waves/node-waves.css" />
 <link rel="stylesheet" href="assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css" />
 <link rel="stylesheet" href="assets/vendor/libs/typeahead-js/typeahead.css" />
-{{-- <link rel="stylesheet" href="assets/vendor/libs/flatpickr/flatpickr.css" /> --}}
+<link rel="stylesheet" href="assets/vendor/libs/flatpickr/flatpickr.css" />
 <link rel="stylesheet" href="assets/vendor/libs/bootstrap-datepicker/bootstrap-datepicker.css" />
 {{-- <link rel="stylesheet" href="assets/vendor/libs/bootstrap-daterangepicker/bootstrap-daterangepicker.css" /> --}}
 <link rel="stylesheet" href="assets/vendor/libs/datatables-bs5/datatables.bootstrap5.css" />

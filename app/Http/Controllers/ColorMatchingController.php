@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Testmain;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -17,6 +18,12 @@ class ColorMatchingController extends Controller
         'DsendT', 'Mems', 'TNname', 'rptno', 'pop', 'cancel', 'CancalRes',
         'TNDate', 'PHR', 'ResinMatch', 'startdate', 'SampleDate', 'ReadyDate',
         'RminWating', 'ColorMatcher', 'MI', 'Density', 'VR', 'Hardness',
+    ];
+
+    // ─── Field ที่เป็นวันที่ — flatpickr ส่งมาเป็น d/m/Y ต้อง parse ก่อน save ───
+    private const DATE_FIELDS = [
+        'TestDate', 'Respdate', 'DsendT', 'TNDate',
+        'startdate', 'SampleDate', 'ReadyDate',
     ];
 
     public function index(Request $request)
@@ -176,7 +183,31 @@ class ColorMatchingController extends Controller
             $payload['color'] = $request->powder_color;
         }
 
+        // แปลง date fields จาก 'd/m/Y' (flatpickr) → 'Y-m-d' (MySQL)
+        foreach (self::DATE_FIELDS as $field) {
+            if (!empty($payload[$field])) {
+                $payload[$field] = $this->parseDate($payload[$field]);
+            }
+        }
+
         return $payload;
+    }
+
+    /**
+     * Parse 'd/m/Y' (จาก flatpickr) → 'Y-m-d' ปลอดภัยแม้รูปแบบ input ไม่แน่นอน
+     */
+    private function parseDate(?string $input): ?string
+    {
+        if (empty($input)) return null;
+
+        // ลอง 'd/m/Y' ก่อน เพราะเป็น default ของ flatpickr ในระบบ
+        try { return Carbon::createFromFormat('d/m/Y', $input)->format('Y-m-d'); } catch (\Exception $e) {}
+        // fallback ถ้าค่ามาเป็น 'Y-m-d' อยู่แล้ว
+        try { return Carbon::createFromFormat('Y-m-d', $input)->format('Y-m-d'); } catch (\Exception $e) {}
+        // fallback สุดท้าย — Carbon parse() เดาเอง
+        try { return Carbon::parse($input)->format('Y-m-d'); } catch (\Exception $e) {}
+
+        return null;
     }
 
     /**
@@ -201,7 +232,10 @@ class ColorMatchingController extends Controller
             $query->where('Adj', $request->revision);
         }
         if (@$request->test_date) {
-            $query->whereDate('TestDate', $request->test_date);
+            $d = $this->parseDate($request->test_date);
+            if ($d) {
+                $query->whereDate('TestDate', $d);
+            }
         }
     }
 }

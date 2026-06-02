@@ -85,15 +85,15 @@
                                 <div class="row g-3">
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">Start Date</label>
-                                        <input type="date" name="startdate" class="form-control">
+                                        <input type="text" name="startdate" class="form-control flatpickr-date">
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">Sample Date</label>
-                                        <input type="date" name="SampleDate" class="form-control">
+                                        <input type="text" name="SampleDate" class="form-control flatpickr-date">
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">Ready Date</label>
-                                        <input type="date" name="ReadyDate" class="form-control">
+                                        <input type="text" name="ReadyDate" class="form-control flatpickr-date">
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">Color Matcher</label>
@@ -126,9 +126,10 @@
                                         <label class="form-label small mb-1">ประเภท</label>
                                         <select name="TestType" class="form-select">
                                             <option value="">-- เลือก --</option>
-                                            <option value="1">1</option>
-                                            <option value="2">2</option>
-                                            <option value="3">3</option>
+                                            <option value="1">1 : CP</option>
+                                            <option value="2">2 : สีผง</option>
+                                            <option value="3">3 : สีเม็ด</option>
+                                            <option value="4">4 : Pigment</option>
                                         </select>
                                     </div>
                                     <div class="col-md-3">
@@ -231,7 +232,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label small mb-1">วันที่เบิก</label>
-                                        <input type="date" name="TNDate" class="form-control">
+                                        <input type="text" name="TNDate" class="form-control flatpickr-date">
                                     </div>
                                 </div>
                             </div>
