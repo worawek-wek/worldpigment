@@ -88,6 +88,27 @@ class ColorMatchingController extends Controller
     }
 
     /**
+     * GET — ค้นชื่อลูกค้าจากรหัส (custno) ในตาราง customer
+     * คืน name (ไทย) + nameEN (อังกฤษ) ให้ฟอร์มเติมอัตโนมัติ
+     */
+    public function customerLookup($code)
+    {
+        $cust = DB::table('customer')
+            ->where('code', $code)
+            ->first(['name', 'nameEN']);
+
+        if (!$cust) {
+            return response()->json(['found' => false]);
+        }
+
+        return response()->json([
+            'found'  => true,
+            'name'   => $cust->name,
+            'nameEN' => $cust->nameEN,
+        ]);
+    }
+
+    /**
      * POST — สร้าง testmain row ใหม่
      */
     public function insert(Request $request)

@@ -366,6 +366,43 @@
             }
         });
 
+        // ── Auto-fill ชื่อลูกค้าจากรหัส (custno) ในฟอร์มเทียบสี ──
+        // พิมพ์รหัส → ดึง name(ไทย)/nameEN(อังกฤษ) จากตาราง customer มาเติม + ล็อกแก้ไขไม่ได้
+        // ถ้าไม่พบรหัส → ปลดล็อกให้กรอกเองเหมือนเดิม
+        let custLookupTimer = null;
+        $('#form_color_matching').on('input', '[name="custno"]', function () {
+            const code = $(this).val().trim();
+            const $th  = $('#form_color_matching [name="custname"]');
+            const $en  = $('#form_color_matching [name="custname_en"]');
+
+            clearTimeout(custLookupTimer);
+
+            // รหัสว่าง → ปลดล็อกให้กรอกเอง
+            if (code === '') {
+                $th.add($en).prop('readonly', false);
+                return;
+            }
+
+            custLookupTimer = setTimeout(function () {
+                $.ajax({
+                    type: 'GET',
+                    url: '{{$page_url}}/customer/' + encodeURIComponent(code),
+                    success: function (resp) {
+                        if (resp && resp.found) {
+                            $th.val(resp.name   ?? '').prop('readonly', true);
+                            $en.val(resp.nameEN ?? '').prop('readonly', true);
+                        } else {
+                            // ไม่พบรหัส → ล้างชื่อให้ว่าง แล้วปลดล็อกให้กรอกเอง
+                            $th.add($en).val('').prop('readonly', false);
+                        }
+                    },
+                    error: function () {
+                        $th.add($en).prop('readonly', false);
+                    }
+                });
+            }, 300);
+        });
+
         // เปิด modal ใบส่ง ต.ย. ในโหมด create — เคลียร์ form
         $('#sampleDeliveryModal').on('show.bs.modal', function (event) {
             const trigger = event.relatedTarget;

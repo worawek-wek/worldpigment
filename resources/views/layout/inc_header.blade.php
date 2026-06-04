@@ -55,6 +55,32 @@
             margin-bottom: 50px; /* ปรับค่าตามต้องการ */
         }
     </style>
+
+    {{-- ─────────────────────────────────────────────────────────────────
+         WIP marker (สำหรับ dev): แปะ class "wip" ที่ element/ส่วนที่ยังเขียน
+         ไม่เสร็จ → พื้นหลังแดง ลูกค้าจะเห็นว่าส่วนนั้นยัง test ไม่ได้
+         เสร็จแล้ว → ลบคำว่า "wip" ออก "คำเดียว" สไตล์เดิมกลับมาเอง (ไม่ต้องจำสีเดิม)
+         ใช้ได้ทุกระดับ:  <div class="card wip">, <li class="menu-item wip">,
+                          <button class="btn wip">, <tr class="wip"> ฯลฯ
+
+         ⚙ สวิตช์รวม: ตั้ง $WIP_MODE = false → สีแดงหายหมดทุกหน้าทันที
+            (ไม่ต้องไล่ลบ class — เผื่อลืม จะได้ไม่หลุดสีแดงขึ้น production)
+       ───────────────────────────────────────────────────────────────── --}}
+    @php $WIP_MODE = true; @endphp
+    @if ($WIP_MODE)
+    <style>
+        .wip,
+        .wip > td,
+        .wip > th {
+            background-color: #ffe3e3 !important;
+        }
+        .wip {
+            outline: 2px dashed #e03131 !important;
+            outline-offset: -2px;
+        }
+    </style>
+    @endif
+
 <!-- Page CSS -->
 
 <!-- Helpers -->
