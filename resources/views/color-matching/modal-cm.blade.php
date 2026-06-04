@@ -91,7 +91,7 @@
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">วันที่ส่งเทียบสี</label>
-                                        <input type="text" name="TestDate"
+                                        <input type="text" name="DsendT"
                                             class="form-control flatpickr-date"
                                             value="{{ date('d/m/Y') }}">
                                     </div>
@@ -138,9 +138,12 @@
                                             placeholder="ชื่อสี เช่น DB PINK-Y AS50%+ABS50%">
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label small mb-1">คุณสมบัติ (STD)</label>
-                                        <input type="text" name="STD" class="form-control"
-                                            placeholder="ตามสูตรที่แนบ">
+                                        <label class="form-label small mb-1">คุณสมบัติ</label>
+                                        <select name="pop" class="form-select select2-tags">
+                                            <option value="">-- เลือก --</option>
+                                            <option>Food Contact</option>
+                                            <option>Non-Toxic</option>
+                                        </select>
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label small mb-1">นำไปทำชิ้นงาน (Model)</label>
@@ -173,9 +176,9 @@
                                         <label class="form-label small mb-1">ผู้รับเอกสาร</label>
                                         <select name="TNname" class="form-select">
                                             <option value="">-- เลือก --</option>
-                                            <option>วารุณี</option>
-                                            <option>สุเมธ</option>
-                                            <option>เมตตา</option>
+                                            @foreach (($employees ?? []) as $emp)
+                                                <option value="{{ $emp->empname }}">{{ trim($emp->empname.' '.$emp->empsur) }}</option>
+                                            @endforeach
                                         </select>
                                     </div>
                                     <div class="col-md-3">
@@ -190,7 +193,7 @@
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">กำหนดเทียบสีเสร็จ</label>
-                                        <input type="text" name="Respdate" class="form-control flatpickr-date"
+                                        <input type="text" name="TNDate" class="form-control flatpickr-date"
                                             placeholder="วว/ดด/ปปปป">
                                     </div>
                                     <div class="col-12">
@@ -211,12 +214,7 @@
 
                 <!-- Footer -->
                 <div class="modal-footer justify-content-between flex-wrap gap-2">
-                    <div class="d-flex gap-2 flex-wrap">
-                        <button type="button" class="btn btn-label-primary">
-                            <i class="ti ti-search me-1"></i>
-                            ค้นหารหัสสี
-                        </button>
-                    </div>
+                    <div class="d-flex gap-2 flex-wrap"></div>
                     <div class="d-flex gap-2">
                         <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">
                             ปิด

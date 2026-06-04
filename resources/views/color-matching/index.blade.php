@@ -80,7 +80,7 @@
                             สร้างใบนำส่งเทียบสี
                         </button>
 
-                        <button class="btn btn-label-primary"
+                        <button class="btn btn-label-primary wip"
                             data-bs-toggle="modal"
                             data-bs-target="#sampleDeliveryModal">
                             <i class="ti ti-package me-1"></i>
@@ -118,7 +118,7 @@
             <div class="row g-3 align-items-end">
 
                 <div class="col-md-3">
-                    <label class="form-label small text-muted mb-1">ค้นหา</label>
+                    <label class="form-label small fw-medium mb-1">ค้นหา</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="ti ti-search"></i></span>
                         <input type="text" name="search"
@@ -129,7 +129,7 @@
                 </div>
 
                 <div class="col-md-2">
-                    <label class="form-label small text-muted mb-1">ประเภทงาน</label>
+                    <label class="form-label small fw-medium mb-1">ประเภทงาน</label>
                     <select name="job_type" class="form-select p_search" onchange="loadData(page)">
                         <option value="">ทุกประเภท</option>
                         @foreach (['เป่าฟิมล์','เป่าขวด','EXT','ROLL','INJ','CY'] as $opt)
@@ -139,12 +139,24 @@
                 </div>
 
                 <div class="col-md-2">
-                    <label class="form-label small text-muted mb-1">วันที่ส่งเทียบสี</label>
-                    <input type="text" name="test_date" class="form-control p_search flatpickr-date" placeholder="ค้นหาวันที่">
+                    <label class="form-label small fw-medium mb-1">Standard</label>
+                    <input type="text" name="std" class="form-control p_search"
+                        placeholder="เช่น PT 494 C" onkeyup="if(event.key==='Enter') loadData(page)">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label small fw-medium mb-1">วันที่ส่งเทียบสี</label>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="small fw-medium">ตั้งแต่</span>
+                        <input type="date" name="test_date_from" class="form-control p_search" onchange="loadData(page)">
+                        <span class="small fw-medium">ถึง</span>
+                        <input type="date" name="test_date_to" class="form-control p_search"
+                            value="{{ date('Y-m-d') }}" onchange="loadData(page)">
+                    </div>
                 </div>
 
                 <div class="col-md-2">
-                    <label class="form-label small text-muted mb-1">ปรับแก้ไข</label>
+                    <label class="form-label small fw-medium mb-1">ปรับแก้ไข</label>
                     <select name="revision" class="form-select p_search" onchange="loadData(page)">
                         <option value="">ทั้งหมด</option>
                         @foreach (['New','Revise 1','Revise 2'] as $opt)
@@ -163,7 +175,7 @@
 
             {{-- Row 2: Show limit selector (จัดชิดขวา) --}}
             <div class="d-flex justify-content-end align-items-center mt-3">
-                <label class="form-label small text-muted mb-0 me-2">แสดง</label>
+                <label class="form-label small fw-medium mb-0 me-2">แสดง</label>
                 <select name="limit" class="form-select form-select-sm p_search"
                     style="width: 90px;" onchange='loadData("{{$page_url}}/datatable")'>
                     <option value="15">15</option>
@@ -172,7 +184,7 @@
                     <option value="100">100</option>
                     <option value="200">200</option>
                 </select>
-                <span class="ms-2 small text-muted">รายการ/หน้า</span>
+                <span class="ms-2 small fw-medium">รายการ/หน้า</span>
             </div>
         </div>
 
@@ -246,8 +258,14 @@
             // ── Select2 ── ทุก select ใน modal + filter (ยกเว้น name="limit" = ปุ่มเลือกจำนวนต่อหน้า)
             // dropdownParent = .modal-content (position:relative) ไม่ใช่ .modal (position:fixed + scroll)
             // เพื่อกันบั๊กตำแหน่ง dropdown เพี้ยนตอนเปิดขึ้นบน/ตอน modal scroll
-            $('#colorMatchingModal select').select2({
+            $('#colorMatchingModal select:not(.select2-tags)').select2({
                 width: '100%',
+                dropdownParent: $('#colorMatchingModal .modal-content')
+            });
+            // คุณสมบัติ (pop) = select2 แบบ tags → เลือกจาก list หรือพิมพ์ค่าใหม่เองได้ (กัน variant ใน DB หาย)
+            $('#colorMatchingModal .select2-tags').select2({
+                width: '100%',
+                tags: true,
                 dropdownParent: $('#colorMatchingModal .modal-content')
             });
             $('#sampleDeliveryModal select').select2({
@@ -477,7 +495,12 @@
 
                 // select (รวม select2 ที่ต้อง trigger change เพื่อ refresh UI)
                 if ($input.is('select')) {
-                    $input.val(val ?? '').trigger('change.select2');
+                    const sv = val ?? '';
+                    // ถ้าค่าใน DB ไม่มีใน option (เช่น variant ของ pop) → เพิ่ม option ชั่วคราว กันค่าหาย
+                    if (sv !== '' && $input.find('option').filter(function () { return this.value === String(sv); }).length === 0) {
+                        $input.append(new Option(sv, sv, true, true));
+                    }
+                    $input.val(sv).trigger('change.select2');
                     return;
                 }
 
@@ -583,38 +606,6 @@
                 });
             });
         });
-
-        // ลบ record
-        function Delete(sendno) {
-            Swal.fire({
-                title: 'ยืนยันการลบ?',
-                text: 'จะลบใบเทียบสี ' + sendno + ' ออกจากระบบ ไม่สามารถกู้คืนได้',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'ลบ',
-                confirmButtonColor: '#d33',
-                cancelButtonText: 'ยกเลิก'
-            }).then((result) => {
-                if (!result.isConfirmed) return;
-
-                $.ajax({
-                    url: '{{$page_url}}/' + encodeURIComponent(sendno),
-                    type: 'DELETE',
-                    data: { _token: CSRF },
-                    success: function(resp) {
-                        if (resp && resp.ok) {
-                            Swal.fire('ลบเรียบร้อย', '', 'success');
-                            loadData(page);
-                        } else {
-                            Swal.fire('ไม่สามารถลบได้', resp.error ?? '', 'error');
-                        }
-                    },
-                    error: function(xhr) {
-                        Swal.fire('เกิดข้อผิดพลาด', xhr.responseJSON?.error ?? '', 'error');
-                    }
-                });
-            });
-        }
 </script>
 </body>
 

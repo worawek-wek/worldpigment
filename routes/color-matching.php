@@ -15,7 +15,6 @@ Route::prefix('color-matching')->group(function () {
     // ─── CRUD ────────────────────────────────────────────────────────
     Route::post('/insert',             [ColorMatchingController::class, 'insert'])->name('color_matching.insert');
     Route::post('/update/{sendno}',    [ColorMatchingController::class, 'update'])->where('sendno', '.+')->name('color_matching.update');
-    Route::delete('/{sendno}',         [ColorMatchingController::class, 'delete'])->where('sendno', '.+')->name('color_matching.delete');
     Route::get('/{sendno}',            [ColorMatchingController::class, 'edit'])->where('sendno', '.+')->name('color_matching.edit');
 
 });

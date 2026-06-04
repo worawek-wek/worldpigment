@@ -16,7 +16,7 @@
                 <th class="align-middle">ปรับแก้ไข</th>
                 <th class="align-middle">เลขที่ใบส่ง ต.ย.</th>
                 <th class="align-middle">สถานะ</th>
-                <th class="align-middle" width="120">จัดการ</th>
+                <th class="align-middle wip" width="120">จัดการ</th>
             </tr>
         </thead>
 
@@ -59,7 +59,7 @@
                         <strong class="text-primary">{{ $row->SendNo }}</strong>
                         <br>
                         <small class="text-muted">
-                            {{ $row->TestDate ? \Carbon\Carbon::parse($row->TestDate)->format('d/m/Y') : '-' }}
+                            {{ $row->DsendT ? \Carbon\Carbon::parse($row->DsendT)->format('d/m/Y') : '-' }}
                         </small>
                     </td>
 
@@ -111,7 +111,7 @@
                         </span>
                     </td>
 
-                    <td>
+                    <td class="wip">
                         <button class="btn btn-sm btn-icon btn-label-primary"
                             title="แก้ไขใบนำส่งเทียบสี"
                             onclick="view('{{ $row->SendNo }}')">
@@ -121,11 +121,6 @@
                             title="แก้ไขใบส่ง ต.ย."
                             onclick="viewSampleDelivery('{{ $row->SendNo }}')">
                             <i class="ti ti-package"></i>
-                        </button>
-                        <button class="btn btn-sm btn-icon btn-label-danger"
-                            title="ลบ"
-                            onclick="Delete('{{ $row->SendNo }}')">
-                            <i class="ti ti-trash"></i>
                         </button>
                     </td>
                 </tr>

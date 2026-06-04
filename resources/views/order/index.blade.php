@@ -73,7 +73,7 @@
                         </p>
                     </div>
 
-                    <div>
+                    <div class="wip">
                         <button class="btn btn-primary"
                             data-bs-toggle="modal"
                             data-bs-target="#saleOrderModal">
@@ -92,7 +92,7 @@
     <!-- Summary -->
     <div class="row mb-4">
 
-        <div class="col-md-3">
+        <div class="col-md-3 wip">
             <div class="card">
                 <div class="card-body">
 
@@ -108,7 +108,7 @@
             </div>
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-3 wip">
             <div class="card">
                 <div class="card-body">
 
@@ -124,7 +124,7 @@
             </div>
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-3 wip">
             <div class="card">
                 <div class="card-body">
 
@@ -140,7 +140,7 @@
             </div>
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-3 wip">
             <div class="card">
                 <div class="card-body">
 
@@ -165,13 +165,13 @@
 
             <div class="row g-3 align-items-center">
 
-                <div class="col-md-3">
+                <div class="col-md-3 wip">
                     <input type="text"
                         class="form-control"
                         placeholder="ค้นหา Sale Order">
                 </div>
 
-                <div class="col-md-2">
+                <div class="col-md-2 wip">
                     <select class="form-select">
                         <option>ทุกสถานะ</option>
                         <option>Draft</option>
@@ -181,7 +181,7 @@
                     </select>
                 </div>
 
-                <div class="col-md-2">
+                <div class="col-md-2 wip">
                     <select class="form-select">
                         <option>ทุกประเภท</option>
                         <option>Stock</option>
@@ -191,7 +191,7 @@
                     </select>
                 </div>
 
-                <div class="col-md-2">
+                <div class="col-md-2 wip">
                     <input type="date"
                         class="form-control">
                 </div>
@@ -200,7 +200,7 @@
 
         </div>
 
-        <div class="table-responsive text-nowrap">
+        <div class="table-responsive text-nowrap wip">
 
             <table class="table table-hover">
 
@@ -359,7 +359,7 @@
 
     <div class="modal-dialog modal-xl">
 
-        <div class="modal-content">
+        <div class="modal-content wip">
 
             <div class="modal-header">
 

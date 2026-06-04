@@ -29,12 +29,17 @@ class ColorMatchingController extends Controller
     public function index(Request $request)
     {
         $data['page_url'] = 'color-matching';
+        // พนักงานจากตาราง emp (ใช้ทำ select2 ของ ผู้รับเอกสาร/Color Matcher)
+        $data['employees'] = DB::table('emp')
+            ->whereNotNull('empname')->where('empname', '!=', '')
+            ->orderBy('empname')
+            ->get(['empno', 'empname', 'empsur']);
         return view('color-matching.index', $data);
     }
 
     public function datatable(Request $request)
     {
-        $results = Testmain::orderByDesc('TestDate')->orderByDesc('SendNo');
+        $results = Testmain::orderByDesc('DsendT')->orderByDesc('SendNo');
         $this->applyFilters($results, $request);
 
         $limit = 15;
@@ -165,29 +170,6 @@ class ColorMatchingController extends Controller
     }
 
     /**
-     * DELETE — ลบ testmain row
-     */
-    public function delete($sendno)
-    {
-        try {
-            DB::beginTransaction();
-
-            $row = Testmain::where('SendNo', $sendno)->first();
-            if (!$row) {
-                return response()->json(['error' => 'not_found'], 404);
-            }
-
-            $row->delete();
-
-            DB::commit();
-            return response()->json(['ok' => true]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
-    }
-
-    /**
      * ดึงเฉพาะ field ที่มีอยู่จริงใน testmain + แปลง type พิเศษ
      */
     private function extractPayload(Request $request): array
@@ -252,10 +234,20 @@ class ColorMatchingController extends Controller
         if (@$request->revision) {
             $query->where('Adj', $request->revision);
         }
-        if (@$request->test_date) {
-            $d = $this->parseDate($request->test_date);
+        if (@$request->std) {
+            $query->where('STD', 'LIKE', "%{$request->std}%");
+        }
+        // ช่วงวันที่ส่งเทียบสี (ตั้งแต่/ถึง) — ใช้ column DsendT
+        if (@$request->test_date_from) {
+            $d = $this->parseDate($request->test_date_from);
             if ($d) {
-                $query->whereDate('TestDate', $d);
+                $query->whereDate('DsendT', '>=', $d);
+            }
+        }
+        if (@$request->test_date_to) {
+            $d = $this->parseDate($request->test_date_to);
+            if ($d) {
+                $query->whereDate('DsendT', '<=', $d);
             }
         }
     }

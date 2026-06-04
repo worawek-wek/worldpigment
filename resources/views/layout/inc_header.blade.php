@@ -69,14 +69,27 @@
     @php $WIP_MODE = true; @endphp
     @if ($WIP_MODE)
     <style>
+        /* สีพื้นฐาน (เผื่อบริเวณที่ไม่มี element ลูกทับ) */
         .wip,
         .wip > td,
         .wip > th {
             background-color: #ffe3e3 !important;
         }
         .wip {
-            outline: 2px dashed #e03131 !important;
+            position: relative !important;
+            outline: 2px dashed #ff8c8c !important;
             outline-offset: -2px;
+        }
+        /* ม่านแดงโปร่งแสงคลุมทับทั้ง section → แดงทั้งหมดแม้ลูกมีพื้นหลังทึบ/inline style
+           pointer-events:none → ยังคลิก/พิมพ์ทะลุได้ปกติ */
+        .wip::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(224, 49, 49, 0.16);
+            pointer-events: none;
+            border-radius: inherit;
+            z-index: 5;
         }
     </style>
     @endif
