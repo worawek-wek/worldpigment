@@ -18,6 +18,7 @@ class ColorMatchingController extends Controller
         'DsendT', 'Mems', 'TNname', 'rptno', 'pop', 'cancel', 'CancalRes',
         'TNDate', 'PHR', 'ResinMatch', 'startdate', 'SampleDate', 'ReadyDate',
         'RminWating', 'ColorMatcher', 'MI', 'Density', 'VR', 'Hardness',
+        'ref_sendno', // อ้างอิงเลขใบนำส่งเทียบสี (CM) — ใช้ในฟอร์ม SD
     ];
 
     // ─── Field ที่เป็นวันที่ — flatpickr ส่งมาเป็น d/m/Y ต้อง parse ก่อน save ───
@@ -29,11 +30,6 @@ class ColorMatchingController extends Controller
     public function index(Request $request)
     {
         $data['page_url'] = 'color-matching';
-        // พนักงานจากตาราง emp (ใช้ทำ select2 ของ ผู้รับเอกสาร/Color Matcher)
-        $data['employees'] = DB::table('emp')
-            ->whereNotNull('empname')->where('empname', '!=', '')
-            ->orderBy('empname')
-            ->get(['empno', 'empname', 'empsur']);
         return view('color-matching.index', $data);
     }
 
@@ -114,6 +110,25 @@ class ColorMatchingController extends Controller
     }
 
     /**
+     * ถ้าชื่อพนักงานที่กรอกยังไม่มีใน emp.empname → สร้างพนักงานใหม่ (gen empno)
+     * เก็บเฉพาะชื่อต้น (empname) ตามที่ฟอร์มกรอก (ปกติไม่กรอกนามสกุล)
+     */
+    private function ensureEmployee(?string $name): void
+    {
+        $name = trim((string) $name);
+        if ($name === '') return;
+
+        if (DB::table('emp')->where('empname', $name)->exists()) return;
+
+        // gen empno ใหม่ (varchar(4)) = เลขมากสุด + 1
+        $maxNo = (int) DB::table('emp')->max(DB::raw('CAST(empno AS UNSIGNED)'));
+        DB::table('emp')->insert([
+            'empno'   => (string) ($maxNo + 1),
+            'empname' => $name,
+        ]);
+    }
+
+    /**
      * POST — สร้าง testmain row ใหม่
      */
     public function insert(Request $request)
@@ -130,6 +145,10 @@ class ColorMatchingController extends Controller
             if (Testmain::where('SendNo', $payload['SendNo'])->exists()) {
                 return response()->json(['error' => 'duplicate_send_no'], 422);
             }
+
+            // ชื่อพนักงานที่กรอก (ผู้รับเอกสาร/Color Matcher) ถ้าใหม่ → สร้างใน emp
+            $this->ensureEmployee($request->TNname);
+            $this->ensureEmployee($request->ColorMatcher);
 
             Testmain::create($payload);
 
@@ -158,6 +177,10 @@ class ColorMatchingController extends Controller
 
             // ถ้า user เปลี่ยน SendNo ใน form → handle rename (เลี่ยงไว้ตอนนี้ — ใช้ค่าเดิม)
             $payload['SendNo'] = $sendno;
+
+            // ชื่อพนักงานที่กรอก (ผู้รับเอกสาร/Color Matcher) ถ้าใหม่ → สร้างใน emp
+            $this->ensureEmployee($request->TNname);
+            $this->ensureEmployee($request->ColorMatcher);
 
             $row->fill($payload)->save();
 

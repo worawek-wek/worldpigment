@@ -575,10 +575,10 @@
             }).then((result) => {
                 if (!result.isConfirmed) return;
 
-                // ⚠ TODO(ชั่วคราว): SD create ยังไม่มี SendNo จริง (ยังไม่ได้สรุป flow ว่าผูกกับใบ CM ยังไง)
-                // gen เลขมั่วๆ ใส่ลง field ให้ insert ผ่านไปก่อน แล้วค่อยมาแก้ให้ถูกทีหลัง
+                // ⚠ TODO(ชั่วคราว): SD create ยังไม่มี SendNo จริง — gen เลขชั่วคราวให้ insert ผ่านก่อน
+                // SendNo เป็น varchar(12) → ตัดให้พอดี ('SD' + 10 หลักท้ายของ timestamp = 12 ตัว)
                 if (!isUpdate) {
-                    $('#form_sample_delivery [name="SendNo"]').val('SD' + Date.now());
+                    $('#form_sample_delivery [name="SendNo"]').val('SD' + String(Date.now()).slice(-10));
                 }
 
                 const fd = new FormData(this);

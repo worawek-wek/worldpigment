@@ -51,7 +51,7 @@
             @if($menu_role == 'superadmin')
                 @if(Auth::guard('admin')->user()->hasRole('superadmin'))
                 <li class="menu-item {{ $menu_active }}">
-                    <a href="{{ isset($menu['route_name']) ? route($menu['route_name']) : 'javascript:void(0);' }}"
+                    <a href="{{ isset($menu['url']) ? url($menu['url']) : (isset($menu['route_name']) ? route($menu['route_name']) : 'javascript:void(0);') }}"
                         class="menu-link {{ $menu_toggle }}">
                         <i class="menu-icon tf-icons ti {{ isset($menu['icon']) ? $menu['icon'] : '' }}"></i>
                         <div>{{ $menu['title'] }}</div>
@@ -76,7 +76,7 @@
                 @endif
             @else
                 <li class="menu-item {{ $menu_active }}">
-                    <a href="{{ isset($menu['route_name']) ? route($menu['route_name']) : 'javascript:void(0);' }}"
+                    <a href="{{ isset($menu['url']) ? url($menu['url']) : (isset($menu['route_name']) ? route($menu['route_name']) : 'javascript:void(0);') }}"
                         class="menu-link {{ $menu_toggle }}">
                         <i class="menu-icon tf-icons ti {{ isset($menu['icon']) ? $menu['icon'] : '' }}"></i>
                         <div>{{ $menu['title'] }}</div>

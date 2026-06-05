@@ -64,7 +64,7 @@
 
                     <div>
                         <h3 class="mb-1">
-                            <i class="ti ti-report-analytics text-primary"></i>
+                            <i class="ti ti-report text-primary"></i>
                             รายงาน
                         </h3>
 

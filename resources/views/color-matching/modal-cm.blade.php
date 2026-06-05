@@ -174,12 +174,8 @@
                                 <div class="row g-3">
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">ผู้รับเอกสาร</label>
-                                        <select name="TNname" class="form-select">
-                                            <option value="">-- เลือก --</option>
-                                            @foreach (($employees ?? []) as $emp)
-                                                <option value="{{ $emp->empname }}">{{ trim($emp->empname.' '.$emp->empsur) }}</option>
-                                            @endforeach
-                                        </select>
+                                        <input type="text" name="TNname" class="form-control"
+                                            placeholder="ชื่อพนักงาน">
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">เลขที่ใบรายงานผล</label>

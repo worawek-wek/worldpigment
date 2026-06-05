@@ -39,6 +39,17 @@
 
                         <div class="card-body p-4">
 
+                            {{-- ─── อ้างอิงใบนำส่งเทียบสี (CM) — 1 CM มีได้หลายใบส่ง ต.ย. ─── --}}
+                            <div class="row g-3 mb-4 pb-3 border-bottom">
+                                <div class="col-md-4 wip">
+                                    <label class="form-label small mb-1 fw-semibold" style="color:#4b3fb8;">
+                                        <i class="ti ti-link me-1"></i>เลขที่ใบนำส่งเทียบสี (อ้างอิง)
+                                    </label>
+                                    <input type="text" name="ref_sendno" class="form-control"
+                                        placeholder="เช่น 26/0001">
+                                </div>
+                            </div>
+
                             {{-- ─── กลุ่ม: ข้อมูลลูกค้า ─── --}}
                             <div class="mb-4 pb-3 border-bottom">
                                 <div class="d-flex align-items-center mb-3 ps-2"
@@ -102,12 +113,8 @@
                                     </div>
                                     <div class="col-md-3 wip">
                                         <label class="form-label small mb-1">Color Matcher</label>
-                                        <select name="ColorMatcher" class="form-select">
-                                            <option value="">-- เลือก --</option>
-                                            @foreach (($employees ?? []) as $emp)
-                                                <option value="{{ $emp->empname }}">{{ trim($emp->empname.' '.$emp->empsur) }}</option>
-                                            @endforeach
-                                        </select>
+                                        <input type="text" name="ColorMatcher" class="form-control"
+                                            placeholder="ชื่อพนักงาน">
                                     </div>
                                 </div>
                             </div>
@@ -194,10 +201,10 @@
                                         <input type="text" name="sale" class="form-control" maxlength="2"
                                             placeholder="เช่น A1">
                                     </div>
-                                    <div class="col-md-4 wip">
+                                    <div class="col-md-4 px-4 wip">
                                         <div class="form-check p-2 rounded border border-danger-subtle bg-danger-subtle">
-                                            <input class="form-check-input" type="checkbox" name="cancel" value="1">
-                                            <label class="form-check-label text-danger fw-semibold ms-1">
+                                            <input class="form-check-input" type="checkbox" name="cancel" value="1" id="cancel">
+                                            <label for="cancel" class="form-check-label text-danger fw-semibold ms-1">
                                                 cancel / วัตถุดิบแก้ไข Lot
                                             </label>
                                         </div>
@@ -228,7 +235,7 @@
                                     </span>
                                 </div>
 
-                                <div class="row g-3">
+                                <div class="row g-3 align-items-end">
                                     <div class="col-md-6 wip">
                                         <label class="form-label small mb-1 text-danger">
                                             <i class="ti ti-asterisk-simple"></i>

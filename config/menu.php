@@ -3,26 +3,26 @@
 return [
     'ColorMatching' => [
         'title' => 'เทียบสี',
-        'icon' => 'ti-receipt-tax',
+        'icon' => 'ti-palette',
         'route_name' => 'color_matching.index',
         'permission' => 'color_matching read',
     ],
     'Quotation' => [
         'title' => 'ใบเสนอราคา',
-        'icon' => 'ti-receipt-tax',
+        'icon' => 'ti-file-invoice',
         'route_name' => 'quotation.index',
         'permission' => 'quotation read',
     ],
     'Order' => [
         'title' => 'Order',
-        'icon' => 'ti-receipt-tax',
+        'icon' => 'ti-shopping-cart',
         'route_name' => 'order.index',
         'permission' => 'order read',
     ],
 
     'Production' => [
         'title' => 'แผนการผลิต',
-        'icon' => 'ti-server',
+        'icon' => 'ti-calendar-stats',
         'permission' => 'production read',
         'sub_menu' => [
             'ProductionOrder' => [
@@ -43,13 +43,13 @@ return [
     ],
     'Customer' => [
         'title' => 'ฐานข้อมูลลูกค้า',
-        'icon' => 'ti-receipt-tax',
+        'icon' => 'ti-address-book',
         'route_name' => 'customer.index',
         'permission' => 'customer read',
     ],
     'Report' => [
         'title' => 'รายงาน',
-        'icon' => 'ti-receipt-tax',
+        'icon' => 'ti-report',
         'route_name' => 'report.index',
         'permission' => 'report read',
     ],
@@ -59,9 +59,14 @@ return [
     ],
     'Permission' => [
         'title' => 'สิทธิ์การใช้งาน',
-        'icon' => 'ti-receipt-tax',
+        'icon' => 'ti-shield-lock',
         'route_name' => 'permission.index',
         'permission' => 'permission read',
+    ],
+    'LinkUser' => [
+        'title' => 'พนักงาน',
+        'icon' => 'ti-id-badge',
+        'url' => 'user', // ใช้ url ตรง เพราะ route name 'user' ซ้ำ (index + user/{id}) → route() ต้องการ id
     ],
 
 

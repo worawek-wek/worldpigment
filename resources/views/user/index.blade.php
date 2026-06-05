@@ -67,7 +67,7 @@
                                         <div class="row g-3 justify-content-between">
                                             <div class="col-sm-12">
                                                 <h4 class="mb-0">
-                                                    <i class="tf-icons ti ti-copy text-main ti-md me-2"></i>
+                                                    <i class="tf-icons ti ti-id-badge text-main ti-md me-2"></i>
                                                     พนักงาน
                                                 </h4>
                                             </div>
