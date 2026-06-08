@@ -93,9 +93,8 @@
         </div>
     </div>
 
-    <!-- Summary (โหลดผ่าน AJAX จาก color-matching/summary หลัง loadData()) -->
+    {{-- ⏸ Summary ปิดไว้ก่อน (ค่อยเปิดใช้ภายหลัง) — โหลดผ่าน AJAX จาก color-matching/summary
     <div id="summary-data" class="row g-4 mb-4">
-        {{-- placeholder ขณะรอ AJAX โหลด --}}
         @for ($i = 0; $i < 4; $i++)
             <div class="col-sm-6 col-lg-3">
                 <div class="card">
@@ -110,14 +109,18 @@
             </div>
         @endfor
     </div>
+    --}}
 
     <!-- Table -->
     <div class="card">
 
         <div class="card-header border-bottom">
-            <div class="row g-3 align-items-end">
 
-                <div class="col-md-3">
+            {{-- ปุ่มล้างตัวกรอง (มุมขวาบน) --}}
+
+            {{-- แถวตัวกรอง 1: ค้นหา + ช่วงวันที่ --}}
+            <div class="row g-3 align-items-end">
+                <div class="col-md-6">
                     <label class="form-label small fw-medium mb-1">ค้นหา</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="ti ti-search"></i></span>
@@ -127,24 +130,7 @@
                             onkeyup="if(event.key==='Enter') loadData(page)">
                     </div>
                 </div>
-
-                <div class="col-md-2">
-                    <label class="form-label small fw-medium mb-1">ประเภทงาน</label>
-                    <select name="job_type" class="form-select p_search" onchange="loadData(page)">
-                        <option value="">ทุกประเภท</option>
-                        @foreach (['เป่าฟิมล์','เป่าขวด','EXT','ROLL','INJ','CY'] as $opt)
-                            <option value="{{ $opt }}">{{ $opt }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="col-md-2">
-                    <label class="form-label small fw-medium mb-1">Standard</label>
-                    <input type="text" name="std" class="form-control p_search"
-                        placeholder="เช่น PT 494 C" onkeyup="if(event.key==='Enter') loadData(page)">
-                </div>
-
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <label class="form-label small fw-medium mb-1">วันที่ส่งเทียบสี</label>
                     <div class="d-flex align-items-center gap-2">
                         <span class="small fw-medium">ตั้งแต่</span>
@@ -154,8 +140,25 @@
                             value="{{ date('Y-m-d') }}" onchange="loadData(page)">
                     </div>
                 </div>
+            </div>
 
-                <div class="col-md-2">
+            {{-- แถวตัวกรอง 2: ประเภทงาน + Standard + ปรับแก้ไข --}}
+            <div class="row g-3 align-items-end mt-1">
+                <div class="col-md-4">
+                    <label class="form-label small fw-medium mb-1">ประเภทงาน</label>
+                    <select name="job_type" class="form-select p_search" onchange="loadData(page)">
+                        <option value="">ทุกประเภท</option>
+                        @foreach (['เป่าฟิมล์','เป่าขวด','EXT','ROLL','INJ','CY'] as $opt)
+                            <option value="{{ $opt }}">{{ $opt }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-medium mb-1">Standard</label>
+                    <input type="text" name="std" class="form-control p_search"
+                        placeholder="เช่น PT 494 C" onkeyup="if(event.key==='Enter') loadData(page)">
+                </div>
+                <div class="col-md-4">
                     <label class="form-label small fw-medium mb-1">ปรับแก้ไข</label>
                     <select name="revision" class="form-select p_search" onchange="loadData(page)">
                         <option value="">ทั้งหมด</option>
@@ -164,17 +167,15 @@
                         @endforeach
                     </select>
                 </div>
-
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="button" id="btnResetFilters" class="btn btn-label-secondary" onclick="resetFilters()">
-                        <i class="ti ti-x me-1"></i>ล้างตัวกรอง<span class="filter-count ms-1"></span>
-                    </button>
-                </div>
-
+            </div>
+            <div class="d-flex justify-content-end my-3">
+                <button type="button" id="btnResetFilters" class="btn btn-label-secondary" onclick="resetFilters()">
+                    <i class="ti ti-x me-1"></i>ล้างตัวกรอง<span class="filter-count ms-1"></span>
+                </button>
             </div>
 
-            {{-- Row 2: Show limit selector (จัดชิดขวา) --}}
-            <div class="d-flex justify-content-end align-items-center mt-3">
+            {{-- จำนวนต่อหน้า (มุมขวาล่าง) --}}
+            <div class="d-flex justify-content-end align-items-center mt-3 pt-3 border-top">
                 <label class="form-label small fw-medium mb-0 me-2">แสดง</label>
                 <select name="limit" class="form-select form-select-sm p_search"
                     style="width: 90px;" onchange='loadData("{{$page_url}}/datatable")'>
@@ -331,7 +332,7 @@
                 data: searchData,
                 success: function(data) {
                     $("#table-data").html(data);
-                    loadSummary(); // โหลด summary ต่อ ให้สอดคล้องกับ filter ปัจจุบัน
+                    // loadSummary(); // ⏸ ปิด summary ไว้ก่อน — ค่อยเปิดเมื่อต้องใช้
                 }
             });
         }

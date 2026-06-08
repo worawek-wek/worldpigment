@@ -18,7 +18,6 @@ class ColorMatchingController extends Controller
         'DsendT', 'Mems', 'TNname', 'rptno', 'pop', 'cancel', 'CancalRes',
         'TNDate', 'PHR', 'ResinMatch', 'startdate', 'SampleDate', 'ReadyDate',
         'RminWating', 'ColorMatcher', 'MI', 'Density', 'VR', 'Hardness',
-        'ref_sendno', // อ้างอิงเลขใบนำส่งเทียบสี (CM) — ใช้ในฟอร์ม SD
     ];
 
     // ─── Field ที่เป็นวันที่ — flatpickr ส่งมาเป็น d/m/Y ต้อง parse ก่อน save ───

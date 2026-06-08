@@ -5,7 +5,7 @@
             <tr class="align-middle">
                 <th class="align-middle text-center" style="width: 50px;">ลำดับ</th>
                 <th class="align-middle">
-                    เลขที่ใบนำส่ง
+                    เอกสาร / เลขที่
                     <br>
                     <small class="text-body-secondary fw-normal">วันที่ส่งเทียบสี</small>
                 </th>
@@ -24,6 +24,9 @@
 
             @forelse ($list_data as $key => $row)
                 @php
+                    // มี Testno = ใบส่ง ต.ย. (SD), ไม่มี = ใบนำส่งเทียบสี (CM)
+                    $isSD = !empty(trim((string)$row->Testno));
+
                     $revBadge = match (trim((string)$row->Adj)) {
                         'New'      => 'bg-label-info',
                         'Revise 1' => 'bg-label-warning',
@@ -56,7 +59,20 @@
                     </td>
 
                     <td>
-                        <strong class="text-primary">{{ $row->SendNo }}</strong>
+                        @if ($isSD)
+                            <span class="badge bg-label-info mb-1">
+                                <i class="ti ti-package me-1"></i>ใบส่ง ต.ย.
+                            </span>
+                            <br>
+                            <small class="text-muted">อ้างอิงใบเทียบสี:</small>
+                            <strong class="text-primary">{{ $row->SendNo ?: '—' }}</strong>
+                        @else
+                            <span class="badge bg-label-primary mb-1">
+                                <i class="ti ti-file-text me-1"></i>ใบนำส่งเทียบสี
+                            </span>
+                            <br>
+                            <strong class="text-primary">{{ $row->SendNo }}</strong>
+                        @endif
                         <br>
                         <small class="text-muted">
                             {{ $row->DsendT ? \Carbon\Carbon::parse($row->DsendT)->format('d/m/Y') : '-' }}
@@ -112,16 +128,19 @@
                     </td>
 
                     <td class="wip">
-                        <button class="btn btn-sm btn-icon btn-label-primary"
-                            title="แก้ไขใบนำส่งเทียบสี"
-                            onclick="view('{{ $row->SendNo }}')">
-                            <i class="ti ti-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-icon btn-label-info"
-                            title="แก้ไขใบส่ง ต.ย."
-                            onclick="viewSampleDelivery('{{ $row->SendNo }}')">
-                            <i class="ti ti-package"></i>
-                        </button>
+                        @if ($isSD)
+                            <button class="btn btn-sm btn-icon btn-label-info"
+                                title="แก้ไขใบส่ง ต.ย."
+                                onclick="viewSampleDelivery('{{ $row->SendNo }}')">
+                                <i class="ti ti-package"></i>
+                            </button>
+                        @else
+                            <button class="btn btn-sm btn-icon btn-label-primary"
+                                title="แก้ไขใบนำส่งเทียบสี"
+                                onclick="view('{{ $row->SendNo }}')">
+                                <i class="ti ti-edit"></i>
+                            </button>
+                        @endif
                     </td>
                 </tr>
             @empty

@@ -21,7 +21,6 @@
                 <input type="hidden" name="_mode" value="create">
                 {{-- _pk = SendNo ของ record ที่ใช้อยู่ (จำเป็นสำหรับ SD เพราะอ้างอิงใบ CM) --}}
                 <input type="hidden" name="_pk" value="">
-                <input type="hidden" name="SendNo" value="">
 
                 <!-- Body -->
                 <div class="modal-body px-5 py-4" style="background-color: #f8f9fb;">
@@ -45,7 +44,7 @@
                                     <label class="form-label small mb-1 fw-semibold" style="color:#4b3fb8;">
                                         <i class="ti ti-link me-1"></i>เลขที่ใบนำส่งเทียบสี (อ้างอิง)
                                     </label>
-                                    <input type="text" name="ref_sendno" class="form-control"
+                                    <input type="text" name="SendNo" class="form-control"
                                         placeholder="เช่น 26/0001">
                                 </div>
                             </div>
