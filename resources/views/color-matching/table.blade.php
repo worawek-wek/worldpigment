@@ -16,7 +16,7 @@
                 <th class="align-middle">ปรับแก้ไข</th>
                 <th class="align-middle">เลขที่ใบส่ง ต.ย.</th>
                 <th class="align-middle">สถานะ</th>
-                <th class="align-middle wip" width="120">จัดการ</th>
+                <th class="align-middle text-center" width="120">จัดการ</th>
             </tr>
         </thead>
 
@@ -127,20 +127,29 @@
                         </span>
                     </td>
 
-                    <td class="wip">
-                        @if ($isSD)
-                            <button class="btn btn-sm btn-icon btn-label-info"
-                                title="แก้ไขใบส่ง ต.ย."
-                                onclick="viewSampleDelivery('{{ $row->SendNo }}')">
-                                <i class="ti ti-package"></i>
+                    <td class="text-center">
+                        <div class="d-inline-flex gap-1">
+                            {{-- ดูรายละเอียด (อ่านอย่างเดียว) — แสดงคนละหน้าตาตามชนิดเอกสาร --}}
+                            <button class="btn btn-sm btn-icon btn-label-secondary"
+                                title="ดูรายละเอียด"
+                                onclick="viewDetail('{{ $row->id }}')">
+                                <i class="ti ti-eye"></i>
                             </button>
-                        @else
-                            <button class="btn btn-sm btn-icon btn-label-primary"
-                                title="แก้ไขใบนำส่งเทียบสี"
-                                onclick="view('{{ $row->SendNo }}')">
-                                <i class="ti ti-edit"></i>
-                            </button>
-                        @endif
+
+                            @if ($isSD)
+                                <button class="btn btn-sm btn-icon btn-label-info"
+                                    title="แก้ไขใบส่ง ต.ย."
+                                    onclick="viewSampleDelivery('{{ $row->id }}')">
+                                    <i class="ti ti-edit"></i>
+                                </button>
+                            @else
+                                <button class="btn btn-sm btn-icon btn-label-primary"
+                                    title="แก้ไขใบนำส่งเทียบสี"
+                                    onclick="view('{{ $row->id }}')">
+                                    <i class="ti ti-edit"></i>
+                                </button>
+                            @endif
+                        </div>
                     </td>
                 </tr>
             @empty
@@ -157,7 +166,7 @@
     </table>
 </div>
 
-<div class="cm-pagination-wrap mt-4">
+<div class="cm-pagination-wrap mt-4 mb-3">
     @include('layout/pagination')
 </div>
 

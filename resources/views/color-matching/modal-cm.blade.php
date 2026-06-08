@@ -67,7 +67,7 @@
                                             <span class="badge bg-label-secondary me-1">EN</span>
                                             ชื่อบริษัท (อังกฤษ)
                                         </label>
-                                        <input type="text" name="custname_en" class="form-control"
+                                        <input type="text" name="custnameEN" class="form-control"
                                             placeholder="กรอกชื่อบริษัท (อังกฤษ)">
                                     </div>
                                 </div>

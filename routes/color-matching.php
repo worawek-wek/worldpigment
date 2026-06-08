@@ -12,9 +12,15 @@ Route::prefix('color-matching')->group(function () {
     // ─── Lookup ลูกค้า (ต้องอยู่ก่อน /{sendno} เพราะ .+ จับ slash ได้) ───
     Route::get('/customer/{code}',     [ColorMatchingController::class, 'customerLookup'])->name('color_matching.customer_lookup');
 
-    // ─── CRUD ────────────────────────────────────────────────────────
+    // ─── Lookup record CM จาก SendNo (ฟอร์มใบส่ง ต.ย. → เลขอ้างอิง) ───
+    Route::get('/ref/{sendno}',        [ColorMatchingController::class, 'lookupBySendNo'])->where('sendno', '.+')->name('color_matching.ref');
+
+    // ─── รายละเอียด (อ่านอย่างเดียว) — อ้างอิงด้วย id ───
+    Route::get('/detail/{id}',         [ColorMatchingController::class, 'detail'])->whereNumber('id')->name('color_matching.detail');
+
+    // ─── CRUD (อ้างอิงด้วย id auto-increment) ────────────────────────
     Route::post('/insert',             [ColorMatchingController::class, 'insert'])->name('color_matching.insert');
-    Route::post('/update/{sendno}',    [ColorMatchingController::class, 'update'])->where('sendno', '.+')->name('color_matching.update');
-    Route::get('/{sendno}',            [ColorMatchingController::class, 'edit'])->where('sendno', '.+')->name('color_matching.edit');
+    Route::post('/update/{id}',        [ColorMatchingController::class, 'update'])->whereNumber('id')->name('color_matching.update');
+    Route::get('/{id}',                [ColorMatchingController::class, 'edit'])->whereNumber('id')->name('color_matching.edit');
 
 });
