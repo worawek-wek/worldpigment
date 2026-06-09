@@ -5,6 +5,13 @@
     $default_mdate     = $parent_header?->mdate ? substr($parent_header->mdate, 0, 10) : '';
     $default_custno    = $parent_header?->company  ?? '';   // custno = company ของ header แม่
     $companies = ['CP', 'MB', 'DB', 'SPP'];
+
+    // สีของ badge ตามสถานะ semi/pigment
+    $spStatusCls = [
+        'request'  => 'bg-label-warning',
+        'approved' => 'bg-label-success',
+        'reject'   => 'bg-label-danger',
+    ];
 @endphp
 
 <div class="modal-header" style="background-color: #3A8EBA; padding: 1rem 1.5rem;">
@@ -167,37 +174,57 @@
                         <th style="min-width:110px">Company</th>
                         <th style="min-width:120px">วันที่สั่ง</th>
                         <th style="min-width:120px">วันที่ต้องการรับ</th>
-                        <th style="min-width:120px">วันที่ส่งสินค้า</th>
                         <th style="min-width:100px">Cust No.</th>
                         <th style="min-width:130px">Item No.</th>
                         <th style="min-width:80px">Quantity</th>
+                        <th class="text-center" style="min-width:90px">สถานะ</th>
                         <th class="text-center" style="width:46px">ลบ</th>
                     </tr>
                 </thead>
                 <tbody id="tbody_semi">
                     @forelse($semi_list as $i => $row)
-                    <tr>
-                        <td class="text-center row-num">{{ $i + 1 }}</td>
-                        <td>
-                            <select class="form-select form-select-sm" data-field="company">
-                                <option value="">-- เลือก --</option>
-                                @foreach($companies as $c)
-                                <option value="{{ $c }}" {{ ($row['company'] ?? '') == $c ? 'selected' : '' }}>{{ $c }}</option>
-                                @endforeach
-                            </select>
-                        </td>
-                        <td><input type="date" class="form-control form-control-sm" data-field="mdate"    value="{{ substr($row['mdate']    ?? '', 0, 10) }}"></td>
-                        <td><input type="date" class="form-control form-control-sm" data-field="custwant" value="{{ substr($row['custwant'] ?? '', 0, 10) }}"></td>
-                        <td><input type="date" class="form-control form-control-sm" data-field="senddate" value="{{ substr($row['senddate'] ?? '', 0, 10) }}"></td>
-                        <td><input type="text" class="form-control form-control-sm bg-light" data-field="custno"   value="{{ $default_custno }}" readonly></td>
-                        <td><input type="text" class="form-control form-control-sm" data-field="itemno"   value="{{ $row['itemno']   ?? '' }}" placeholder="Item No."></td>
-                        <td><input type="text" class="form-control form-control-sm" data-field="quantity" value="{{ $row['quantity'] ?? '' }}" placeholder="0"></td>
-                        <td class="text-center">
-                            <button type="button" class="btn btn-sm btn-danger btn-icon btn_remove_row">
-                                <i class="ti ti-trash ti-sm"></i>
-                            </button>
-                        </td>
-                    </tr>
+                        @php
+                            $st       = $row['status'] ?? 'request';
+                            $isLocked = $st !== 'request';
+                            $stCls    = $spStatusCls[$st] ?? 'bg-label-secondary';
+                            $stLabel  = $row['status_label'] ?? 'รออนุมัติ';
+                        @endphp
+                        @if($isLocked)
+                        <tr class="locked-row table-light">
+                            <td class="text-center row-num">{{ $i + 1 }}</td>
+                            <td>{{ $row['company'] ?? '-' }}</td>
+                            <td>{{ substr($row['mdate']    ?? '', 0, 10) ?: '-' }}</td>
+                            <td>{{ substr($row['custwant'] ?? '', 0, 10) ?: '-' }}</td>
+                            <td>{{ $row['custno']   ?? '-' }}</td>
+                            <td>{{ $row['itemno']   ?? '-' }}</td>
+                            <td>{{ $row['quantity'] ?? '-' }}</td>
+                            <td class="text-center"><span class="badge {{ $stCls }}">{{ $stLabel }}</span></td>
+                            <td class="text-center"><i class="ti ti-lock text-muted" title="ดำเนินการแล้ว แก้ไขไม่ได้"></i></td>
+                        </tr>
+                        @else
+                        <tr>
+                            <td class="text-center row-num">{{ $i + 1 }}</td>
+                            <td>
+                                <select class="form-select form-select-sm" data-field="company">
+                                    <option value="">-- เลือก --</option>
+                                    @foreach($companies as $c)
+                                    <option value="{{ $c }}" {{ ($row['company'] ?? '') == $c ? 'selected' : '' }}>{{ $c }}</option>
+                                    @endforeach
+                                </select>
+                            </td>
+                            <td><input type="date" class="form-control form-control-sm" data-field="mdate"    value="{{ substr($row['mdate']    ?? '', 0, 10) }}"></td>
+                            <td><input type="date" class="form-control form-control-sm" data-field="custwant" value="{{ substr($row['custwant'] ?? '', 0, 10) }}"></td>
+                            <td><input type="text" class="form-control form-control-sm bg-light" data-field="custno"   value="{{ $default_custno }}" readonly></td>
+                            <td><input type="text" class="form-control form-control-sm" data-field="itemno"   value="{{ $row['itemno']   ?? '' }}" placeholder="Item No."></td>
+                            <td><input type="text" class="form-control form-control-sm" data-field="quantity" value="{{ $row['quantity'] ?? '' }}" placeholder="0"></td>
+                            <td class="text-center"><span class="badge bg-label-warning">รออนุมัติ</span></td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-danger btn-icon btn_remove_row">
+                                    <i class="ti ti-trash ti-sm"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        @endif
                     @empty
                     <tr class="empty-row">
                         <td colspan="9" class="text-center text-muted py-2">ยังไม่มีรายการ Semi</td>
@@ -233,37 +260,57 @@
                         <th style="min-width:110px">Company</th>
                         <th style="min-width:120px">วันที่สั่ง</th>
                         <th style="min-width:120px">วันที่ต้องการรับ</th>
-                        <th style="min-width:120px">วันที่ส่งสินค้า</th>
                         <th style="min-width:100px">Cust No.</th>
                         <th style="min-width:130px">Item No.</th>
                         <th style="min-width:80px">Quantity</th>
+                        <th class="text-center" style="min-width:90px">สถานะ</th>
                         <th class="text-center" style="width:46px">ลบ</th>
                     </tr>
                 </thead>
                 <tbody id="tbody_pigment">
                     @forelse($pigment_list as $i => $row)
-                    <tr>
-                        <td class="text-center row-num">{{ $i + 1 }}</td>
-                        <td>
-                            <select class="form-select form-select-sm" data-field="company">
-                                <option value="">-- เลือก --</option>
-                                @foreach($companies as $c)
-                                <option value="{{ $c }}" {{ ($row['company'] ?? '') == $c ? 'selected' : '' }}>{{ $c }}</option>
-                                @endforeach
-                            </select>
-                        </td>
-                        <td><input type="date" class="form-control form-control-sm" data-field="mdate"    value="{{ substr($row['mdate']    ?? '', 0, 10) }}"></td>
-                        <td><input type="date" class="form-control form-control-sm" data-field="custwant" value="{{ substr($row['custwant'] ?? '', 0, 10) }}"></td>
-                        <td><input type="date" class="form-control form-control-sm" data-field="senddate" value="{{ substr($row['senddate'] ?? '', 0, 10) }}"></td>
-                        <td><input type="text" class="form-control form-control-sm bg-light" data-field="custno"   value="{{ $default_custno }}" readonly></td>
-                        <td><input type="text" class="form-control form-control-sm" data-field="itemno"   value="{{ $row['itemno']   ?? '' }}" placeholder="Item No."></td>
-                        <td><input type="text" class="form-control form-control-sm" data-field="quantity" value="{{ $row['quantity'] ?? '' }}" placeholder="0"></td>
-                        <td class="text-center">
-                            <button type="button" class="btn btn-sm btn-danger btn-icon btn_remove_row">
-                                <i class="ti ti-trash ti-sm"></i>
-                            </button>
-                        </td>
-                    </tr>
+                        @php
+                            $st       = $row['status'] ?? 'request';
+                            $isLocked = $st !== 'request';
+                            $stCls    = $spStatusCls[$st] ?? 'bg-label-secondary';
+                            $stLabel  = $row['status_label'] ?? 'รออนุมัติ';
+                        @endphp
+                        @if($isLocked)
+                        <tr class="locked-row table-light">
+                            <td class="text-center row-num">{{ $i + 1 }}</td>
+                            <td>{{ $row['company'] ?? '-' }}</td>
+                            <td>{{ substr($row['mdate']    ?? '', 0, 10) ?: '-' }}</td>
+                            <td>{{ substr($row['custwant'] ?? '', 0, 10) ?: '-' }}</td>
+                            <td>{{ $row['custno']   ?? '-' }}</td>
+                            <td>{{ $row['itemno']   ?? '-' }}</td>
+                            <td>{{ $row['quantity'] ?? '-' }}</td>
+                            <td class="text-center"><span class="badge {{ $stCls }}">{{ $stLabel }}</span></td>
+                            <td class="text-center"><i class="ti ti-lock text-muted" title="ดำเนินการแล้ว แก้ไขไม่ได้"></i></td>
+                        </tr>
+                        @else
+                        <tr>
+                            <td class="text-center row-num">{{ $i + 1 }}</td>
+                            <td>
+                                <select class="form-select form-select-sm" data-field="company">
+                                    <option value="">-- เลือก --</option>
+                                    @foreach($companies as $c)
+                                    <option value="{{ $c }}" {{ ($row['company'] ?? '') == $c ? 'selected' : '' }}>{{ $c }}</option>
+                                    @endforeach
+                                </select>
+                            </td>
+                            <td><input type="date" class="form-control form-control-sm" data-field="mdate"    value="{{ substr($row['mdate']    ?? '', 0, 10) }}"></td>
+                            <td><input type="date" class="form-control form-control-sm" data-field="custwant" value="{{ substr($row['custwant'] ?? '', 0, 10) }}"></td>
+                            <td><input type="text" class="form-control form-control-sm bg-light" data-field="custno"   value="{{ $default_custno }}" readonly></td>
+                            <td><input type="text" class="form-control form-control-sm" data-field="itemno"   value="{{ $row['itemno']   ?? '' }}" placeholder="Item No."></td>
+                            <td><input type="text" class="form-control form-control-sm" data-field="quantity" value="{{ $row['quantity'] ?? '' }}" placeholder="0"></td>
+                            <td class="text-center"><span class="badge bg-label-warning">รออนุมัติ</span></td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-danger btn-icon btn_remove_row">
+                                    <i class="ti ti-trash ti-sm"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        @endif
                     @empty
                     <tr class="empty-row">
                         <td colspan="9" class="text-center text-muted py-2">ยังไม่มีรายการ Pigment</td>
@@ -310,10 +357,10 @@
             '<td><select class="form-select form-select-sm" data-field="company">' + COMPANY_OPTIONS + '</select></td>' +
             '<td><input type="date" class="form-control form-control-sm" data-field="mdate"    value="' + DEFAULT_MDATE + '"></td>' +
             '<td><input type="date" class="form-control form-control-sm" data-field="custwant" value=""></td>' +
-            '<td><input type="date" class="form-control form-control-sm" data-field="senddate" value=""></td>' +
             '<td><input type="text" class="form-control form-control-sm bg-light" data-field="custno"   value="' + DEFAULT_CUSTNO + '" readonly placeholder="Cust No."></td>' +
             '<td><input type="text" class="form-control form-control-sm" data-field="itemno"   value="" placeholder="Item No."></td>' +
             '<td><input type="text" class="form-control form-control-sm" data-field="quantity" value="" placeholder="0"></td>' +
+            '<td class="text-center"><span class="badge bg-label-warning">รออนุมัติ</span></td>' +
             '<td class="text-center"><button type="button" class="btn btn-sm btn-danger btn-icon btn_remove_row"><i class="ti ti-trash ti-sm"></i></button></td>' +
             '</tr>';
     }
@@ -328,19 +375,19 @@
     function checkEmpty(tbodyId, label) {
         if ($('#' + tbodyId + ' tr').length === 0) {
             $('#' + tbodyId).append(
-                '<tr class="empty-row"><td colspan="8" class="text-center text-muted py-2">ยังไม่มีรายการ ' + label + '</td></tr>'
+                '<tr class="empty-row"><td colspan="9" class="text-center text-muted py-2">ยังไม่มีรายการ ' + label + '</td></tr>'
             );
         }
     }
 
     function collectRows(tbodyId) {
         var rows = [];
-        $('#' + tbodyId + ' tr:not(.empty-row)').each(function () {
+        // ข้ามแถวที่ล็อก (อนุมัติ/ปฏิเสธแล้ว) — เก็บเฉพาะแถวที่รออนุมัติ/แถวใหม่
+        $('#' + tbodyId + ' tr:not(.empty-row):not(.locked-row)').each(function () {
             rows.push({
                 company:  $(this).find('[data-field="company"]').val()  || '',
                 mdate:    $(this).find('[data-field="mdate"]').val()    || '',
                 custwant: $(this).find('[data-field="custwant"]').val() || '',
-                senddate: $(this).find('[data-field="senddate"]').val() || '',
                 custno:   $(this).find('[data-field="custno"]').val()   || '',
                 itemno:   $(this).find('[data-field="itemno"]').val()   || '',
                 quantity: $(this).find('[data-field="quantity"]').val() || ''

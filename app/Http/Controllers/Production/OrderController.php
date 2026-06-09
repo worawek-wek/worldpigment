@@ -27,17 +27,30 @@ class OrderController extends Controller
             ->addColumn('rownum', function($row) {
                 return $row->rownum;
             })
+            ->addColumn('plan_badge', function($row) {
+                if ($row->has_plan) {
+                    return '<span class="badge bg-label-success">สร้างแล้ว</span>';
+                }
+                return '<span class="badge bg-label-secondary">ยังไม่สร้าง</span>';
+            })
             ->addColumn('btnedit', function($row) {
-                $btn_view = '<button class="btn btn-sm btn-icon btn-label-primary me-2 btn_view" data-orderno="'.$row->Orderno.'" title ="ลบ">
+                $btn_view = '<button class="btn btn-sm btn-icon btn-label-primary me-2 btn_view" data-orderno="'.$row->Orderno.'" title="ดูรายละเอียด">
                     <i class="ti ti-eye ti-sm"></i>
                 </button>';
-                $btn_edit = '<button class="btn btn-sm btn-icon btn-label-warning btn_edit" data-orderno="'.$row->Orderno.'" title ="แก้ไข">
-                    <i class="ti ti-download ti-sm"></i>
-                </button>';
+
+                if ($row->has_plan) {
+                    $btn_edit = '<button class="btn btn-sm btn-icon btn-label-secondary btn_edit" data-orderno="'.$row->Orderno.'" title="สร้างแผนการผลิตแล้ว" disabled>
+                        <i class="ti ti-checks ti-sm"></i>
+                    </button>';
+                } else {
+                    $btn_edit = '<button class="btn btn-sm btn-icon btn-label-warning btn_edit" data-orderno="'.$row->Orderno.'" title="สร้างแผนการผลิต">
+                        <i class="ti ti-download ti-sm"></i>
+                    </button>';
+                }
 
                 return $btn_view.$btn_edit;
             })
-            ->rawColumns(['btnedit']) // 👈 บอกให้ column นี้ render HTML
+            ->rawColumns(['plan_badge', 'btnedit']) // 👈 บอกให้ column นี้ render HTML
             ->make(true);
     }
 
@@ -48,7 +61,12 @@ class OrderController extends Controller
 
         $data = Morder::select([
                 'morder.*',
-                DB::raw('ROW_NUMBER() OVER (ORDER BY morder.Mdate DESC) AS rownum')
+                DB::raw('ROW_NUMBER() OVER (ORDER BY morder.Mdate DESC) AS rownum'),
+                DB::raw("EXISTS(
+                    SELECT 1 FROM tb_planning_header
+                    WHERE tb_planning_header.orderno = morder.Orderno
+                      AND tb_planning_header.plan_type = 'ORDER'
+                ) AS has_plan")
             ])
             ->when(!empty($search), function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
@@ -84,7 +102,9 @@ class OrderController extends Controller
         $orderno =  request('orderno');
 
         $order = Morder::where('Orderno', $orderno)->first();
-        $check_plan = PlanningHeader::where('orderno', $orderno)->first();
+        $check_plan = PlanningHeader::where('orderno', $orderno)
+            ->where('plan_type', 'ORDER')
+            ->first();
 
         if(!is_null($check_plan)){
             return response()->json([

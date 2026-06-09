@@ -17,4 +17,16 @@ Route::prefix('production-planning')->group(function () {
     Route::get('/planning/edit-item', [Production\ProductionPlanController::class, 'editItem'])->name('production.planning.edit-item');
     Route::post('/planning/save-item', [Production\ProductionPlanController::class, 'saveItem'])->name('production.planning.save-item');
 
+    // Semi & Pigment (รออนุมัติ)
+    Route::get('/semi-pigment', [Production\SemiPigmentController::class, 'index'])->name('production.semipigment.index');
+    Route::get('/semi-pigment/datatable', [Production\SemiPigmentController::class, 'datatable'])->name('production.semipigment.datatable');
+    Route::post('/semi-pigment/approve', [Production\SemiPigmentController::class, 'approve'])->name('production.semipigment.approve');
+    Route::post('/semi-pigment/reject', [Production\SemiPigmentController::class, 'reject'])->name('production.semipigment.reject');
+
+    // Semi & Pigment (อนุมัติแล้ว)
+    Route::get('/semi-pigment/approved', [Production\SemiPigmentController::class, 'approvedIndex'])->name('production.semipigment.approved');
+    Route::get('/semi-pigment/approved/datatable', [Production\SemiPigmentController::class, 'approvedDatatable'])->name('production.semipigment.approved.datatable');
+    Route::get('/semi-pigment/detail', [Production\SemiPigmentController::class, 'detail'])->name('production.semipigment.detail');
+    Route::post('/semi-pigment/convertplanning', [Production\SemiPigmentController::class, 'convertplanning'])->name('production.semipigment.convertplanning');
+
 });

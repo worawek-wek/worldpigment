@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\Facades\DataTables;
 use App\Models\PlanningHeader;
 use App\Models\Planning;
+use App\Models\SemiPigment;
 
 class ProductionPlanController extends Controller
 {
@@ -108,41 +109,40 @@ class ProductionPlanController extends Controller
         $parent_header = null;
 
         if ($planning_id) {
-            $planning_item = Planning::with([
-                'semi_headers.plannings',
-                'pigment_headers.plannings',
-                'planning_header',
-            ])->find($planning_id);
+            $planning_item = Planning::with('planning_header')->find($planning_id);
 
             if ($planning_item) {
                 $parent_header  = $planning_item->planning_header;
                 $parent_orderno = $parent_header?->orderno;
 
-                $semi_list = $planning_item->semi_headers->map(function ($header) {
-                    $p = $header->plannings->first();
+                // โหลดทุกรายการพร้อมสถานะ (รออนุมัติ = แก้ไขได้, อนุมัติ/ปฏิเสธ = ล็อกอ่านอย่างเดียว)
+                $mapRow = function (SemiPigment $r) {
                     return [
-                        'company'  => $header->company,
-                        'mdate'    => !empty($p->mdate) ? $p->mdate : null,
-                        'custwant' => !empty($p->custwant) ? $p->custwant : null,
-                        'senddate' => !empty($p->senddate) ? $p->senddate : null,
-                        'custno'   => $header->custno,
-                        'itemno'   => $p?->itemno,
-                        'quantity' => $p?->quantity,
+                        'company'      => $r->company,
+                        'mdate'        => !empty($r->order_date) ? $r->order_date : null,
+                        'custwant'     => !empty($r->want_date) ? $r->want_date : null,
+                        'custno'       => $r->custno,
+                        'itemno'       => $r->itemno,
+                        'quantity'     => $r->quantity,
+                        'status'       => $r->status,
+                        'status_label' => $r->statusLabel(),
                     ];
-                })->values()->toArray();
+                };
 
-                $pigment_list = $planning_item->pigment_headers->map(function ($header) {
-                    $p = $header->plannings->first();
-                    return [
-                        'company'  => $header->company,
-                        'mdate'    => !empty($p->mdate) ? $p->mdate : null,
-                        'custwant' => !empty($p->custwant) ? $p->custwant : null,
-                        'senddate' => !empty($p->senddate) ? $p->senddate : null,
-                        'custno'   => $header->custno,
-                        'itemno'   => $p?->itemno,
-                        'quantity' => $p?->quantity,
-                    ];
-                })->values()->toArray();
+                // เรียงให้ "รออนุมัติ" อยู่บนสุด แล้วตามด้วยอนุมัติ/ปฏิเสธ
+                $orderByStatus = "FIELD(status, 'request', 'approved', 'reject')";
+
+                $semi_list = SemiPigment::where('planning_id', $planning_id)
+                    ->where('type', 'semi')
+                    ->orderByRaw($orderByStatus)
+                    ->orderBy('id')
+                    ->get()->map($mapRow)->values()->toArray();
+
+                $pigment_list = SemiPigment::where('planning_id', $planning_id)
+                    ->where('type', 'pigment')
+                    ->orderByRaw($orderByStatus)
+                    ->orderBy('id')
+                    ->get()->map($mapRow)->values()->toArray();
             }
         } elseif ($planning_header_id) {
             $parent_header  = PlanningHeader::find($planning_header_id);
@@ -221,11 +221,9 @@ class ProductionPlanController extends Controller
                 $parent->load('planning_header');
             }
 
-            $parent_orderno = $parent->planning_header?->orderno;
-
-            // 2) sync sub-orders (ลบเดิม → สร้างใหม่)
-            $this->syncSubOrders($parent, 'semi',    $semi_list,    $parent_orderno);
-            $this->syncSubOrders($parent, 'pigment', $pigment_list, $parent_orderno);
+            // 2) บันทึก Semi / Pigment ลงตารางรออนุมัติ (แทนการสร้าง planning อัตโนมัติ)
+            $this->syncSemiPigment($parent, 'semi',    $semi_list);
+            $this->syncSemiPigment($parent, 'pigment', $pigment_list);
 
             DB::commit();
         } catch (\Exception $e) {
@@ -244,46 +242,33 @@ class ProductionPlanController extends Controller
     }
 
     /**
-     * ลบ sub-order headers (และ plannings ของมัน) เดิมทั้งหมด
-     * แล้วสร้างใหม่ตาม $entries
+     * ลบรายการ Semi/Pigment ที่ "รออนุมัติ" เดิมของ planning นี้ แล้วบันทึกใหม่
+     * (รายการที่ "อนุมัติ" แล้วจะไม่ถูกแตะต้อง เพราะถูกแปลงเป็นแผนการผลิตไปแล้ว)
      */
-    private function syncSubOrders(Planning $parent, string $type, array $entries, ?string $parent_orderno): void
+    private function syncSemiPigment(Planning $parent, string $type, array $entries): void
     {
-        // ลบ plannings ที่อยู่ใต้ sub-headers เดิมก่อน
-        $old_header_ids = PlanningHeader::where('parent_planning_id', $parent->id)
-            ->where('plan_type', $type)
-            ->pluck('id');
+        SemiPigment::where('planning_id', $parent->id)
+            ->where('type', $type)
+            ->where('status', SemiPigment::STATUS_REQUEST)
+            ->delete();
 
-        if ($old_header_ids->isNotEmpty()) {
-            Planning::whereIn('planning_header_id', $old_header_ids)->delete();
-            PlanningHeader::whereIn('id', $old_header_ids)->delete();
-        }
+        $orderno = $parent->planning_header?->orderno;
 
-        // สร้างใหม่
-        foreach ($entries as $i => $entry) {
+        foreach ($entries as $entry) {
             if (empty($entry['itemno'])) continue;
 
-            $sub_header = PlanningHeader::create([
-                'planning_code'      => $parent_orderno . '-' .strtoupper($type) . '-' . ($i + 1),
-                'plan_type'          => $type,
-                'parent_planning_id' => $parent->id,
-                'company'            => $entry['company']   ?? null,
-                'mdate'              => !empty($entry['mdate']) ? $entry['mdate'] : null,
-                'custwant'           => !empty($entry['custwant']) ? $entry['custwant'] : null,
-                'senddate'           => !empty($entry['senddate']) ? $entry['senddate'] : null,
-                'custno'             => $entry['custno']    ?? null,
-                'orderno'            => $parent_orderno,
-            ]);
-
-            Planning::create([
-                'planning_header_id' => $sub_header->id,
-                'parent_planning_id' => $parent->id,
-                'plan_type'          => $type,
+            SemiPigment::create([
+                'planning_id'        => $parent->id,
+                'planning_header_id' => $parent->planning_header_id,
+                'orderno'            => $orderno,
+                'type'               => $type,
+                'company'            => $entry['company']  ?? null,
+                'order_date'         => !empty($entry['mdate'])    ? $entry['mdate']    : null,
+                'want_date'          => !empty($entry['custwant']) ? $entry['custwant'] : null,
+                'custno'             => $entry['custno']   ?? null,
                 'itemno'             => $entry['itemno']   ?? null,
-                'quantity'           => $entry['quantity'] ?? null,
-                'mdate'              => !empty($entry['mdate']) ? $entry['mdate'] : null,
-                'custwant'           => !empty($entry['custwant']) ? $entry['custwant'] : null,
-                'senddate'           => !empty($entry['senddate']) ? $entry['senddate'] : null,
+                'quantity'           => (isset($entry['quantity']) && $entry['quantity'] !== '') ? $entry['quantity'] : null,
+                'status'             => SemiPigment::STATUS_REQUEST,
             ]);
         }
     }
