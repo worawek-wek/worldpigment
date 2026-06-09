@@ -258,12 +258,12 @@
 
                 <!-- Footer -->
                 <div class="modal-footer justify-content-between flex-wrap gap-2">
-                    <div class="d-flex gap-2 flex-wrap">
+                    {{-- <div class="d-flex gap-2 flex-wrap">
                         <button type="button" class="btn btn-label-primary">
                             <i class="ti ti-link me-1"></i>
                             อ้างอิงใบนำส่งเทียบสี
                         </button>
-                    </div>
+                    </div> --}}
                     <div class="d-flex gap-2">
                         <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">
                             ปิด
