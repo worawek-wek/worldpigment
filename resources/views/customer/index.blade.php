@@ -64,7 +64,7 @@
 
                     <div>
                         <h3 class="mb-1">
-                            <i class="ti ti-users text-primary"></i>
+                            <i class="ti ti-address-book text-primary"></i>
                             ฐานข้อมูลลูกค้า
                         </h3>
 

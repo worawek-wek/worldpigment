@@ -10,9 +10,10 @@ class Testmain extends Model
     use HasFactory;
 
     protected $table = 'testmain';
-    protected $primaryKey = 'SendNo';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    // ใช้ id (auto-increment) เป็นตัวอ้างอิงหลักของแอป — SendNo ยังเป็น PRIMARY KEY ใน DB (legacy)
+    protected $primaryKey = 'id';
+    public $incrementing = true;
+    protected $keyType = 'int';
     public $timestamps = false;
 
     protected $guarded = [];

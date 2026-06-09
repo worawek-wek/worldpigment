@@ -13,7 +13,7 @@ class ColorMatchingController extends Controller
     // ─── Columns ที่ testmain มีอยู่จริง (ใช้กรอง form input ก่อน mass-assign) ───
     private const TESTMAIN_COLUMNS = [
         'SendNo', 'TestDate', 'TestType', 'TestDesc', 'Testno', 'Type_Work', 'Model',
-        'custno', 'custname', 'sale', 'CodeNo', 'color', 'STD',
+        'custno', 'custname', 'custnameEN', 'sale', 'CodeNo', 'color', 'STD',
         'lotno', 'Adj', 'Resp', 'TyResp', 'Respdate', 'Wage', 'remark',
         'DsendT', 'Mems', 'TNname', 'rptno', 'pop', 'cancel', 'CancalRes',
         'TNDate', 'PHR', 'ResinMatch', 'startdate', 'SampleDate', 'ReadyDate',
@@ -34,7 +34,7 @@ class ColorMatchingController extends Controller
 
     public function datatable(Request $request)
     {
-        $results = Testmain::orderByDesc('TestDate')->orderByDesc('SendNo');
+        $results = Testmain::orderByDesc('id');
         $this->applyFilters($results, $request);
 
         $limit = 15;
@@ -74,17 +74,103 @@ class ColorMatchingController extends Controller
     }
 
     /**
+     * GET — แสดงรายละเอียด testmain 1 row (อ่านอย่างเดียว) เป็น HTML ใส่ modal
+     * CM กับ SD แสดงคนละชุดข้อมูล (แยกใน detail.blade.php ด้วย Testno)
+     */
+    public function detail($id)
+    {
+        $row = Testmain::find($id);
+
+        if (!$row) {
+            return response('ไม่พบข้อมูล', 404);
+        }
+
+        // ถ้าเป็นใบนำส่งเทียบสี (CM = ไม่มี Testno) → ดึงใบส่ง ต.ย. (SD) ที่อ้างอิง SendNo เดียวกัน
+        $relatedSd = collect();
+        $isCM = empty(trim((string) $row->Testno));
+        if ($isCM && !empty($row->SendNo)) {
+            $relatedSd = Testmain::where('SendNo', $row->SendNo)
+                ->whereNotNull('Testno')->where('Testno', '!=', '')
+                ->orderByDesc('id')
+                ->get();
+        }
+
+        return view('color-matching.detail', compact('row', 'relatedSd'));
+    }
+
+    /**
      * GET — ดึงข้อมูล testmain 1 row (ส่งกลับเป็น JSON ให้ form modal เติม)
      */
-    public function edit($sendno)
+    public function edit($id)
     {
-        $row = Testmain::where('SendNo', $sendno)->first();
+        $row = Testmain::find($id);
 
         if (!$row) {
             return response()->json(['error' => 'not_found'], 404);
         }
 
         return response()->json($row);
+    }
+
+    /**
+     * GET — ค้น record เทียบสี (CM) จากเลขที่ใบนำส่ง (SendNo)
+     * ใช้ในฟอร์มใบส่ง ต.ย. เมื่อพิมพ์เลขอ้างอิง → ดึงข้อมูลที่ตรงกันมาเติม
+     */
+    public function lookupBySendNo($sendno)
+    {
+        // SendNo ซ้ำได้ → เลือก record CM (ไม่มี Testno) ก่อน, ไม่งั้น fallback แถวแรก
+        $row = Testmain::where('SendNo', $sendno)
+            ->where(function ($q) {
+                $q->whereNull('Testno')->orWhere('Testno', '');
+            })
+            ->first()
+            ?? Testmain::where('SendNo', $sendno)->first();
+
+        if (!$row) {
+            return response()->json(['found' => false]);
+        }
+
+        return response()->json(['found' => true] + $row->toArray());
+    }
+
+    /**
+     * GET — ค้นชื่อลูกค้าจากรหัส (custno) ในตาราง customer
+     * คืน name (ไทย) + nameEN (อังกฤษ) ให้ฟอร์มเติมอัตโนมัติ
+     */
+    public function customerLookup($code)
+    {
+        $cust = DB::table('customer')
+            ->where('code', $code)
+            ->first(['name', 'nameEN']);
+
+        if (!$cust) {
+            return response()->json(['found' => false]);
+        }
+
+        return response()->json([
+            'found'  => true,
+            'name'   => $cust->name,
+            'nameEN' => $cust->nameEN,
+        ]);
+    }
+
+    /**
+     * ถ้าชื่อพนักงานที่กรอกยังไม่มีใน emp.empname → สร้างพนักงานใหม่ (gen empno)
+     * เก็บเฉพาะชื่อต้น (empname) ตามที่ฟอร์มกรอก (ปกติไม่กรอกนามสกุล)
+     */
+    private function ensureEmployee(?string $name): void
+    {
+        $name = trim((string) $name);
+        if ($name === '') return;
+
+        if (DB::table('emp')->where('empname', $name)->exists()) return;
+
+        // gen empno ใหม่ (varchar(4)) = เลขมากสุด + 1
+        $maxNo = (int) DB::table('emp')->max(DB::raw('CAST(empno AS UNSIGNED)'));
+        DB::table('emp')->insert([
+            'empno'   => (string) ($maxNo + 1),
+            'empname' => $name,
+        ]);
     }
 
     /**
@@ -97,13 +183,14 @@ class ColorMatchingController extends Controller
 
             $payload = $this->extractPayload($request);
 
-            // PK ต้องไม่ซ้ำ
+            // SendNo จำเป็น แต่ "ซ้ำได้" (1 CM → หลาย SD ใช้ SendNo เดียวกัน); PK จริงคือ id
             if (empty($payload['SendNo'])) {
                 return response()->json(['error' => 'SendNo required'], 422);
             }
-            if (Testmain::where('SendNo', $payload['SendNo'])->exists()) {
-                return response()->json(['error' => 'duplicate_send_no'], 422);
-            }
+
+            // ชื่อพนักงานที่กรอก (ผู้รับเอกสาร/Color Matcher) ถ้าใหม่ → สร้างใน emp
+            $this->ensureEmployee($request->TNname);
+            $this->ensureEmployee($request->ColorMatcher);
 
             Testmain::create($payload);
 
@@ -118,45 +205,23 @@ class ColorMatchingController extends Controller
     /**
      * POST — อัพเดท testmain row (ระบุด้วย SendNo เดิม)
      */
-    public function update(Request $request, $sendno)
+    public function update(Request $request, $id)
     {
         try {
             DB::beginTransaction();
 
-            $row = Testmain::where('SendNo', $sendno)->first();
+            $row = Testmain::find($id);
             if (!$row) {
                 return response()->json(['error' => 'not_found'], 404);
             }
 
             $payload = $this->extractPayload($request);
 
-            // ถ้า user เปลี่ยน SendNo ใน form → handle rename (เลี่ยงไว้ตอนนี้ — ใช้ค่าเดิม)
-            $payload['SendNo'] = $sendno;
+            // ชื่อพนักงานที่กรอก (ผู้รับเอกสาร/Color Matcher) ถ้าใหม่ → สร้างใน emp
+            $this->ensureEmployee($request->TNname);
+            $this->ensureEmployee($request->ColorMatcher);
 
             $row->fill($payload)->save();
-
-            DB::commit();
-            return response()->json(['ok' => true]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
-    }
-
-    /**
-     * DELETE — ลบ testmain row
-     */
-    public function delete($sendno)
-    {
-        try {
-            DB::beginTransaction();
-
-            $row = Testmain::where('SendNo', $sendno)->first();
-            if (!$row) {
-                return response()->json(['error' => 'not_found'], 404);
-            }
-
-            $row->delete();
 
             DB::commit();
             return response()->json(['ok' => true]);
@@ -225,16 +290,41 @@ class ColorMatchingController extends Controller
                   ->orWhere('color', 'LIKE', "%{$s}%");
             });
         }
+        // ประเภทเอกสาร (checkbox) — CM=ไม่มี Testno, SD=มี Testno
+        // ติ๊กทั้งคู่ → แสดงทั้งหมด; ติ๊กข้างเดียว → กรองชนิดนั้น; ไม่ติ๊กเลย → ไม่พบ
+        $showCm = $request->filled('show_cm');
+        $showSd = $request->filled('show_sd');
+        if (!$showCm && !$showSd) {
+            $query->whereRaw('1 = 0');                       // ไม่ติ๊กเลย → ไม่พบข้อมูล
+        } elseif ($showCm && !$showSd) {
+            $query->where(function ($q) {                    // เฉพาะ CM
+                $q->whereNull('Testno')->orWhere('Testno', '');
+            });
+        } elseif ($showSd && !$showCm) {
+            $query->whereNotNull('Testno')->where('Testno', '!=', '');  // เฉพาะ SD
+        }
+        // ติ๊กทั้งคู่ → ไม่กรอง (แสดงทั้งหมด)
+
         if (@$request->job_type) {
             $query->where('Type_Work', $request->job_type);
         }
         if (@$request->revision) {
             $query->where('Adj', $request->revision);
         }
-        if (@$request->test_date) {
-            $d = $this->parseDate($request->test_date);
+        if (@$request->std) {
+            $query->where('STD', 'LIKE', "%{$request->std}%");
+        }
+        // ช่วงวันที่ส่งเทียบสี (ตั้งแต่/ถึง) — ใช้ column DsendT
+        if (@$request->test_date_from) {
+            $d = $this->parseDate($request->test_date_from);
             if ($d) {
-                $query->whereDate('TestDate', $d);
+                $query->whereDate('DsendT', '>=', $d);
+            }
+        }
+        if (@$request->test_date_to) {
+            $d = $this->parseDate($request->test_date_to);
+            if ($d) {
+                $query->whereDate('DsendT', '<=', $d);
             }
         }
     }

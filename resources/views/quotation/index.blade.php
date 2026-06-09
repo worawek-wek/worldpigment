@@ -70,7 +70,7 @@
                         </p>
                     </div>
 
-                    <div>
+                    <div class="wip">
                         <button class="btn btn-primary" data-bs-toggle="modal"
                             data-bs-target="#quotationModal">
                             <i class="ti ti-plus me-1"></i>
@@ -86,7 +86,7 @@
     <!-- Summary -->
     <div class="row mb-4">
 
-        <div class="col-md-3">
+        <div class="col-md-3 wip">
             <div class="card">
                 <div class="card-body">
                     <span class="fw-semibold text-muted">ทั้งหมด</span>
@@ -95,7 +95,7 @@
             </div>
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-3 wip">
             <div class="card">
                 <div class="card-body">
                     <span class="fw-semibold text-warning">รออนุมัติ</span>
@@ -104,7 +104,7 @@
             </div>
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-3 wip">
             <div class="card">
                 <div class="card-body">
                     <span class="fw-semibold text-success">อนุมัติแล้ว</span>
@@ -113,7 +113,7 @@
             </div>
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-3 wip">
             <div class="card">
                 <div class="card-body">
                     <span class="fw-semibold text-danger">ยกเลิก</span>
@@ -156,7 +156,7 @@
 
         <div class="row g-3">
 
-            <div class="col-md-2">
+            <div class="col-md-2 wip">
 
                 <label class="form-label">
                     เลขที่เอกสาร
@@ -168,7 +168,7 @@
 
             </div>
 
-            <div class="col-md-3">
+            <div class="col-md-3 wip">
 
                 <label class="form-label">
                     ลูกค้า
@@ -180,7 +180,7 @@
 
             </div>
 
-            <div class="col-md-2">
+            <div class="col-md-2 wip">
 
                 <label class="form-label">
                     ชนิดสินค้า
@@ -208,7 +208,7 @@
 
             </div>
 
-            <div class="col-md-2">
+            <div class="col-md-2 wip">
 
                 <label class="form-label">
                     วันที่เริ่มต้น
@@ -219,7 +219,7 @@
 
             </div>
 
-            <div class="col-md-2">
+            <div class="col-md-2 wip">
 
                 <label class="form-label">
                     วันที่สิ้นสุด
@@ -230,7 +230,7 @@
 
             </div>
 
-            <div class="col-md-1 d-flex align-items-end">
+            <div class="col-md-1 d-flex align-items-end wip">
 
                 <button class="btn btn-label-primary w-100">
 
@@ -245,7 +245,7 @@
     </div>
 
     <!-- Table -->
-    <div class="table-responsive">
+    <div class="table-responsive wip">
 
         <table class="table table-bordered table-hover align-middle mb-0">
 
@@ -506,7 +506,7 @@
 <!-- Quotation Modal -->
 <div class="modal modalHeadDecor fade" id="quotationModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl">
-        <div class="modal-content">
+        <div class="modal-content wip">
 
             <div class="modal-header">
                 <h5 class="modal-title">
