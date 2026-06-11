@@ -69,15 +69,19 @@ class OrderController extends Controller
                 ) AS has_plan")
             ])
             ->where('morder.appv', '-1') // เฉพาะ order ที่อนุมัติแล้ว
+            // มี suborder อย่างน้อย 1 ตัวที่ EndP เป็นค่าว่าง (ใช้ EXISTS กัน row ซ้ำกรณี suborder มีหลายตัว)
+            ->whereHas('suborders', function ($query) {
+                $query->whereNull('EndP');
+            })
             ->when(!empty($search), function ($query) use ($search) {
-                
+
                 $query->where(function ($query) use ($search) {
                     $query->where('morder.Orderno', 'LIKE', '%'.$search.'%')
                         ->orWhere('morder.Custno', 'LIKE', '%'.$search.'%')
                         ->orWhere('morder.Custname', 'LIKE', '%'.$search.'%');
                 });
             })
-             ->when(!empty($company), function ($query) use ($company) {
+            ->when(!empty($company), function ($query) use ($company) {
                 $query->where('morder.Company', 'LIKE', '%'.$company.'%');
             })
             ->orderby('morder.Mdate', 'desc');
