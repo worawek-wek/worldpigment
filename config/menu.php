@@ -32,6 +32,13 @@ return [
                 'route_name' => 'production.order.index',
                 'permission' => 'production read',
             ],
+            'ProductionOrderPlan' => [
+                'title' => 'แผนการผลิต Order',
+                'icon' => '',
+                'menu_parent' => 'Production',
+                'route_name' => 'production.orderplan.index',
+                'permission' => 'productionplanning read',
+            ],
             'ProductionPlanning' => [
                 'title' => 'วางแผนการผลิต',
                 'icon' => '',

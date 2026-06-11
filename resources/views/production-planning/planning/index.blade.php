@@ -69,14 +69,15 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th class="col-1">#</th>
+                                        <th class="col-2">Planning Code</th>
                                         <th class="col-1">Orderno</th>
                                         <th class="col-1">Company</th>
-                                        <th class="col-2">Mdate</th>
-                                        <th class="col-2">Custwant</th>
-                                        <th class="col-2">Itemno</th>
+                                        <th class="col-1">Mdate</th>
+                                        <th class="col-1">Custwant</th>
+                                        <th class="col-1">Itemno</th>
                                         {{-- <th class="col-1">Quantity</th> --}}
                                         <th class="col-2">MachineNo</th>
-                                        <th class="col-2">Manage</th>
+                                        <th class="col-1">Manage</th>
                                     </tr>
                                 </thead>
                             </table>
@@ -127,6 +128,7 @@
             },
             columns: [
                 { 'className': "text-center", data: 'rownum', name: 'rownum', orderable: false },
+                { 'className': "text-left", data: 'planning_code', name: 'planning_code', orderable: false },
                 { 'className': "text-center", data: 'orderno', name: 'orderno', orderable: false },
                 { 'className': "text-center", data: 'company', name: 'company', orderable: false },
                 { 'className': "text-center", data: 'mdate', name: 'mdate', orderable: false },

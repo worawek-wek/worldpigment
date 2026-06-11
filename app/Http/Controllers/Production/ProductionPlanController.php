@@ -55,9 +55,22 @@ class ProductionPlanController extends Controller
                 'tb_planning.*',
                 'tb_planning_header.company as company',
                 'tb_planning_header.orderno as orderno',
+                'tb_planning_header.planning_code as planning_code',
                 'tb_planning_header.mdate as header_mdate',
                 DB::raw('ROW_NUMBER() OVER (ORDER BY tb_planning.id DESC) AS rownum')
             ])
+            ->when(!empty($search), function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('tb_planning.machine_no', 'LIKE', '%'.$search.'%')
+                        ->orWhere('tb_planning.itemno', 'LIKE', '%'.$search.'%')
+                        ->orWhere('tb_planning_header.orderno', 'LIKE', '%'.$search.'%')
+                        ->orWhere('tb_planning_header.planning_code', 'LIKE', '%'.$search.'%')
+                        ->orWhere('tb_planning_header.custno', 'LIKE', '%'.$search.'%');
+                });
+            })
+             ->when(!empty($company), function ($query) use ($company) {
+                $query->where('tb_planning_header.company', $company);
+            })
             ->orderby('tb_planning.id', 'desc');
 
         // $data = $data->get();

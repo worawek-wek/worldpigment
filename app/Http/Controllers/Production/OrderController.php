@@ -113,14 +113,21 @@ class OrderController extends Controller
             ]);
         }
 
+        // ดึง custwant ของ suborder ทุกตัว (ตัดค่าว่างทิ้ง) เพื่อหาวันที่น้อยสุด/หลังสุด
+        $custwants = $order->suborders
+            ->pluck('custwant')
+            ->filter(fn ($date) => !empty($date))
+            ->values();
+
         $data_planning_header = [
             'planning_code' => $order->Orderno,
             'mdate' => $order->Mdate,
             'company' => $order->Company,
             'orderno' => $order->Orderno,
             'custno' => $order->Custno,
-            'saleno' => $order->Emp,
+            'saleno' => $order->supno,
             'netqty' => $order->netqty,
+            'custwant' => $custwants->max() ?: null, // วันที่หลังสุดจาก suborder.custwant
             'plan_type' => 'ORDER',
         ];
 
@@ -131,7 +138,7 @@ class OrderController extends Controller
                 'planning_header_id' => $planning_header->id,
                 'itemno'             => $suborder->Itemno,
                 'plan_type'          => 'ORDER',
-                'mdate'              => $order->Mdate    ?: null,
+                'mdate'              => $order->Mdate ?: null,
                 'custwant'           => $suborder->custwant ?: null,
                 'remark'             => $suborder->Remark ?: null,
             ];

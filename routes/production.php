@@ -10,6 +10,11 @@ Route::prefix('production-planning')->group(function () {
     Route::get('/order/convertplanning', [Production\OrderController::class, 'convertPlanning'])->name('production.order.convertplanning');
 
 
+    // แผนการผลิต Order (อ่านอย่างเดียว) — header ที่ parent_planning_id ว่าง
+    Route::get('/order-plan', [Production\OrderPlanController::class, 'index'])->name('production.orderplan.index');
+    Route::get('/order-plan/datatable', [Production\OrderPlanController::class, 'datatable'])->name('production.orderplan.datatable');
+    Route::get('/order-plan/detail', [Production\OrderPlanController::class, 'detail'])->name('production.orderplan.detail');
+
 
     Route::get('/planning', [Production\ProductionPlanController::class, 'index'])->name('production.planning.index');
     Route::get('/planning/datatable', [Production\ProductionPlanController::class, 'datatable'])->name('production.planning.datatable');
