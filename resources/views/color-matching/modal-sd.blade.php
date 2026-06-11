@@ -257,7 +257,7 @@
                 </div>
 
                 <!-- Footer -->
-                <div class="modal-footer justify-content-between flex-wrap gap-2">
+                <div class="modal-footer justify-content-end flex-wrap gap-2">
                     {{-- <div class="d-flex gap-2 flex-wrap">
                         <button type="button" class="btn btn-label-primary">
                             <i class="ti ti-link me-1"></i>

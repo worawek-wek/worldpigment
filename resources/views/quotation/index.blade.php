@@ -66,13 +66,12 @@
                             ใบเสนอราคา
                         </h3>
                         <p class="text-muted mb-0">
-                            จัดการข้อมูลใบเสนอราคาและ Revision
+                            จัดการใบเสนอราคาและ Revision
                         </p>
                     </div>
 
-                    <div class="wip">
-                        <button class="btn btn-primary" data-bs-toggle="modal"
-                            data-bs-target="#quotationModal">
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#quotationModal">
                             <i class="ti ti-plus me-1"></i>
                             สร้างใบเสนอราคา
                         </button>
@@ -83,404 +82,75 @@
         </div>
     </div>
 
-    <!-- Summary -->
-    <div class="row mb-4">
-
-        <div class="col-md-3 wip">
-            <div class="card">
-                <div class="card-body">
-                    <span class="fw-semibold text-muted">ทั้งหมด</span>
-                    <h3 class="mt-2 mb-0">125</h3>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3 wip">
-            <div class="card">
-                <div class="card-body">
-                    <span class="fw-semibold text-warning">รออนุมัติ</span>
-                    <h3 class="mt-2 mb-0">15</h3>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3 wip">
-            <div class="card">
-                <div class="card-body">
-                    <span class="fw-semibold text-success">อนุมัติแล้ว</span>
-                    <h3 class="mt-2 mb-0">90</h3>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3 wip">
-            <div class="card">
-                <div class="card-body">
-                    <span class="fw-semibold text-danger">ยกเลิก</span>
-                    <h3 class="mt-2 mb-0">20</h3>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
     <!-- Table -->
     <div class="card">
 
-    <!-- Header -->
-    <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-header border-bottom">
 
-        <div>
-            <h4 class="mb-0">
-                ใบเสนอราคา
-            </h4>
-
-            <small class="text-muted">
-                รายการใบเสนอราคาทั้งหมด
-            </small>
-        </div>
-
-        <button class="btn btn-primary"
-            data-bs-toggle="modal"
-            data-bs-target="#quotationModal">
-
-            <i class="ti ti-plus me-1"></i>
-            สร้างใบเสนอราคา
-
-        </button>
-
-    </div>
-
-    <!-- Filter -->
-    <div class="card-body border-bottom">
-
-        <div class="row g-3">
-
-            <div class="col-md-2 wip">
-
-                <label class="form-label">
-                    เลขที่เอกสาร
-                </label>
-
-                <input type="text"
-                    class="form-control"
-                    placeholder="ค้นหาเลขที่">
-
+            {{-- แถวตัวกรอง 1: ค้นหา + ช่วงวันที่ --}}
+            <div class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label class="form-label small fw-medium mb-1">ค้นหา</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="ti ti-search"></i></span>
+                        <input type="text" name="search" class="form-control p_search"
+                            placeholder="เลขที่ใบเสนอราคา / รหัสลูกค้า / ชื่อลูกค้า"
+                            oninput="loadData(page)">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-medium mb-1">วันที่เสนอราคา</label>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="small fw-medium">ตั้งแต่</span>
+                        <input type="date" name="date_from" class="form-control p_search" autocomplete="off" onchange="loadData(page)">
+                        <span class="small fw-medium">ถึง</span>
+                        <input type="date" name="date_to" class="form-control p_search" autocomplete="off" onchange="loadData(page)">
+                    </div>
+                </div>
             </div>
 
-            <div class="col-md-3 wip">
-
-                <label class="form-label">
-                    ลูกค้า
-                </label>
-
-                <input type="text"
-                    class="form-control"
-                    placeholder="ค้นหาลูกค้า">
-
+            {{-- แถวตัวกรอง 2: ชนิดสินค้า --}}
+            <div class="row g-3 align-items-end mt-1">
+                <div class="col-md-4">
+                    <label class="form-label small fw-medium mb-1">ชนิดสินค้า</label>
+                    <select name="product_type" class="form-select p_search" onchange="loadData(page)">
+                        <option value="">ทั้งหมด</option>
+                        @foreach ($pdtypes as $pt)
+                            <option value="{{ $pt->PDType }}">{{ $pt->PDType }} — {{ $pt->PDHead1 }}</option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
 
-            <div class="col-md-2 wip">
-
-                <label class="form-label">
-                    ชนิดสินค้า
-                </label>
-
-                <select class="form-select">
-
-                    <option value="">
-                        ทั้งหมด
-                    </option>
-
-                    <option>
-                        MB
-                    </option>
-
-                    <option>
-                        DB
-                    </option>
-
-                    <option>
-                        CP
-                    </option>
-
-                </select>
-
-            </div>
-
-            <div class="col-md-2 wip">
-
-                <label class="form-label">
-                    วันที่เริ่มต้น
-                </label>
-
-                <input type="date"
-                    class="form-control">
-
-            </div>
-
-            <div class="col-md-2 wip">
-
-                <label class="form-label">
-                    วันที่สิ้นสุด
-                </label>
-
-                <input type="date"
-                    class="form-control">
-
-            </div>
-
-            <div class="col-md-1 d-flex align-items-end wip">
-
-                <button class="btn btn-label-primary w-100">
-
-                    <i class="ti ti-search"></i>
-
+            <div class="d-flex justify-content-end my-3">
+                <button type="button" id="btnResetFilters" class="btn btn-label-secondary" onclick="resetFilters()">
+                    <i class="ti ti-x me-1"></i>ล้างตัวกรอง<span class="filter-count ms-1"></span>
                 </button>
-
             </div>
 
+            {{-- จำนวนต่อหน้า (มุมขวาล่าง) --}}
+            <div class="d-flex justify-content-end align-items-center mt-3 pt-3 border-top">
+                <label class="form-label small fw-medium mb-0 me-2">แสดง</label>
+                <select name="limit" class="form-select form-select-sm p_search" style="width: 90px;"
+                    onchange='loadData("{{$page_url}}/datatable")'>
+                    <option value="15">15</option>
+                    <option value="50">50</option>
+                    <option value="75">75</option>
+                    <option value="100">100</option>
+                </select>
+                <span class="ms-2 small fw-medium">รายการ/หน้า</span>
+            </div>
+        </div>
+
+        <div id="table-data">
+            {{-- Table โหลดผ่าน AJAX จาก quotation/datatable --}}
+            <div class="text-center py-5 text-muted">
+                <div class="spinner-border spinner-border-sm me-2"></div>
+                กำลังโหลดข้อมูล...
+            </div>
         </div>
 
     </div>
-
-    <!-- Table -->
-    <div class="table-responsive wip">
-
-        <table class="table table-bordered table-hover align-middle mb-0">
-
-            <thead class="table-light">
-
-                <tr>
-
-                    <th width="60" class="text-center">
-                        #
-                    </th>
-
-                    <th width="150">
-                        เลขที่ใบเสนอราคา
-                    </th>
-
-                    <th width="120">
-                        วันที่
-                    </th>
-
-                    <th>
-                        ลูกค้า
-                    </th>
-
-                    <th width="100" class="text-center">
-                        ชนิดสินค้า
-                    </th>
-
-                    <th width="120" class="text-end">
-                        จำนวนรายการ
-                    </th>
-
-                    <th width="140" class="text-end">
-                        มูลค่ารวม
-                    </th>
-
-                    <th width="120" class="text-center">
-                        สถานะ
-                    </th>
-
-                    <th width="180" class="text-center">
-                        จัดการ
-                    </th>
-
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-                <tr>
-
-                    <td class="text-center">
-                        1
-                    </td>
-
-                    <td class="fw-bold text-primary">
-                        WH690270
-                    </td>
-
-                    <td>
-                        22/05/2026
-                    </td>
-
-                    <td>
-                        บริษัท วนวิทย์ แมนูแฟคเจอริ่ง จำกัด
-                    </td>
-
-                    <td class="text-center">
-                        MB
-                    </td>
-
-                    <td class="text-end">
-                        5
-                    </td>
-
-                    <td class="text-end fw-bold">
-                        58,450.00
-                    </td>
-
-                    <td class="text-center">
-
-                        <span class="badge bg-label-success">
-                            ใช้งาน
-                        </span>
-
-                    </td>
-
-                    <td class="text-center">
-
-                        <div class="d-flex justify-content-center gap-1">
-
-                            <button class="btn btn-sm btn-icon btn-label-primary">
-
-                                <i class="ti ti-eye"></i>
-
-                            </button>
-
-                            <button class="btn btn-sm btn-icon btn-label-warning">
-
-                                <i class="ti ti-edit"></i>
-
-                            </button>
-
-                            <button class="btn btn-sm btn-icon btn-label-danger">
-
-                                <i class="ti ti-trash"></i>
-
-                            </button>
-
-                            <button class="btn btn-sm btn-icon btn-label-info">
-
-                                <i class="ti ti-printer"></i>
-
-                            </button>
-
-                        </div>
-
-                    </td>
-
-                </tr>
-
-                <tr>
-
-                    <td class="text-center">
-                        2
-                    </td>
-
-                    <td class="fw-bold text-primary">
-                        WH690271
-                    </td>
-
-                    <td>
-                        22/05/2026
-                    </td>
-
-                    <td>
-                        บริษัท ไทยโพลีเมอร์ จำกัด
-                    </td>
-
-                    <td class="text-center">
-                        DB
-                    </td>
-
-                    <td class="text-end">
-                        2
-                    </td>
-
-                    <td class="text-end fw-bold">
-                        12,800.00
-                    </td>
-
-                    <td class="text-center">
-
-                        <span class="badge bg-label-secondary">
-                            ยกเลิก
-                        </span>
-
-                    </td>
-
-                    <td class="text-center">
-
-                        <div class="d-flex justify-content-center gap-1">
-
-                            <button class="btn btn-sm btn-icon btn-label-primary">
-
-                                <i class="ti ti-eye"></i>
-
-                            </button>
-
-                            <button class="btn btn-sm btn-icon btn-label-warning">
-
-                                <i class="ti ti-edit"></i>
-
-                            </button>
-
-                            <button class="btn btn-sm btn-icon btn-label-danger">
-
-                                <i class="ti ti-trash"></i>
-
-                            </button>
-
-                            <button class="btn btn-sm btn-icon btn-label-info">
-
-                                <i class="ti ti-printer"></i>
-
-                            </button>
-
-                        </div>
-
-                    </td>
-
-                </tr>
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-    <!-- Footer -->
-    <div class="card-footer d-flex justify-content-between align-items-center">
-
-        <div class="text-muted">
-            แสดง 1 ถึง 2 จากทั้งหมด 2 รายการ
-        </div>
-
-        <nav>
-
-            <ul class="pagination pagination-sm mb-0">
-
-                <li class="page-item disabled">
-                    <a class="page-link">
-                        Previous
-                    </a>
-                </li>
-
-                <li class="page-item active">
-                    <a class="page-link">
-                        1
-                    </a>
-                </li>
-
-                <li class="page-item disabled">
-                    <a class="page-link">
-                        Next
-                    </a>
-                </li>
-
-            </ul>
-
-        </nav>
-
-    </div>
-
-</div>
 
 </div>
                     <!-- / Content -->
@@ -506,7 +176,7 @@
 <!-- Quotation Modal -->
 <div class="modal modalHeadDecor fade" id="quotationModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl">
-        <div class="modal-content wip">
+        <div class="modal-content">
 
             <div class="modal-header">
                 <h5 class="modal-title">
@@ -645,8 +315,8 @@
 
                     <div class="d-flex flex-wrap gap-2">
 
-                        <button class="btn btn-label-warning">
-                            <i class="fa fa-plus me-2"></i>
+                        <button type="button" class="btn btn-label-warning" onclick="addQuotationItem()">
+                            <i class="ti ti-plus me-1"></i>
                             เพิ่มรายการ
                         </button>
 
@@ -659,102 +329,47 @@
             <!-- Product Table -->
             <div class="table-responsive mt-4">
 
-                <table class="table table-bordered align-middle">
+                <table class="table table-bordered align-middle" id="quotationItemsTable">
 
                     <thead class="table-light">
 
                         <tr>
-
-                            <th width="150">
-                                รหัสสินค้า
-                            </th>
-
-                            <th>
-                                ชื่อสินค้า
-                            </th>
-
-                            <th width="150">
-                                ราคาเก่า
-                            </th>
-
-                            <th width="150">
-                                ราคาใหม่
-                            </th>
-
-                            <th width="150">
-                                ราคารวมภาษี
-                            </th>
-
+                            <th width="150">รหัสสินค้า</th>
+                            <th>ชื่อสินค้า</th>
+                            <th width="150">ราคาเก่า</th>
+                            <th width="150">ราคาใหม่</th>
+                            <th width="150">ราคารวมภาษี</th>
+                            <th width="60" class="text-center">ลบ</th>
                         </tr>
 
                     </thead>
 
-                    <tbody>
+                    <tbody id="quotationItems">
 
                         <tr>
-
-                            <td>
-                                <input type="text"
-                                    class="form-control"
-                                    value="1908053">
+                            <td><input type="text" name="item_code[]" class="form-control" value="1908053"></td>
+                            <td><input type="text" name="item_name[]" class="form-control" value="MB BLUE-J [MB POM RAL 2308520]"></td>
+                            <td><input type="number" name="item_old_price[]" class="form-control text-end" value="275.00"></td>
+                            <td><input type="number" name="item_new_price[]" class="form-control text-end" value="285.00"></td>
+                            <td><input type="number" name="item_total_price[]" class="form-control text-end" value="304.95"></td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-icon btn-label-danger" title="ลบรายการ" onclick="removeQuotationItem(this)">
+                                    <i class="ti ti-trash"></i>
+                                </button>
                             </td>
-
-                            <td>
-                                <input type="text"
-                                    class="form-control"
-                                    value="MB BLUE-J [MB POM RAL 2308520]">
-                            </td>
-
-                            <td>
-                                <input type="number"
-                                    class="form-control text-end"
-                                    value="275.00">
-                            </td>
-
-                            <td>
-                                <input type="number"
-                                    class="form-control text-end"
-                                    value="285.00">
-                            </td>
-
-                            <td>
-                                <input type="number"
-                                    class="form-control text-end"
-                                    value="304.95">
-                            </td>
-
                         </tr>
 
                         <tr>
-
-                            <td>
-                                <input type="text"
-                                    class="form-control">
+                            <td><input type="text" name="item_code[]" class="form-control"></td>
+                            <td><input type="text" name="item_name[]" class="form-control"></td>
+                            <td><input type="number" name="item_old_price[]" class="form-control text-end" value="0.00"></td>
+                            <td><input type="number" name="item_new_price[]" class="form-control text-end" value="0.00"></td>
+                            <td><input type="number" name="item_total_price[]" class="form-control text-end" value="0.00"></td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-icon btn-label-danger" title="ลบรายการ" onclick="removeQuotationItem(this)">
+                                    <i class="ti ti-trash"></i>
+                                </button>
                             </td>
-
-                            <td>
-                                <input type="text"
-                                    class="form-control">
-                            </td>
-
-                            <td>
-                                <input type="number"
-                                    class="form-control text-end"
-                                    value="0.00">
-                            </td>
-
-                            <td>
-                                <input type="number"
-                                    class="form-control text-end"
-                                    value="0.00">
-                            </td>
-
-                            <td>
-                                <input type="number"
-                                    class="form-control text-end"
-                                    value="0.00">
-                            </td>
-
                         </tr>
 
                     </tbody>
@@ -848,29 +463,84 @@
 <script>
     var page = "{{$page_url}}/datatable";
         var searchData = {};
+        // ต้องประกาศก่อน loadData ครั้งแรก — เลี่ยง hoisting ทำให้ dtSeq เป็น NaN (spinner ค้าง)
+        var dtXhr = null, dtSeq = 0;
         loadData(page);
 
-        function loadData(pages){
-
-            $('.p_search').each(function() {
-                var inputName = $(this).attr('name'); // ดึงชื่อ attribute 'name' ของ input
-                var inputValue = $(this).val(); // ดึงค่า value ของ input
-
-                searchData[inputName] = inputValue; // เก็บข้อมูลลงในออบเจ็กต์ searchData
-            });
-
-            // alert(page);
-            page = pages;
-            $.ajax({
-                type: "GET",
-                url: pages,
-                data: searchData,
-                success: function(data) {
-                    $("#table-data").html(data);
-                }
-            });
-            // alert(page);
+        // ────────────────────────────────────────────────────────
+        //  รายการสินค้าในใบเสนอราคา — เพิ่ม/ลบแถวได้
+        // ────────────────────────────────────────────────────────
+        function addQuotationItem() {
+            var row = '<tr>'
+                + '<td><input type="text" name="item_code[]" class="form-control"></td>'
+                + '<td><input type="text" name="item_name[]" class="form-control"></td>'
+                + '<td><input type="number" name="item_old_price[]" class="form-control text-end" value="0.00"></td>'
+                + '<td><input type="number" name="item_new_price[]" class="form-control text-end" value="0.00"></td>'
+                + '<td><input type="number" name="item_total_price[]" class="form-control text-end" value="0.00"></td>'
+                + '<td class="text-center">'
+                +   '<button type="button" class="btn btn-sm btn-icon btn-label-danger" title="ลบรายการ" onclick="removeQuotationItem(this)">'
+                +     '<i class="ti ti-trash"></i>'
+                +   '</button>'
+                + '</td>'
+                + '</tr>';
+            $('#quotationItems').append(row);
         }
+
+        function removeQuotationItem(btn) {
+            // เหลืออย่างน้อย 1 แถว — ถ้าลบแถวสุดท้ายให้เคลียร์ค่าแทน
+            if ($('#quotationItems tr').length <= 1) {
+                $(btn).closest('tr').find('input').val('');
+                return;
+            }
+            $(btn).closest('tr').remove();
+        }
+
+        // เก็บ filter สด (เฉพาะที่มีค่า) ทุกครั้ง — ไม่สะสมค่าเก่า
+        function collectSearchData(){
+            var data = {};
+            $('.p_search').each(function(){
+                var v = $(this).val();
+                if (v !== '' && v !== null) data[$(this).attr('name')] = v;
+            });
+            return data;
+        }
+
+        // อัปเดตปุ่มล้างตัวกรองตามจำนวน filter ที่ใช้อยู่ (ไม่นับ limit)
+        function updateFilterButtonState(){
+            var count = 0;
+            $('.p_search:not([name="limit"])').each(function(){
+                var v = $(this).val();
+                if (v !== '' && v !== null) count++;
+            });
+            var $btn = $('#btnResetFilters');
+            if (count > 0) { $btn.removeClass('btn-label-secondary').addClass('btn-danger'); $btn.find('.filter-count').text('('+count+')'); }
+            else           { $btn.removeClass('btn-danger').addClass('btn-label-secondary'); $btn.find('.filter-count').text(''); }
+        }
+
+        // กัน AJAX race: รับเฉพาะผลของ request ล่าสุด (dtXhr/dtSeq ประกาศด้านบนแล้ว)
+        function loadData(pages){
+            updateFilterButtonState();
+            searchData = collectSearchData();
+            page = pages;
+            var seq = ++dtSeq;
+            if (dtXhr) dtXhr.abort();
+            dtXhr = $.ajax({
+                type: "GET", url: pages, data: searchData,
+                success: function(data){ if (seq === dtSeq) $("#table-data").html(data); },
+                complete: function(){ if (seq === dtSeq) dtXhr = null; }
+            });
+        }
+
+        function resetFilters(){
+            $('.p_search:not([name="limit"])').val('');
+            loadData("{{$page_url}}/datatable");
+        }
+
+        // ── ปุ่มจัดการในตาราง (ยังไม่ได้ต่อ CRUD — จะทำสเตปถัดไป) ──
+        function quotationView(qno)   { Swal.fire('ดูรายละเอียด', 'อยู่ระหว่างพัฒนา (' + qno + ')', 'info'); }
+        function quotationEdit(qno)   { Swal.fire('แก้ไข', 'อยู่ระหว่างพัฒนา (' + qno + ')', 'info'); }
+        function quotationPrint(qno)  { Swal.fire('พิมพ์', 'อยู่ระหว่างพัฒนา (' + qno + ')', 'info'); }
+        function quotationDelete(qno) { Swal.fire('ลบ', 'อยู่ระหว่างพัฒนา (' + qno + ')', 'info'); }
         var update_id = 999999999999;
         function view(id){
             update_id = id;
