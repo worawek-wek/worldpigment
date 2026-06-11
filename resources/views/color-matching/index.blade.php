@@ -561,9 +561,9 @@
                     url: '{{$page_url}}/ref/' + encodeURIComponent(sendNo),
                     success: function (resp) {
                         const $f = $('#form_sample_delivery');
-                        // ไม่พบ → ล้างช่องข้อมูลลูกค้าให้ว่าง (กันค้างค่าจากใบอ้างอิงก่อนหน้า)
+                        // ไม่พบ → ล้างทุกช่องที่ auto-fill มาจากใบอ้างอิง (ลูกค้า/สีผง/เลขที่ใบส่ง ต.ย.)
                         if (!resp || !resp.found) {
-                            $f.find('[name="custno"], [name="custname"], [name="custnameEN"]').val('');
+                            $f.find('[name="custno"], [name="custname"], [name="custnameEN"], [name="powder_color"], [name="Testno"]').val('');
                             return;
                         }
                         $f.find('[name="custno"]').val(resp.custno ?? '');
