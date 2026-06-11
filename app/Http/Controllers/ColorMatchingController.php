@@ -29,7 +29,29 @@ class ColorMatchingController extends Controller
     public function index(Request $request)
     {
         $data['page_url'] = 'color-matching';
+        // ตัวเลือก dropdown ดึงจากค่าที่เคยบันทึกจริงใน testmain (distinct) — list โตตามข้อมูลที่เพิ่ม
+        // ใช้ร่วมกันทั้ง modal (CM/SD) และ filter หน้าหลัก ผ่าน @include
+        $data['options'] = [
+            'Type_Work' => $this->distinctOptions('Type_Work'),
+            'Model'     => $this->distinctOptions('Model'),
+            'pop'       => $this->distinctOptions('pop'),
+            'Adj'       => $this->distinctOptions('Adj'),
+        ];
         return view('color-matching.index', $data);
+    }
+
+    /**
+     * ค่า distinct ของ column หนึ่งใน testmain (ตัด null/ค่าว่างออก) สำหรับเติม <option>
+     */
+    private function distinctOptions(string $column): array
+    {
+        return Testmain::query()
+            ->whereNotNull($column)
+            ->where($column, '!=', '')
+            ->distinct()
+            ->orderBy($column)
+            ->pluck($column)
+            ->all();
     }
 
     public function datatable(Request $request)

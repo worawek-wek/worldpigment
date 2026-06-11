@@ -31,6 +31,40 @@
     border-right: 65px solid transparent;
 }
 
+/* ─── Theme override: ฟอร์มใบส่ง ต.ย. (SD) ใช้ theme ม่วง ─── */
+#sampleDeliveryModal .modal-title {
+    background-color: #6c5ce7;
+}
+#sampleDeliveryModal .modal-title::after {
+    border-top-color: #6c5ce7;
+}
+
+/* ─── ปุ่มเปิด modal: สีตาม theme แต่ละฟอร์ม ─── */
+.btn-theme-cm {
+    background-color: #54BAB9;
+    border-color: #54BAB9;
+    color: #fff;
+}
+.btn-theme-cm:hover,
+.btn-theme-cm:focus,
+.btn-theme-cm:active {
+    background-color: #429a99;
+    border-color: #429a99;
+    color: #fff;
+}
+.btn-theme-sd {
+    background-color: #6c5ce7;
+    border-color: #6c5ce7;
+    color: #fff;
+}
+.btn-theme-sd:hover,
+.btn-theme-sd:focus,
+.btn-theme-sd:active {
+    background-color: #5a4bd1;
+    border-color: #5a4bd1;
+    color: #fff;
+}
+
 /* filter ประเภทเอกสาร — option ที่ไม่ติ๊กให้จางลง เห็นชัดว่าอันไหนกำลังแสดง */
 .doc-filter {
     font-size: 1rem;
@@ -85,14 +119,14 @@
                     </div>
 
                     <div class="d-flex gap-2 flex-wrap">
-                        <button class="btn btn-primary"
+                        <button class="btn btn-theme-cm"
                             data-bs-toggle="modal"
                             data-bs-target="#colorMatchingModal">
                             <i class="ti ti-file-text me-1"></i>
                             สร้างใบนำส่งเทียบสี
                         </button>
 
-                        <button class="btn btn-label-primary"
+                        <button class="btn btn-theme-sd"
                             data-bs-toggle="modal"
                             data-bs-target="#sampleDeliveryModal">
                             <i class="ti ti-package me-1"></i>
@@ -160,7 +194,7 @@
                     <label class="form-label small fw-medium mb-1">ประเภทงาน</label>
                     <select name="job_type" class="form-select p_search" onchange="loadData(page)">
                         <option value="">ทุกประเภท</option>
-                        @foreach (['เป่าฟิมล์','เป่าขวด','EXT','ROLL','INJ','CY'] as $opt)
+                        @foreach ($options['Type_Work'] as $opt)
                             <option value="{{ $opt }}">{{ $opt }}</option>
                         @endforeach
                     </select>
@@ -174,7 +208,7 @@
                     <label class="form-label small fw-medium mb-1">ปรับแก้ไข</label>
                     <select name="revision" class="form-select p_search" onchange="loadData(page)">
                         <option value="">ทั้งหมด</option>
-                        @foreach (['New','Revise 1','Revise 2'] as $opt)
+                        @foreach ($options['Adj'] as $opt)
                             <option value="{{ $opt }}">{{ $opt }}</option>
                         @endforeach
                     </select>
@@ -296,18 +330,15 @@
             // ── Select2 ── ทุก select ใน modal + filter (ยกเว้น name="limit" = ปุ่มเลือกจำนวนต่อหน้า)
             // dropdownParent = .modal-content (position:relative) ไม่ใช่ .modal (position:fixed + scroll)
             // เพื่อกันบั๊กตำแหน่ง dropdown เพี้ยนตอนเปิดขึ้นบน/ตอน modal scroll
-            $('#colorMatchingModal select:not(.select2-tags)').select2({
-                width: '100%',
-                dropdownParent: $('#colorMatchingModal .modal-content')
-            });
-            // คุณสมบัติ (pop) = select2 แบบ tags → เลือกจาก list หรือพิมพ์ค่าใหม่เองได้ (กัน variant ใน DB หาย)
-            $('#colorMatchingModal .select2-tags').select2({
+            // tags: true → ทุก select เลือกจาก list หรือพิมพ์ค่าใหม่ที่ไม่มีในตัวเลือกเองได้ (กันค่าใน DB หาย)
+            $('#colorMatchingModal select').select2({
                 width: '100%',
                 tags: true,
                 dropdownParent: $('#colorMatchingModal .modal-content')
             });
             $('#sampleDeliveryModal select').select2({
                 width: '100%',
+                tags: true,
                 dropdownParent: $('#sampleDeliveryModal .modal-content')
             });
             // filter ของหน้าหลัก (ไม่อยู่ใน modal) → ไม่ต้องมี dropdownParent
@@ -529,8 +560,12 @@
                     type: 'GET',
                     url: '{{$page_url}}/ref/' + encodeURIComponent(sendNo),
                     success: function (resp) {
-                        if (!resp || !resp.found) return;   // ไม่พบ → ไม่แตะอะไร
                         const $f = $('#form_sample_delivery');
+                        // ไม่พบ → ล้างช่องข้อมูลลูกค้าให้ว่าง (กันค้างค่าจากใบอ้างอิงก่อนหน้า)
+                        if (!resp || !resp.found) {
+                            $f.find('[name="custno"], [name="custname"], [name="custnameEN"]').val('');
+                            return;
+                        }
                         $f.find('[name="custno"]').val(resp.custno ?? '');
                         $f.find('[name="custname"]').val(resp.custname ?? '');
                         $f.find('[name="custnameEN"]').val(resp.custnameEN ?? '');
