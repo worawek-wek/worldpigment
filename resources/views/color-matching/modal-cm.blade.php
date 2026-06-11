@@ -99,12 +99,9 @@
                                         <label class="form-label small mb-1">ประเภทงาน</label>
                                         <select name="Type_Work" class="form-select">
                                             <option value="">-- เลือก --</option>
-                                            <option>เป่าฟิล์ม</option>
-                                            <option>เป่าขวด</option>
-                                            <option>EXT</option>
-                                            <option>ROLL</option>
-                                            <option>INJ</option>
-                                            <option>CY</option>
+                                            @foreach ($options['Type_Work'] as $opt)
+                                                <option>{{ $opt }}</option>
+                                            @endforeach
                                         </select>
                                     </div>
                                     <div class="col-md-3">
@@ -113,9 +110,9 @@
                                             ปรับแก้ไขครั้งที่
                                         </label>
                                         <select name="Adj" class="form-select">
-                                            <option>New</option>
-                                            <option>Revise 1</option>
-                                            <option>Revise 2</option>
+                                            @foreach ($options['Adj'] as $opt)
+                                                <option>{{ $opt }}</option>
+                                            @endforeach
                                         </select>
                                     </div>
                                 </div>
@@ -141,21 +138,18 @@
                                         <label class="form-label small mb-1">คุณสมบัติ</label>
                                         <select name="pop" class="form-select select2-tags">
                                             <option value="">-- เลือก --</option>
-                                            <option>Food Contact</option>
-                                            <option>Non-Toxic</option>
+                                            @foreach ($options['pop'] as $opt)
+                                                <option>{{ $opt }}</option>
+                                            @endforeach
                                         </select>
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label small mb-1">นำไปทำชิ้นงาน (Model)</label>
                                         <select name="Model" class="form-select">
                                             <option value="">-- เลือก --</option>
-                                            <option>ตลับแป้ง</option>
-                                            <option>สายไฟ</option>
-                                            <option>สายรัด</option>
-                                            <option>หลอดโฟม</option>
-                                            <option>หนังเทียม</option>
-                                            <option>อะไหล่รถยนต์</option>
-                                            <option>แฮนด์รถจักรยาน</option>
+                                            @foreach ($options['Model'] as $opt)
+                                                <option>{{ $opt }}</option>
+                                            @endforeach
                                         </select>
                                     </div>
                                 </div>
