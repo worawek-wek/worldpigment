@@ -68,7 +68,9 @@ class OrderController extends Controller
                       AND tb_planning_header.plan_type = 'ORDER'
                 ) AS has_plan")
             ])
+            ->where('morder.appv', '-1') // เฉพาะ order ที่อนุมัติแล้ว
             ->when(!empty($search), function ($query) use ($search) {
+                
                 $query->where(function ($query) use ($search) {
                     $query->where('morder.Orderno', 'LIKE', '%'.$search.'%')
                         ->orWhere('morder.Custno', 'LIKE', '%'.$search.'%')
