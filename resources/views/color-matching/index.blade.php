@@ -172,7 +172,7 @@
                         <span class="input-group-text"><i class="ti ti-search"></i></span>
                         <input type="text" name="search"
                             class="form-control p_search"
-                            placeholder="เลขที่ใบนำส่ง / เลขที่ใบส่ง ต.ย. / ลูกค้า"
+                            placeholder="เลขที่ใบนำส่ง / เลขที่ใบส่ง ต.ย. / รหัสลูกค้า / ชื่อลูกค้า / สี"
                             oninput="loadData(page)">
                     </div>
                 </div>
@@ -188,7 +188,7 @@
                 </div>
             </div>
 
-            {{-- แถวตัวกรอง 2: ประเภทงาน + Standard + ปรับแก้ไข --}}
+            {{-- แถวตัวกรอง 2: ประเภทงาน + ปรับแก้ไข + Standard + สี + Lot --}}
             <div class="row g-3 align-items-end mt-1">
                 <div class="col-md-3">
                     <label class="form-label small fw-medium mb-1">ประเภทงาน</label>
@@ -200,11 +200,6 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label small fw-medium mb-1">Standard</label>
-                    <input type="text" name="std" class="form-control p_search"
-                        placeholder="เช่น PT 494 C" onkeyup="if(event.key==='Enter') loadData(page)">
-                </div>
-                <div class="col-md-3">
                     <label class="form-label small fw-medium mb-1">ปรับแก้ไข</label>
                     <select name="revision" class="form-select p_search" onchange="loadData(page)">
                         <option value="">ทั้งหมด</option>
@@ -212,6 +207,21 @@
                             <option value="{{ $opt }}">{{ $opt }}</option>
                         @endforeach
                     </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-medium mb-1">Standard</label>
+                    <input type="text" name="std" class="form-control p_search"
+                        placeholder="เช่น PT 494 C" oninput="loadData(page)">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-medium mb-1">สี</label>
+                    <input type="text" name="color" class="form-control p_search"
+                        placeholder="ชื่อสี" oninput="loadData(page)">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-medium mb-1">Lot No.</label>
+                    <input type="text" name="lot" class="form-control p_search"
+                        placeholder="เช่น 690112-1-2/01" oninput="loadData(page)">
                 </div>
             </div>
             <div class="d-flex justify-content-center align-items-center my-3 position-relative">
@@ -331,9 +341,15 @@
             // dropdownParent = .modal-content (position:relative) ไม่ใช่ .modal (position:fixed + scroll)
             // เพื่อกันบั๊กตำแหน่ง dropdown เพี้ยนตอนเปิดขึ้นบน/ตอน modal scroll
             // tags: true → ทุก select เลือกจาก list หรือพิมพ์ค่าใหม่ที่ไม่มีในตัวเลือกเองได้ (กันค่าใน DB หาย)
-            $('#colorMatchingModal select').select2({
+            // ประเภท (TestType) = ค่าตายตัว 1-4 → tags:false (ห้ามพิมพ์ค่าใหม่), ที่เหลือ tags:true
+            $('#colorMatchingModal select:not([name="TestType"])').select2({
                 width: '100%',
                 tags: true,
+                dropdownParent: $('#colorMatchingModal .modal-content')
+            });
+            $('#colorMatchingModal select[name="TestType"]').select2({
+                width: '100%',
+                tags: false,
                 dropdownParent: $('#colorMatchingModal .modal-content')
             });
             $('#sampleDeliveryModal select').select2({
@@ -563,13 +579,12 @@
                         const $f = $('#form_sample_delivery');
                         // ไม่พบ → ล้างทุกช่องที่ auto-fill มาจากใบอ้างอิง (ลูกค้า/สีผง/เลขที่ใบส่ง ต.ย.)
                         if (!resp || !resp.found) {
-                            $f.find('[name="custno"], [name="custname"], [name="custnameEN"], [name="powder_color"], [name="Testno"]').val('');
+                            $f.find('[name="custno"], [name="custname"], [name="custnameEN"], [name="Testno"]').val('');
                             return;
                         }
                         $f.find('[name="custno"]').val(resp.custno ?? '');
                         $f.find('[name="custname"]').val(resp.custname ?? '');
                         $f.find('[name="custnameEN"]').val(resp.custnameEN ?? '');
-                        $f.find('[name="powder_color"]').val(resp.color ?? '');
                         // นำ SendNo ตั้งต้นในช่องเลขที่ใบส่ง ต.ย. (ผู้ใช้พิมพ์ต่อ)
                         $f.find('[name="Testno"]').val(sendNo);
                     }
@@ -604,8 +619,6 @@
                 url: "{{$page_url}}/" + encodeURIComponent(id),
                 success: function(row) {
                     fillForm('#form_sample_delivery', row);
-                    // สีผง (powder_color) ใน DB เก็บเป็น column color → เติมกลับเอง
-                    $('#form_sample_delivery [name="powder_color"]').val(row.color ?? '');
                     $('#form_sample_delivery [name="_mode"]').val('edit');
                     $('#form_sample_delivery [name="_pk"]').val(row.id);
                     $('#form_sample_delivery [name="SendNo"]').val(row.SendNo ?? '');

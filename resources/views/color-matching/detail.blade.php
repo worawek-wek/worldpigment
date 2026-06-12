@@ -29,22 +29,10 @@
                 'ชื่อบริษัท (TH)'  => $v($row->custname),
                 'ชื่อบริษัท (EN)'  => $v($row->custnameEN),
             ]],
-            ['วันที่ดำเนินการ และผู้เทียบสี', 'ti-calendar-event', [
-                'Start Date'    => $d($row->startdate),
-                'Sample Date'   => $d($row->SampleDate),
-                'Ready Date'    => $d($row->ReadyDate),
-                'Color Matcher' => $v($row->ColorMatcher),
-            ]],
             ['รายละเอียดผลิตภัณฑ์', 'ti-flask', [
-                'รายละเอียด'     => $v($row->TestDesc),
-                'ประเภท'         => $v($typeMap[(string) $row->TestType] ?? $row->TestType),
                 'รหัสสินค้า'      => $v($row->CodeNo),
-                'สีผง'           => $v($row->color),
-                'Resin (Match)'  => $v($row->ResinMatch),
-                'PHR'            => $v($row->PHR),
                 'Lot No.'        => $v($row->lotno),
                 'น้ำหนัก (กรัม)'  => $v($row->Wage),
-                'Standard'       => $v($row->STD),
             ]],
             ['ข้อมูลการขาย / การยกเลิก', 'ti-alert-circle', [
                 'Saleman Code'    => $v($row->sale),
@@ -76,6 +64,19 @@
                 'สี'                    => $v($row->color),
                 'คุณสมบัติ'             => $v($row->pop),
                 'นำไปทำชิ้นงาน (Model)' => $v($row->Model),
+            ]],
+            ['วันที่ดำเนินการ และผู้เทียบสี', 'ti-calendar-event', [
+                'Start Date'    => $d($row->startdate),
+                'Sample Date'   => $d($row->SampleDate),
+                'Ready Date'    => $d($row->ReadyDate),
+                'Color Matcher' => $v($row->ColorMatcher),
+            ]],
+            ['รายละเอียดผลิตภัณฑ์', 'ti-flask', [
+                'รายละเอียด'     => $v($row->TestDesc),
+                'ประเภท'         => $v($typeMap[(string) $row->TestType] ?? $row->TestType),
+                'Standard'       => $v($row->STD),
+                'Resin (Match)'  => $v($row->ResinMatch),
+                'PHR'            => $v($row->PHR),
             ]],
             ['การติดตามงาน', 'ti-clipboard-check', [
                 'ผู้รับเอกสาร'       => $v($row->TNname),
@@ -165,7 +166,7 @@
                                         <th class="text-center" style="width:50px;">#</th>
                                         <th>เลขที่ใบส่ง ต.ย.</th>
                                         <th>วันที่เบิก</th>
-                                        <th>Color Matcher</th>
+                                        <th>รหัสสินค้า</th>
                                         <th>Lot No.</th>
                                         <th>สถานะ</th>
                                         <th class="text-center" style="width:70px;">ดู</th>
@@ -177,7 +178,7 @@
                                             <td class="text-center text-muted">{{ $i + 1 }}</td>
                                             <td><strong class="text-primary">{{ $v($sd->Testno) }}</strong></td>
                                             <td>{{ $d($sd->TestDate) }}</td>
-                                            <td>{{ $v($sd->ColorMatcher) }}</td>
+                                            <td>{{ $v($sd->CodeNo) }}</td>
                                             <td>{{ $v($sd->lotno) }}</td>
                                             <td>
                                                 @if ($sd->cancel == 1)

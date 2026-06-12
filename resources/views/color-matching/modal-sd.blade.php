@@ -84,41 +84,7 @@
                                 </div>
                             </div>
 
-                            {{-- ─── กลุ่ม: วันที่ดำเนินการ และผู้เทียบสี ─── --}}
-                            <div class="mb-4 pb-3 border-bottom">
-                                <div class="d-flex align-items-center mb-3 ps-2"
-                                    style="border-left: 3px solid #6c5ce7;">
-                                    <i class="ti ti-calendar-event me-2" style="color: #4b3fb8;"></i>
-                                    <span class="fw-semibold" style="font-size: 0.95rem; color: #4b3fb8;">
-                                        วันที่ดำเนินการ และผู้เทียบสี
-                                    </span>
-                                </div>
-
-                                <div class="row g-3">
-                                    <div class="col-md-3">
-                                        <label class="form-label small mb-1">Start Date</label>
-                                        <input type="text" name="startdate" class="form-control flatpickr-date"
-                                            placeholder="วว/ดด/ปปปป">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small mb-1">Sample Date</label>
-                                        <input type="text" name="SampleDate" class="form-control flatpickr-date"
-                                            placeholder="วว/ดด/ปปปป">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small mb-1">Ready Date</label>
-                                        <input type="text" name="ReadyDate" class="form-control flatpickr-date"
-                                            placeholder="วว/ดด/ปปปป">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small mb-1">Color Matcher</label>
-                                        <input type="text" name="ColorMatcher" class="form-control"
-                                            placeholder="ชื่อพนักงาน">
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- ─── กลุ่ม: รายละเอียดผลิตภัณฑ์ ─── --}}
+                            {{-- ─── กลุ่ม: รายละเอียดผลิตภัณฑ์ (เฉพาะ รหัสสินค้า/Lot/น้ำหนัก — ที่เหลือย้ายไปฟอร์ม CM) ─── --}}
                             <div class="mb-4 pb-3 border-bottom">
                                 <div class="d-flex align-items-center mb-3 ps-2"
                                     style="border-left: 3px solid #6c5ce7;">
@@ -129,42 +95,10 @@
                                 </div>
 
                                 <div class="row g-3">
-                                    <div class="col-md-7">
-                                        <label class="form-label small mb-1">รายละเอียด</label>
-                                        <input type="text" name="TestDesc" class="form-control"
-                                            placeholder="รายละเอียดผลิตภัณฑ์">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label small mb-1">ประเภท</label>
-                                        <select name="TestType" class="form-select">
-                                            <option value="">-- เลือก --</option>
-                                            <option value="1">1 : CP</option>
-                                            <option value="2">2 : สีผง</option>
-                                            <option value="3">3 : สีเม็ด</option>
-                                            <option value="4">4 : Pigment</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-4">
                                         <label class="form-label small mb-1">รหัสสินค้า</label>
                                         <input type="text" name="CodeNo" class="form-control"
                                             placeholder="เช่น CP1Y583PVC">
-                                    </div>
-                                    <div class="col-md-5">
-                                        <label class="form-label small mb-1">
-                                            สีผง <small class="text-muted">(จะ map เป็น color เดียวกับ CM)</small>
-                                        </label>
-                                        <input type="text" name="powder_color" class="form-control"
-                                            placeholder="ชื่อสีผง เช่น DB PINK-Y">
-                                    </div>
-                                    <div class="col-md-5">
-                                        <label class="form-label small mb-1">Resin (Match)</label>
-                                        <input type="text" name="ResinMatch" class="form-control"
-                                            placeholder="เช่น PVC, ABS, PE">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label small mb-1">PHR</label>
-                                        <input type="number" step="0.0001" name="PHR" class="form-control text-end"
-                                            placeholder="0.0000">
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label small mb-1">Lot No.</label>
@@ -175,11 +109,6 @@
                                         <label class="form-label small mb-1">น้ำหนัก (กรัม)</label>
                                         <input type="number" name="Wage" class="form-control"
                                             placeholder="เช่น 100">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label small mb-1">Standard</label>
-                                        <input type="text" name="STD" class="form-control"
-                                            placeholder="เช่น PT 494 C">
                                     </div>
                                 </div>
                             </div>

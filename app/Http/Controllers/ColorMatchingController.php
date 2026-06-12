@@ -336,6 +336,12 @@ class ColorMatchingController extends Controller
         if (@$request->std) {
             $query->where('STD', 'LIKE', "%{$request->std}%");
         }
+        if (@$request->color) {
+            $query->where('color', 'LIKE', "%{$request->color}%");
+        }
+        if (@$request->lot) {
+            $query->where('lotno', 'LIKE', "%{$request->lot}%");
+        }
         // ช่วงวันที่ส่งเทียบสี (ตั้งแต่/ถึง) — ใช้ column DsendT
         if (@$request->test_date_from) {
             $d = $this->parseDate($request->test_date_from);
