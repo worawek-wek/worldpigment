@@ -148,43 +148,65 @@
   html[data-bs-theme="light"],
   html.light-style,
   :root {
-    --bs-body-color: #4b465c;                 /* เดิม #6f6b7d — ข้อความหลัก */
-    --bs-body-color-rgb: 75, 70, 92;
-    --bs-heading-color: #2f2b3a;              /* เดิม #5d596c — หัวข้อ/heading */
-    --bs-secondary-color: #565167;            /* เดิม rgba(111,107,125,.75) — ดันเข้มขึ้นอีก */
-    --bs-secondary-color-rgb: 86, 81, 103;
-    --bs-tertiary-color: #6f6b80;            /* เดิม rgba(111,107,125,.5) — muted/placeholder */
-    --bs-tertiary-color-rgb: 111, 107, 128;
+    --bs-body-color: #000000;                 /* เดิม #6f6b7d — ข้อความหลัก ดำสนิท */
+    --bs-body-color-rgb: 0, 0, 0;
+    --bs-heading-color: #000000;              /* เดิม #5d596c — หัวข้อ/heading ดำสนิท */
+    --bs-secondary-color: #000000;            /* เดิม rgba(111,107,125,.75) — ดำสนิท */
+    --bs-secondary-color-rgb: 0, 0, 0;
+    --bs-tertiary-color: #000000;            /* เดิม rgba(111,107,125,.5) — muted/placeholder ดำสนิท */
+    --bs-tertiary-color-rgb: 0, 0, 0;
   }
-  /* utility ที่บาง component กำหนดสีจางตรง ๆ — บังคับให้เข้มตาม */
+  /* utility ที่บาง component กำหนดสีจางตรง ๆ — บังคับให้เป็นดำ */
   html[data-bs-theme="light"] .text-muted,
   html[data-bs-theme="light"] .text-body-secondary,
   html.light-style .text-muted,
   html.light-style .text-body-secondary {
-    color: #565167 !important;
+    color: #000000 !important;
   }
-  /* placeholder ในช่องกรอก — เดิมจางมาก */
+  /* placeholder ในช่องกรอก — ดำสนิทตามที่สั่ง (ถ้าอยากให้จางกว่าตัวพิมพ์จริงบอกได้) */
   html[data-bs-theme="light"] .form-control::placeholder,
   html.light-style .form-control::placeholder {
-    color: #7a778a;
+    color: #000000;
     opacity: 1;
+  }
+
+  /* border ของช่องกรอก (input/select/textarea/select2) — เดิม #dbdade จางมาก → เข้มขึ้น
+     เจาะจงเฉพาะ form field (ไม่แตะ border การ์ด/ตาราง/เส้นคั่นทั่วเว็บ)
+     คง border ตอน focus เป็นสีม่วง primary ไว้ (specificity ของ :focus สูงกว่า) */
+  html[data-bs-theme="light"] .form-control,
+  html[data-bs-theme="light"] .form-select,
+  html[data-bs-theme="light"] .input-group-text,
+  html[data-bs-theme="light"] .select2-container--default .select2-selection,
+  html.light-style .form-control,
+  html.light-style .form-select,
+  html.light-style .input-group-text,
+  html.light-style .select2-container--default .select2-selection {
+    border-color: #a8a5b3;
+  }
+  html[data-bs-theme="light"] .form-control:focus,
+  html[data-bs-theme="light"] .form-select:focus,
+  html.light-style .form-control:focus,
+  html.light-style .form-select:focus {
+    border-color: #7367f0;
   }
 
   /* เมนูซ้าย (sidebar) — ธีมตั้ง link สถานะปกติเป็น rgba(75,70,92,.5) จางมาก
      พึ่ง id #layout-menu + !important → ชนะทุก theme class แน่นอน
      scope เฉพาะ menu-item ที่ "ไม่ใช่ active" (active มีพื้นเข้ม+ไอคอนขาว ห้ามแตะ) */
   #layout-menu .menu-item:not(.active) > .menu-link,
-  #layout-menu .menu-item:not(.active) > .menu-link .menu-icon,
   #layout-menu .menu-item:not(.active) > .menu-link > div {
-    color: #2f2b3a !important;        /* เดิม rgba(75,70,92,.5) — ข้อความ+ไอคอนเมนู */
+    color: #000 !important;           /* ข้อความเมนู ดำสนิท */
   }
   #layout-menu .menu-item:not(.active) > .menu-link:hover,
-  #layout-menu .menu-item:not(.active) > .menu-link:hover .menu-icon,
   #layout-menu .menu-item:not(.active) > .menu-link:hover > div {
     color: #000 !important;
   }
+  /* ไอคอนเมนู — สีเขียวมิ้นท์ accent ของระบบ (#54BAB9) ไม่บังคับเป็นดำ */
+  #layout-menu .menu-item:not(.active) > .menu-link .menu-icon {
+    color: #54BAB9 !important;
+  }
   #layout-menu .menu-header {
-    color: #5d596c !important;        /* หัวข้อกลุ่มเมนู เดิม rgba(75,70,92,.5) */
+    color: #000000 !important;        /* หัวข้อกลุ่มเมนู เดิม rgba(75,70,92,.5) */
   }
 </style>
 

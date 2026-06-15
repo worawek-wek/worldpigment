@@ -251,18 +251,28 @@
                 </button>
             </div>
 
-            {{-- จำนวนต่อหน้า (มุมขวาล่าง) --}}
-            <div class="d-flex justify-content-end align-items-center mt-3 pt-3 border-top">
-                <label class="form-label small fw-medium mb-0 me-2">แสดง</label>
-                <select name="limit" class="form-select form-select-sm p_search"
-                    style="width: 90px;" onchange='loadData("{{$page_url}}/datatable")'>
-                    <option value="15">15</option>
-                    <option value="50">50</option>
-                    <option value="75">75</option>
-                    <option value="100">100</option>
-                    <option value="200">200</option>
-                </select>
-                <span class="ms-2 small fw-medium">รายการ/หน้า</span>
+            {{-- เรียงข้อมูล (ซ้าย) + จำนวนต่อหน้า (ขวา) --}}
+            <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                <div class="d-flex align-items-center">
+                    <label class="form-label small fw-medium mb-0 me-2">เรียงตาม</label>
+                    <select name="sort" class="form-select form-select-sm p_search"
+                        style="width: 150px;" onchange='loadData("{{$page_url}}/datatable")'>
+                        <option value="desc">ใหม่ → เก่า</option>
+                        <option value="asc">เก่า → ใหม่</option>
+                    </select>
+                </div>
+                <div class="d-flex align-items-center">
+                    <label class="form-label small fw-medium mb-0 me-2">แสดง</label>
+                    <select name="limit" class="form-select form-select-sm p_search"
+                        style="width: 90px;" onchange='loadData("{{$page_url}}/datatable")'>
+                        <option value="15">15</option>
+                        <option value="50">50</option>
+                        <option value="75">75</option>
+                        <option value="100">100</option>
+                        <option value="200">200</option>
+                    </select>
+                    <span class="ms-2 small fw-medium">รายการ/หน้า</span>
+                </div>
             </div>
         </div>
 
@@ -358,7 +368,7 @@
                 dropdownParent: $('#sampleDeliveryModal .modal-content')
             });
             // filter ของหน้าหลัก (ไม่อยู่ใน modal) → ไม่ต้องมี dropdownParent
-            $('.card-header select[name]:not([name="limit"])').select2({
+            $('.card-header select[name]:not([name="limit"]):not([name="sort"])').select2({
                 width: '100%'
             });
 
@@ -403,7 +413,7 @@
         // อัปเดตสีปุ่ม "ล้างตัวกรอง" ตามว่ามี filter ใช้งานอยู่กี่ตัว (ไม่นับ limit)
         function updateFilterButtonState(){
             var count = 0;
-            $('.p_search:not([name="limit"])').each(function(){
+            $('.p_search:not([name="limit"]):not([name="sort"])').each(function(){
                 if ($(this).is(':checkbox, :radio')) return;   // นับแยกด้านล่าง
                 var v = $(this).val();
                 if (v !== '' && v !== null) count++;
@@ -459,8 +469,8 @@
         }
 
         function resetFilters() {
-            // ไม่ล้าง name="limit" (รายการ/หน้า) — เป็นการตั้งค่าแสดงผล ไม่ใช่ตัวกรอง
-            $('.p_search:not([name="limit"])').each(function () {
+            // ไม่ล้าง name="limit" (รายการ/หน้า) และ name="sort" (การเรียง) — เป็นการตั้งค่าแสดงผล ไม่ใช่ตัวกรอง
+            $('.p_search:not([name="limit"]):not([name="sort"])').each(function () {
                 const $input = $(this);
                 // flatpickr: เคลียร์ผ่าน instance เพื่อให้ช่องวันที่ว่างจริง
                 if ($input.hasClass('flatpickr-date')) {

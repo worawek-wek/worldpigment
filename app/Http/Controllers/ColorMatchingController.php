@@ -56,7 +56,9 @@ class ColorMatchingController extends Controller
 
     public function datatable(Request $request)
     {
-        $results = Testmain::orderByDesc('id');
+        // ทิศทางการเรียง (ตาม id = ลำดับการบันทึก) — desc = หลัง→ก่อน (ใหม่สุดอยู่บน, ค่า default), asc = ก่อน→หลัง
+        $sort = strtolower((string) $request->sort) === 'asc' ? 'asc' : 'desc';
+        $results = Testmain::orderBy('id', $sort);
         $this->applyFilters($results, $request);
 
         $limit = 15;
