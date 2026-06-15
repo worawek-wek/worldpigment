@@ -135,6 +135,59 @@
   }
 </style>
 
+{{-- ─────────────────────────────────────────────────────────────────
+     ปรับสีข้อความให้เข้มขึ้นทั้งเว็บ (ลูกค้าแจ้งว่าธีม default จางอ่านยาก)
+     ธีม Sneat คุมสีข้อความผ่าน CSS variables ใต้ [data-bs-theme=light]
+     → override ตัวแปรเดิมด้วยโทนม่วง-เทาเดิมแต่เข้มขึ้น + เลิกใช้ opacity
+       ต่ำ ๆ (ต้นเหตุความจาง) เปลี่ยนเป็นสีทึบที่อ่านชัด
+     selector html[data-bs-theme=light]/html.light-style → specificity
+       ชนะค่าตั้งต้นของธีม (อยู่หลัง core.css ในลำดับด้วย)
+     เฉพาะ light mode — dark mode ปล่อยตามดีไซน์เดิม (สว่างบนพื้นมืดอยู่แล้ว)
+   ───────────────────────────────────────────────────────────────── --}}
+<style>
+  html[data-bs-theme="light"],
+  html.light-style,
+  :root {
+    --bs-body-color: #4b465c;                 /* เดิม #6f6b7d — ข้อความหลัก */
+    --bs-body-color-rgb: 75, 70, 92;
+    --bs-heading-color: #2f2b3a;              /* เดิม #5d596c — หัวข้อ/heading */
+    --bs-secondary-color: #565167;            /* เดิม rgba(111,107,125,.75) — ดันเข้มขึ้นอีก */
+    --bs-secondary-color-rgb: 86, 81, 103;
+    --bs-tertiary-color: #6f6b80;            /* เดิม rgba(111,107,125,.5) — muted/placeholder */
+    --bs-tertiary-color-rgb: 111, 107, 128;
+  }
+  /* utility ที่บาง component กำหนดสีจางตรง ๆ — บังคับให้เข้มตาม */
+  html[data-bs-theme="light"] .text-muted,
+  html[data-bs-theme="light"] .text-body-secondary,
+  html.light-style .text-muted,
+  html.light-style .text-body-secondary {
+    color: #565167 !important;
+  }
+  /* placeholder ในช่องกรอก — เดิมจางมาก */
+  html[data-bs-theme="light"] .form-control::placeholder,
+  html.light-style .form-control::placeholder {
+    color: #7a778a;
+    opacity: 1;
+  }
+
+  /* เมนูซ้าย (sidebar) — ธีมตั้ง link สถานะปกติเป็น rgba(75,70,92,.5) จางมาก
+     พึ่ง id #layout-menu + !important → ชนะทุก theme class แน่นอน
+     scope เฉพาะ menu-item ที่ "ไม่ใช่ active" (active มีพื้นเข้ม+ไอคอนขาว ห้ามแตะ) */
+  #layout-menu .menu-item:not(.active) > .menu-link,
+  #layout-menu .menu-item:not(.active) > .menu-link .menu-icon,
+  #layout-menu .menu-item:not(.active) > .menu-link > div {
+    color: #2f2b3a !important;        /* เดิม rgba(75,70,92,.5) — ข้อความ+ไอคอนเมนู */
+  }
+  #layout-menu .menu-item:not(.active) > .menu-link:hover,
+  #layout-menu .menu-item:not(.active) > .menu-link:hover .menu-icon,
+  #layout-menu .menu-item:not(.active) > .menu-link:hover > div {
+    color: #000 !important;
+  }
+  #layout-menu .menu-header {
+    color: #5d596c !important;        /* หัวข้อกลุ่มเมนู เดิม rgba(75,70,92,.5) */
+  }
+</style>
+
 <div id="loadingOverlay" style="display: none;">
     <div class="col">
         <!-- Chase -->
