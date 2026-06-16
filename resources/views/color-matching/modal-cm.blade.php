@@ -50,25 +50,22 @@
 
                                 <div class="row g-3">
                                     <div class="col-md-2">
-                                        <label class="form-label small mb-1">รหัสลูกค้า</label>
-                                        <input type="text" name="custno" class="form-control"
-                                            placeholder="เช่น 00004">
+                                        <label class="form-label small mb-1">รหัสลูกค้า <span class="text-muted fw-normal">(เช่น 00004)</span></label>
+                                        <input type="text" name="custno" class="form-control">
                                     </div>
                                     <div class="col-md-5">
                                         <label class="form-label small mb-1">
                                             <span class="badge bg-label-secondary me-1">TH</span>
                                             ชื่อบริษัท (ไทย)
                                         </label>
-                                        <input type="text" name="custname" class="form-control"
-                                            placeholder="กรอกชื่อบริษัท (ไทย)">
+                                        <input type="text" name="custname" class="form-control">
                                     </div>
                                     <div class="col-md-5">
                                         <label class="form-label small mb-1">
                                             <span class="badge bg-label-secondary me-1">EN</span>
                                             ชื่อบริษัท (อังกฤษ)
                                         </label>
-                                        <input type="text" name="custnameEN" class="form-control"
-                                            placeholder="กรอกชื่อบริษัท (อังกฤษ)">
+                                        <input type="text" name="custnameEN" class="form-control">
                                     </div>
                                 </div>
                             </div>
@@ -85,9 +82,8 @@
 
                                 <div class="row g-3">
                                     <div class="col-md-3">
-                                        <label class="form-label small mb-1">เลขที่ใบนำส่งเทียบสี</label>
-                                        <input type="text" name="SendNo" class="form-control" required
-                                            placeholder="เช่น 26/0001">
+                                        <label class="form-label small mb-1">เลขที่ใบนำส่งเทียบสี <span class="text-muted fw-normal">(เช่น 26/0001)</span></label>
+                                        <input type="text" name="SendNo" class="form-control" required>
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">วันที่ส่งเทียบสี</label>
@@ -130,9 +126,8 @@
 
                                 <div class="row g-3">
                                     <div class="col-md-5">
-                                        <label class="form-label small mb-1">สี</label>
-                                        <input type="text" name="color" class="form-control"
-                                            placeholder="ชื่อสี เช่น DB PINK-Y AS50%+ABS50%">
+                                        <label class="form-label small mb-1">สี <span class="text-muted fw-normal">(ชื่อสี เช่น DB PINK-Y AS50%+ABS50%)</span></label>
+                                        <input type="text" name="color" class="form-control">
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">คุณสมบัติ</label>
@@ -167,24 +162,20 @@
 
                                 <div class="row g-3">
                                     <div class="col-md-3">
-                                        <label class="form-label small mb-1">Start Date</label>
-                                        <input type="text" name="startdate" class="form-control flatpickr-date"
-                                            placeholder="วว/ดด/ปปปป">
+                                        <label class="form-label small mb-1">Start Date <span class="text-muted fw-normal">(วว/ดด/ปปปป)</span></label>
+                                        <input type="text" name="startdate" class="form-control flatpickr-date">
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label small mb-1">Sample Date</label>
-                                        <input type="text" name="SampleDate" class="form-control flatpickr-date"
-                                            placeholder="วว/ดด/ปปปป">
+                                        <label class="form-label small mb-1">Sample Date <span class="text-muted fw-normal">(วว/ดด/ปปปป)</span></label>
+                                        <input type="text" name="SampleDate" class="form-control flatpickr-date">
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label small mb-1">Ready Date</label>
-                                        <input type="text" name="ReadyDate" class="form-control flatpickr-date"
-                                            placeholder="วว/ดด/ปปปป">
+                                        <label class="form-label small mb-1">Ready Date <span class="text-muted fw-normal">(วว/ดด/ปปปป)</span></label>
+                                        <input type="text" name="ReadyDate" class="form-control flatpickr-date">
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label small mb-1">Color Matcher</label>
-                                        <input type="text" name="ColorMatcher" class="form-control"
-                                            placeholder="ชื่อพนักงาน">
+                                        <label class="form-label small mb-1">Color Matcher <span class="text-muted fw-normal">(ชื่อพนักงาน)</span></label>
+                                        <input type="text" name="ColorMatcher" class="form-control">
                                     </div>
                                 </div>
                             </div>
@@ -201,9 +192,8 @@
 
                                 <div class="row g-3">
                                     <div class="col-md-7">
-                                        <label class="form-label small mb-1">รายละเอียด</label>
-                                        <input type="text" name="TestDesc" class="form-control"
-                                            placeholder="รายละเอียดผลิตภัณฑ์">
+                                        <label class="form-label small mb-1">รายละเอียด <span class="text-muted fw-normal">(รายละเอียดผลิตภัณฑ์)</span></label>
+                                        <input type="text" name="TestDesc" class="form-control">
                                     </div>
                                     <div class="col-md-2">
                                         <label class="form-label small mb-1">ประเภท</label>
@@ -216,19 +206,16 @@
                                         </select>
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label small mb-1">Standard</label>
-                                        <input type="text" name="STD" class="form-control"
-                                            placeholder="เช่น PT 494 C">
+                                        <label class="form-label small mb-1">Standard <span class="text-muted fw-normal">(เช่น PT 494 C)</span></label>
+                                        <input type="text" name="STD" class="form-control">
                                     </div>
                                     <div class="col-md-8">
-                                        <label class="form-label small mb-1">Resin (Match)</label>
-                                        <input type="text" name="ResinMatch" class="form-control"
-                                            placeholder="เช่น PVC, ABS, PE">
+                                        <label class="form-label small mb-1">Resin (Match) <span class="text-muted fw-normal">(เช่น PVC, ABS, PE)</span></label>
+                                        <input type="text" name="ResinMatch" class="form-control">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label small mb-1">PHR</label>
-                                        <input type="number" step="0.0001" name="PHR" class="form-control text-end"
-                                            placeholder="0.0000">
+                                        <label class="form-label small mb-1">PHR <span class="text-muted fw-normal">(0.0000)</span></label>
+                                        <input type="number" step="0.0001" name="PHR" class="form-control text-end">
                                     </div>
                                 </div>
                             </div>
@@ -245,32 +232,27 @@
 
                                 <div class="row g-3">
                                     <div class="col-md-3">
-                                        <label class="form-label small mb-1">ผู้รับเอกสาร</label>
-                                        <input type="text" name="TNname" class="form-control"
-                                            placeholder="ชื่อพนักงาน">
+                                        <label class="form-label small mb-1">ผู้รับเอกสาร <span class="text-muted fw-normal">(ชื่อพนักงาน)</span></label>
+                                        <input type="text" name="TNname" class="form-control">
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label small mb-1">เลขที่ใบรายงานผล</label>
-                                        <input type="text" name="rptno" class="form-control"
-                                            placeholder="เช่น 26/0001/2/4">
+                                        <label class="form-label small mb-1">เลขที่ใบรายงานผล <span class="text-muted fw-normal">(เช่น 26/0001/2/4)</span></label>
+                                        <input type="text" name="rptno" class="form-control">
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label small mb-1">รอวัตถุดิบ</label>
-                                        <input type="text" name="RminWating" class="form-control"
-                                            placeholder="ระบุวัตถุดิบที่รอ">
+                                        <label class="form-label small mb-1">รอวัตถุดิบ <span class="text-muted fw-normal">(ระบุวัตถุดิบที่รอ)</span></label>
+                                        <input type="text" name="RminWating" class="form-control">
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label small mb-1">กำหนดเทียบสีเสร็จ</label>
-                                        <input type="text" name="TNDate" class="form-control flatpickr-date"
-                                            placeholder="วว/ดด/ปปปป">
+                                        <label class="form-label small mb-1">กำหนดเทียบสีเสร็จ <span class="text-muted fw-normal">(วว/ดด/ปปปป)</span></label>
+                                        <input type="text" name="TNDate" class="form-control flatpickr-date">
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label small mb-1">
                                             <i class="ti ti-note me-1"></i>
-                                            หมายเหตุ
+                                            หมายเหตุ <span class="text-muted fw-normal">(หมายเหตุเพิ่มเติม)</span>
                                         </label>
-                                        <input type="text" name="Mems" class="form-control"
-                                            placeholder="หมายเหตุเพิ่มเติม">
+                                        <input type="text" name="Mems" class="form-control">
                                     </div>
                                 </div>
                             </div>

@@ -2,7 +2,7 @@
     <div class="row g-3">
         <div class="col-sm-6">
             <label for="exampleFormControlInput1" class="form-label">ชื่อหมวดหมู่</label>
-            <input class="form-control" name="name" id="exampleFormControlInput1" placeholder="ชื่อหมวดหมู่" value="{{ @$equipments['name'] }}">
+            <input class="form-control" name="name" id="exampleFormControlInput1" value="{{ @$equipments['name'] }}">
         </div>
     </div>
 </div>

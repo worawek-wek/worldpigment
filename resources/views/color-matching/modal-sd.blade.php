@@ -42,10 +42,9 @@
                             <div class="row g-3 mb-4 pb-3 border-bottom">
                                 <div class="col-md-4">
                                     <label class="form-label small mb-1 fw-semibold" style="color:#4b3fb8;">
-                                        <i class="ti ti-link me-1"></i>เลขที่ใบนำส่งเทียบสี (อ้างอิง)
+                                        <i class="ti ti-link me-1"></i>เลขที่ใบนำส่งเทียบสี (อ้างอิง) <span class="text-muted fw-normal">(เช่น 26/0001)</span>
                                     </label>
-                                    <input type="text" name="SendNo" class="form-control"
-                                        placeholder="เช่น 26/0001">
+                                    <input type="text" name="SendNo" class="form-control">
                                 </div>
                             </div>
 
@@ -61,25 +60,22 @@
 
                                 <div class="row g-3">
                                     <div class="col-md-2">
-                                        <label class="form-label small mb-1">รหัสลูกค้า</label>
-                                        <input type="text" name="custno" class="form-control"
-                                            placeholder="เช่น 00004">
+                                        <label class="form-label small mb-1">รหัสลูกค้า <span class="text-muted fw-normal">(เช่น 00004)</span></label>
+                                        <input type="text" name="custno" class="form-control">
                                     </div>
                                     <div class="col-md-5">
                                         <label class="form-label small mb-1">
                                             <span class="badge bg-label-secondary me-1">TH</span>
                                             ชื่อบริษัท (ไทย)
                                         </label>
-                                        <input type="text" name="custname" class="form-control"
-                                            placeholder="ชื่อบริษัทภาษาไทย">
+                                        <input type="text" name="custname" class="form-control">
                                     </div>
                                     <div class="col-md-5">
                                         <label class="form-label small mb-1">
                                             <span class="badge bg-label-secondary me-1">EN</span>
                                             ชื่อบริษัท (อังกฤษ)
                                         </label>
-                                        <input type="text" name="custnameEN" class="form-control"
-                                            placeholder="ชื่อบริษัทภาษาอังกฤษ">
+                                        <input type="text" name="custnameEN" class="form-control">
                                     </div>
                                 </div>
                             </div>
@@ -96,19 +92,16 @@
 
                                 <div class="row g-3">
                                     <div class="col-md-4">
-                                        <label class="form-label small mb-1">รหัสสินค้า</label>
-                                        <input type="text" name="CodeNo" class="form-control"
-                                            placeholder="เช่น CP1Y583PVC">
+                                        <label class="form-label small mb-1">รหัสสินค้า <span class="text-muted fw-normal">(เช่น CP1Y583PVC)</span></label>
+                                        <input type="text" name="CodeNo" class="form-control">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label small mb-1">Lot No.</label>
-                                        <input type="text" name="lotno" class="form-control bg-dark text-white"
-                                            placeholder="เช่น 690112-1-2/01">
+                                        <label class="form-label small mb-1">Lot No. <span class="text-muted fw-normal">(เช่น 690112-1-2/01)</span></label>
+                                        <input type="text" name="lotno" class="form-control bg-dark text-white">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label small mb-1">น้ำหนัก (กรัม)</label>
-                                        <input type="number" name="Wage" class="form-control"
-                                            placeholder="เช่น 100">
+                                        <label class="form-label small mb-1">น้ำหนัก (กรัม) <span class="text-muted fw-normal">(เช่น 100)</span></label>
+                                        <input type="number" name="Wage" class="form-control">
                                     </div>
                                 </div>
                             </div>
@@ -125,9 +118,8 @@
 
                                 <div class="row g-3 align-items-end">
                                     <div class="col-md-2">
-                                        <label class="form-label small mb-1">Saleman Code</label>
-                                        <input type="text" name="sale" class="form-control" maxlength="2"
-                                            placeholder="เช่น A1">
+                                        <label class="form-label small mb-1">Saleman Code <span class="text-muted fw-normal">(เช่น A1)</span></label>
+                                        <input type="text" name="sale" class="form-control" maxlength="2">
                                     </div>
                                     <div class="col-md-4 px-4">
                                         <div class="form-check p-2 rounded border border-danger-subtle bg-danger-subtle">
@@ -139,16 +131,14 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label small mb-1">สาเหตุที่ยกเลิก</label>
-                                        <input type="text" name="CancalRes" class="form-control bg-label-secondary"
-                                            placeholder="ระบุสาเหตุที่ยกเลิก">
+                                        <input type="text" name="CancalRes" class="form-control bg-label-secondary">
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label small mb-1">
                                             <i class="ti ti-note me-1"></i>
-                                            หมายเหตุ
+                                            หมายเหตุ <span class="text-muted fw-normal">(หมายเหตุเพิ่มเติม)</span>
                                         </label>
-                                        <textarea name="remark" class="form-control" rows="2"
-                                            placeholder="หมายเหตุเพิ่มเติม"></textarea>
+                                        <textarea name="remark" class="form-control" rows="2"></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -167,15 +157,13 @@
                                     <div class="col-md-6">
                                         <label class="form-label small mb-1 text-danger">
                                             <i class="ti ti-asterisk-simple"></i>
-                                            เลขที่ใบส่ง ต.ย. ให้ลูกค้า
+                                            เลขที่ใบส่ง ต.ย. ให้ลูกค้า <span class="text-muted fw-normal">(เช่น 53495-CP)</span>
                                         </label>
-                                        <input type="text" name="Testno" class="form-control" required
-                                            placeholder="เช่น 53495-CP">
+                                        <input type="text" name="Testno" class="form-control" required>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label small mb-1">วันที่เบิก</label>
-                                        <input type="text" name="TestDate" class="form-control flatpickr-date"
-                                            placeholder="วว/ดด/ปปปป">
+                                        <label class="form-label small mb-1">วันที่เบิก <span class="text-muted fw-normal">(วว/ดด/ปปปป)</span></label>
+                                        <input type="text" name="TestDate" class="form-control flatpickr-date">
                                     </div>
                                 </div>
                             </div>

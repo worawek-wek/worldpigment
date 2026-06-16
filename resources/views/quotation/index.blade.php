@@ -90,11 +90,10 @@
             {{-- แถวตัวกรอง 1: ค้นหา + ช่วงวันที่ --}}
             <div class="row g-3 align-items-end">
                 <div class="col-md-6">
-                    <label class="form-label small fw-medium mb-1">ค้นหา</label>
+                    <label class="form-label small fw-medium mb-1">ค้นหา <span class="text-muted fw-normal">(เลขที่ใบเสนอราคา / รหัสลูกค้า / ชื่อลูกค้า)</span></label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="ti ti-search"></i></span>
                         <input type="text" name="search" class="form-control p_search"
-                            placeholder="เลขที่ใบเสนอราคา / รหัสลูกค้า / ชื่อลูกค้า"
                             oninput="loadData(page)">
                     </div>
                 </div>
@@ -200,7 +199,6 @@
 
                     <input type="text"
                         class="form-control"
-                        placeholder="กรอกเลขที่ใบเสนอราคา"
                         value="WH690270">
                 </div>
                 <div class="col-md-8">
@@ -412,12 +410,11 @@
 
                 <div class="col-md-3">
                     <label class="form-label">
-                        ส่งสินค้าได้ภายใน
+                        ส่งสินค้าได้ภายใน <span class="text-muted fw-normal">(วัน)</span>
                     </label>
 
                     <input type="text"
-                        class="form-control"
-                        placeholder="วัน">
+                        class="form-control">
                 </div>
 
             </div>

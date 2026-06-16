@@ -167,12 +167,11 @@
             {{-- แถวตัวกรอง 1: ค้นหา + ช่วงวันที่ --}}
             <div class="row g-3 align-items-end">
                 <div class="col-md-6">
-                    <label class="form-label small fw-medium mb-1">ค้นหา</label>
+                    <label class="form-label small fw-medium mb-1">ค้นหา <span class="text-muted fw-normal">(เลขที่ใบนำส่ง / เลขที่ใบส่ง ต.ย. / รหัสลูกค้า / ชื่อลูกค้า / สี)</span></label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="ti ti-search"></i></span>
                         <input type="text" name="search"
                             class="form-control p_search"
-                            placeholder="เลขที่ใบนำส่ง / เลขที่ใบส่ง ต.ย. / รหัสลูกค้า / ชื่อลูกค้า / สี"
                             oninput="loadData(page)">
                     </div>
                 </div>
@@ -209,19 +208,19 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small fw-medium mb-1">Standard</label>
+                    <label class="form-label small fw-medium mb-1">Standard <span class="text-muted fw-normal">(เช่น PT 494 C)</span></label>
                     <input type="text" name="std" class="form-control p_search"
-                        placeholder="เช่น PT 494 C" oninput="loadData(page)">
+                        oninput="loadData(page)">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small fw-medium mb-1">สี</label>
                     <input type="text" name="color" class="form-control p_search"
-                        placeholder="ชื่อสี" oninput="loadData(page)">
+                        oninput="loadData(page)">
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small fw-medium mb-1">Lot No.</label>
+                    <label class="form-label small fw-medium mb-1">Lot No. <span class="text-muted fw-normal">(เช่น 690112-1-2/01)</span></label>
                     <input type="text" name="lot" class="form-control p_search"
-                        placeholder="เช่น 690112-1-2/01" oninput="loadData(page)">
+                        oninput="loadData(page)">
                 </div>
             </div>
             <div class="d-flex justify-content-center align-items-center my-3 position-relative">
@@ -256,9 +255,9 @@
                 <div class="d-flex align-items-center">
                     <label class="form-label small fw-medium mb-0 me-2">เรียงตาม</label>
                     <select name="sort" class="form-select form-select-sm p_search"
-                        style="width: 150px;" onchange='loadData("{{$page_url}}/datatable")'>
-                        <option value="desc">ใหม่ → เก่า</option>
-                        <option value="asc">เก่า → ใหม่</option>
+                        style="width: 100px;" onchange='loadData("{{$page_url}}/datatable")'>
+                        <option value="desc">ล่าสุด</option>
+                        <option value="asc">เก่าสุด</option>
                     </select>
                 </div>
                 <div class="d-flex align-items-center">
