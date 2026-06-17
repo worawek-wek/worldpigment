@@ -21,12 +21,10 @@
         <!-- /Left Text -->
         <div class="d-none d-lg-flex col-lg-7 p-0">
           <div class="auth-cover-bg auth-cover-bg-color d-flex justify-content-center align-items-center mx-0">
-            <img style="max-height: none;"
-              src="{{url('')}}/assets/img/illustrations/auth-login-illustration-light.png"
-              alt="auth-login-cover"
-              class="img-fluid auth-illustration"
-              data-app-light-img="illustrations/auth-login-illustration-light.png"
-              data-app-dark-img="illustrations/auth-login-illustration-dark.png" />
+            <img style="max-height: 75vh;"
+              src="{{url('')}}/assets/img/illustrations/auth-login-pigment.svg"
+              alt="World Pigment - ระบบเทียบสี"
+              class="img-fluid auth-illustration" />
           </div>
         </div>
         <!-- /Left Text -->
@@ -34,12 +32,12 @@
         <div class="d-flex col-12 col-lg-5 align-items-center p-sm-5 p-4">
           <div class="col-12 mx-auto">
             <!-- Logo -->
-            <div class="app-brand mb-4">
-              <img src="{{url('')}}/assets/img/illustrations/main.png" width="300px" alt="" style="margin: auto;">
+            <div class="app-brand mb-4 justify-content-center">
+              <img src="{{url('')}}/assets/img/illustrations/main.png" alt="" class="img-fluid d-block mx-auto" style="max-width: 220px;">
             </div>
             <!-- /Logo -->
             <h3 class="mb-1">ยินดีต้อนรับ</h3>
-            <p class="mb-4">Please sign-in to your account and start the adventure</p>
+            <p class="mb-4 text-muted">เข้าสู่ระบบเพื่อเริ่มต้นใช้งาน</p>
 
                     {{-- @include('layout/inc_footer') --}}
             <div id="formAuthentication" class="mb-3">

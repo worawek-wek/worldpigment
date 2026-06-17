@@ -65,6 +65,52 @@
     color: #fff;
 }
 
+/* ─── ตาราง: badge/ปุ่ม ใช้ theme เดียวกับฟอร์ม (CM=teal #54BAB9, SD=ม่วง #6c5ce7) ─── */
+/* badge ชนิดเอกสาร — โทนอ่อน (soft) เหมือน bg-label-* แต่เป็นสี theme */
+.badge-doc-cm {
+    background-color: #fff;
+    color: #14706e;
+    border: 2px solid #54BAB9;
+    font-weight: 700;
+}
+.badge-doc-sd {
+    background-color: #fff;
+    color: #3a2db0;
+    border: 2px solid #6c5ce7;
+    font-weight: 700;
+}
+/* สถานะ "กำลังเทียบสี" (ขั้นตอนของ CM) ให้เป็นโทน teal */
+.badge-status-cm {
+    background-color: #e8f6f6;
+    color: #1f7a78;
+}
+
+/* หัวตารางสีเข้ม (Dark Table head) — ตัวหนังสือขาว ตัวพิมพ์ใหญ่ */
+#table-data thead.cm-thead-dark th {
+    background-color: #6e6e78;
+    color: #fff;
+    border-color: #6e6e78;
+    font-weight: 600;
+    letter-spacing: .4px;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+#table-data thead.cm-thead-dark th small {
+    color: rgba(255, 255, 255, .65) !important;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* พื้นหลังแถวตามชนิดเอกสาร (CM=teal, SD=ม่วง) + เส้นบอกชนิดด้านซ้าย */
+/* ตั้งค่าผ่านตัวแปร --bs-table-bg ต่อแถว → hover ของ Bootstrap ยังทำงานทับได้ปกติ */
+#table-data tbody tr.tr-cm { --bs-table-bg: #d6eeed; }
+#table-data tbody tr.tr-sd { --bs-table-bg: #e6e1fb; }
+#table-data tbody tr.tr-cm > td:first-child { border-left: 3px solid #54BAB9; }
+#table-data tbody tr.tr-sd > td:first-child { border-left: 3px solid #6c5ce7; }
+/* ช่องสถานะ + จัดการ — พื้นหลังขาว (ไม่อิงสีพื้นแถว) */
+#table-data tbody td.td-status,
+#table-data tbody td.td-action { background-color: #fff; }
+
 /* filter ประเภทเอกสาร — option ที่ไม่ติ๊กให้จางลง เห็นชัดว่าอันไหนกำลังแสดง */
 .doc-filter {
     font-size: 1rem;
