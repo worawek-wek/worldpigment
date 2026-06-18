@@ -93,9 +93,11 @@
                     <tr>
                         <th class="text-center" style="width:40px">#</th>
                         <th>Item No.</th>
-                        <th class="text-center">Quantity</th>
-                        <th class="text-center">Lot</th>
+                        {{-- <th class="text-center">Quantity</th> --}}
+                        {{-- <th class="text-center">Lot</th> --}}
                         <th class="text-center">Weight</th>
+                        <th class="text-center">Inplan</th>
+                        <th class="text-center">วันที่ส่งสินค้า</th>
                         <th class="text-center">Machine No.</th>
                         <th class="text-center">สถานะ</th>
                         <th class="text-center" style="width:80px">จัดการ</th>
@@ -106,9 +108,11 @@
                     <tr>
                         <td class="text-center">{{ $loop->iteration }}</td>
                         <td>{{ $item->itemno ?? '-' }}</td>
-                        <td class="text-center">{{ $item->quantity ?? '-' }}</td>
-                        <td class="text-center">{{ $item->lot ?? '-' }}</td>
+                        {{-- <td class="text-center">{{ $item->quantity ?? '-' }}</td> --}}
+                        {{-- <td class="text-center">{{ $item->lot ?? '-' }}</td> --}}
                         <td class="text-center">{{ number_format($item->weight,2) ?? '-' }}</td>
+                        <td class="text-center">{{ $item->inplan ?? '-' }}</td>
+                        <td class="text-center">{{ $item->senddate ?? '-' }}</td>
                         <td class="text-center">{{ $item->machine_no ?? '-' }}</td>
                         <td class="text-center">
                             @if($item->planning_status)
