@@ -84,67 +84,81 @@
                        value="{{ $planning_item?->planning_status ?? '' }}"
                        class="form-control" placeholder="สถานะ">
             </div>
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Start Date</label>
-                <input type="date" name="start_date"
-                       value="{{ $planning_item?->start_date ?? '' }}"
-                       class="form-control">
+        </div>
+        <div class="row my-2"><hr /></div>
+        <div class="row p-3 rounded" style="background-color: #fffaf0; border: 1px dashed #ffc107;">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">วันที่สั่ง (mdate)</label>
+                    <input type="date" name="mdate"
+                        value="{{ $planning_item?->mdate ? substr($planning_item->mdate, 0, 10) : '' }}"
+                        class="form-control">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">วันที่ต้องการรับ (custwant)</label>
+                    <input type="date" name="custwant"
+                        value="{{ $planning_item?->custwant ? substr($planning_item->custwant, 0, 10) : '' }}"
+                        class="form-control">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">วันที่ส่งสินค้า (senddate)</label>
+                    <input type="date" name="senddate"
+                        value="{{ $planning_item?->senddate ? substr($planning_item->senddate, 0, 10) : '' }}"
+                        class="form-control">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">วันที่วางแผนผลิต (Inplan)</label>
+                    <input type="date" name="inplan"
+                        value="{{ $planning_item?->inplan ?? '' }}"
+                        class="form-control">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">วันที่เริ่มผลิต (Start Date)</label>
+                    <input type="date" name="start_date"
+                        value="{{ $planning_item?->start_date ?? '' }}"
+                        class="form-control">
+                </div>
             </div>
         </div>
+        <div class="row my-2"><hr /></div>
         <div class="row">
             <div class="col-md-4 mb-3">
-                <label class="form-label">QC Date</label>
+                <label class="form-label">วันที่ส่ง Qc (QC Date)</label>
                 <input type="date" name="qc_date"
                        value="{{ $planning_item?->qc_date ?? '' }}"
                        class="form-control">
             </div>
             <div class="col-md-4 mb-3">
-                <label class="form-label">QC Time</label>
+                <label class="form-label">เวลาที่ส่ง Qc (QC Time)</label>
                 <input type="text" name="qc_time"
                        value="{{ $planning_item?->qc_time ?? '' }}"
                        class="form-control" placeholder="HH:MM">
             </div>
             <div class="col-md-4 mb-3">
-                <label class="form-label">QC Status</label>
+            <label class="form-label">สถานะ Qc (QC Status) </label>
                 <input type="text" name="qc_status"
                        value="{{ $planning_item?->qc_status ?? '' }}"
                        class="form-control" placeholder="สถานะ QC">
             </div>
         </div>
+        <div class="row my-2"><hr /></div>
         <div class="row">
             <div class="col-md-6 mb-3">
-                <label class="form-label">Packing Datetime</label>
+                <label class="form-label">วันเวลาที่บรรจุเสร็จ (Packing Datetime)</label>
                 <input type="text" name="packing_datetie"
                        value="{{ $planning_item?->packing_datetie ?? '' }}"
                        class="form-control" placeholder="วันเวลาจัดแพ็ค">
             </div>
         </div>
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <label class="form-label">วันที่สั่ง (mdate)</label>
-                <input type="date" name="mdate"
-                       value="{{ $planning_item?->mdate ? substr($planning_item->mdate, 0, 10) : '' }}"
-                       class="form-control">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label class="form-label">วันที่ต้องการรับ (custwant)</label>
-                <input type="date" name="custwant"
-                       value="{{ $planning_item?->custwant ? substr($planning_item->custwant, 0, 10) : '' }}"
-                       class="form-control">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label class="form-label">วันที่ส่งสินค้า (senddate)</label>
-                <input type="date" name="senddate"
-                       value="{{ $planning_item?->senddate ? substr($planning_item->senddate, 0, 10) : '' }}"
-                       class="form-control">
-            </div>
-        </div>
+
         <div class="row">
             <div class="col-md-6 mb-3">
                 <label class="form-label">Remark</label>
                 <input type="text" name="remark"
                        value="{{ $planning_item?->remark ?? '' }}"
-                       class="form-control" placeholder="วันเวลาจัดแพ็ค">
+                       class="form-control" placeholder="หมายเหตุ">
             </div>
         </div>
 

@@ -188,6 +188,7 @@ class ProductionPlanController extends Controller
             'machine_no'         => 'nullable|string|max:255',
             'plan_type'          => 'nullable|string|max:255',
             'planning_status'    => 'nullable|string|max:255',
+            'inplan'         => 'nullable|date',
             'start_date'         => 'nullable|date',
             'qc_date'            => 'nullable|date',
             'qc_time'            => 'nullable|string|max:10',
@@ -208,7 +209,7 @@ class ProductionPlanController extends Controller
 
         $fields = $request->only([
             'planning_header_id', 'itemno', 'quantity', 'lot', 'weight',
-            'machine_no', 'plan_type', 'planning_status', 'start_date',
+            'machine_no', 'plan_type', 'planning_status', 'inplan','start_date',
             'qc_date', 'qc_time', 'qc_status', 'packing_datetie',
             'mdate', 'custwant', 'senddate', 'remark'
         ]);
