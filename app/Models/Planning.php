@@ -10,8 +10,6 @@ class Planning extends Model
 {
     use HasFactory;
 
-    use HasFactory;
-
     protected $table = 'tb_planning';
 
     protected $guarded = [];

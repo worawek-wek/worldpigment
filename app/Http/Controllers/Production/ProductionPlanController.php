@@ -10,6 +10,7 @@ use Yajra\DataTables\Facades\DataTables;
 use App\Models\PlanningHeader;
 use App\Models\Planning;
 use App\Models\SemiPigment;
+use App\Models\Machine;
 
 class ProductionPlanController extends Controller
 {
@@ -100,7 +101,7 @@ class ProductionPlanController extends Controller
         }
 
         $html = view('production-planning.planning.planning-form', [
-            'planning_header' => $planning_header
+            'planning_header' => $planning_header,
         ])->render();
 
         return response()->json([
@@ -162,6 +163,8 @@ class ProductionPlanController extends Controller
             $parent_orderno = $parent_header?->orderno;
         }
 
+        $machines = Machine::where('dept',$parent_header->company)->get();
+
         $html = view('production-planning.planning.planning-item-form', [
             'planning_item'      => $planning_item,
             'planning_header_id' => $planning_header_id,
@@ -169,6 +172,7 @@ class ProductionPlanController extends Controller
             'semi_list'          => $semi_list,
             'pigment_list'       => $pigment_list,
             'parent_orderno'     => $parent_orderno,
+            'machines' => $machines
         ])->render();
 
         return response()->json([

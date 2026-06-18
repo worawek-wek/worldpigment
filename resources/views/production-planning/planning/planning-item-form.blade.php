@@ -64,9 +64,14 @@
             </div>
             <div class="col-md-4 mb-3">
                 <label class="form-label">Machine No.</label>
-                <input type="text" name="machine_no"
-                       value="{{ $planning_item?->machine_no ?? '' }}"
-                       class="form-control" placeholder="เครื่องจักร">
+                <select name="machine_no" class="form-control">
+                    <option value="">เลือกเครื่องจักร</option>
+                    @foreach($machines as $machine)
+                        <option value="{{ $machine->MBX }}" {{ $planning_item && $planning_item->machine_no === $machine->MBX ? 'selected' : '' }}>
+                            {{ $machine->MBX }}
+                        </option>
+                    @endforeach
+                </select>
             </div>
             <div class="col-md-4 mb-3">
                 <label class="form-label">Plan Type</label>
