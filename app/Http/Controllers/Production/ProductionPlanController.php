@@ -241,6 +241,18 @@ class ProductionPlanController extends Controller
         try {
             // 1) บันทึก / อัปเดต planning หลัก
             if ($is_update) {
+                // ถ้าวันที่ส่งสินค้า (senddate) เปลี่ยนไปจากเดิม → เก็บค่าเดิมไว้ใน senddate_log (สะสมต่อท้าย คั่นด้วย comma)
+                $existing = Planning::find($planning_id);
+                if ($existing) {
+                    $old_send = $existing->senddate ? \Carbon\Carbon::parse($existing->senddate)->format('Y-m-d') : null;
+                    $new_send = !empty($fields['senddate']) ? \Carbon\Carbon::parse($fields['senddate'])->format('Y-m-d') : null;
+                    if ($old_send && $old_send !== $new_send) {
+                        $fields['senddate_log'] = $existing->senddate_log
+                            ? $existing->senddate_log . ',' . $old_send
+                            : $old_send;
+                    }
+                }
+
                 Planning::where('id', $planning_id)->update($fields);
                 $parent = Planning::with('planning_header')->find($planning_id);
             } else {

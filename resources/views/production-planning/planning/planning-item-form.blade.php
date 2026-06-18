@@ -12,6 +12,9 @@
         'approved' => 'bg-label-success',
         'reject'   => 'bg-label-danger',
     ];
+
+    // ประวัติวันที่ส่งสินค้าเดิม (senddate_log) — เก็บคั่นด้วย comma เรียงตามลำดับการเปลี่ยน
+    $senddate_logs = array_values(array_filter(array_map('trim', explode(',', $planning_item?->senddate_log ?? ''))));
 @endphp
 
 <div class="modal-header" style="background-color: #3A8EBA; padding: 1rem 1.5rem;">
@@ -59,7 +62,7 @@
             <div class="col-md-4 mb-3">
                 <label class="form-label">Weight</label>
                 <input type="text" name="weight"
-                       value="{{ number_format($planning_item?->weight ?? '', 2) }}"
+                       value="{{ number_format((float) ($planning_item?->weight ?? 0), 2) }}"
                        class="form-control" placeholder="0.00">
             </div>
             <div class="col-md-4 mb-3">
@@ -116,7 +119,15 @@
                         class="form-control">
                 </div>
                 <div class="col-md-4 mb-3">
-                    <label class="form-label">วันที่ส่งสินค้า (senddate)</label>
+                    <label class="form-label d-flex align-items-center justify-content-between">
+                        <span>วันที่ส่งสินค้า (senddate)</span>
+                        @if($planning_item && count($senddate_logs))
+                            <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none" id="btn_senddate_log">
+                                <i class="ti ti-history me-1"></i>ประวัติ
+                                <span class="badge bg-label-secondary ms-1">{{ count($senddate_logs) }}</span>
+                            </button>
+                        @endif
+                    </label>
                     <input type="date" name="senddate"
                         value="{{ $planning_item?->senddate ? substr($planning_item->senddate, 0, 10) : '' }}"
                         class="form-control">
@@ -147,7 +158,7 @@
             </div>
             <div class="col-md-4 mb-3">
                 <label class="form-label">เวลาที่ส่ง Qc (QC Time)</label>
-                <input type="text" name="qc_time"
+                <input type="time" name="qc_time"
                        value="{{ $planning_item?->qc_time ?? '' }}"
                        class="form-control" placeholder="HH:MM">
             </div>
@@ -162,7 +173,7 @@
         <div class="row">
             <div class="col-md-6 mb-3">
                 <label class="form-label">วันเวลาที่บรรจุเสร็จ (Packing Datetime)</label>
-                <input type="text" name="packing_datetie"
+                <input type="datetime-local" name="packing_datetie"
                        value="{{ $planning_item?->packing_datetie ?? '' }}"
                        class="form-control" placeholder="วันเวลาจัดแพ็ค">
             </div>
@@ -361,6 +372,41 @@
     </button>
 </div>
 
+{{-- ── Modal ประวัติวันที่ส่งสินค้า (senddate_log) ── --}}
+<div class="modal fade" id="senddate_log_modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:300px;">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#3A8EBA; padding:.75rem 1.25rem;">
+                <h6 class="modal-title text-white mb-0">
+                    <i class="ti ti-history me-1"></i>ประวัติวันที่ส่งสินค้า
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2 small text-muted">
+                    วันที่ส่งปัจจุบัน:
+                    <strong>{{ $planning_item?->senddate ? substr($planning_item->senddate, 0, 10) : '-' }}</strong>
+                </div>
+                @if(count($senddate_logs))
+                    <ul class="list-group list-group-flush">
+                        @foreach($senddate_logs as $i => $log_date)
+                            <li class="list-group-item d-flex align-items-center px-0">
+                                <span class="badge bg-label-secondary me-2">{{ $i + 1 }}</span>
+                                <span>{{ $log_date }}</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                    <div class="mt-2 small text-muted">
+                        <i class="ti ti-info-circle me-1"></i>เรียงตามลำดับการเปลี่ยนแปลง (เก่า → ใหม่)
+                    </div>
+                @else
+                    <div class="text-center text-muted py-3">ยังไม่มีประวัติการเปลี่ยนแปลง</div>
+                @endif
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 (function () {
     // ── ค่า default จาก planning_header แม่ ──
@@ -446,5 +492,30 @@
         $('#semi_json').val(JSON.stringify(collectRows('tbody_semi')));
         $('#pigment_json').val(JSON.stringify(collectRows('tbody_pigment')));
     });
+
+    // ── modal ประวัติ senddate ──
+    // ย้าย modal ออกไปเป็น sibling ที่ body (Bootstrap จัดการ stacked modal แบบ sibling ได้ดีกว่าซ้อนใน .modal-content)
+    // ลบตัวเก่าที่ค้างจากการเปิดฟอร์มครั้งก่อนออกก่อน กัน id ซ้ำ
+    $('body').children('#senddate_log_modal').remove();
+    var $logModal = $('#senddate_log_modal').appendTo('body');
+
+    $('#btn_senddate_log').on('click', function () {
+        bootstrap.Modal.getOrCreateInstance($logModal[0]).show();
+    });
+
+    // เมื่อปิด modal ประวัติ แต่ modal หลักยังเปิดอยู่ ให้คง scroll-lock ของ body ไว้
+    $logModal.on('hidden.bs.modal', function () {
+        if ($('.modal.show').length) {
+            $('body').addClass('modal-open');
+        }
+    });
+
+    // เมื่อปิดฟอร์มหลัก เก็บกวาด modal ประวัติที่ย้ายไป body ทิ้ง (namespace กัน handler ซ้อนสะสม)
+    $('#planning_item_form').closest('.modal')
+        .off('hidden.bs.modal.senddatelog')
+        .on('hidden.bs.modal.senddatelog', function () {
+            bootstrap.Modal.getInstance($logModal[0])?.dispose();
+            $logModal.remove();
+        });
 })();
 </script>
