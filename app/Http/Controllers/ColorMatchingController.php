@@ -56,9 +56,29 @@ class ColorMatchingController extends Controller
 
     public function datatable(Request $request)
     {
-        // ทิศทางการเรียง (ตาม id = ลำดับการบันทึก) — desc = หลัง→ก่อน (ใหม่สุดอยู่บน, ค่า default), asc = ก่อน→หลัง
-        $sort = strtolower((string) $request->sort) === 'asc' ? 'asc' : 'desc';
-        $results = Testmain::orderBy('id', $sort);
+        // ── เรียงลำดับโดยคลิกหัวตาราง ──
+        // whitelist คอลัมน์ที่เรียงได้ (กัน SQL injection) — map หัวตาราง → คอลัมน์จริงใน DB
+        // 'status' = คอลัมน์เสมือน (คำนวณจาก cancel/RminWating/Testno) → เรียงด้วย CASE
+        $sortable = ['id', 'DsendT', 'custno', 'Type_Work', 'color', 'STD', 'lotno', 'status'];
+        $sortCol  = in_array((string) $request->sort_col, $sortable, true) ? (string) $request->sort_col : 'id';
+        // ทิศทาง: desc = มาก→น้อย (default, id desc = ใหม่สุดอยู่บน), asc = น้อย→มาก
+        $sortDir  = strtolower((string) $request->sort_dir) === 'asc' ? 'asc' : 'desc';
+
+        if ($sortCol === 'status') {
+            // จัดอันดับสถานะให้ตรงลำดับ logic ใน table.blade (1=กำลังเทียบสี → 4=ยกเลิก)
+            $statusRank = "CASE
+                WHEN cancel = 1 THEN 4
+                WHEN (RminWating IS NOT NULL AND TRIM(RminWating) <> '') THEN 2
+                WHEN (Testno IS NULL OR TRIM(Testno) = '') THEN 1
+                ELSE 3 END";
+            $results = Testmain::orderByRaw("$statusRank $sortDir");
+        } else {
+            $results = Testmain::orderBy($sortCol, $sortDir);
+        }
+        // เรียงรองด้วย id เพื่อให้ลำดับคงที่เมื่อค่าคอลัมน์หลักซ้ำกัน
+        if ($sortCol !== 'id') {
+            $results->orderBy('id', 'desc');
+        }
         $this->applyFilters($results, $request);
 
         $limit = 15;
@@ -73,6 +93,8 @@ class ColorMatchingController extends Controller
         $data['query']['limit'] = $limit;
 
         $data['list_data'] = $results;
+        $data['sort_col']  = $sortCol;
+        $data['sort_dir']  = $sortDir;
 
         return view('color-matching.table', $data);
     }

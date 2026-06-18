@@ -2,6 +2,10 @@
     .active .menu-link i {
         color: #ffffff !important; /* เปลี่ยนสีของไอคอนใน <li> ที่มีคลาส active */
     }
+    /* ปุ่ม toggle (พับเมนู) สี teal ตามธีมระบบ */
+    .app-brand .layout-menu-toggle i {
+        color: #54BAB9 !important;
+    }
 </style>
 <aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
     <div class="app-brand">

@@ -1,19 +1,36 @@
 <div class="table-responsive">
     <table class="table table-hover align-middle">
 
+        @php
+            // สถานะการเรียงปัจจุบัน (ส่งมาจาก controller) — ใช้เลือกไอคอนหัวตาราง
+            $sortCol = $sort_col ?? 'id';
+            $sortDir = $sort_dir ?? 'desc';
+            // คอลัมน์ที่กำลังเรียง = ลูกศรขึ้น/ลง (เด่น), ที่เหลือ = ลูกศรจาง
+            $sortIcon = function ($col) use ($sortCol, $sortDir) {
+                if ($sortCol === $col) {
+                    $dir = $sortDir === 'asc' ? 'ti-arrow-up' : 'ti-arrow-down';
+                    return '<i class="ti ' . $dir . ' th-sort-icon active"></i>';
+                }
+                return '<i class="ti ti-arrows-sort th-sort-icon"></i>';
+            };
+            // class เน้นทั้งคอลัมน์ที่กำลังเรียง (ใช้ทั้งหัวตาราง th และ cell td)
+            $sortActive = fn ($col) => $sortCol === $col ? ' col-sorted' : '';
+        @endphp
+
         <thead class="cm-thead-dark">
             <tr class="align-middle">
                 <th class="align-middle text-center" style="width: 50px;">ลำดับ</th>
-                <th class="align-middle">
-                    เอกสาร / เลขที่
+                <th class="align-middle th-sort{{ $sortActive('DsendT') }}" data-sort="DsendT">
+                    เอกสาร / เลขที่ {!! $sortIcon('DsendT') !!}
                     <br>
                     <small class="text-body-secondary fw-normal">วันที่ส่งเทียบสี</small>
                 </th>
-                <th class="align-middle">ลูกค้า</th>
-                <th class="align-middle">ประเภทงาน</th>
-                <th class="align-middle">สี / นำไปทำชิ้นงาน</th>
-                <th class="align-middle">Color Matcher</th>
-                <th class="align-middle">สถานะ</th>
+                <th class="align-middle th-sort{{ $sortActive('custno') }}" data-sort="custno">ลูกค้า {!! $sortIcon('custno') !!}</th>
+                <th class="align-middle th-sort{{ $sortActive('Type_Work') }}" data-sort="Type_Work">ประเภทงาน {!! $sortIcon('Type_Work') !!}</th>
+                <th class="align-middle th-sort{{ $sortActive('color') }}" data-sort="color">สี / นำไปทำชิ้นงาน {!! $sortIcon('color') !!}</th>
+                <th class="align-middle th-sort{{ $sortActive('STD') }}" data-sort="STD">Standard {!! $sortIcon('STD') !!}</th>
+                <th class="align-middle th-sort{{ $sortActive('lotno') }}" data-sort="lotno">Lot No. {!! $sortIcon('lotno') !!}</th>
+                <th class="align-middle text-center th-sort{{ $sortActive('status') }}" data-sort="status">สถานะ {!! $sortIcon('status') !!}</th>
                 <th class="align-middle text-center" width="120">จัดการ</th>
             </tr>
         </thead>
@@ -49,7 +66,7 @@
                         {{ $list_data->firstItem() + $key }}
                     </td>
 
-                    <td>
+                    <td class="{{ trim($sortActive('DsendT')) }}">
                         @if ($isSD)
                             <span class="badge badge-doc-sd mb-1">
                                 <i class="ti ti-package me-1"></i>ใบส่ง ต.ย.
@@ -71,13 +88,13 @@
                         </small>
                     </td>
 
-                    <td>
+                    <td class="{{ trim($sortActive('custno')) }}">
                         <span class="badge bg-label-secondary mb-1">{{ $row->custno ?? '-' }}</span>
                         <br>
                         <small>{{ $row->custname ?: '—' }}</small>
                     </td>
 
-                    <td>
+                    <td class="{{ trim($sortActive('Type_Work')) }}">
                         @if ($row->Type_Work)
                             <span class="badge bg-label-primary">{{ $row->Type_Work }}</span>
                         @else
@@ -85,7 +102,7 @@
                         @endif
                     </td>
 
-                    <td>
+                    <td class="{{ trim($sortActive('color')) }}">
                         <div>
                             <div class="small fw-semibold">{{ $row->color ?: '—' }}</div>
                             @if ($row->Model)
@@ -94,9 +111,11 @@
                         </div>
                     </td>
 
-                    <td>{{ $row->ColorMatcher ?: '-' }}</td>
+                    <td class="{{ trim($sortActive('STD')) }}">{{ $row->STD ?: '-' }}</td>
 
-                    <td class="td-status">
+                    <td class="{{ trim($sortActive('lotno')) }}">{{ $row->lotno ?: '-' }}</td>
+
+                    <td class="td-status text-center{{ $sortActive('status') }}">
                         <span class="badge {{ $statusClass }}">
                             <i class="ti {{ $statusIcon }} me-1"></i>
                             {{ $statusText }}
@@ -130,7 +149,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="8" class="text-center py-5 text-muted">
+                    <td colspan="9" class="text-center py-5 text-muted">
                         <i class="ti ti-database-off fs-2 d-block mb-2 opacity-50"></i>
                         ไม่พบข้อมูลที่ตรงกับเงื่อนไข
                     </td>

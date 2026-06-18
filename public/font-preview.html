@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>เลือกฟอนต์ — World Pigment</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;700&family=Sarabun:wght@400;500;700&family=Kanit:wght@400;500;700&family=IBM+Plex+Sans+Thai:wght@400;500;700&family=Noto+Sans+Thai:wght@400;500;700&family=Inter:wght@400;500;700&family=Roboto:wght@400;500;700&family=Poppins:wght@400;500;700&family=Montserrat:wght@400;500;700&family=Nunito:wght@400;500;700&family=Open+Sans:wght@400;500;700&family=Lato:wght@400;700&family=Work+Sans:wght@400;500;700&family=Outfit:wght@400;500;700&family=Manrope:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;700&family=Urbanist:wght@400;500;700&family=Lexend:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root { --teal:#54BAB9; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: #eef1f5; color: #2a3142;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      padding: 32px 24px;
+    }
+    .wrap { max-width: 1180px; margin: 0 auto; }
+    .head { margin-bottom: 18px; }
+    .head h1 { margin: 0 0 4px; font-size: 20px; }
+    .head h1 .dot { color: var(--teal); }
+    .head p { margin: 0; color: #6b7280; font-size: 13px; }
+
+    .controls { display:flex; gap:16px; align-items:center; margin: 14px 0 0; flex-wrap: wrap; }
+    .controls label { font-size:12px; font-weight:600; color:#6b7280; }
+    .controls input[type=range] { width: 200px; }
+    .sizeval { color: var(--teal); font-weight:700; }
+
+    .panel { background:#fff; border-radius: 14px; box-shadow: 0 4px 16px rgba(0,0,0,.05); overflow: hidden; }
+    table { width:100%; border-collapse: collapse; }
+    thead th {
+      text-align: left; font-size: 13px; font-weight: 700; color:#2a3142;
+      padding: 16px 20px; border-bottom: 2px solid #e3e7ee; white-space: nowrap;
+    }
+    tbody td { padding: 14px 20px; border-bottom: 1px solid #eef1f5; vertical-align: middle; }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr { cursor: pointer; transition: background .12s; }
+    tbody tr:hover { background: #f6fbfb; }
+    tbody tr.selected { background: #e9f7f6; box-shadow: inset 3px 0 0 var(--teal); }
+
+    /* คอลัมน์ชื่อฟอนต์ — ฟอนต์กลางๆ เล็ก อ่านสม่ำเสมอ */
+    .fname { font-size: 30px; color: #475569; }
+    tr.selected .fname { color: var(--teal); font-weight: 700; }
+
+    /* คอลัมน์ตัวอย่าง — ใช้ฟอนต์ของแถวนั้น */
+    .smp { font-size: 30px; line-height: 1.25; font-weight: 500; }
+    .smp.num { font-variant-numeric: tabular-nums; }
+
+    .foot { margin-top: 16px; color:#6b7280; font-size: 13px; }
+    code { background:#fff; padding:2px 6px; border-radius:5px; font-size:12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head">
+      <h1>เลือกฟอนต์ <span class="dot">●</span> World Pigment</h1>
+      <p>คลิกที่แถวเพื่อเลือกฟอนต์ที่ชอบ — ฟอนต์ไทยอยู่กลุ่มบน, ฟอนต์ Latin อยู่กลุ่มล่าง</p>
+      <div class="controls">
+        <label>ขนาดตัวอย่าง: <span class="sizeval" id="sizeval">30</span> px</label>
+        <input type="range" id="sizeRange" min="18" max="56" value="30">
+      </div>
+    </div>
+
+    <div class="panel">
+      <table>
+        <thead>
+          <tr>
+            <th>Font</th>
+            <th>ABC</th>
+            <th>abc</th>
+            <th>1234567890</th>
+            <th>369</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="foot" id="picked">เลือกได้เลย เมื่อตัดสินใจแล้วบอกชื่อฟอนต์กับผม เดี๋ยวตั้งเป็นฟอนต์หลักทั้งระบบให้ครับ</div>
+  </div>
+
+  <script>
+    // ลำดับตามภาพ: ไทยก่อน แล้ว Latin
+    const FONTS = [
+      "Prompt", "Sarabun", "Kanit", "IBM Plex Sans Thai", "Noto Sans Thai",
+      "Inter", "Roboto", "Poppins", "Montserrat", "Nunito", "Open Sans",
+      "Lato", "Work Sans", "Outfit", "Manrope", "Plus Jakarta Sans", "Urbanist", "Lexend"
+    ];
+
+    const tbody = document.getElementById('tbody');
+    FONTS.forEach(name => {
+      const tr = document.createElement('tr');
+      const ff = `'${name}', sans-serif`;
+      tr.innerHTML = `
+        <td class="fname">${name}</td>
+        <td class="smp" style="font-family:${ff}">ABC</td>
+        <td class="smp" style="font-family:${ff}">abc</td>
+        <td class="smp num" style="font-family:${ff}">1234567890</td>
+        <td class="smp num" style="font-family:${ff}">369</td>`;
+      tr.addEventListener('click', () => selectFont(name, tr));
+      tbody.appendChild(tr);
+    });
+
+    const sizeRange = document.getElementById('sizeRange');
+    const sizeval = document.getElementById('sizeval');
+    sizeRange.addEventListener('input', () => {
+      sizeval.textContent = sizeRange.value;
+      document.querySelectorAll('.smp, .fname').forEach(el => el.style.fontSize = sizeRange.value + 'px');
+    });
+
+    function selectFont(name, tr){
+      document.querySelectorAll('tbody tr').forEach(r => r.classList.remove('selected'));
+      tr.classList.add('selected');
+      document.getElementById('picked').innerHTML =
+        `✅ เลือก: <b>${name}</b> — ถ้าตกลงใช้ฟอนต์นี้ บอกผมได้เลย เดี๋ยวตั้งเป็นฟอนต์หลักทั้งระบบ ` +
+        `(<code>font-family: '${name}'</code>)`;
+    }
+  </script>
+</body>
+</html>

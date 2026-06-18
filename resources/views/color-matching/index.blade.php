@@ -101,6 +101,45 @@
     letter-spacing: 0;
 }
 
+/* หัวตารางคลิกเรียงลำดับได้ — hover เน้นพื้นหลัง, ไอคอนบอกทิศ */
+#table-data th.th-sort {
+    cursor: pointer;
+    user-select: none;
+}
+#table-data th.th-sort:hover {
+    background-color: #5c5c66;
+}
+.th-sort-icon {
+    font-size: .9rem;
+    opacity: .35;
+    vertical-align: middle;
+}
+
+/* คอลัมน์ที่กำลังเรียง — เน้นทั้งคอลัมน์ (หัวตาราง + cell) ให้เห็นชัดทันที */
+/* หัวตาราง: สี theme teal เข้ม ตัวอักษรขาว */
+#table-data thead.cm-thead-dark th.col-sorted {
+    background-color: #54BAB9;
+    color: #fff;
+    box-shadow: inset 0 -3px 0 #ffd43b;   /* ขีดเส้นใต้สีเหลืองเน้นซ้ำ */
+}
+#table-data thead.cm-thead-dark th.col-sorted:hover {
+    background-color: #4aa9a8;
+}
+#table-data thead.cm-thead-dark th.col-sorted small {
+    color: rgba(255, 255, 255, .8) !important;
+}
+/* cell ในคอลัมน์: ไม่ใส่พื้นหลัง ใส่แค่เส้นข้างซ้าย-ขวาให้เห็นเป็นแนวคอลัมน์ */
+#table-data tbody td.col-sorted {
+    box-shadow: inset 2px 0 0 #54BAB9, inset -2px 0 0 #54BAB9;
+}
+.th-sort-icon.active {
+    opacity: 1;
+    color: #ffd43b;        /* ลูกศรทิศทางสีเหลือง เด่นบนพื้น teal */
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-left: .15rem;
+}
+
 /* พื้นหลังแถวตามชนิดเอกสาร (CM=teal, SD=ม่วง) + เส้นบอกชนิดด้านซ้าย */
 /* ตั้งค่าผ่านตัวแปร --bs-table-bg ต่อแถว → hover ของ Bootstrap ยังทำงานทับได้ปกติ */
 #table-data tbody tr.tr-cm { --bs-table-bg: #d6eeed; }
@@ -270,10 +309,6 @@
             <div class="d-flex justify-content-center align-items-center my-3 position-relative">
                 {{-- ประเภทเอกสาร (อยู่ตรงกลาง) — กลุ่ม checkbox เลือกได้หลายอัน (ติ๊ก=แสดง) --}}
                 <div class="doc-filter d-flex align-items-center flex-wrap justify-content-center gap-3 py-2">
-                    <span class="fw-bold text-nowrap text-heading mb-0">
-                        <i class="ti ti-filter me-1 text-primary"></i>แสดงเอกสาร
-                    </span>
-                    <div class="vr d-none d-sm-block"></div>
                     <div class="form-check mb-0">
                         <input class="form-check-input p_search" type="checkbox"
                             name="show_cm" value="1" id="filter_show_cm" checked onchange="loadData(page)">
@@ -294,16 +329,11 @@
                 </button>
             </div>
 
-            {{-- เรียงข้อมูล (ซ้าย) + จำนวนต่อหน้า (ขวา) --}}
-            <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
-                <div class="d-flex align-items-center">
-                    <label class="form-label small fw-medium mb-0 me-2">เรียงตาม</label>
-                    <select name="sort" class="form-select form-select-sm p_search"
-                        style="width: 100px;" onchange='loadData("{{$page_url}}/datatable")'>
-                        <option value="desc">ล่าสุด</option>
-                        <option value="asc">เก่าสุด</option>
-                    </select>
-                </div>
+            {{-- เรียงข้อมูล (คลิกหัวตาราง) + จำนวนต่อหน้า (ขวา) --}}
+            {{-- state การเรียง — เก็บไว้นอก #table-data เพื่อให้คงค่าเมื่อตารางโหลดใหม่ (default = id desc = ล่าสุด) --}}
+            <input type="hidden" name="sort_col" value="id" class="p_search">
+            <input type="hidden" name="sort_dir" value="desc" class="p_search">
+            <div class="d-flex justify-content-end align-items-center mt-3 pt-3 border-top">
                 <div class="d-flex align-items-center">
                     <label class="form-label small fw-medium mb-0 me-2">แสดง</label>
                     <select name="limit" class="form-select form-select-sm p_search"
@@ -456,7 +486,7 @@
         // อัปเดตสีปุ่ม "ล้างตัวกรอง" ตามว่ามี filter ใช้งานอยู่กี่ตัว (ไม่นับ limit)
         function updateFilterButtonState(){
             var count = 0;
-            $('.p_search:not([name="limit"]):not([name="sort"])').each(function(){
+            $('.p_search:not([name="limit"]):not([name="sort_col"]):not([name="sort_dir"])').each(function(){
                 if ($(this).is(':checkbox, :radio')) return;   // นับแยกด้านล่าง
                 var v = $(this).val();
                 if (v !== '' && v !== null) count++;
@@ -500,6 +530,22 @@
             });
         }
 
+        // ── เรียงลำดับโดยคลิกหัวตาราง ──
+        // คลิกคอลัมน์เดิมซ้ำ = สลับ asc/desc; คลิกคอลัมน์ใหม่ = เริ่มที่ asc
+        // (handler แบบ delegated เพราะ thead อยู่ใน #table-data ที่โหลดใหม่ทุกครั้งผ่าน AJAX)
+        $(document).on('click', '#table-data th[data-sort]', function () {
+            var col  = String($(this).data('sort'));
+            var $col = $('input[name="sort_col"]');
+            var $dir = $('input[name="sort_dir"]');
+            if ($col.val() === col) {
+                $dir.val($dir.val() === 'asc' ? 'desc' : 'asc');
+            } else {
+                $col.val(col);
+                $dir.val('asc');
+            }
+            loadData(page);
+        });
+
         function loadSummary(){
             $.ajax({
                 type: "GET",
@@ -512,8 +558,8 @@
         }
 
         function resetFilters() {
-            // ไม่ล้าง name="limit" (รายการ/หน้า) และ name="sort" (การเรียง) — เป็นการตั้งค่าแสดงผล ไม่ใช่ตัวกรอง
-            $('.p_search:not([name="limit"]):not([name="sort"])').each(function () {
+            // ไม่ล้าง name="limit" (รายการ/หน้า) และ sort_col/sort_dir (การเรียง) — เป็นการตั้งค่าแสดงผล ไม่ใช่ตัวกรอง
+            $('.p_search:not([name="limit"]):not([name="sort_col"]):not([name="sort_dir"])').each(function () {
                 const $input = $(this);
                 // flatpickr: เคลียร์ผ่าน instance เพื่อให้ช่องวันที่ว่างจริง
                 if ($input.hasClass('flatpickr-date')) {
