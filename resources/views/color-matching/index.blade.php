@@ -105,8 +105,6 @@
 /* ตั้งค่าผ่านตัวแปร --bs-table-bg ต่อแถว → hover ของ Bootstrap ยังทำงานทับได้ปกติ */
 #table-data tbody tr.tr-cm { --bs-table-bg: #d6eeed; }
 #table-data tbody tr.tr-sd { --bs-table-bg: #e6e1fb; }
-#table-data tbody tr.tr-cm > td:first-child { border-left: 3px solid #54BAB9; }
-#table-data tbody tr.tr-sd > td:first-child { border-left: 3px solid #6c5ce7; }
 /* ช่องสถานะ + จัดการ — พื้นหลังขาว (ไม่อิงสีพื้นแถว) */
 #table-data tbody td.td-status,
 #table-data tbody td.td-action { background-color: #fff; }
