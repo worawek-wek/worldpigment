@@ -22,6 +22,12 @@ Route::prefix('production-planning')->group(function () {
     Route::get('/planning/edit-item', [Production\ProductionPlanController::class, 'editItem'])->name('production.planning.edit-item');
     Route::post('/planning/save-item', [Production\ProductionPlanController::class, 'saveItem'])->name('production.planning.save-item');
 
+    // สถานะ Planning (master data)
+    Route::get('/planning-status', [Production\PlanningStatusController::class, 'index'])->name('production.planningstatus.index');
+    Route::get('/planning-status/datatable', [Production\PlanningStatusController::class, 'datatable'])->name('production.planningstatus.datatable');
+    Route::get('/planning-status/edit', [Production\PlanningStatusController::class, 'edit'])->name('production.planningstatus.edit');
+    Route::post('/planning-status/save', [Production\PlanningStatusController::class, 'save'])->name('production.planningstatus.save');
+
     // Semi & Pigment (รออนุมัติ)
     Route::get('/semi-pigment', [Production\SemiPigmentController::class, 'index'])->name('production.semipigment.index');
     Route::get('/semi-pigment/datatable', [Production\SemiPigmentController::class, 'datatable'])->name('production.semipigment.datatable');

@@ -59,7 +59,7 @@
             <div class="col-md-4 mb-3">
                 <label class="form-label">Weight</label>
                 <input type="text" name="weight"
-                       value="{{ $planning_item?->weight ?? '' }}"
+                       value="{{ number_format($planning_item?->weight ?? '', 2) }}"
                        class="form-control" placeholder="0.00">
             </div>
             <div class="col-md-4 mb-3">
@@ -85,9 +85,19 @@
         <div class="row">
             <div class="col-md-6 mb-3">
                 <label class="form-label">Planning Status</label>
-                <input type="text" name="planning_status"
-                       value="{{ $planning_item?->planning_status ?? '' }}"
-                       class="form-control" placeholder="สถานะ">
+                @php $current_status = $planning_item?->planning_status ?? ''; @endphp
+                <select name="planning_status" class="form-select">
+                    <option value="">เลือกสถานะ</option>
+                    @foreach($planning_statuses as $status)
+                        <option value="{{ $status->name }}" {{ $current_status === $status->name ? 'selected' : '' }}>
+                            {{ $status->name }}
+                        </option>
+                    @endforeach
+                    {{-- เผื่อค่าเดิมที่บันทึกไว้ไม่อยู่ในรายการของแผนกนี้แล้ว --}}
+                    @if($current_status !== '' && !$planning_statuses->contains('name', $current_status))
+                        <option value="{{ $current_status }}" selected>{{ $current_status }}</option>
+                    @endif
+                </select>
             </div>
         </div>
         <div class="row my-2"><hr /></div>

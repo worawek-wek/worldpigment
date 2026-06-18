@@ -11,6 +11,7 @@ use App\Models\PlanningHeader;
 use App\Models\Planning;
 use App\Models\SemiPigment;
 use App\Models\Machine;
+use App\Models\PlanningStatus;
 
 class ProductionPlanController extends Controller
 {
@@ -165,6 +166,13 @@ class ProductionPlanController extends Controller
 
         $machines = Machine::where('dept',$parent_header->company)->get();
 
+        // สถานะ Planning ตามแผนก (company) ของ header — เฉพาะที่เปิดใช้งาน
+        $planning_statuses = PlanningStatus::where('dept', $parent_header->company)
+            ->where('is_active', 'Y')
+            ->orderBy('sort', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
+
         $html = view('production-planning.planning.planning-item-form', [
             'planning_item'      => $planning_item,
             'planning_header_id' => $planning_header_id,
@@ -172,7 +180,8 @@ class ProductionPlanController extends Controller
             'semi_list'          => $semi_list,
             'pigment_list'       => $pigment_list,
             'parent_orderno'     => $parent_orderno,
-            'machines' => $machines
+            'machines' => $machines,
+            'planning_statuses' => $planning_statuses
         ])->render();
 
         return response()->json([

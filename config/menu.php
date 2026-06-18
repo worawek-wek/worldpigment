@@ -60,6 +60,13 @@ return [
                 'route_name' => 'production.semipigment.approved',
                 'permission' => 'productionplanning read',
             ],
+            'PlanningStatus' => [
+                'title' => 'สถานะ Planning',
+                'icon' => '',
+                'menu_parent' => 'Production',
+                'route_name' => 'production.planningstatus.index',
+                'permission' => 'productionplanning read',
+            ],
         ],
     ],
     'Customer' => [
