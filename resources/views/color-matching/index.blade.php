@@ -334,7 +334,21 @@
             {{-- state การเรียง — เก็บไว้นอก #table-data เพื่อให้คงค่าเมื่อตารางโหลดใหม่ (default = id desc = ล่าสุด) --}}
             <input type="hidden" name="sort_col" value="id" class="p_search">
             <input type="hidden" name="sort_dir" value="desc" class="p_search">
-            <div class="d-flex justify-content-end align-items-center mt-3 pt-3 border-top">
+            <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                {{-- เรียงตามลำดับบันทึก (id) — ทำงานร่วมกับการคลิกหัวตาราง ผ่าน state เดียวกัน (sort_col/sort_dir) --}}
+                <div class="d-flex align-items-center">
+                    <label class="form-label small fw-medium mb-0 me-2 d-flex align-items-center"
+                        title="เรียงตามลำดับการเพิ่มข้อมูลเข้าระบบ">
+                        เรียงตามลำดับการเพิ่ม
+                        <i class="ti ti-info-circle ms-1 text-muted"></i>
+                    </label>
+                    <select name="sort" class="form-select form-select-sm"
+                        style="width: 210px;" onchange="onSortDropdown(this.value)">
+                        <option value="desc">ล่าสุด</option>
+                        <option value="asc">เก่าสุด</option>
+                        <option value="" hidden>เรียงตามคอลัมน์ (คลิกหัวตาราง)</option>
+                    </select>
+                </div>
                 <div class="d-flex align-items-center">
                     <label class="form-label small fw-medium mb-0 me-2">แสดง</label>
                     <select name="limit" class="form-select form-select-sm p_search"
@@ -462,6 +476,9 @@
             // ปิด autocomplete ของช่องวันที่ทั้งหมด (flatpickr + native date)
             // กัน dropdown ประวัติของเบราว์เซอร์มาบังปฏิทิน
             $('.flatpickr-date, input[type="date"]').attr('autocomplete', 'off');
+
+            // sync dropdown "เรียงตาม" ให้ตรงกับ state การเรียงเริ่มต้น (id desc = ล่าสุด)
+            syncSortDropdown();
         });
 
         // เก็บ filter ที่กรอกใน UI เป็น object — ใช้ทั้ง loadData() และ loadSummary()
@@ -531,20 +548,40 @@
             });
         }
 
-        // ── เรียงลำดับโดยคลิกหัวตาราง ──
-        // คลิกคอลัมน์เดิมซ้ำ = สลับ asc/desc; คลิกคอลัมน์ใหม่ = เริ่มที่ asc
+        // ────────────────────────────────────────────────────────
+        //  เรียงลำดับ — state เดียว (sort_col/sort_dir) ใช้ร่วมกัน 2 ทาง:
+        //   1) dropdown "เรียงตาม" (ล่าสุด/เก่าสุด = เรียงตาม id)
+        //   2) คลิกหัวตาราง (เรียงตามคอลัมน์ใดก็ได้)
+        // ────────────────────────────────────────────────────────
+        function setSort(col, dir) {
+            $('input[name="sort_col"]').val(col);
+            $('input[name="sort_dir"]').val(dir);
+            syncSortDropdown();
+            loadData(page);
+        }
+
+        // dropdown สะท้อนเฉพาะการเรียงตามลำดับบันทึก (id) → เลือก ล่าสุด/เก่าสุด
+        // ถ้าเรียงตามคอลัมน์อื่น → แสดง option "เรียงตามคอลัมน์…"
+        function syncSortDropdown() {
+            var col = $('input[name="sort_col"]').val();
+            var dir = $('input[name="sort_dir"]').val();
+            $('select[name="sort"]').val(col === 'id' ? dir : '');
+        }
+
+        // เลือกจาก dropdown → เรียงตาม id ทิศตามที่เลือก
+        function onSortDropdown(val) {
+            if (val === '') return;   // option ตัวบอกสถานะ (เรียงตามคอลัมน์) — ไม่ทำอะไร
+            setSort('id', val);
+        }
+
+        // คลิกหัวตาราง: คอลัมน์เดิมซ้ำ = สลับ asc/desc; คอลัมน์ใหม่ = เริ่มที่ asc
         // (handler แบบ delegated เพราะ thead อยู่ใน #table-data ที่โหลดใหม่ทุกครั้งผ่าน AJAX)
         $(document).on('click', '#table-data th[data-sort]', function () {
-            var col  = String($(this).data('sort'));
-            var $col = $('input[name="sort_col"]');
-            var $dir = $('input[name="sort_dir"]');
-            if ($col.val() === col) {
-                $dir.val($dir.val() === 'asc' ? 'desc' : 'asc');
-            } else {
-                $col.val(col);
-                $dir.val('asc');
-            }
-            loadData(page);
+            var col    = String($(this).data('sort'));
+            var curCol = $('input[name="sort_col"]').val();
+            var curDir = $('input[name="sort_dir"]').val();
+            var dir    = (curCol === col) ? (curDir === 'asc' ? 'desc' : 'asc') : 'asc';
+            setSort(col, dir);
         });
 
         function loadSummary(){
