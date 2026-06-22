@@ -262,10 +262,11 @@
                     <label class="form-label small fw-medium mb-1">วันที่ส่งเทียบสี</label>
                     <div class="d-flex align-items-center gap-2">
                         <span class="small fw-medium">ตั้งแต่</span>
-                        <input type="date" name="test_date_from" class="form-control p_search" onchange="loadData(page)">
+                        <input type="text" name="test_date_from" class="form-control flatpickr-date p_search"
+                            placeholder="วว/ดด/ปปปป">
                         <span class="small fw-medium">ถึง</span>
-                        <input type="date" name="test_date_to" class="form-control p_search"
-                            onchange="loadData(page)">
+                        <input type="text" name="test_date_to" class="form-control flatpickr-date p_search"
+                            placeholder="วว/ดด/ปปปป">
                     </div>
                 </div>
             </div>
