@@ -53,6 +53,7 @@
                                         <th>รหัสลูกค้า</th>
                                         <th>Item No.</th>
                                         <th>น้ำหนักที่จะใช้</th>
+                                        <th>น้ำหนักที่ผลิต</th>
                                         <th>แผนการผลิต</th>
                                         <th>จัดการ</th>
                                     </tr>
@@ -85,6 +86,13 @@
 @section('script')
 <script>
     var oTable;
+
+    // แสดงตัวเลขเป็นทศนิยม 2 ตำแหน่ง (มี comma คั่นหลัก) — ว่าง/ไม่ใช่ตัวเลขแสดง '-'
+    function fmt2(data) {
+        if (data === null || data === '' || isNaN(data)) return '-';
+        return parseFloat(data).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
     $(document).ready(function () {
         oTable = $('#dataTable').DataTable({
             processing: true,
@@ -111,8 +119,9 @@
                 { className: "text-center", data: 'want_date',  name: 'want_date',  orderable: false },
                 { className: "text-center", data: 'custno',     name: 'custno',     orderable: false },
                 { className: "text-left",   data: 'itemno',         name: 'itemno',         orderable: false },
-                { className: "text-center", data: 'weight_request', name: 'weight_request', orderable: false },
-                { className: "text-center", data: 'plan_badge',     name: 'plan_badge',     orderable: false, searchable: false },
+                { className: "text-center", data: 'weight_request',    name: 'weight_request',    orderable: false, render: fmt2 },
+                { className: "text-center", data: 'weight_production', name: 'weight_production', orderable: false, render: fmt2 },
+                { className: "text-center", data: 'plan_badge',        name: 'plan_badge',        orderable: false, searchable: false },
                 { className: "text-center", data: 'action',     name: 'action',     orderable: false, searchable: false },
             ],
             order: [[0, 'asc']]

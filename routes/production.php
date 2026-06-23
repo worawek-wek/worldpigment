@@ -36,6 +36,7 @@ Route::prefix('production-planning')->group(function () {
     // Semi & Pigment (รออนุมัติ)
     Route::get('/semi-pigment', [Production\SemiPigmentController::class, 'index'])->name('production.semipigment.index');
     Route::get('/semi-pigment/datatable', [Production\SemiPigmentController::class, 'datatable'])->name('production.semipigment.datatable');
+    Route::get('/semi-pigment/edit', [Production\SemiPigmentController::class, 'editForm'])->name('production.semipigment.edit');
     Route::post('/semi-pigment/approve', [Production\SemiPigmentController::class, 'approve'])->name('production.semipigment.approve');
     Route::post('/semi-pigment/reject', [Production\SemiPigmentController::class, 'reject'])->name('production.semipigment.reject');
 

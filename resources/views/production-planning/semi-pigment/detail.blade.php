@@ -94,7 +94,7 @@
                 <tbody>
                     <tr>
                         <td class="text-center">{{ $sp->statusLabel() }}</td>
-                        <td class="text-center">{{ $sp->approver_code ?? '-' }}</td>
+                        <td class="text-center">{{ $sp->approver?->name ?? '-' }}</td>
                         <td class="text-center">{{ $sp->approve_date ? date('Y-m-d H:i', strtotime($sp->approve_date)) : '-' }}</td>
                     </tr>
                 </tbody>

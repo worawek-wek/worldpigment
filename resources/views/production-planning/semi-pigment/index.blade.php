@@ -60,6 +60,7 @@
                                         <th>รหัสลูกค้า</th>
                                         <th>Item No.</th>
                                         <th>น้ำหนักที่จะใช้</th>
+                                        <th>น้ำหนักที่ผลิต</th>
                                         <th>สถานะ</th>
                                         <th>จัดการ</th>
                                     </tr>
@@ -72,11 +73,33 @@
 
         </div>
     </div>
+
+    <!-- Edit / Detail Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header" style="padding: 1rem 1.5rem; color: white; background-color: #3A8EBA;">
+                    <h5 class="modal-title text-white mb-0">
+                        <i class="ti ti-pencil me-1"></i>แก้ไข Semi &amp; Pigment
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="sp_edit_body"></div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @section('script')
 <script>
     var oTable;
+
+    // แสดงตัวเลขเป็นทศนิยม 2 ตำแหน่ง (มี comma คั่นหลัก) — ว่าง/ไม่ใช่ตัวเลขแสดง '-'
+    function fmt2(data) {
+        if (data === null || data === '' || isNaN(data)) return '-';
+        return parseFloat(data).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
     $(document).ready(function () {
         oTable = $('#dataTable').DataTable({
             processing: true,
@@ -104,8 +127,9 @@
                 { className: "text-center", data: 'want_date',    name: 'want_date',    orderable: false },
                 { className: "text-center", data: 'custno',       name: 'custno',       orderable: false },
                 { className: "text-left",   data: 'itemno',         name: 'itemno',         orderable: false },
-                { className: "text-center", data: 'weight_request', name: 'weight_request', orderable: false },
-                { className: "text-center", data: 'status_badge',   name: 'status_badge',   orderable: false, searchable: false },
+                { className: "text-center", data: 'weight_request',    name: 'weight_request',    orderable: false, render: fmt2 },
+                { className: "text-center", data: 'weight_production', name: 'weight_production', orderable: false, render: fmt2 },
+                { className: "text-center", data: 'status_badge',      name: 'status_badge',      orderable: false, searchable: false },
                 { className: "text-center", data: 'action',       name: 'action',       orderable: false, searchable: false },
             ],
             order: [[0, 'asc']]
@@ -114,6 +138,73 @@
 
     $(document).on('keyup', '#searchInput', function () { oTable.draw(); });
     $(document).on('change', '#searchType, #searchStatus', function () { oTable.draw(); });
+
+    function getEditModal() {
+        return bootstrap.Modal.getOrCreateInstance(document.getElementById('editModal'));
+    }
+
+    function closeEditModal() {
+        getEditModal().hide();
+    }
+
+    // ---- เปิด modal แก้ไข / รายละเอียด ----
+    $(document).on('click', '.btn_edit', function () {
+        var id = $(this).data('id');
+        $.ajax({
+            type: 'GET',
+            url: '{{ route("production.semipigment.edit") }}',
+            dataType: 'json',
+            cache: false,
+            data: { id: id },
+            success: function (response) {
+                if (response.status == 200) {
+                    $('#sp_edit_body').html(response.data);
+                    getEditModal().show();
+                } else {
+                    Swal.fire({ icon: 'warning', title: 'ผิดพลาด', text: response.message });
+                }
+            },
+            error: function (xhr) {
+                var msg = xhr.responseJSON?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: msg });
+            }
+        });
+    });
+
+    // ---- บันทึกข้อมูล (แก้ไข) ----
+    $(document).on('click', '#btn_sp_save', function () {
+        var $btn = $(this);
+        var itemno = ($('#sp_edit_form [name="itemno"]').val() || '').trim();
+        if (!itemno) {
+            $('#sp_edit_form [name="itemno"]').addClass('is-invalid').trigger('focus');
+            return;
+        }
+        $('#sp_edit_form [name="itemno"]').removeClass('is-invalid');
+
+        var formData = $('#sp_edit_form').serialize() + '&_token={{ csrf_token() }}';
+
+        $btn.prop('disabled', true);
+        $.ajax({
+            type: 'POST',
+            url: '{{ route("production.semipigment.entry.update") }}',
+            dataType: 'json',
+            data: formData,
+            success: function (response) {
+                if (response.status == 200) {
+                    closeEditModal();
+                    oTable.draw();
+                    Swal.fire({ icon: 'success', title: 'สำเร็จ', text: response.message, timer: 1800, showConfirmButton: false });
+                } else {
+                    Swal.fire({ icon: 'warning', title: response.status == 422 ? 'ข้อมูลไม่ถูกต้อง' : 'ผิดพลาด', text: response.message });
+                }
+            },
+            error: function (xhr) {
+                var msg = xhr.responseJSON?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: msg });
+            },
+            complete: function () { $btn.prop('disabled', false); }
+        });
+    });
 
     // ---- อนุมัติ ----
     $(document).on('click', '.btn_approve', function () {
@@ -137,6 +228,7 @@
                 data: { id: id, _token: '{{ csrf_token() }}' },
                 success: function (response) {
                     if (response.status == 200) {
+                        closeEditModal();
                         oTable.draw();
                         Swal.fire({
                             icon: 'success',
@@ -179,6 +271,7 @@
                 data: { id: id, _token: '{{ csrf_token() }}' },
                 success: function (response) {
                     if (response.status == 200) {
+                        closeEditModal();
                         oTable.draw();
                         Swal.fire({
                             icon: 'success',

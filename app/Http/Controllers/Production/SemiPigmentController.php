@@ -34,20 +34,33 @@ class SemiPigmentController extends Controller
             ->addColumn('type_badge', fn ($row) => $this->typeBadge($row))
             ->addColumn('status_badge', fn ($row) => $this->statusBadge($row))
             ->addColumn('action', function ($row) {
-                if ($row->status === SemiPigment::STATUS_REQUEST) {
-                    return '<button class="btn btn-sm btn-success btn_approve me-1" data-id="'.$row->id.'" title="อนุมัติ">
-                                <i class="ti ti-check ti-sm"></i>
-                            </button>
-                            <button class="btn btn-sm btn-danger btn_reject" data-id="'.$row->id.'" title="ไม่อนุมัติ">
-                                <i class="ti ti-x ti-sm"></i>
-                            </button>';
-                }
-                return '<span class="text-muted small">'
-                        .($row->approve_date ? date('d/m/Y H:i', strtotime($row->approve_date)) : '-')
-                        .'</span>';
+                return '<button class="btn btn-sm btn-icon btn-warning btn_edit" data-id="'.$row->id.'" title="แก้ไข / รายละเอียด">
+                            <i class="ti ti-pencil ti-sm"></i>
+                        </button>';
             })
             ->rawColumns(['type_badge', 'status_badge', 'action'])
             ->make(true);
+    }
+
+    /**
+     * ฟอร์มแก้ไขรายการ Semi/Pigment (สำหรับ modal หน้ารออนุมัติ)
+     */
+    public function editForm()
+    {
+        $sp = SemiPigment::find(request('id'));
+
+        if (!$sp) {
+            return response()->json(['status' => 404, 'message' => 'ไม่พบรายการ']);
+        }
+
+        $companies = ['CP', 'MB', 'DB', 'SPP'];
+
+        $html = view('production-planning.semi-pigment.edit', compact('sp', 'companies'))->render();
+
+        return response()->json([
+            'status' => 200,
+            'data'   => $html
+        ]);
     }
 
     /* ===================== หน้า: อนุมัติแล้ว ===================== */

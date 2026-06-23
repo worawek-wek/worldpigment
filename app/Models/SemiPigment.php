@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Planning;
 use App\Models\PlanningHeader;
+use App\Models\User;
 
 class SemiPigment extends Model
 {
@@ -46,5 +47,11 @@ class SemiPigment extends Model
     public function result_planning()
     {
         return $this->belongsTo(Planning::class, 'result_planning_id', 'id');
+    }
+
+    // ผู้อนุมัติ (อ้างอิงจาก users.id เก็บใน approver_code)
+    public function approver()
+    {
+        return $this->belongsTo(User::class, 'approver_code', 'id');
     }
 }
