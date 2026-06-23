@@ -34,8 +34,6 @@
     <form id="planning_item_form">
         <input type="hidden" name="planning_id"        value="{{ $planning_item?->id ?? '' }}">
         <input type="hidden" name="planning_header_id" value="{{ $planning_header_id ?? '' }}">
-        <input type="hidden" name="semi_json"    id="semi_json"    value="">
-        <input type="hidden" name="pigment_json" id="pigment_json" value="">
 
         {{-- ── ข้อมูลหลัก ── --}}
         <div class="row">
@@ -218,7 +216,7 @@
                         <th style="min-width:130px">Item No.</th>
                         <th style="min-width:80px">Quantity</th>
                         <th class="text-center" style="min-width:90px">สถานะ</th>
-                        <th class="text-center" style="width:46px">ลบ</th>
+                        <th class="text-center" style="min-width:90px">จัดการ</th>
                     </tr>
                 </thead>
                 <tbody id="tbody_semi">
@@ -237,33 +235,12 @@
                             <td>{{ substr($row['custwant'] ?? '', 0, 10) ?: '-' }}</td>
                             <td>{{ $row['custno']   ?? '-' }}</td>
                             <td>{{ $row['itemno']   ?? '-' }}</td>
-                            <td>{{ $row['quantity'] ?? '-' }}</td>
+                            <td>{{ $row['weight_request'] ?? '-' }}</td>
                             <td class="text-center"><span class="badge {{ $stCls }}">{{ $stLabel }}</span></td>
                             <td class="text-center"><i class="ti ti-lock text-muted" title="ดำเนินการแล้ว แก้ไขไม่ได้"></i></td>
                         </tr>
                         @else
-                        <tr>
-                            <td class="text-center row-num">{{ $i + 1 }}</td>
-                            <td>
-                                <select class="form-select form-select-sm" data-field="company">
-                                    <option value="">-- เลือก --</option>
-                                    @foreach($companies as $c)
-                                    <option value="{{ $c }}" {{ ($row['company'] ?? '') == $c ? 'selected' : '' }}>{{ $c }}</option>
-                                    @endforeach
-                                </select>
-                            </td>
-                            <td><input type="date" class="form-control form-control-sm" data-field="mdate"    value="{{ substr($row['mdate']    ?? '', 0, 10) }}"></td>
-                            <td><input type="date" class="form-control form-control-sm" data-field="custwant" value="{{ substr($row['custwant'] ?? '', 0, 10) }}"></td>
-                            <td><input type="text" class="form-control form-control-sm bg-light" data-field="custno"   value="{{ $default_custno }}" readonly></td>
-                            <td><input type="text" class="form-control form-control-sm" data-field="itemno"   value="{{ $row['itemno']   ?? '' }}" placeholder="Item No."></td>
-                            <td><input type="text" class="form-control form-control-sm" data-field="quantity" value="{{ $row['quantity'] ?? '' }}" placeholder="0"></td>
-                            <td class="text-center"><span class="badge bg-label-warning">รออนุมัติ</span></td>
-                            <td class="text-center">
-                                <button type="button" class="btn btn-sm btn-danger btn-icon btn_remove_row">
-                                    <i class="ti ti-trash ti-sm"></i>
-                                </button>
-                            </td>
-                        </tr>
+                        @include('production-planning.planning.partials.sp-row', ['row' => $row, 'i' => $i, 'default_custno' => $default_custno])
                         @endif
                     @empty
                     <tr class="empty-row">
@@ -304,7 +281,7 @@
                         <th style="min-width:130px">Item No.</th>
                         <th style="min-width:80px">Quantity</th>
                         <th class="text-center" style="min-width:90px">สถานะ</th>
-                        <th class="text-center" style="width:46px">ลบ</th>
+                        <th class="text-center" style="min-width:90px">จัดการ</th>
                     </tr>
                 </thead>
                 <tbody id="tbody_pigment">
@@ -323,33 +300,12 @@
                             <td>{{ substr($row['custwant'] ?? '', 0, 10) ?: '-' }}</td>
                             <td>{{ $row['custno']   ?? '-' }}</td>
                             <td>{{ $row['itemno']   ?? '-' }}</td>
-                            <td>{{ $row['quantity'] ?? '-' }}</td>
+                            <td>{{ $row['weight_request'] ?? '-' }}</td>
                             <td class="text-center"><span class="badge {{ $stCls }}">{{ $stLabel }}</span></td>
                             <td class="text-center"><i class="ti ti-lock text-muted" title="ดำเนินการแล้ว แก้ไขไม่ได้"></i></td>
                         </tr>
                         @else
-                        <tr>
-                            <td class="text-center row-num">{{ $i + 1 }}</td>
-                            <td>
-                                <select class="form-select form-select-sm" data-field="company">
-                                    <option value="">-- เลือก --</option>
-                                    @foreach($companies as $c)
-                                    <option value="{{ $c }}" {{ ($row['company'] ?? '') == $c ? 'selected' : '' }}>{{ $c }}</option>
-                                    @endforeach
-                                </select>
-                            </td>
-                            <td><input type="date" class="form-control form-control-sm" data-field="mdate"    value="{{ substr($row['mdate']    ?? '', 0, 10) }}"></td>
-                            <td><input type="date" class="form-control form-control-sm" data-field="custwant" value="{{ substr($row['custwant'] ?? '', 0, 10) }}"></td>
-                            <td><input type="text" class="form-control form-control-sm bg-light" data-field="custno"   value="{{ $default_custno }}" readonly></td>
-                            <td><input type="text" class="form-control form-control-sm" data-field="itemno"   value="{{ $row['itemno']   ?? '' }}" placeholder="Item No."></td>
-                            <td><input type="text" class="form-control form-control-sm" data-field="quantity" value="{{ $row['quantity'] ?? '' }}" placeholder="0"></td>
-                            <td class="text-center"><span class="badge bg-label-warning">รออนุมัติ</span></td>
-                            <td class="text-center">
-                                <button type="button" class="btn btn-sm btn-danger btn-icon btn_remove_row">
-                                    <i class="ti ti-trash ti-sm"></i>
-                                </button>
-                            </td>
-                        </tr>
+                        @include('production-planning.planning.partials.sp-row', ['row' => $row, 'i' => $i, 'default_custno' => $default_custno])
                         @endif
                     @empty
                     <tr class="empty-row">
@@ -407,18 +363,114 @@
     </div>
 </div>
 
+{{-- ── Modal เพิ่ม Semi / Pigment ── --}}
+<div class="modal fade" id="sp_entry_modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#3A8EBA; padding:.75rem 1.25rem;">
+                <h6 class="modal-title text-white mb-0">
+                    <i class="ti ti-plus me-1"></i><span id="sp_entry_title">เพิ่ม Semi</span>
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="sp_entry_target" value="">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Company</label>
+                        <select class="form-select" id="sp_company">
+                            <option value="">-- เลือก --</option>
+                            @foreach($companies as $c)
+                                <option value="{{ $c }}">{{ $c }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Cust No.</label>
+                        <input type="text" class="form-control bg-light" id="sp_custno" readonly>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">วันที่สั่ง</label>
+                        <input type="date" class="form-control" id="sp_mdate">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">วันที่ต้องการรับ</label>
+                        <input type="date" class="form-control" id="sp_custwant">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Item No. <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="sp_itemno" placeholder="Item No.">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Semi Code</label>
+                        <input type="text" class="form-control" id="sp_semi_code" placeholder="รหัสกึ่งสำเร็จรูป">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">แม่สี (Primary Color)</label>
+                        <input type="text" class="form-control" id="sp_primary_color" placeholder="แม่สี">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Lot No.</label>
+                        <input type="text" class="form-control" id="sp_lot_no" placeholder="ล็อตที่">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">เลขที่ใบเบิกออกใบแดง (Red Bill)</label>
+                        <input type="text" class="form-control" id="sp_red_bill_code" placeholder="เลขที่ใบเบิก">
+                    </div>
+                </div>
+                <hr class="my-2">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">ยอดคงเหลือวันนี้ (Balance)</label>
+                        <input type="number" step="any" class="form-control" id="sp_balance" placeholder="0.00">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">ยอดใช้ย้อนหลัง 2 เดือน</label>
+                        <input type="number" step="any" class="form-control" id="sp_retrospective" placeholder="0.00">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">น้ำหนักที่จะใช้ (weight_request)</label>
+                        <input type="number" step="any" class="form-control" id="sp_weight_request" placeholder="0.00">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">ผลิตเพิ่ม (Increase)</label>
+                        <input type="number" step="any" class="form-control" id="sp_increase_production" placeholder="0.00">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">น้ำหนักที่จะผลิต (weight_production)</label>
+                        <input type="number" step="any" class="form-control" id="sp_weight_production" placeholder="0.00">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="ti ti-x me-1"></i>ยกเลิก
+                </button>
+                <button type="button" class="btn btn-primary" id="btn_sp_entry_save">
+                    <i class="ti ti-device-floppy me-1"></i>บันทึก
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 (function () {
     // ── ค่า default จาก planning_header แม่ ──
     var DEFAULT_MDATE  = '{{ $default_mdate }}';
     var DEFAULT_CUSTNO = '{{ $default_custno }}';
 
-    var COMPANY_OPTIONS =
-        '<option value="">-- เลือก --</option>' +
-        '<option value="CP">CP</option>' +
-        '<option value="MB">MB</option>' +
-        '<option value="DB">DB</option>' +
-        '<option value="SPP">SPP</option>';
+    // ── ค่าสำหรับบันทึก Semi/Pigment ลงฐานข้อมูลทันทีผ่าน modal ──
+    var CSRF             = '{{ csrf_token() }}';
+    var PLANNING_ID      = '{{ $planning_item?->id ?? '' }}';
+    var URL_ENTRY_STORE  = '{{ route('production.semipigment.entry.store') }}';
+    var URL_ENTRY_UPDATE = '{{ route('production.semipigment.entry.update') }}';
+    var URL_ENTRY_DELETE = '{{ route('production.semipigment.entry.delete') }}';
+
+    function toast(icon, text) {
+        Swal.fire({ icon: icon, title: text, toast: true, position: 'top-end',
+            timer: 1800, showConfirmButton: false });
+    }
 
     function renumber(tbodyId) {
         $('#' + tbodyId + ' tr:not(.empty-row)').each(function (i) {
@@ -426,24 +478,46 @@
         });
     }
 
-    function newRow() {
-        return '<tr>' +
-            '<td class="text-center row-num">1</td>' +
-            '<td><select class="form-select form-select-sm" data-field="company">' + COMPANY_OPTIONS + '</select></td>' +
-            '<td><input type="date" class="form-control form-control-sm" data-field="mdate"    value="' + DEFAULT_MDATE + '"></td>' +
-            '<td><input type="date" class="form-control form-control-sm" data-field="custwant" value=""></td>' +
-            '<td><input type="text" class="form-control form-control-sm bg-light" data-field="custno"   value="' + DEFAULT_CUSTNO + '" readonly placeholder="Cust No."></td>' +
-            '<td><input type="text" class="form-control form-control-sm" data-field="itemno"   value="" placeholder="Item No."></td>' +
-            '<td><input type="text" class="form-control form-control-sm" data-field="quantity" value="" placeholder="0"></td>' +
+    // escape ค่าให้ปลอดภัยเมื่อนำไปแสดงเป็น HTML / attribute
+    function esc(v) {
+        return $('<div>').text(v == null ? '' : v).html();
+    }
+
+    // ฟิลด์ที่เก็บไว้ใน hidden input (ไม่แสดงเป็นคอลัมน์ในตาราง)
+    var HIDDEN_FIELDS = ['semi_code', 'primary_color', 'balance', 'lot_no',
+        'retrospective', 'increase_production', 'weight_production', 'red_bill_code'];
+
+    // แถวแสดงผล (อ่านอย่างเดียว) + เก็บค่าจริงไว้ใน hidden input เพื่อให้ readRow อ่านได้
+    function displayRow(d) {
+        function cell(field, text) {
+            return '<td>' + (text === '' ? '-' : esc(text)) +
+                '<input type="hidden" data-field="' + field + '" value="' + esc(d[field] || '') + '"></td>';
+        }
+        function hid(field) {
+            return '<input type="hidden" data-field="' + field + '" value="' + esc(d[field] || '') + '">';
+        }
+        var hiddenInputs = HIDDEN_FIELDS.map(hid).join('');
+
+        return '<tr data-id="' + esc(d.id || '') + '">' +
+            '<td class="text-center row-num">1' + hiddenInputs + '</td>' +
+            cell('company',  d.company  || '') +
+            cell('mdate',    (d.mdate    || '').substr(0, 10)) +
+            cell('custwant', (d.custwant || '').substr(0, 10)) +
+            cell('custno',   d.custno   || '') +
+            cell('itemno',   d.itemno   || '') +
+            cell('weight_request', d.weight_request || '') +
             '<td class="text-center"><span class="badge bg-label-warning">รออนุมัติ</span></td>' +
-            '<td class="text-center"><button type="button" class="btn btn-sm btn-danger btn-icon btn_remove_row"><i class="ti ti-trash ti-sm"></i></button></td>' +
+            '<td class="text-center text-nowrap">' +
+                '<button type="button" class="btn btn-sm btn-warning btn-icon btn_edit_row" title="แก้ไข"><i class="ti ti-pencil ti-sm"></i></button> ' +
+                '<button type="button" class="btn btn-sm btn-danger btn-icon btn_remove_row" title="ลบ"><i class="ti ti-trash ti-sm"></i></button>' +
+            '</td>' +
             '</tr>';
     }
 
-    function addRow(tbodyId) {
+    function addRow(tbodyId, data) {
         var $tbody = $('#' + tbodyId);
         $tbody.find('.empty-row').remove();
-        $tbody.append(newRow());
+        $tbody.append(displayRow(data));
         renumber(tbodyId);
     }
 
@@ -455,42 +529,216 @@
         }
     }
 
-    function collectRows(tbodyId) {
-        var rows = [];
-        // ข้ามแถวที่ล็อก (อนุมัติ/ปฏิเสธแล้ว) — เก็บเฉพาะแถวที่รออนุมัติ/แถวใหม่
-        $('#' + tbodyId + ' tr:not(.empty-row):not(.locked-row)').each(function () {
-            rows.push({
-                company:  $(this).find('[data-field="company"]').val()  || '',
-                mdate:    $(this).find('[data-field="mdate"]').val()    || '',
-                custwant: $(this).find('[data-field="custwant"]').val() || '',
-                custno:   $(this).find('[data-field="custno"]').val()   || '',
-                itemno:   $(this).find('[data-field="itemno"]').val()   || '',
-                quantity: $(this).find('[data-field="quantity"]').val() || ''
-            });
+    // ทุกฟิลด์ของแถว semi/pigment (ทั้งที่แสดงผลและ hidden)
+    var ALL_FIELDS = ['company', 'mdate', 'custwant', 'custno', 'itemno', 'weight_request'].concat(HIDDEN_FIELDS);
+
+    // อ่านค่าทุกฟิลด์จากแถว (อ่านจาก input/select ที่มี data-field)
+    function readRow($tr) {
+        var d = {};
+        ALL_FIELDS.forEach(function (f) {
+            d[f] = $tr.find('[data-field="' + f + '"]').val() || '';
         });
-        return rows;
+        return d;
     }
 
-    // ── Add buttons ──
-    $('#btn_add_semi_row').on('click',    function () { addRow('tbody_semi'); });
-    $('#btn_add_pigment_row').on('click', function () { addRow('tbody_pigment'); });
+    // ── Modal เพิ่ม Semi / Pigment ──
+    // ย้าย modal ออกไปเป็น sibling ที่ body (กัน stacked modal ซ้อนใน .modal-content แล้วเพี้ยน)
+    $('body').children('#sp_entry_modal').remove();
+    var $entryModal = $('#sp_entry_modal').appendTo('body');
 
-    // ── Remove buttons ──
+    // แถวที่กำลังแก้ไขผ่าน modal (null = โหมดเพิ่มใหม่)
+    var $editingRow = null;
+
+    function fillModal(d) {
+        $('#sp_company').val(d.company || '');
+        $('#sp_custno').val(d.custno || DEFAULT_CUSTNO);
+        $('#sp_mdate').val(d.mdate || '');
+        $('#sp_custwant').val(d.custwant || '');
+        $('#sp_itemno').val(d.itemno || '');
+        $('#sp_semi_code').val(d.semi_code || '');
+        $('#sp_primary_color').val(d.primary_color || '');
+        $('#sp_lot_no').val(d.lot_no || '');
+        $('#sp_red_bill_code').val(d.red_bill_code || '');
+        $('#sp_balance').val(d.balance || '');
+        $('#sp_retrospective').val(d.retrospective || '');
+        $('#sp_weight_request').val(d.weight_request || '');
+        $('#sp_increase_production').val(d.increase_production || '');
+        $('#sp_weight_production').val(d.weight_production || '');
+        $('#sp_itemno').removeClass('is-invalid');
+    }
+
+    function openAddModal(target, label) {
+        $editingRow = null;
+        $('#sp_entry_target').val(target);
+        $('#sp_entry_title').text('เพิ่ม ' + label);
+        $('#btn_sp_entry_save').html('<i class="ti ti-plus me-1"></i>เพิ่มลงตาราง');
+        fillModal({ mdate: DEFAULT_MDATE, custno: DEFAULT_CUSTNO });
+        bootstrap.Modal.getOrCreateInstance($entryModal[0]).show();
+        setTimeout(function () { $('#sp_itemno').trigger('focus'); }, 300);
+    }
+
+    function openEditModal($tr) {
+        $editingRow = $tr;
+        var label = $tr.closest('tbody').attr('id') === 'tbody_pigment' ? 'Pigment' : 'Semi';
+        $('#sp_entry_title').text('แก้ไข ' + label);
+        $('#btn_sp_entry_save').html('<i class="ti ti-check me-1"></i>อัปเดตในตาราง');
+        fillModal(readRow($tr));
+        bootstrap.Modal.getOrCreateInstance($entryModal[0]).show();
+        setTimeout(function () { $('#sp_itemno').trigger('focus'); }, 300);
+    }
+
+    // ── Add buttons → เปิด modal (โหมดเพิ่ม) ──
+    $('#btn_add_semi_row').on('click',    function () { openAddModal('tbody_semi', 'Semi'); });
+    $('#btn_add_pigment_row').on('click', function () { openAddModal('tbody_pigment', 'Pigment'); });
+
+    // ── Edit buttons → เปิด modal (โหมดแก้ไข) ──
+    $('#tbody_semi, #tbody_pigment').on('click', '.btn_edit_row', function () {
+        openEditModal($(this).closest('tr'));
+    });
+
+    // ── บันทึกจาก modal → บันทึกลงฐานข้อมูลทันที (เพิ่ม/แก้ไข) ──
+    $entryModal.find('#btn_sp_entry_save').on('click', function () {
+        var $btn = $(this);
+        var itemno = ($('#sp_itemno').val() || '').trim();
+        if (!itemno) {
+            $('#sp_itemno').addClass('is-invalid').trigger('focus');
+            return;
+        }
+        $('#sp_itemno').removeClass('is-invalid');
+
+        var isEdit  = !!($editingRow && $editingRow.length);
+        var tbodyId = isEdit ? $editingRow.closest('tbody').attr('id') : $('#sp_entry_target').val();
+        var type    = tbodyId === 'tbody_pigment' ? 'pigment' : 'semi';
+
+        // ต้องบันทึก Planning Item ก่อน (มี planning_id) จึงจะเพิ่ม/แก้ไข Semi/Pigment ได้
+        if (!PLANNING_ID) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'ยังบันทึกไม่ได้',
+                text: 'กรุณาบันทึก Planning Item ก่อน แล้วจึงเพิ่ม Semi/Pigment'
+            });
+            return;
+        }
+
+        var weightRequest    = $('#sp_weight_request').val() || '';
+        var weightProduction = $('#sp_weight_production').val() || '';
+        // ถ้ายังไม่ระบุน้ำหนักที่จะผลิต ให้ใช้น้ำหนักที่จะใช้เป็นค่าเริ่มต้น
+        if (weightProduction === '') weightProduction = weightRequest;
+
+        var payload = {
+            _token:              CSRF,
+            planning_id:         PLANNING_ID,
+            type:                type,
+            company:             $('#sp_company').val()  || '',
+            mdate:               $('#sp_mdate').val()    || '',
+            custwant:            $('#sp_custwant').val() || '',
+            custno:              $('#sp_custno').val()   || '',
+            itemno:              itemno,
+            semi_code:           $('#sp_semi_code').val() || '',
+            primary_color:       $('#sp_primary_color').val() || '',
+            lot_no:              $('#sp_lot_no').val() || '',
+            red_bill_code:       $('#sp_red_bill_code').val() || '',
+            balance:             $('#sp_balance').val() || '',
+            retrospective:       $('#sp_retrospective').val() || '',
+            weight_request:      weightRequest,
+            increase_production: $('#sp_increase_production').val() || '',
+            weight_production:   weightProduction
+        };
+
+        var url = URL_ENTRY_STORE;
+        if (isEdit) {
+            url = URL_ENTRY_UPDATE;
+            payload.id = $editingRow.data('id');
+        }
+
+        $btn.prop('disabled', true);
+        $.ajax({
+            type: 'POST', url: url, dataType: 'json', data: payload,
+            success: function (res) {
+                if (res.status == 200) {
+                    if (isEdit) {
+                        $editingRow.replaceWith($(displayRow(res.data)));
+                        renumber(tbodyId);
+                        $editingRow = null;
+                    } else {
+                        addRow(tbodyId, res.data);
+                    }
+                    bootstrap.Modal.getInstance($entryModal[0]).hide();
+                    toast('success', res.message || 'บันทึกสำเร็จ');
+                } else {
+                    Swal.fire({ icon: 'warning', title: 'ผิดพลาด', text: res.message || 'บันทึกไม่สำเร็จ' });
+                }
+            },
+            error: function (xhr) {
+                Swal.fire({ icon: 'error', title: 'ผิดพลาด',
+                    text: (xhr.responseJSON && xhr.responseJSON.message) || 'เกิดข้อผิดพลาด กรุณาลองใหม่' });
+            },
+            complete: function () { $btn.prop('disabled', false); }
+        });
+    });
+
+    // คง scroll-lock ของ body ไว้เมื่อปิด modal ย่อยแต่ modal หลักยังเปิด
+    $entryModal.on('hidden.bs.modal', function () {
+        if ($('.modal.show').length) {
+            $('body').addClass('modal-open');
+        }
+    });
+
+    // เก็บกวาด modal ที่ย้ายไป body เมื่อปิดฟอร์มหลัก
+    $('#planning_item_form').closest('.modal')
+        .off('hidden.bs.modal.spentry')
+        .on('hidden.bs.modal.spentry', function () {
+            bootstrap.Modal.getInstance($entryModal[0])?.dispose();
+            $entryModal.remove();
+        });
+
+    // ── Remove buttons → ลบออกจากฐานข้อมูลทันที ──
+    function removeRow($tr, tbodyId, label) {
+        var id = $tr.data('id');
+
+        function done() {
+            $tr.remove();
+            renumber(tbodyId);
+            checkEmpty(tbodyId, label);
+        }
+
+        // แถวที่ยังไม่มี id (เผื่อกรณีพิเศษ) — ลบจากตารางอย่างเดียว
+        if (!id) { done(); return; }
+
+        Swal.fire({
+            icon: 'warning',
+            title: 'ยืนยันการลบ',
+            text: 'ต้องการลบรายการ ' + label + ' นี้หรือไม่?',
+            showCancelButton: true,
+            confirmButtonText: 'ลบ',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#d33'
+        }).then(function (result) {
+            if (!result.isConfirmed) return;
+            $.ajax({
+                type: 'POST', url: URL_ENTRY_DELETE, dataType: 'json',
+                data: { _token: CSRF, id: id },
+                success: function (res) {
+                    if (res.status == 200) {
+                        done();
+                        toast('success', res.message || 'ลบสำเร็จ');
+                    } else {
+                        Swal.fire({ icon: 'warning', title: 'ผิดพลาด', text: res.message || 'ลบไม่สำเร็จ' });
+                    }
+                },
+                error: function (xhr) {
+                    Swal.fire({ icon: 'error', title: 'ผิดพลาด',
+                        text: (xhr.responseJSON && xhr.responseJSON.message) || 'เกิดข้อผิดพลาด กรุณาลองใหม่' });
+                }
+            });
+        });
+    }
+
     $('#tbody_semi').on('click', '.btn_remove_row', function () {
-        $(this).closest('tr').remove();
-        renumber('tbody_semi');
-        checkEmpty('tbody_semi', 'Semi');
+        removeRow($(this).closest('tr'), 'tbody_semi', 'Semi');
     });
     $('#tbody_pigment').on('click', '.btn_remove_row', function () {
-        $(this).closest('tr').remove();
-        renumber('tbody_pigment');
-        checkEmpty('tbody_pigment', 'Pigment');
-    });
-
-    // ── hook serialize ก่อน save ──
-    $('#planning_item_form').data('serialize_fn', function () {
-        $('#semi_json').val(JSON.stringify(collectRows('tbody_semi')));
-        $('#pigment_json').val(JSON.stringify(collectRows('tbody_pigment')));
+        removeRow($(this).closest('tr'), 'tbody_pigment', 'Pigment');
     });
 
     // ── modal ประวัติ senddate ──

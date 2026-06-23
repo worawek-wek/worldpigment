@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\Facades\DataTables;
 use App\Models\SemiPigment;
 use App\Models\Planning;
@@ -150,6 +151,146 @@ class SemiPigmentController extends Controller
         ]);
     }
 
+    /* ===================== เพิ่ม / แก้ไข / ลบ จาก modal หน้า Planning Item ===================== */
+
+    /**
+     * เพิ่มรายการ Semi/Pigment (รออนุมัติ) — บันทึกลงฐานข้อมูลทันทีจาก modal
+     */
+    public function entryStore(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'planning_id' => 'required|exists:tb_planning,id',
+            'type'        => 'required|in:semi,pigment',
+            'itemno'      => 'required|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 422, 'message' => $validator->errors()->first()]);
+        }
+
+        $planning = Planning::with('planning_header')->find($request->planning_id);
+        if (!$planning) {
+            return response()->json(['status' => 404, 'message' => 'ไม่พบ Planning Item']);
+        }
+
+        $sp = SemiPigment::create(array_merge($this->entryFields($request), [
+            'planning_id'        => $planning->id,
+            'planning_header_id' => $planning->planning_header_id,
+            'orderno'            => $planning->planning_header?->orderno,
+            'type'               => $request->input('type'),
+            'status'             => SemiPigment::STATUS_REQUEST,
+        ]));
+
+        return response()->json([
+            'status'  => 200,
+            'message' => 'เพิ่มรายการสำเร็จ',
+            'data'    => $this->entryPayload($sp),
+        ]);
+    }
+
+    /**
+     * แก้ไขรายการ Semi/Pigment (เฉพาะที่ยัง "รออนุมัติ")
+     */
+    public function entryUpdate(Request $request)
+    {
+        $sp = SemiPigment::find($request->id);
+        if (!$sp) {
+            return response()->json(['status' => 404, 'message' => 'ไม่พบรายการ']);
+        }
+
+        if ($sp->status !== SemiPigment::STATUS_REQUEST) {
+            return response()->json(['status' => 500, 'message' => 'รายการนี้ถูกดำเนินการแล้ว แก้ไขไม่ได้']);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'itemno' => 'required|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 422, 'message' => $validator->errors()->first()]);
+        }
+
+        $sp->update($this->entryFields($request));
+
+        return response()->json([
+            'status'  => 200,
+            'message' => 'แก้ไขรายการสำเร็จ',
+            'data'    => $this->entryPayload($sp),
+        ]);
+    }
+
+    /**
+     * ลบรายการ Semi/Pigment (เฉพาะที่ยัง "รออนุมัติ")
+     */
+    public function entryDestroy(Request $request)
+    {
+        $sp = SemiPigment::find($request->id);
+        if (!$sp) {
+            return response()->json(['status' => 404, 'message' => 'ไม่พบรายการ']);
+        }
+
+        if ($sp->status !== SemiPigment::STATUS_REQUEST) {
+            return response()->json(['status' => 500, 'message' => 'รายการนี้ถูกดำเนินการแล้ว ลบไม่ได้']);
+        }
+
+        $sp->delete();
+
+        return response()->json(['status' => 200, 'message' => 'ลบรายการสำเร็จ']);
+    }
+
+    /**
+     * รับค่าฟิลด์ที่แก้ไขได้จาก modal → คอลัมน์ของ tb_semi_pigment
+     */
+    private function entryFields(Request $request): array
+    {
+        $val = fn ($k) => $request->filled($k) ? $request->input($k) : null;
+
+        $weightRequest = $val('weight_request');
+        // ถ้ายังไม่ระบุน้ำหนักที่จะผลิต ให้ใช้น้ำหนักที่จะใช้เป็นค่าเริ่มต้น
+        $weightProduction = $val('weight_production') ?? $weightRequest;
+
+        return [
+            'company'             => $val('company'),
+            'order_date'          => $val('mdate'),
+            'want_date'           => $val('custwant'),
+            'custno'              => $val('custno'),
+            'itemno'              => $request->input('itemno'),
+            'semi_code'           => $val('semi_code'),
+            'primary_color'       => $val('primary_color'),
+            'weight_request'      => $weightRequest,
+            'balance'             => $val('balance'),
+            'lot_no'              => $val('lot_no'),
+            'retrospective'       => $val('retrospective'),
+            'increase_production' => $val('increase_production'),
+            'weight_production'   => $weightProduction,
+            'red_bill_code'       => $val('red_bill_code'),
+        ];
+    }
+
+    /**
+     * แปลงข้อมูล SemiPigment → โครงสร้างที่ฝั่ง JS (displayRow) ใช้สร้างแถวในตาราง
+     */
+    private function entryPayload(SemiPigment $sp): array
+    {
+        return [
+            'id'                  => $sp->id,
+            'company'             => $sp->company,
+            'mdate'               => $sp->order_date ? substr($sp->order_date, 0, 10) : '',
+            'custwant'            => $sp->want_date ? substr($sp->want_date, 0, 10) : '',
+            'custno'              => $sp->custno,
+            'itemno'              => $sp->itemno,
+            'semi_code'           => $sp->semi_code,
+            'primary_color'       => $sp->primary_color,
+            'weight_request'      => $sp->weight_request,
+            'balance'             => $sp->balance,
+            'lot_no'              => $sp->lot_no,
+            'retrospective'       => $sp->retrospective,
+            'increase_production' => $sp->increase_production,
+            'weight_production'   => $sp->weight_production,
+            'red_bill_code'       => $sp->red_bill_code,
+        ];
+    }
+
     /* ===================== อนุมัติ / ไม่อนุมัติ ===================== */
 
     /**
@@ -261,6 +402,7 @@ class SemiPigmentController extends Controller
             'custwant'           => $sp->want_date,
             'custno'             => $sp->custno,
             'orderno'            => $sp->orderno,
+            'netqty'             => $sp->weight_production,
         ]);
 
         return Planning::create([
@@ -268,7 +410,8 @@ class SemiPigmentController extends Controller
             'parent_planning_id' => $sp->planning_id,
             'plan_type'          => $sp->type,
             'itemno'             => $sp->itemno,
-            'quantity'           => $sp->quantity,
+            'quantity'           => $sp->weight_production,
+            'weight'             => $sp->weight_production,
             'mdate'              => $sp->order_date,
             'custwant'           => $sp->want_date,
         ]);

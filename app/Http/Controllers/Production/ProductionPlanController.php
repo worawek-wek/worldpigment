@@ -133,14 +133,23 @@ class ProductionPlanController extends Controller
                 // โหลดทุกรายการพร้อมสถานะ (รออนุมัติ = แก้ไขได้, อนุมัติ/ปฏิเสธ = ล็อกอ่านอย่างเดียว)
                 $mapRow = function (SemiPigment $r) {
                     return [
-                        'company'      => $r->company,
-                        'mdate'        => !empty($r->order_date) ? $r->order_date : null,
-                        'custwant'     => !empty($r->want_date) ? $r->want_date : null,
-                        'custno'       => $r->custno,
-                        'itemno'       => $r->itemno,
-                        'quantity'     => $r->quantity,
-                        'status'       => $r->status,
-                        'status_label' => $r->statusLabel(),
+                        'id'                  => $r->id,
+                        'company'             => $r->company,
+                        'mdate'               => !empty($r->order_date) ? $r->order_date : null,
+                        'custwant'            => !empty($r->want_date) ? $r->want_date : null,
+                        'custno'              => $r->custno,
+                        'itemno'              => $r->itemno,
+                        'semi_code'           => $r->semi_code,
+                        'primary_color'       => $r->primary_color,
+                        'weight_request'      => $r->weight_request,
+                        'balance'             => $r->balance,
+                        'lot_no'              => $r->lot_no,
+                        'retrospective'       => $r->retrospective,
+                        'increase_production' => $r->increase_production,
+                        'weight_production'   => $r->weight_production,
+                        'red_bill_code'       => $r->red_bill_code,
+                        'status'              => $r->status,
+                        'status_label'        => $r->statusLabel(),
                     ];
                 };
 
@@ -227,12 +236,8 @@ class ProductionPlanController extends Controller
             'mdate', 'custwant', 'senddate', 'remark'
         ]);
 
-        // semi / pigment — decode JSON string
-        $semi_list    = json_decode($request->input('semi_json',    '[]'), true) ?? [];
-        $pigment_list = json_decode($request->input('pigment_json', '[]'), true) ?? [];
-
-        $fields['semi']    = json_encode($semi_list);
-        $fields['pigment'] = json_encode($pigment_list);
+        // หมายเหตุ: Semi / Pigment ไม่ถูกบันทึกที่นี่อีกต่อไป
+        // ย้ายไปบันทึกลงฐานข้อมูลทันทีผ่าน modal เพิ่ม/แก้ไข Semi (SemiPigmentController::entryStore/entryUpdate)
 
         $planning_id = $request->planning_id;
         $is_update   = !empty($planning_id);
@@ -254,15 +259,9 @@ class ProductionPlanController extends Controller
                 }
 
                 Planning::where('id', $planning_id)->update($fields);
-                $parent = Planning::with('planning_header')->find($planning_id);
             } else {
-                $parent = Planning::create($fields);
-                $parent->load('planning_header');
+                Planning::create($fields);
             }
-
-            // 2) บันทึก Semi / Pigment ลงตารางรออนุมัติ (แทนการสร้าง planning อัตโนมัติ)
-            $this->syncSemiPigment($parent, 'semi',    $semi_list);
-            $this->syncSemiPigment($parent, 'pigment', $pigment_list);
 
             DB::commit();
         } catch (\Exception $e) {
@@ -278,37 +277,5 @@ class ProductionPlanController extends Controller
             'message'            => $is_update ? 'แก้ไขข้อมูล Planning สำเร็จ' : 'เพิ่มข้อมูล Planning สำเร็จ',
             'planning_header_id' => $fields['planning_header_id']
         ]);
-    }
-
-    /**
-     * ลบรายการ Semi/Pigment ที่ "รออนุมัติ" เดิมของ planning นี้ แล้วบันทึกใหม่
-     * (รายการที่ "อนุมัติ" แล้วจะไม่ถูกแตะต้อง เพราะถูกแปลงเป็นแผนการผลิตไปแล้ว)
-     */
-    private function syncSemiPigment(Planning $parent, string $type, array $entries): void
-    {
-        SemiPigment::where('planning_id', $parent->id)
-            ->where('type', $type)
-            ->where('status', SemiPigment::STATUS_REQUEST)
-            ->delete();
-
-        $orderno = $parent->planning_header?->orderno;
-
-        foreach ($entries as $entry) {
-            if (empty($entry['itemno'])) continue;
-
-            SemiPigment::create([
-                'planning_id'        => $parent->id,
-                'planning_header_id' => $parent->planning_header_id,
-                'orderno'            => $orderno,
-                'type'               => $type,
-                'company'            => $entry['company']  ?? null,
-                'order_date'         => !empty($entry['mdate'])    ? $entry['mdate']    : null,
-                'want_date'          => !empty($entry['custwant']) ? $entry['custwant'] : null,
-                'custno'             => $entry['custno']   ?? null,
-                'itemno'             => $entry['itemno']   ?? null,
-                'quantity'           => (isset($entry['quantity']) && $entry['quantity'] !== '') ? $entry['quantity'] : null,
-                'status'             => SemiPigment::STATUS_REQUEST,
-            ]);
-        }
     }
 }

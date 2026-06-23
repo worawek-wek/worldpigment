@@ -51,7 +51,7 @@
                     </div>
                     <div class="col-md-3 mb-2">
                         <div class="text-muted small">จำนวนสุทธิ</div>
-                        <div class="fw-semibold">{{ number_format($planning_header->netqty ?? '-', 2) }}</div>
+                        <div class="fw-semibold">{{ is_numeric($planning_header->netqty) ? number_format((float) $planning_header->netqty, 2) : '-' }}</div>
                     </div>
                     <div class="col-md-3 mb-2">
                         <div class="text-muted small">วันที่ลูกค้าต้องการ</div>

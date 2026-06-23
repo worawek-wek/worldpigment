@@ -52,7 +52,7 @@
                                         <th>วันที่ต้องการรับ</th>
                                         <th>รหัสลูกค้า</th>
                                         <th>Item No.</th>
-                                        <th>Quantity</th>
+                                        <th>น้ำหนักที่จะใช้</th>
                                         <th>แผนการผลิต</th>
                                         <th>จัดการ</th>
                                     </tr>
@@ -110,9 +110,9 @@
                 { className: "text-center", data: 'order_date', name: 'order_date', orderable: false },
                 { className: "text-center", data: 'want_date',  name: 'want_date',  orderable: false },
                 { className: "text-center", data: 'custno',     name: 'custno',     orderable: false },
-                { className: "text-left",   data: 'itemno',     name: 'itemno',     orderable: false },
-                { className: "text-center", data: 'quantity',   name: 'quantity',   orderable: false },
-                { className: "text-center", data: 'plan_badge', name: 'plan_badge', orderable: false, searchable: false },
+                { className: "text-left",   data: 'itemno',         name: 'itemno',         orderable: false },
+                { className: "text-center", data: 'weight_request', name: 'weight_request', orderable: false },
+                { className: "text-center", data: 'plan_badge',     name: 'plan_badge',     orderable: false, searchable: false },
                 { className: "text-center", data: 'action',     name: 'action',     orderable: false, searchable: false },
             ],
             order: [[0, 'asc']]
