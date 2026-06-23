@@ -74,11 +74,13 @@ class SemiPigmentController extends Controller
     {
         // หน้านี้แสดงเฉพาะรายการที่อนุมัติแล้ว
         $data = $this->baseQuery()
+            ->with('approver')
             ->where('status', SemiPigment::STATUS_APPROVED);
 
         return DataTables::of($data)
             ->addColumn('rownum', fn ($row) => $row->rownum)
             ->addColumn('type_badge', fn ($row) => $this->typeBadge($row))
+            ->addColumn('approver_name', fn ($row) => $row->approver?->name ?? '-')
             ->addColumn('plan_badge', function ($row) {
                 if ($row->result_planning_id) {
                     return '<span class="badge bg-label-success">สร้างแล้ว</span>';

@@ -54,6 +54,7 @@
                                         <th>Item No.</th>
                                         <th>น้ำหนักที่จะใช้</th>
                                         <th>น้ำหนักที่ผลิต</th>
+                                        <th>ผู้อนุมัติ</th>
                                         <th>แผนการผลิต</th>
                                         <th>จัดการ</th>
                                     </tr>
@@ -121,6 +122,7 @@
                 { className: "text-left",   data: 'itemno',         name: 'itemno',         orderable: false },
                 { className: "text-center", data: 'weight_request',    name: 'weight_request',    orderable: false, render: fmt2 },
                 { className: "text-center", data: 'weight_production', name: 'weight_production', orderable: false, render: fmt2 },
+                { className: "text-center", data: 'approver_name',     name: 'approver_name',     orderable: false, searchable: false },
                 { className: "text-center", data: 'plan_badge',        name: 'plan_badge',        orderable: false, searchable: false },
                 { className: "text-center", data: 'action',     name: 'action',     orderable: false, searchable: false },
             ],
