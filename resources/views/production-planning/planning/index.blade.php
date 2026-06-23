@@ -103,6 +103,117 @@
             <div class="modal-content" id="result_planning_item"></div>
         </div>
     </div>
+
+    <!-- Modal สร้างแผนการผลิต (กรอกเอง) -->
+    <div class="modal fade" id="createPlanModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color:#54BAB9; padding:1rem 1.5rem;">
+                    <h5 class="modal-title text-white mb-0">
+                        <i class="ti ti-calendar-plus me-1"></i>สร้างแผนการผลิต
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="create_plan_form">
+                        {{-- ── ข้อมูล Header ── --}}
+                        <h6 class="text-primary mb-2"><i class="ti ti-info-circle me-1"></i>ข้อมูลแผนการผลิต</h6>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Planning Code <span class="text-danger">*</span></label>
+                                <input type="text" name="planning_code" class="form-control" placeholder="รหัสแผนการผลิต">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Company / แผนก <span class="text-danger">*</span></label>
+                                <select name="company" class="form-select">
+                                    <option value="">-- เลือก --</option>
+                                    <option value="CP">CP</option>
+                                    <option value="DB">DB</option>
+                                    <option value="MB">MB</option>
+                                    <option value="SPP">SPP</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Plan Type</label>
+                                <select name="plan_type" class="form-select">
+                                    <option value="">-- เลือก --</option>
+                                    @foreach($plan_types as $pt)
+                                        <option value="{{ $pt }}">{{ $pt }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Order No.</label>
+                                <input type="text" name="orderno" class="form-control" placeholder="เลขที่ใบสั่ง">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">รหัสลูกค้า (Cust No.)</label>
+                                <input type="text" name="custno" class="form-control" placeholder="รหัสลูกค้า">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Sale No.</label>
+                                <input type="text" name="saleno" class="form-control" placeholder="เลขที่เซลล์">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">จำนวนสุทธิ (Net Qty)</label>
+                                <input type="number" step="any" name="netqty" class="form-control" placeholder="0.00">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">วันที่สั่ง (Mdate)</label>
+                                <input type="date" name="mdate" class="form-control">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">วันที่ลูกค้าต้องการ (Custwant)</label>
+                                <input type="date" name="custwant" class="form-control">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">วันที่ส่ง (Senddate)</label>
+                                <input type="date" name="senddate" class="form-control">
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">หมายเหตุ (Remark)</label>
+                                <input type="text" name="remark" class="form-control" placeholder="หมายเหตุ">
+                            </div>
+                        </div>
+
+                        <hr class="my-2">
+
+                        {{-- ── รายการ Planning ── --}}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="text-primary mb-0"><i class="ti ti-list-details me-1"></i>รายการ Planning</h6>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="btn_add_plan_item_row">
+                                <i class="ti ti-plus me-1"></i>เพิ่มรายการ
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered align-middle" id="table_plan_items">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="text-center" style="width:36px">#</th>
+                                        <th style="min-width:160px">Item No. <span class="text-danger">*</span></th>
+                                        <th style="min-width:100px">Quantity</th>
+                                        <th style="min-width:100px">Weight</th>
+                                        <th style="min-width:100px">Lot</th>
+                                        <th style="min-width:120px">Machine No.</th>
+                                        <th class="text-center" style="width:60px">ลบ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody_plan_items"></tbody>
+                            </table>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="ti ti-x me-1"></i>ยกเลิก
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btn_save_create_plan">
+                        <i class="ti ti-device-floppy me-1"></i>บันทึก
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @section('script')
@@ -185,9 +296,136 @@
         });
     }
 
+    // ---- สร้างแผนการผลิต (กรอกเอง) ----
+    var createPlanModal;
+    var MACHINES_BY_DEPT = @json($machines_by_dept);
+
+    // สร้าง options เครื่องจักรตามแผนก (company) ที่เลือกในฟอร์ม
+    function machineOptions(selected) {
+        var company = $('#create_plan_form [name="company"]').val() || '';
+        var list = MACHINES_BY_DEPT[company] || [];
+        var opts = '<option value="">-- เลือก --</option>';
+        list.forEach(function (m) {
+            opts += '<option value="' + m + '"' + (m === selected ? ' selected' : '') + '>' + m + '</option>';
+        });
+        return opts;
+    }
+
+    function planItemRow() {
+        return '<tr>' +
+            '<td class="text-center row-num"></td>' +
+            '<td><input type="text" class="form-control form-control-sm" data-f="itemno" placeholder="Item No."></td>' +
+            '<td><input type="number" step="any" class="form-control form-control-sm" data-f="quantity" placeholder="0"></td>' +
+            '<td><input type="number" step="any" class="form-control form-control-sm" data-f="weight" placeholder="0.00"></td>' +
+            '<td><input type="text" class="form-control form-control-sm" data-f="lot" placeholder="Lot"></td>' +
+            '<td><select class="form-select form-select-sm" data-f="machine_no">' + machineOptions('') + '</select></td>' +
+            '<td class="text-center"><button type="button" class="btn btn-sm btn-icon btn-danger btn_remove_plan_item"><i class="ti ti-trash ti-sm"></i></button></td>' +
+            '</tr>';
+    }
+
+    // เมื่อเปลี่ยนแผนก → โหลดเครื่องจักรใหม่ทุกแถว (คงค่าที่เลือกไว้ถ้ายังมีในแผนกใหม่)
+    $(document).on('change', '#create_plan_form [name="company"]', function () {
+        $('#tbody_plan_items tr').each(function () {
+            var $sel = $(this).find('[data-f="machine_no"]');
+            $sel.html(machineOptions($sel.val()));
+        });
+    });
+
+    function renumberPlanItems() {
+        $('#tbody_plan_items tr').each(function (i) {
+            $(this).find('.row-num').text(i + 1);
+        });
+    }
+
+    function addPlanItemRow() {
+        $('#tbody_plan_items').append(planItemRow());
+        renumberPlanItems();
+    }
+
+    $(document).on('click', '#btn_add_plan_item_row', function () { addPlanItemRow(); });
+
+    $(document).on('click', '.btn_remove_plan_item', function () {
+        $(this).closest('tr').remove();
+        renumberPlanItems();
+    });
+
     $(document).on('click', '#btn_add', function(e){
         e.preventDefault();
-        openPlanningModal('', '');
+        // reset ฟอร์ม + เริ่มด้วย 1 แถว
+        $('#create_plan_form')[0].reset();
+        $('#tbody_plan_items').empty();
+        addPlanItemRow();
+        createPlanModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('createPlanModal'));
+        createPlanModal.show();
+    });
+
+    $(document).on('click', '#btn_save_create_plan', function () {
+        var $btn = $(this);
+        var $form = $('#create_plan_form');
+
+        // header fields
+        var header = {};
+        $form.find('input, select, textarea').each(function () {
+            var name = $(this).attr('name');
+            if (name) header[name] = $(this).val();
+        });
+
+        // ตรวจ required ฝั่ง client
+        if (!(header.planning_code || '').trim()) {
+            Swal.fire({ icon: 'warning', title: 'ข้อมูลไม่ครบ', text: 'กรุณากรอก Planning Code' });
+            return;
+        }
+        if (!(header.company || '').trim()) {
+            Swal.fire({ icon: 'warning', title: 'ข้อมูลไม่ครบ', text: 'กรุณาเลือก Company / แผนก' });
+            return;
+        }
+
+        // items
+        var items = [];
+        $('#tbody_plan_items tr').each(function () {
+            var itemno = ($(this).find('[data-f="itemno"]').val() || '').trim();
+            if (!itemno) return;
+            items.push({
+                itemno:     itemno,
+                quantity:   $(this).find('[data-f="quantity"]').val()   || '',
+                weight:     $(this).find('[data-f="weight"]').val()     || '',
+                lot:        $(this).find('[data-f="lot"]').val()        || '',
+                machine_no: $(this).find('[data-f="machine_no"]').val() || ''
+            });
+        });
+
+        if (items.length === 0) {
+            Swal.fire({ icon: 'warning', title: 'ข้อมูลไม่ครบ', text: 'กรุณาเพิ่มรายการ Planning อย่างน้อย 1 รายการ (ระบุ Item No.)' });
+            return;
+        }
+
+        var payload = $.extend({}, header, { items: items, _token: '{{ csrf_token() }}' });
+
+        $btn.prop('disabled', true).html('<i class="ti ti-loader me-1"></i>กำลังบันทึก...');
+        $.ajax({
+            type: 'POST',
+            url: '{{ route("production.planning.store") }}',
+            dataType: 'json',
+            data: payload,
+            success: function (response) {
+                if (response.status == 200) {
+                    createPlanModal.hide();
+                    oTable.draw();
+                    Swal.fire({ icon: 'success', title: 'สำเร็จ', text: response.message, timer: 1600, showConfirmButton: false });
+                    // เปิด modal จัดการแผน เพื่อเพิ่ม Semi/Pigment หรือแก้ไขรายละเอียดต่อ
+                    openPlanningModal('', response.planning_header_id);
+                } else {
+                    Swal.fire({ icon: 'warning', title: response.status == 422 ? 'ข้อมูลไม่ถูกต้อง' : 'ผิดพลาด', text: response.message });
+                }
+            },
+            error: function (xhr) {
+                var msg = xhr.responseJSON?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: msg });
+            },
+            complete: function () {
+                $btn.prop('disabled', false).html('<i class="ti ti-device-floppy me-1"></i>บันทึก');
+            }
+        });
     });
 
     $(document).on('click', '.btn_edit', function(e){

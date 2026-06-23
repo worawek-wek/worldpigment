@@ -17,9 +17,30 @@ class ProductionPlanController extends Controller
 {
     public function index()
     {
-        $data = $this->dataQuery();
+        // เครื่องจักรจัดกลุ่มตามแผนก (dept) เพื่อให้ dropdown กรองตาม company ฝั่ง JS
+        $machines_by_dept = Machine::orderBy('dept')->orderBy('MBX')->get()
+            ->groupBy('dept')
+            ->map(fn ($g) => $g->pluck('MBX')->values())
+            ->toArray();
 
-        return view('production-planning.planning.index');
+        // ตัวเลือก plan_type ดึงจาก enum ของคอลัมน์โดยตรง
+        $plan_types = $this->planTypeOptions();
+
+        return view('production-planning.planning.index', compact('machines_by_dept', 'plan_types'));
+    }
+
+    /**
+     * อ่านค่า enum ของคอลัมน์ plan_type มาเป็น array
+     */
+    private function planTypeOptions(): array
+    {
+        $col = DB::selectOne("SHOW COLUMNS FROM tb_planning_header LIKE 'plan_type'");
+
+        if (!$col || !preg_match('/enum\((.*)\)/i', $col->Type, $m)) {
+            return [];
+        }
+
+        return array_map(fn ($v) => trim($v, "'"), str_getcsv($m[1]));
     }
 
     public function datatable()
@@ -108,6 +129,85 @@ class ProductionPlanController extends Controller
         return response()->json([
             'status' => 200,
             'data' => $html
+        ]);
+    }
+
+    /**
+     * สร้างแผนการผลิตเอง (กรอกข้อมูลเอง) — สร้าง PlanningHeader + Planning (หลายรายการ) พร้อมกัน
+     */
+    public function store(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'planning_code'      => 'required|string|max:255',
+            'company'            => 'required|string|max:255',
+            'orderno'            => 'nullable|string|max:255',
+            'custno'             => 'nullable|string|max:255',
+            'saleno'             => 'nullable|string|max:255',
+            'netqty'             => 'nullable|numeric',
+            'mdate'              => 'nullable|date',
+            'custwant'           => 'nullable|date',
+            'senddate'           => 'nullable|date',
+            'plan_type'          => 'nullable|string|max:255',
+            'remark'             => 'nullable|string|max:1000',
+            'items'              => 'required|array|min:1',
+            'items.*.itemno'     => 'required|string|max:255',
+            'items.*.quantity'   => 'nullable|numeric',
+            'items.*.weight'     => 'nullable|numeric',
+            'items.*.lot'        => 'nullable|string|max:255',
+            'items.*.machine_no' => 'nullable|string|max:255',
+        ], [
+            'items.required'        => 'กรุณาเพิ่มรายการ Planning อย่างน้อย 1 รายการ',
+            'items.*.itemno.required' => 'กรุณากรอก Item No. ให้ครบทุกรายการ',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status'  => 422,
+                'message' => $validator->errors()->first(),
+                'errors'  => $validator->errors()
+            ]);
+        }
+
+        $header_fields = $request->only([
+            'planning_code', 'company', 'orderno', 'custno', 'saleno',
+            'netqty', 'mdate', 'custwant', 'senddate', 'plan_type', 'remark'
+        ]);
+
+        $plan_type = $request->input('plan_type');
+
+        DB::beginTransaction();
+        try {
+            $header = PlanningHeader::create($header_fields);
+
+            foreach ($request->input('items', []) as $item) {
+                if (empty($item['itemno'])) continue;
+
+                Planning::create([
+                    'planning_header_id' => $header->id,
+                    'plan_type'          => $plan_type,
+                    'itemno'             => $item['itemno'],
+                    'quantity'           => $item['quantity']   ?? null,
+                    'weight'             => $item['weight']     ?? null,
+                    'lot'                => $item['lot']        ?? null,
+                    'machine_no'         => $item['machine_no'] ?? null,
+                    'mdate'              => $request->input('mdate')    ?: null,
+                    'custwant'           => $request->input('custwant') ?: null,
+                ]);
+            }
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'status'  => 500,
+                'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage()
+            ]);
+        }
+
+        return response()->json([
+            'status'             => 200,
+            'message'            => 'สร้างแผนการผลิตสำเร็จ',
+            'planning_header_id' => $header->id
         ]);
     }
 
