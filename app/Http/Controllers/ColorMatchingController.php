@@ -18,6 +18,7 @@ class ColorMatchingController extends Controller
         'DsendT', 'Mems', 'TNname', 'rptno', 'pop', 'cancel', 'CancalRes',
         'TNDate', 'PHR', 'ResinMatch', 'startdate', 'SampleDate', 'ReadyDate',
         'RminWating', 'ColorMatcher', 'MI', 'Density', 'VR', 'Hardness',
+        'ColorChar', 'ApprovedLot',
     ];
 
     // ─── Field ที่เป็นวันที่ — flatpickr ส่งมาเป็น d/m/Y ต้อง parse ก่อน save ───
@@ -36,6 +37,7 @@ class ColorMatchingController extends Controller
             'Model'     => $this->distinctOptions('Model'),
             'pop'       => $this->distinctOptions('pop'),
             'Adj'       => $this->distinctOptions('Adj'),
+            'ColorChar' => $this->distinctOptions('ColorChar'),
         ];
         return view('color-matching.index', $data);
     }

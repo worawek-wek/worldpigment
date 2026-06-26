@@ -439,7 +439,7 @@
             // dropdownParent = .modal-content (position:relative) ไม่ใช่ .modal (position:fixed + scroll)
             // เพื่อกันบั๊กตำแหน่ง dropdown เพี้ยนตอนเปิดขึ้นบน/ตอน modal scroll
             // tags: true → ทุก select เลือกจาก list หรือพิมพ์ค่าใหม่ที่ไม่มีในตัวเลือกเองได้ (กันค่าใน DB หาย)
-            // ประเภท (TestType) = ค่าตายตัว 1-4 → tags:false (ห้ามพิมพ์ค่าใหม่), ที่เหลือ tags:true
+            // ประเภท (TestType) = ค่าตายตัว 1-4 → tags:false (ห้ามพิมพ์ค่าใหม่), ที่เหลือ tags:true (เลือกค่าที่ไม่มีในรายการได้)
             $('#colorMatchingModal select:not([name="TestType"])').select2({
                 width: '100%',
                 tags: true,
@@ -450,9 +450,15 @@
                 tags: false,
                 dropdownParent: $('#colorMatchingModal .modal-content')
             });
-            $('#sampleDeliveryModal select').select2({
+            // ประเภท (TestType) = ค่าตายตัว 1-4 → tags:false, ที่เหลือ tags:true (เหมือนฟอร์ม CM)
+            $('#sampleDeliveryModal select:not([name="TestType"])').select2({
                 width: '100%',
                 tags: true,
+                dropdownParent: $('#sampleDeliveryModal .modal-content')
+            });
+            $('#sampleDeliveryModal select[name="TestType"]').select2({
+                width: '100%',
+                tags: false,
                 dropdownParent: $('#sampleDeliveryModal .modal-content')
             });
             // filter ของหน้าหลัก (ไม่อยู่ใน modal) → ไม่ต้องมี dropdownParent
@@ -702,6 +708,19 @@
         // ── พิมพ์ "เลขที่ใบนำส่งเทียบสี (อ้างอิง)" ในฟอร์ม SD ──
         // → ดึง record CM ตาม SendNo มาเติมช่องที่ตรงกัน (ลูกค้า/สี)
         //   และนำ SendNo ไปตั้งต้นในช่อง "เลขที่ใบส่ง ต.ย." (ผู้ใช้พิมพ์เพิ่มได้)
+        // เติมส่วน "ข้อมูลสี" ในฟอร์ม SD จาก record ใบนำส่งเทียบสี (เป็น field แก้ไขได้ เหมือน CM)
+        // ใช้ fillForm เพื่อให้ select2 รีเฟรช + เพิ่ม option ที่ไม่มีในรายการให้อัตโนมัติ
+        function fillSdColorInfo($f, resp) {
+            resp = resp || {};
+            fillForm('#form_sample_delivery', {
+                color:     resp.color     ?? '',
+                ColorChar: resp.ColorChar ?? '',
+                TestType:  resp.TestType  ?? '',
+                pop:       resp.pop       ?? '',
+                Model:     resp.Model     ?? '',
+            });
+        }
+
         let sdRefTimer = null;
         $('#form_sample_delivery').on('input', '[name="SendNo"]', function () {
             const sendNo = $(this).val().trim();
@@ -714,16 +733,21 @@
                     url: '{{$page_url}}/ref/' + encodeURIComponent(sendNo),
                     success: function (resp) {
                         const $f = $('#form_sample_delivery');
-                        // ไม่พบ → ล้างทุกช่องที่ auto-fill มาจากใบอ้างอิง (ลูกค้า/สีผง/เลขที่ใบส่ง ต.ย.)
+                        // ไม่พบ → ล้างช่องที่ auto-fill มาจากใบอ้างอิง (ลูกค้า/ข้อมูลสี)
                         if (!resp || !resp.found) {
-                            $f.find('[name="custno"], [name="custname"], [name="custnameEN"], [name="Testno"]').val('');
+                            $f.find('[name="custno"], [name="custname"], [name="custnameEN"]').val('');
+                            fillSdColorInfo($f, {});
                             return;
                         }
                         $f.find('[name="custno"]').val(resp.custno ?? '');
                         $f.find('[name="custname"]').val(resp.custname ?? '');
                         $f.find('[name="custnameEN"]').val(resp.custnameEN ?? '');
-                        // นำ SendNo ตั้งต้นในช่องเลขที่ใบส่ง ต.ย. (ผู้ใช้พิมพ์ต่อ)
-                        $f.find('[name="Testno"]').val(sendNo);
+                        // เติม "ข้อมูลสี" จากใบนำส่งเทียบสี (ผู้ใช้แก้ไขต่อได้)
+                        fillSdColorInfo($f, resp);
+                        // นำ SendNo ตั้งต้นในช่องเลขที่ใบส่ง ต.ย. เฉพาะเมื่อยังว่าง (กันทับค่าตอนแก้ไข)
+                        if (!$f.find('[name="Testno"]').val()) {
+                            $f.find('[name="Testno"]').val(sendNo);
+                        }
                     }
                 });
             }, 300);
@@ -759,6 +783,8 @@
                     $('#form_sample_delivery [name="_mode"]').val('edit');
                     $('#form_sample_delivery [name="_pk"]').val(row.id);
                     $('#form_sample_delivery [name="SendNo"]').val(row.SendNo ?? '');
+                    // ข้อมูลสี (color/ColorChar/TestType/pop/Model) ถูก fillForm เติมจากแถว SD แล้ว
+                    // — ไม่ trigger ดึงจาก CM ซ้ำ เพื่อไม่ให้ทับค่าที่บันทึกไว้ของใบส่ง ต.ย.
                     $('#sampleDeliveryModal').modal('show');
                 },
                 error: function() {

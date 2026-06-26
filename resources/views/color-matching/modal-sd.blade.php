@@ -80,7 +80,94 @@
                                 </div>
                             </div>
 
-                            {{-- ─── กลุ่ม: รายละเอียดผลิตภัณฑ์ (เฉพาะ รหัสสินค้า/Lot/น้ำหนัก — ที่เหลือย้ายไปฟอร์ม CM) ─── --}}
+                            {{-- ─── กลุ่ม: เอกสารปิดงาน (อยู่ใต้ข้อมูลลูกค้า) ─── --}}
+                            <div class="p-3 rounded mb-4" style="background-color: #fffaf0; border: 1px dashed #ffc107;">
+                                <div class="d-flex align-items-center mb-3 ps-2"
+                                    style="border-left: 3px solid #f0a500;">
+                                    <i class="ti ti-receipt me-2" style="color: #8a6100;"></i>
+                                    <span class="fw-semibold" style="font-size: 0.95rem; color: #8a6100;">
+                                        เอกสารปิดงาน
+                                    </span>
+                                </div>
+
+                                <div class="row g-3 align-items-end">
+                                    <div class="col-md-6">
+                                        <label class="form-label small mb-1 text-danger">
+                                            <i class="ti ti-asterisk-simple"></i>
+                                            เลขที่ใบส่ง ต.ย. ให้ลูกค้า <span class="text-muted fw-normal">(เช่น 53495-CP)</span>
+                                        </label>
+                                        <input type="text" name="Testno" class="form-control" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small mb-1">วันที่เบิก <span class="text-muted fw-normal">(วว/ดด/ปปปป)</span></label>
+                                        <input type="text" name="TestDate" class="form-control flatpickr-date">
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- ─── กลุ่ม: ข้อมูลสี (เหมือนฟอร์ม CM — ดึงจากใบนำส่งเทียบสีตอนป้อน SendNo แต่แก้ไขได้) ─── --}}
+                            <div class="mb-4 pb-3 border-bottom">
+                                <div class="d-flex align-items-center mb-3 ps-2"
+                                    style="border-left: 3px solid #6c5ce7;">
+                                    <i class="ti ti-palette me-2" style="color: #4b3fb8;"></i>
+                                    <span class="fw-semibold" style="font-size: 0.95rem; color: #4b3fb8;">
+                                        ข้อมูลสี
+                                    </span>
+                                    <span class="ms-2 small text-muted">(ดึงจากใบนำส่งเทียบสีอัตโนมัติ แก้ไขได้)</span>
+                                </div>
+
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label small mb-1">เม็ดที่ลูกค้าใช้ <span class="text-muted fw-normal">(ชื่อสี เช่น DB PINK-Y AS50%+ABS50%)</span></label>
+                                        <input type="text" name="color" class="form-control">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small mb-1">ลักษณะสี</label>
+                                        @php $colorCharFixed = ['ทึบ', 'ใส', 'กึ่งทึบ', 'ตาม ตย.']; @endphp
+                                        <select name="ColorChar" class="form-select">
+                                            <option value="">-- เลือก --</option>
+                                            {{-- ตัวเลือกตายตัว (บนสุด) --}}
+                                            @foreach ($colorCharFixed as $opt)
+                                                <option>{{ $opt }}</option>
+                                            @endforeach
+                                            {{-- ค่าที่เคยบันทึกใน DB (ต่อท้าย) — ตัดที่ซ้ำกับตัวตายตัวออก --}}
+                                            @foreach (array_diff($options['ColorChar'], $colorCharFixed) as $opt)
+                                                <option>{{ $opt }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small mb-1">ประเภท</label>
+                                        <select name="TestType" class="form-select">
+                                            <option value="">-- เลือก --</option>
+                                            <option value="1">1 : CP</option>
+                                            <option value="2">2 : สีผง</option>
+                                            <option value="3">3 : สีเม็ด</option>
+                                            <option value="4">4 : Pigment</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small mb-1">คุณสมบัติ</label>
+                                        <select name="pop" class="form-select select2-tags">
+                                            <option value="">-- เลือก --</option>
+                                            @foreach ($options['pop'] as $opt)
+                                                <option>{{ $opt }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small mb-1">นำไปทำชิ้นงาน (Model)</label>
+                                        <select name="Model" class="form-select">
+                                            <option value="">-- เลือก --</option>
+                                            @foreach ($options['Model'] as $opt)
+                                                <option>{{ $opt }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- ─── กลุ่ม: รายละเอียดผลิตภัณฑ์ (ย้ายจากฟอร์ม CM) ─── --}}
                             <div class="mb-4 pb-3 border-bottom">
                                 <div class="d-flex align-items-center mb-3 ps-2"
                                     style="border-left: 3px solid #6c5ce7;">
@@ -90,18 +177,53 @@
                                     </span>
                                 </div>
 
+                                {{-- ความกว้างแต่ละช่องปรับตามเนื้อหา (ไม่ยืดเต็มคอลัมน์) — ใช้ w-100 คั่นเพื่อขึ้นบรรทัดใหม่ --}}
                                 <div class="row g-3">
+                                    {{-- แถว 1: เบอร์ที่อนุมัติ + เลขที่ใบรายงานผล --}}
                                     <div class="col-md-4">
-                                        <label class="form-label small mb-1">รหัสสินค้า <span class="text-muted fw-normal">(เช่น CP1Y583PVC)</span></label>
+                                        <label class="form-label small mb-1">ลูกค้าอนุมัติเบอร์ตั้ง <span class="text-muted fw-normal">(เช่น CP1Y583PVC)</span></label>
                                         <input type="text" name="CodeNo" class="form-control">
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
+                                        <label class="form-label small mb-1">เลขที่ใบรายงานผล <span class="text-muted fw-normal">(เช่น 26/0001/2/4)</span></label>
+                                        <input type="text" name="rptno" class="form-control">
+                                    </div>
+                                    <div class="w-100"></div>
+
+                                    {{-- แถว 2: Lot + น้ำหนัก --}}
+                                    <div class="col-md-3">
                                         <label class="form-label small mb-1">Lot No. <span class="text-muted fw-normal">(เช่น 690112-1-2/01)</span></label>
                                         <input type="text" name="lotno" class="form-control bg-dark text-white">
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
+                                        <label class="form-label small mb-1">Lot ที่ลูกค้าอนุมัติ <span class="text-muted fw-normal">(เช่น 690112-1-2/01)</span></label>
+                                        <input type="text" name="ApprovedLot" class="form-control">
+                                    </div>
+                                    <div class="col-md-2">
                                         <label class="form-label small mb-1">น้ำหนัก (กรัม) <span class="text-muted fw-normal">(เช่น 100)</span></label>
                                         <input type="number" name="Wage" class="form-control">
+                                    </div>
+                                    <div class="w-100"></div>
+
+                                    {{-- แถว 3: สเปกวัสดุ --}}
+                                    <div class="col-md-3">
+                                        <label class="form-label small mb-1">Standard <span class="text-muted fw-normal">(เช่น PT 494 C)</span></label>
+                                        <input type="text" name="STD" class="form-control">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small mb-1">Resin (Match) <span class="text-muted fw-normal">(เช่น PVC, ABS, PE)</span></label>
+                                        <input type="text" name="ResinMatch" class="form-control">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small mb-1">PHR <span class="text-muted fw-normal">(0.0000)</span></label>
+                                        <input type="number" step="0.0001" name="PHR" class="form-control text-end">
+                                    </div>
+                                    <div class="w-100"></div>
+
+                                    {{-- แถว 4: รายละเอียด (กว้างกว่าช่องอื่นแต่ไม่เต็มแถว) --}}
+                                    <div class="col-md-8">
+                                        <label class="form-label small mb-1">รายละเอียด <span class="text-muted fw-normal">(รายละเอียดผลิตภัณฑ์)</span></label>
+                                        <input type="text" name="TestDesc" class="form-control">
                                     </div>
                                 </div>
                             </div>
@@ -139,31 +261,6 @@
                                             หมายเหตุ <span class="text-muted fw-normal">(หมายเหตุเพิ่มเติม)</span>
                                         </label>
                                         <textarea name="remark" class="form-control" rows="2"></textarea>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- ─── กลุ่ม: เอกสารปิดงาน (ล่างสุด) ─── --}}
-                            <div class="p-3 rounded" style="background-color: #fffaf0; border: 1px dashed #ffc107;">
-                                <div class="d-flex align-items-center mb-3 ps-2"
-                                    style="border-left: 3px solid #f0a500;">
-                                    <i class="ti ti-receipt me-2" style="color: #8a6100;"></i>
-                                    <span class="fw-semibold" style="font-size: 0.95rem; color: #8a6100;">
-                                        เอกสารปิดงาน
-                                    </span>
-                                </div>
-
-                                <div class="row g-3 align-items-end">
-                                    <div class="col-md-6">
-                                        <label class="form-label small mb-1 text-danger">
-                                            <i class="ti ti-asterisk-simple"></i>
-                                            เลขที่ใบส่ง ต.ย. ให้ลูกค้า <span class="text-muted fw-normal">(เช่น 53495-CP)</span>
-                                        </label>
-                                        <input type="text" name="Testno" class="form-control" required>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label small mb-1">วันที่เบิก <span class="text-muted fw-normal">(วว/ดด/ปปปป)</span></label>
-                                        <input type="text" name="TestDate" class="form-control flatpickr-date">
                                     </div>
                                 </div>
                             </div>

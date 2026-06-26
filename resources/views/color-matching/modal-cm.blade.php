@@ -125,11 +125,36 @@
                                 </div>
 
                                 <div class="row g-3">
-                                    <div class="col-md-5">
-                                        <label class="form-label small mb-1">สี <span class="text-muted fw-normal">(ชื่อสี เช่น DB PINK-Y AS50%+ABS50%)</span></label>
+                                    <div class="col-md-4">
+                                        <label class="form-label small mb-1">เม็ดที่ลูกค้าใช้ <span class="text-muted fw-normal">(ชื่อสี เช่น DB PINK-Y AS50%+ABS50%)</span></label>
                                         <input type="text" name="color" class="form-control">
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-2">
+                                        <label class="form-label small mb-1">ลักษณะสี</label>
+                                        @php $colorCharFixed = ['ทึบ', 'ใส', 'กึ่งทึบ', 'ตาม ตย.']; @endphp
+                                        <select name="ColorChar" class="form-select">
+                                            <option value="">-- เลือก --</option>
+                                            {{-- ตัวเลือกตายตัว (บนสุด) --}}
+                                            @foreach ($colorCharFixed as $opt)
+                                                <option>{{ $opt }}</option>
+                                            @endforeach
+                                            {{-- ค่าที่เคยบันทึกใน DB (ต่อท้าย) — ตัดที่ซ้ำกับตัวตายตัวออก --}}
+                                            @foreach (array_diff($options['ColorChar'], $colorCharFixed) as $opt)
+                                                <option>{{ $opt }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small mb-1">ประเภท</label>
+                                        <select name="TestType" class="form-select">
+                                            <option value="">-- เลือก --</option>
+                                            <option value="1">1 : CP</option>
+                                            <option value="2">2 : สีผง</option>
+                                            <option value="3">3 : สีเม็ด</option>
+                                            <option value="4">4 : Pigment</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
                                         <label class="form-label small mb-1">คุณสมบัติ</label>
                                         <select name="pop" class="form-select select2-tags">
                                             <option value="">-- เลือก --</option>
@@ -138,7 +163,7 @@
                                             @endforeach
                                         </select>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-2">
                                         <label class="form-label small mb-1">นำไปทำชิ้นงาน (Model)</label>
                                         <select name="Model" class="form-select">
                                             <option value="">-- เลือก --</option>
@@ -180,46 +205,6 @@
                                 </div>
                             </div>
 
-                            {{-- ─── กลุ่ม: รายละเอียดผลิตภัณฑ์ ─── --}}
-                            <div class="mb-4 pb-3 border-bottom">
-                                <div class="d-flex align-items-center mb-3 ps-2"
-                                    style="border-left: 3px solid #54BAB9;">
-                                    <i class="ti ti-flask me-2" style="color: #2a8a89;"></i>
-                                    <span class="fw-semibold" style="font-size: 0.95rem; color: #2a8a89;">
-                                        รายละเอียดผลิตภัณฑ์
-                                    </span>
-                                </div>
-
-                                <div class="row g-3">
-                                    <div class="col-md-7">
-                                        <label class="form-label small mb-1">รายละเอียด <span class="text-muted fw-normal">(รายละเอียดผลิตภัณฑ์)</span></label>
-                                        <input type="text" name="TestDesc" class="form-control">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label small mb-1">ประเภท</label>
-                                        <select name="TestType" class="form-select">
-                                            <option value="">-- เลือก --</option>
-                                            <option value="1">1 : CP</option>
-                                            <option value="2">2 : สีผง</option>
-                                            <option value="3">3 : สีเม็ด</option>
-                                            <option value="4">4 : Pigment</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small mb-1">Standard <span class="text-muted fw-normal">(เช่น PT 494 C)</span></label>
-                                        <input type="text" name="STD" class="form-control">
-                                    </div>
-                                    <div class="col-md-8">
-                                        <label class="form-label small mb-1">Resin (Match) <span class="text-muted fw-normal">(เช่น PVC, ABS, PE)</span></label>
-                                        <input type="text" name="ResinMatch" class="form-control">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label small mb-1">PHR <span class="text-muted fw-normal">(0.0000)</span></label>
-                                        <input type="number" step="0.0001" name="PHR" class="form-control text-end">
-                                    </div>
-                                </div>
-                            </div>
-
                             {{-- ─── กลุ่ม: การติดตามงาน ─── --}}
                             <div class="mb-3">
                                 <div class="d-flex align-items-center mb-3 ps-2"
@@ -231,19 +216,15 @@
                                 </div>
 
                                 <div class="row g-3">
-                                    <div class="col-md-3">
+                                    <div class="col-md-4">
                                         <label class="form-label small mb-1">ผู้รับเอกสาร <span class="text-muted fw-normal">(ชื่อพนักงาน)</span></label>
                                         <input type="text" name="TNname" class="form-control">
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small mb-1">เลขที่ใบรายงานผล <span class="text-muted fw-normal">(เช่น 26/0001/2/4)</span></label>
-                                        <input type="text" name="rptno" class="form-control">
-                                    </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-4">
                                         <label class="form-label small mb-1">รอวัตถุดิบ <span class="text-muted fw-normal">(ระบุวัตถุดิบที่รอ)</span></label>
                                         <input type="text" name="RminWating" class="form-control">
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-4">
                                         <label class="form-label small mb-1">กำหนดเทียบสีเสร็จ <span class="text-muted fw-normal">(วว/ดด/ปปปป)</span></label>
                                         <input type="text" name="TNDate" class="form-control flatpickr-date">
                                     </div>
