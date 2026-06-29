@@ -23,10 +23,9 @@ class SemiPigmentController extends Controller
 
     public function datatable()
     {
-        // หน้านี้แสดงรายการที่ยังไม่อนุมัติ (รออนุมัติ + ไม่อนุมัติ)
+        // กรองตามสถานะที่เลือก (รออนุมัติ / อนุมัติแล้ว / ไม่อนุมัติ) — ค่าว่าง = ทุกสถานะ
         $status = request('status');
         $data = $this->baseQuery()
-            ->where('status', '!=', SemiPigment::STATUS_APPROVED)
             ->when(!empty($status), fn ($q) => $q->where('status', $status));
 
         return DataTables::of($data)
@@ -203,6 +202,35 @@ class SemiPigmentController extends Controller
         return response()->json([
             'status'  => 200,
             'message' => 'เพิ่มรายการสำเร็จ',
+            'data'    => $this->entryPayload($sp),
+        ]);
+    }
+
+    /**
+     * สร้าง Semi แบบกรอกเอง (จากหน้า Planning) — ไม่ผูกกับแผนการผลิตใดๆ
+     * บันทึกเป็นสถานะ "รออนุมัติ" เพื่อเข้าสู่ขั้นตอนอนุมัติตามปกติ
+     */
+    public function standaloneStore(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'itemno' => 'required|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 422, 'message' => $validator->errors()->first()]);
+        }
+
+        $sp = SemiPigment::create(array_merge($this->entryFields($request), [
+            'planning_id'        => null,
+            'planning_header_id' => null,
+            'orderno'            => null,
+            'type'               => 'semi',
+            'status'             => SemiPigment::STATUS_REQUEST,
+        ]));
+
+        return response()->json([
+            'status'  => 200,
+            'message' => 'สร้าง Semi สำเร็จ เข้าสู่รายการรออนุมัติแล้ว',
             'data'    => $this->entryPayload($sp),
         ]);
     }

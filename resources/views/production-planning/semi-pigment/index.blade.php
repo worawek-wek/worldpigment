@@ -39,7 +39,8 @@
                             <div class="col-md-2">
                                 <select id="searchStatus" class="form-select">
                                     <option value="">ทุกสถานะ</option>
-                                    <option value="request">รออนุมัติ</option>
+                                    <option value="request" selected>รออนุมัติ</option>
+                                    <option value="approved">อนุมัติแล้ว</option>
                                     <option value="reject">ไม่อนุมัติ</option>
                                 </select>
                             </div>

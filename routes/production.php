@@ -19,7 +19,6 @@ Route::prefix('production-planning')->group(function () {
     Route::get('/planning', [Production\ProductionPlanController::class, 'index'])->name('production.planning.index');
     Route::get('/planning/datatable', [Production\ProductionPlanController::class, 'datatable'])->name('production.planning.datatable');
     Route::get('/planning/edit', [Production\ProductionPlanController::class, 'edit'])->name('production.planning.edit');
-    Route::post('/planning/store', [Production\ProductionPlanController::class, 'store'])->name('production.planning.store');
     Route::get('/planning/edit-item', [Production\ProductionPlanController::class, 'editItem'])->name('production.planning.edit-item');
     Route::post('/planning/save-item', [Production\ProductionPlanController::class, 'saveItem'])->name('production.planning.save-item');
 
@@ -31,6 +30,8 @@ Route::prefix('production-planning')->group(function () {
 
     // Semi & Pigment — เพิ่ม/แก้ไข/ลบ จาก modal ของหน้า Planning Item (บันทึกลงฐานข้อมูลทันที)
     Route::post('/semi-pigment/entry/store',  [Production\SemiPigmentController::class, 'entryStore'])->name('production.semipigment.entry.store');
+    // สร้าง Semi กรอกเอง (ไม่ผูกแผนการผลิต) จากหน้า Planning → เข้ารายการรออนุมัติ
+    Route::post('/semi-pigment/standalone/store', [Production\SemiPigmentController::class, 'standaloneStore'])->name('production.semipigment.standalone.store');
     Route::post('/semi-pigment/entry/update', [Production\SemiPigmentController::class, 'entryUpdate'])->name('production.semipigment.entry.update');
     Route::post('/semi-pigment/entry/delete', [Production\SemiPigmentController::class, 'entryDestroy'])->name('production.semipigment.entry.delete');
 

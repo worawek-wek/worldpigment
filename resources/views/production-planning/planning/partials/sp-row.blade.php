@@ -21,7 +21,7 @@
 @endphp
 {{-- แถวรออนุมัติ: แสดงผลอ่านอย่างเดียว + เก็บค่าไว้ใน hidden input (แก้ไขผ่าน modal) --}}
 <tr data-id="{{ $row['id'] ?? '' }}">
-    <td class="text-center row-num">{{ $i + 1 }}
+    <td class="text-center"><span class="row-num">{{ $i + 1 }}</span>
         @foreach($hidden as $field => $val)
             <input type="hidden" data-field="{{ $field }}" value="{{ $val }}">
         @endforeach

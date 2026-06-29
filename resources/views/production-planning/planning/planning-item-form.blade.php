@@ -229,7 +229,7 @@
                         @endphp
                         @if($isLocked)
                         <tr class="locked-row table-light">
-                            <td class="text-center row-num">{{ $i + 1 }}</td>
+                            <td class="text-center"><span class="row-num">{{ $i + 1 }}</span></td>
                             <td>{{ $row['company'] ?? '-' }}</td>
                             <td>{{ !empty($row['mdate'])    ? \Carbon\Carbon::parse($row['mdate'])->format('d/m/Y')    : '-' }}</td>
                             <td>{{ !empty($row['custwant']) ? \Carbon\Carbon::parse($row['custwant'])->format('d/m/Y') : '-' }}</td>
@@ -294,7 +294,7 @@
                         @endphp
                         @if($isLocked)
                         <tr class="locked-row table-light">
-                            <td class="text-center row-num">{{ $i + 1 }}</td>
+                            <td class="text-center"><span class="row-num">{{ $i + 1 }}</span></td>
                             <td>{{ $row['company'] ?? '-' }}</td>
                             <td>{{ !empty($row['mdate'])    ? \Carbon\Carbon::parse($row['mdate'])->format('d/m/Y')    : '-' }}</td>
                             <td>{{ !empty($row['custwant']) ? \Carbon\Carbon::parse($row['custwant'])->format('d/m/Y') : '-' }}</td>
@@ -375,72 +375,11 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="sp_entry_target" value="">
-                <div class="row">
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">Company</label>
-                        <select class="form-select" id="sp_company">
-                            <option value="">-- เลือก --</option>
-                            @foreach($companies as $c)
-                                <option value="{{ $c }}">{{ $c }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">Cust No.</label>
-                        <input type="text" class="form-control bg-light" id="sp_custno" readonly>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">วันที่สั่ง</label>
-                        <input type="date" class="form-control" id="sp_mdate">
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">วันที่ต้องการรับ</label>
-                        <input type="date" class="form-control" id="sp_custwant">
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">Item No. <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="sp_itemno" placeholder="Item No.">
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">Semi Code</label>
-                        <input type="text" class="form-control" id="sp_semi_code" placeholder="รหัสกึ่งสำเร็จรูป">
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">แม่สี (Primary Color)</label>
-                        <input type="text" class="form-control" id="sp_primary_color" placeholder="แม่สี">
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">Lot No.</label>
-                        <input type="text" class="form-control" id="sp_lot_no" placeholder="ล็อตที่">
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">เลขที่ใบเบิกออกใบแดง (Red Bill)</label>
-                        <input type="text" class="form-control" id="sp_red_bill_code" placeholder="เลขที่ใบเบิก">
-                    </div>
-                </div>
-                <hr class="my-2">
-                <div class="row">
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">ยอดคงเหลือวันนี้ (Balance)</label>
-                        <input type="number" step="any" class="form-control" id="sp_balance" placeholder="0.00">
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">ยอดใช้ย้อนหลัง 2 เดือน</label>
-                        <input type="number" step="any" class="form-control" id="sp_retrospective" placeholder="0.00">
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">น้ำหนักที่จะใช้ (weight_request)</label>
-                        <input type="number" step="any" class="form-control" id="sp_weight_request" placeholder="0.00">
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">ผลิตเพิ่ม (Increase)</label>
-                        <input type="number" step="any" class="form-control" id="sp_increase_production" placeholder="0.00">
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">น้ำหนักที่จะผลิต (weight_production)</label>
-                        <input type="number" step="any" class="form-control" id="sp_weight_production" placeholder="0.00">
-                    </div>
-                </div>
+                @include('production-planning.semi-pigment.partials.entry-fields', [
+                    'prefix'         => 'sp',
+                    'companies'      => $companies,
+                    'custnoReadonly' => true,
+                ])
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
@@ -507,7 +446,7 @@
         var hiddenInputs = HIDDEN_FIELDS.map(hid).join('');
 
         return '<tr data-id="' + esc(d.id || '') + '">' +
-            '<td class="text-center row-num">1' + hiddenInputs + '</td>' +
+            '<td class="text-center"><span class="row-num">1</span>' + hiddenInputs + '</td>' +
             cell('company',  d.company  || '') +
             cell('mdate',    fmtDate(d.mdate)) +
             cell('custwant', fmtDate(d.custwant)) +
@@ -557,6 +496,43 @@
     // แถวที่กำลังแก้ไขผ่าน modal (null = โหมดเพิ่มใหม่)
     var $editingRow = null;
 
+    // ── น้ำหนักที่จะผลิต = น้ำหนักที่จะใช้ + ผลิตเพิ่ม ──
+    // คำนวณอัตโนมัติเมื่อแก้ "น้ำหนักที่จะใช้/ผลิตเพิ่ม"
+    // แต่ถ้าผู้ใช้พิมพ์แก้ช่อง "น้ำหนักที่จะผลิต" เอง จะล็อกค่านั้นไว้ (ไม่ถูกคำนวณทับ)
+    // จนกว่าจะแก้ "น้ำหนักที่จะใช้/ผลิตเพิ่ม" อีกครั้ง จึงกลับมาคำนวณทับ
+    var spProdManual = false;
+
+    function spNum(v) {
+        v = parseFloat(v);
+        return isNaN(v) ? 0 : v;
+    }
+
+    function spRound(v) {
+        return Math.round(v * 100) / 100;
+    }
+
+    function recalcWeightProduction() {
+        if (spProdManual) return; // ผู้ใช้แก้เอง → คงค่าไว้ ไม่เขียนทับ
+        var req = ($('#sp_weight_request').val() || '').trim();
+        var inc = ($('#sp_increase_production').val() || '').trim();
+        if (req === '' && inc === '') {
+            $('#sp_weight_production').val('');
+            return;
+        }
+        $('#sp_weight_production').val(spRound(spNum(req) + spNum(inc)));
+    }
+
+    // แก้น้ำหนักที่จะใช้ / ผลิตเพิ่ม → กลับมาคำนวณทับอัตโนมัติ
+    $('#sp_weight_request, #sp_increase_production').on('input', function () {
+        spProdManual = false;
+        recalcWeightProduction();
+    });
+
+    // ผู้ใช้พิมพ์แก้น้ำหนักที่จะผลิตเอง → ล็อกค่าไว้ ใช้ค่านี้ตอนบันทึก
+    $('#sp_weight_production').on('input', function () {
+        spProdManual = true;
+    });
+
     function fillModal(d) {
         $('#sp_company').val(d.company || '');
         $('#sp_custno').val(d.custno || DEFAULT_CUSTNO);
@@ -571,8 +547,18 @@
         $('#sp_retrospective').val(d.retrospective || '');
         $('#sp_weight_request').val(d.weight_request || '');
         $('#sp_increase_production').val(d.increase_production || '');
-        $('#sp_weight_production').val(d.weight_production || '');
         $('#sp_itemno').removeClass('is-invalid');
+
+        // เปิด modal มา: ถ้ามีค่าน้ำหนักที่จะผลิตเดิม (เคยแก้/บันทึกไว้) ให้คงค่านั้นไว้
+        // ถ้าไม่มีค่าเดิม ให้คำนวณจากน้ำหนักที่จะใช้ + ผลิตเพิ่ม
+        var storedProd = (d.weight_production != null ? String(d.weight_production) : '').trim();
+        if (storedProd !== '') {
+            spProdManual = true;
+            $('#sp_weight_production').val(storedProd);
+        } else {
+            spProdManual = false;
+            recalcWeightProduction();
+        }
     }
 
     function openAddModal(target, label) {
@@ -628,10 +614,9 @@
             return;
         }
 
+        // บันทึกค่าที่ user กรอกในช่องตรงๆ ไม่คำนวณใหม่ก่อนบันทึก
         var weightRequest    = $('#sp_weight_request').val() || '';
         var weightProduction = $('#sp_weight_production').val() || '';
-        // ถ้ายังไม่ระบุน้ำหนักที่จะผลิต ให้ใช้น้ำหนักที่จะใช้เป็นค่าเริ่มต้น
-        if (weightProduction === '') weightProduction = weightRequest;
 
         var payload = {
             _token:              CSRF,
