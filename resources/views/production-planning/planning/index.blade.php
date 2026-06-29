@@ -72,7 +72,7 @@
                                         <th class="col-2">Planning Code</th>
                                         <th class="col-1">Orderno</th>
                                         <th class="col-1">Company</th>
-                                        <th class="col-1">Mdate</th>
+                                        <th class="col-1">Inplan</th>
                                         <th class="col-1">Custwant</th>
                                         <th class="col-1">Itemno</th>
                                         {{-- <th class="col-1">Quantity</th> --}}
@@ -242,7 +242,7 @@
                 { 'className': "text-left", data: 'planning_code', name: 'planning_code', orderable: false },
                 { 'className': "text-center", data: 'orderno', name: 'orderno', orderable: false },
                 { 'className': "text-center", data: 'company', name: 'company', orderable: false },
-                { 'className': "text-center", data: 'mdate', name: 'mdate', orderable: false },
+                { 'className': "text-center", data: 'inplan', name: 'inplan', orderable: false },
                 { 'className': "text-center", data: 'custwant', name: 'custwant', orderable: false },
                 { 'className': "text-left", data: 'itemno', name: 'itemno', orderable: false },
                 // { 'className': "text-left", data: 'quantity', name: 'quantity', orderable: false },

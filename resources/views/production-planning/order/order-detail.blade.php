@@ -6,7 +6,7 @@
         </div>
         <div class="col-md-6" style="text-align: right">
             <label class="form-label">วันที่</label>
-            {{ $order->Mdate }}
+            {{ $order->Mdate ? \Carbon\Carbon::parse($order->Mdate)->format('d/m/Y') : '' }}
         </div>
     </div>
     <div class="row mt-3">
@@ -43,7 +43,7 @@
                         <td>{{ $suborders->Stock }}</td>
                         <td>{{ $suborders->Production }}</td>
                         <td>{{ $suborders->prodname }}</td>
-                        <td>{{ $suborders?->custwant ? date('Y-m-d', strtotime($suborders->custwant)) : '' }}</td>
+                        <td>{{ $suborders?->custwant ? date('d/m/Y', strtotime($suborders->custwant)) : '' }}</td>
                     </tr>
                 @endforeach
                 </tbody>

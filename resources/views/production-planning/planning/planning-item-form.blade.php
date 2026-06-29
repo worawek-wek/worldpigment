@@ -231,8 +231,8 @@
                         <tr class="locked-row table-light">
                             <td class="text-center row-num">{{ $i + 1 }}</td>
                             <td>{{ $row['company'] ?? '-' }}</td>
-                            <td>{{ substr($row['mdate']    ?? '', 0, 10) ?: '-' }}</td>
-                            <td>{{ substr($row['custwant'] ?? '', 0, 10) ?: '-' }}</td>
+                            <td>{{ !empty($row['mdate'])    ? \Carbon\Carbon::parse($row['mdate'])->format('d/m/Y')    : '-' }}</td>
+                            <td>{{ !empty($row['custwant']) ? \Carbon\Carbon::parse($row['custwant'])->format('d/m/Y') : '-' }}</td>
                             <td>{{ $row['custno']   ?? '-' }}</td>
                             <td>{{ $row['itemno']   ?? '-' }}</td>
                             <td>{{ $row['weight_request'] ?? '-' }}</td>
@@ -296,8 +296,8 @@
                         <tr class="locked-row table-light">
                             <td class="text-center row-num">{{ $i + 1 }}</td>
                             <td>{{ $row['company'] ?? '-' }}</td>
-                            <td>{{ substr($row['mdate']    ?? '', 0, 10) ?: '-' }}</td>
-                            <td>{{ substr($row['custwant'] ?? '', 0, 10) ?: '-' }}</td>
+                            <td>{{ !empty($row['mdate'])    ? \Carbon\Carbon::parse($row['mdate'])->format('d/m/Y')    : '-' }}</td>
+                            <td>{{ !empty($row['custwant']) ? \Carbon\Carbon::parse($row['custwant'])->format('d/m/Y') : '-' }}</td>
                             <td>{{ $row['custno']   ?? '-' }}</td>
                             <td>{{ $row['itemno']   ?? '-' }}</td>
                             <td>{{ $row['weight_request'] ?? '-' }}</td>
@@ -341,14 +341,14 @@
             <div class="modal-body">
                 <div class="mb-2 small text-muted">
                     วันที่ส่งปัจจุบัน:
-                    <strong>{{ $planning_item?->senddate ? substr($planning_item->senddate, 0, 10) : '-' }}</strong>
+                    <strong>{{ $planning_item?->senddate ? \Carbon\Carbon::parse($planning_item->senddate)->format('d/m/Y') : '-' }}</strong>
                 </div>
                 @if(count($senddate_logs))
                     <ul class="list-group list-group-flush">
                         @foreach($senddate_logs as $i => $log_date)
                             <li class="list-group-item d-flex align-items-center px-0">
                                 <span class="badge bg-label-secondary me-2">{{ $i + 1 }}</span>
-                                <span>{{ $log_date }}</span>
+                                <span>{{ $log_date !== '' ? \Carbon\Carbon::parse($log_date)->format('d/m/Y') : '-' }}</span>
                             </li>
                         @endforeach
                     </ul>
@@ -487,6 +487,14 @@
     var HIDDEN_FIELDS = ['semi_code', 'primary_color', 'balance', 'lot_no',
         'retrospective', 'increase_production', 'weight_production', 'red_bill_code'];
 
+    // แปลงวันที่ YYYY-MM-DD → DD/MM/YYYY สำหรับแสดงผล (ค่าจริงยังเก็บใน hidden input เป็น YYYY-MM-DD)
+    function fmtDate(s) {
+        s = (s || '').substr(0, 10);
+        if (!s) return '';
+        var p = s.split('-');
+        return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : s;
+    }
+
     // แถวแสดงผล (อ่านอย่างเดียว) + เก็บค่าจริงไว้ใน hidden input เพื่อให้ readRow อ่านได้
     function displayRow(d) {
         function cell(field, text) {
@@ -501,8 +509,8 @@
         return '<tr data-id="' + esc(d.id || '') + '">' +
             '<td class="text-center row-num">1' + hiddenInputs + '</td>' +
             cell('company',  d.company  || '') +
-            cell('mdate',    (d.mdate    || '').substr(0, 10)) +
-            cell('custwant', (d.custwant || '').substr(0, 10)) +
+            cell('mdate',    fmtDate(d.mdate)) +
+            cell('custwant', fmtDate(d.custwant)) +
             cell('custno',   d.custno   || '') +
             cell('itemno',   d.itemno   || '') +
             cell('weight_request', d.weight_request || '') +

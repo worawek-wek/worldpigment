@@ -24,11 +24,11 @@
         </div>
         <div class="col-md-3">
             <label class="form-label text-muted small d-block">วันที่สั่ง</label>
-            <span class="fw-semibold">{{ $sp->order_date ? date('Y-m-d', strtotime($sp->order_date)) : '-' }}</span>
+            <span class="fw-semibold">{{ $sp->order_date ? date('d/m/Y', strtotime($sp->order_date)) : '-' }}</span>
         </div>
         <div class="col-md-3">
             <label class="form-label text-muted small d-block">วันที่ต้องการรับ</label>
-            <span class="fw-semibold">{{ $sp->want_date ? date('Y-m-d', strtotime($sp->want_date)) : '-' }}</span>
+            <span class="fw-semibold">{{ $sp->want_date ? date('d/m/Y', strtotime($sp->want_date)) : '-' }}</span>
         </div>
     </div>
 
@@ -95,7 +95,7 @@
                     <tr>
                         <td class="text-center">{{ $sp->statusLabel() }}</td>
                         <td class="text-center">{{ $sp->approver?->name ?? '-' }}</td>
-                        <td class="text-center">{{ $sp->approve_date ? date('Y-m-d H:i', strtotime($sp->approve_date)) : '-' }}</td>
+                        <td class="text-center">{{ $sp->approve_date ? date('d/m/Y H:i', strtotime($sp->approve_date)) : '-' }}</td>
                     </tr>
                 </tbody>
             </table>

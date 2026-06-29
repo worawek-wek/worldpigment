@@ -206,13 +206,18 @@
         });
     });
 
-    // ---- อนุมัติ ----
+    // ---- อนุมัติ (บันทึกข้อมูลฟอร์ม + เปลี่ยนสถานะเป็นอนุมัติ) ----
     $(document).on('click', '.btn_approve', function () {
-        var id = $(this).data('id');
+        var itemno = ($('#sp_edit_form [name="itemno"]').val() || '').trim();
+        if (!itemno) {
+            $('#sp_edit_form [name="itemno"]').addClass('is-invalid').trigger('focus');
+            return;
+        }
+        $('#sp_edit_form [name="itemno"]').removeClass('is-invalid');
 
         Swal.fire({
             title: 'ยืนยันการอนุมัติ?',
-            text: 'รายการนี้จะถูกนำไปสร้างแผนการผลิต',
+            text: 'ระบบจะบันทึกข้อมูลและนำรายการนี้ไปสร้างแผนการผลิต',
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'อนุมัติ',
@@ -221,11 +226,13 @@
         }).then(function (result) {
             if (!result.isConfirmed) return;
 
+            var formData = $('#sp_edit_form').serialize() + '&_token={{ csrf_token() }}';
+
             $.ajax({
                 type: 'POST',
                 url: '{{ route("production.semipigment.approve") }}',
                 dataType: 'json',
-                data: { id: id, _token: '{{ csrf_token() }}' },
+                data: formData,
                 success: function (response) {
                     if (response.status == 200) {
                         closeEditModal();

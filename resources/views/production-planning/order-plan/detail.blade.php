@@ -55,15 +55,15 @@
                     </div>
                     <div class="col-md-3 mb-2">
                         <div class="text-muted small">วันที่ (Mdate)</div>
-                        <div class="fw-semibold">{{ $planning_header->mdate ?? '-' }}</div>
+                        <div class="fw-semibold">{{ $planning_header->mdate ? \Carbon\Carbon::parse($planning_header->mdate)->format('d/m/Y') : '-' }}</div>
                     </div>
                     <div class="col-md-3 mb-2">
                         <div class="text-muted small">วันที่ลูกค้าต้องการ</div>
-                        <div class="fw-semibold">{{ $planning_header->custwant ?? '-' }}</div>
+                        <div class="fw-semibold">{{ $planning_header->custwant ? \Carbon\Carbon::parse($planning_header->custwant)->format('d/m/Y') : '-' }}</div>
                     </div>
                     <div class="col-md-3 mb-2">
                         <div class="text-muted small">วันที่ส่ง</div>
-                        <div class="fw-semibold">{{ $planning_header->senddate ?? '-' }}</div>
+                        <div class="fw-semibold">{{ $planning_header->senddate ? \Carbon\Carbon::parse($planning_header->senddate)->format('d/m/Y') : '-' }}</div>
                     </div>
                     @if($planning_header->remark)
                     <div class="col-md-12 mb-2">
@@ -85,13 +85,14 @@
                 <thead class="table-light">
                     <tr>
                         <th class="text-center" style="width:40px">#</th>
-                        <th>Item No.</th>
-                        <th class="text-center">Quantity</th>
-                        <th class="text-center">Lot</th>
-                        <th class="text-center">Weight</th>
-                        <th class="text-center">Machine No.</th>
-                        <th class="text-center">Custwant</th>
-                        <th class="text-center">สถานะ</th>
+                        <th class="text-left col-2">Item No.</th>
+                        {{-- <th class="text-center">Quantity</th> --}}
+                        <th class="text-center col-1">Lot</th>
+                        <th class="text-center col-1">Weight</th>
+                        <th class="text-center col-2"">Machine No.</th>
+                        <th class="text-center col-2">Custwant</th>
+                        <th class="text-center col-1">สถานะ</th>
+                        <th class="text-center col-3" >หมายเหตุ</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -99,11 +100,11 @@
                     <tr>
                         <td class="text-center">{{ $loop->iteration }}</td>
                         <td>{{ $item->itemno ?? '-' }}</td>
-                        <td class="text-center">{{ $item->quantity ?? '-' }}</td>
+                        {{-- <td class="text-center">{{ $item->quantity ?? '-' }}</td> --}}
                         <td class="text-center">{{ $item->lot ?? '-' }}</td>
                         <td class="text-center">{{ $item->weight ? number_format($item->weight, 2) : '-' }}</td>
                         <td class="text-center">{{ $item->machine_no ?? '-' }}</td>
-                        <td class="text-center">{{ $item->custwant ?? '-' }}</td>
+                        <td class="text-center">{{ $item->custwant ? \Carbon\Carbon::parse($item->custwant)->format('d/m/Y') : '-' }}</td>
                         <td class="text-center">
                             @if($item->planning_status)
                                 <span class="badge bg-label-info">{{ $item->planning_status }}</span>
@@ -111,6 +112,7 @@
                                 <span class="badge bg-label-secondary">-</span>
                             @endif
                         </td>
+                        <td class="text-center">{{ $item->remark ?? '-' }}</td>
                     </tr>
 
                     {{-- รายละเอียดที่เกี่ยวข้อง: Semi / Pigment sub-plans ที่ระบบสร้างภายใน --}}

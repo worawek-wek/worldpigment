@@ -27,6 +27,7 @@ class OrderController extends Controller
             ->addColumn('rownum', function($row) {
                 return $row->rownum;
             })
+            ->editColumn('Mdate', fn ($row) => $row->Mdate ? \Carbon\Carbon::parse($row->Mdate)->format('d/m/Y') : '-')
             ->addColumn('plan_badge', function($row) {
                 if ($row->has_plan) {
                     return '<span class="badge bg-label-success">สร้างแล้ว</span>';

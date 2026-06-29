@@ -39,7 +39,7 @@
                     </div>
                     <div class="col-md-3 mb-2">
                         <div class="text-muted small">วันที่</div>
-                        <div class="fw-semibold">{{ $planning_header->mdate ?? '-' }}</div>
+                        <div class="fw-semibold">{{ $planning_header->mdate ? \Carbon\Carbon::parse($planning_header->mdate)->format('d/m/Y') : '-' }}</div>
                     </div>
                     <div class="col-md-3 mb-2">
                         <div class="text-muted small">รหัสลูกค้า</div>
@@ -55,11 +55,11 @@
                     </div>
                     <div class="col-md-3 mb-2">
                         <div class="text-muted small">วันที่ลูกค้าต้องการ</div>
-                        <div class="fw-semibold">{{ $planning_header->custwant ?? '-' }}</div>
+                        <div class="fw-semibold">{{ $planning_header->custwant ? \Carbon\Carbon::parse($planning_header->custwant)->format('d/m/Y') : '-' }}</div>
                     </div>
                     <div class="col-md-3 mb-2">
                         <div class="text-muted small">วันที่ส่ง</div>
-                        <div class="fw-semibold">{{ $planning_header->senddate ?? '-' }}</div>
+                        <div class="fw-semibold">{{ $planning_header->senddate ? \Carbon\Carbon::parse($planning_header->senddate)->format('d/m/Y') : '-' }}</div>
                     </div>
                     <div class="col-md-3 mb-2">
                         <div class="text-muted small">Plan Type</div>
@@ -111,8 +111,8 @@
                         {{-- <td class="text-center">{{ $item->quantity ?? '-' }}</td> --}}
                         {{-- <td class="text-center">{{ $item->lot ?? '-' }}</td> --}}
                         <td class="text-center">{{ number_format($item->weight,2) ?? '-' }}</td>
-                        <td class="text-center">{{ $item->inplan ?? '-' }}</td>
-                        <td class="text-center">{{ $item->senddate ?? '-' }}</td>
+                        <td class="text-center">{{ $item->inplan ? \Carbon\Carbon::parse($item->inplan)->format('d/m/Y') : '-' }}</td>
+                        <td class="text-center">{{ $item->senddate ? \Carbon\Carbon::parse($item->senddate)->format('d/m/Y') : '-' }}</td>
                         <td class="text-center">{{ $item->machine_no ?? '-' }}</td>
                         <td class="text-center">
                             @if($item->planning_status)

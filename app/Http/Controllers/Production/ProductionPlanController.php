@@ -52,6 +52,8 @@ class ProductionPlanController extends Controller
             ->addColumn('rownum', function($row) {
                 return $row->rownum;
             })
+            ->editColumn('inplan', fn ($row) => $row->inplan ? \Carbon\Carbon::parse($row->inplan)->format('d/m/Y') : '-')
+            ->editColumn('custwant', fn ($row) => $row->custwant ? \Carbon\Carbon::parse($row->custwant)->format('d/m/Y') : '-')
             ->addColumn('btnedit', function($row) {
                 $btn_view = '<button class="btn btn-sm btn-icon btn-info me-2 btn_view" data-planning_id="'.$row->id.'" title ="ลบ">
                     <i class="ti ti-eye text-white ti-sm"></i>

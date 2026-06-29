@@ -33,6 +33,8 @@ class SemiPigmentController extends Controller
             ->addColumn('rownum', fn ($row) => $row->rownum)
             ->addColumn('type_badge', fn ($row) => $this->typeBadge($row))
             ->addColumn('status_badge', fn ($row) => $this->statusBadge($row))
+            ->editColumn('order_date', fn ($row) => $row->order_date ? \Carbon\Carbon::parse($row->order_date)->format('d/m/Y') : '-')
+            ->editColumn('want_date', fn ($row) => $row->want_date ? \Carbon\Carbon::parse($row->want_date)->format('d/m/Y') : '-')
             ->addColumn('action', function ($row) {
                 return '<button class="btn btn-sm btn-icon btn-warning btn_edit" data-id="'.$row->id.'" title="แก้ไข / รายละเอียด">
                             <i class="ti ti-pencil ti-sm"></i>
@@ -80,6 +82,8 @@ class SemiPigmentController extends Controller
         return DataTables::of($data)
             ->addColumn('rownum', fn ($row) => $row->rownum)
             ->addColumn('type_badge', fn ($row) => $this->typeBadge($row))
+            ->editColumn('order_date', fn ($row) => $row->order_date ? \Carbon\Carbon::parse($row->order_date)->format('d/m/Y') : '-')
+            ->editColumn('want_date', fn ($row) => $row->want_date ? \Carbon\Carbon::parse($row->want_date)->format('d/m/Y') : '-')
             ->addColumn('approver_name', fn ($row) => $row->approver?->name ?? '-')
             ->addColumn('plan_badge', function ($row) {
                 if ($row->result_planning_id) {
@@ -323,11 +327,20 @@ class SemiPigmentController extends Controller
             return response()->json(['status' => 500, 'message' => 'รายการนี้ดำเนินการไปแล้ว']);
         }
 
-        $sp->update([
+        $validator = Validator::make($request->all(), [
+            'itemno' => 'required|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 422, 'message' => $validator->errors()->first()]);
+        }
+
+        // บันทึกข้อมูลฟอร์ม + เปลี่ยนสถานะเป็นอนุมัติในคราวเดียว
+        $sp->update(array_merge($this->entryFields($request), [
             'status'        => SemiPigment::STATUS_APPROVED,
             'approver_code' => Auth::id(),
             'approve_date'  => now(),
-        ]);
+        ]));
 
         return response()->json([
             'status'  => 200,

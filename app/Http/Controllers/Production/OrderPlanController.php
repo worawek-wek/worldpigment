@@ -27,6 +27,8 @@ class OrderPlanController extends Controller
             ->addColumn('item_count', function ($row) {
                 return $row->plannings_count;
             })
+            ->editColumn('mdate', fn ($row) => $row->mdate ? \Carbon\Carbon::parse($row->mdate)->format('d/m/Y') : '-')
+            ->editColumn('custwant', fn ($row) => $row->custwant ? \Carbon\Carbon::parse($row->custwant)->format('d/m/Y') : '-')
             ->addColumn('btnedit', function ($row) {
                 return '<button class="btn btn-sm btn-icon btn-label-primary btn_view" data-planning_header_id="'.$row->id.'" title="ดูรายละเอียด">
                     <i class="ti ti-eye ti-sm"></i>
