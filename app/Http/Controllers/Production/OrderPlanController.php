@@ -21,9 +21,6 @@ class OrderPlanController extends Controller
 
         return DataTables::of($data)
             ->addIndexColumn()
-            ->addColumn('rownum', function ($row) {
-                return $row->rownum;
-            })
             ->addColumn('item_count', function ($row) {
                 return $row->plannings_count;
             })
@@ -43,14 +40,40 @@ class OrderPlanController extends Controller
                     <i class="ti ti-eye ti-sm"></i>
                 </button>';
             })
+            // mapping การเรียงลำดับสำหรับคอลัมน์ที่มาจาก subquery/aggregate
+            ->orderColumn('inplan', $this->maxInplanSql() . ' $1')
+            ->orderColumn('custname', $this->custnameSql() . ' $1')
+            ->orderColumn('item_count', $this->itemCountSql() . ' $1')
             ->rawColumns(['btnedit'])
             ->make(true);
     }
 
+    // ── subquery ที่ใช้ทั้งใน select / filter / order ──
+    private function maxInplanSql(): string
+    {
+        return '(SELECT MAX(p.inplan) FROM tb_planning p WHERE p.planning_header_id = tb_planning_header.id)';
+    }
+
+    private function custnameSql(): string
+    {
+        return '(SELECT m.Custname FROM morder m WHERE m.Orderno = tb_planning_header.orderno LIMIT 1)';
+    }
+
+    private function itemCountSql(): string
+    {
+        return '(SELECT COUNT(*) FROM tb_planning p WHERE p.planning_header_id = tb_planning_header.id)';
+    }
+
     public function dataQuery()
     {
-        $search  = request('search');
-        $company = request('company');
+        $search         = request('search');
+        $company        = request('company');
+        $inplanStart    = request('inplan_start');
+        $inplanEnd      = request('inplan_end');
+        $custwantStart  = request('custwant_start');
+        $custwantEnd    = request('custwant_end');
+
+        $maxInplan = $this->maxInplanSql();
 
         // แผนการผลิตหลัก (Order) = header ที่ parent_planning_id ว่าง
         // ไม่ดึง header ที่ระบบสร้างภายใน (semi/pigment sub-headers ที่มี parent_planning_id)
@@ -59,24 +82,33 @@ class OrderPlanController extends Controller
             // หมายเหตุ: ต้อง select() ก่อน withCount/withMax ไม่งั้น select จะลบคอลัมน์ subquery ที่ withCount/withMax เพิ่มไว้
             ->select([
                 'tb_planning_header.*',
-                DB::raw('ROW_NUMBER() OVER (ORDER BY tb_planning_header.id DESC) AS rownum'),
                 // ชื่อลูกค้า ดึงจากตาราง Order (morder) ตาม orderno
-                DB::raw('(SELECT m.Custname FROM morder m WHERE m.Orderno = tb_planning_header.orderno LIMIT 1) AS custname'),
+                DB::raw($this->custnameSql() . ' AS custname'),
             ])
             ->withCount('plannings')
             ->withMax('plannings', 'inplan')
             ->with('plannings.subHeadersRecursive')
+            // ค้นหา: รหัส Order / รหัสลูกค้า / ชื่อลูกค้า (ชื่อลูกค้าอยู่ตาราง morder)
             ->when(!empty($search), function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
-                    $query->where('tb_planning_header.planning_code', 'LIKE', '%'.$search.'%')
-                        ->orWhere('tb_planning_header.orderno', 'LIKE', '%'.$search.'%')
-                        ->orWhere('tb_planning_header.custno', 'LIKE', '%'.$search.'%');
+                    $query->where('tb_planning_header.orderno', 'LIKE', '%'.$search.'%')
+                        ->orWhere('tb_planning_header.custno', 'LIKE', '%'.$search.'%')
+                        ->orWhereExists(function ($sub) use ($search) {
+                            $sub->select(DB::raw(1))->from('morder')
+                                ->whereColumn('morder.Orderno', 'tb_planning_header.orderno')
+                                ->where('morder.Custname', 'LIKE', '%'.$search.'%');
+                        });
                 });
             })
             ->when(!empty($company), function ($query) use ($company) {
                 $query->where('tb_planning_header.company', $company);
             })
-            ->orderby('tb_planning_header.id', 'desc');
+            // ค้นหาช่วงวันที่ Inplan (เทียบกับ inplan ล่าสุด/มากสุดของแผน)
+            ->when(!empty($inplanStart), fn ($q) => $q->whereRaw("$maxInplan >= ?", [$inplanStart]))
+            ->when(!empty($inplanEnd),   fn ($q) => $q->whereRaw("$maxInplan <= ?", [$inplanEnd]))
+            // ค้นหาช่วงวันที่ Custwant
+            ->when(!empty($custwantStart), fn ($q) => $q->whereDate('tb_planning_header.custwant', '>=', $custwantStart))
+            ->when(!empty($custwantEnd),   fn ($q) => $q->whereDate('tb_planning_header.custwant', '<=', $custwantEnd));
 
         return $data;
     }

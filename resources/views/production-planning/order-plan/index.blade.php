@@ -27,12 +27,14 @@
                 <div class="card">
 
                     <div class="card-header">
-                        <div class="row g-3 align-items-center">
+                        <div class="row g-3">
                             <div class="col-md-3">
+                                <label class="form-label small mb-1">ค้นหา</label>
                                 <input id="searchInput" type="text" class="form-control"
-                                placeholder="ค้นหา Planning Code, Orderno, รหัสลูกค้า">
+                                placeholder="รหัส Order, รหัสลูกค้า, ชื่อลูกค้า">
                             </div>
                             <div class="col-md-2">
+                                <label class="form-label small mb-1">แผนก</label>
                                 <select id="searchCompany" class="form-select">
                                     <option value="">ทุกแผนก</option>
                                     <option value="CP">CP</option>
@@ -40,6 +42,25 @@
                                     <option value="MB">MB</option>
                                     <option value="SPP">SPP</option>
                                 </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small mb-1">Inplan (วันเริ่ม – สิ้นสุด)</label>
+                                <div class="d-flex gap-1">
+                                    <input id="inplanStart" type="date" class="form-control" title="Inplan เริ่ม">
+                                    <input id="inplanEnd" type="date" class="form-control" title="Inplan สิ้นสุด">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small mb-1">Custwant (วันเริ่ม – สิ้นสุด)</label>
+                                <div class="d-flex gap-1">
+                                    <input id="custwantStart" type="date" class="form-control" title="Custwant เริ่ม">
+                                    <input id="custwantEnd" type="date" class="form-control" title="Custwant สิ้นสุด">
+                                </div>
+                            </div>
+                            <div class="col-md-1 d-flex align-items-end">
+                                <button id="btnClearFilter" type="button" class="btn btn-label-secondary w-100" title="ล้างตัวกรอง">
+                                    <i class="ti ti-eraser"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -88,6 +109,7 @@
             processing: true,
             serverSide: true,
             searching: false,
+            ordering: true,
             lengthChange: false,
             responsive: true,
             ajax: {
@@ -95,25 +117,29 @@
                 data: function(d) {
                     d.search = $('#searchInput').val();
                     d.company = $('#searchCompany').val();
+                    d.inplan_start = $('#inplanStart').val();
+                    d.inplan_end = $('#inplanEnd').val();
+                    d.custwant_start = $('#custwantStart').val();
+                    d.custwant_end = $('#custwantEnd').val();
                 },
                 error: function(xhr, error, thrown) {
                     console.error('AJAX Error:', error, thrown);
                 }
             },
             columns: [
-                { 'className': "text-center", data: 'rownum', name: 'rownum', orderable: false },
-                { 'className': "text-center", data: 'orderno', name: 'orderno', orderable: false },
-                { 'className': "text-center", data: 'company', name: 'company', orderable: false },
-                { 'className': "text-center", data: 'inplan', name: 'inplan', orderable: false, searchable: false },
-                { 'className': "text-center", data: 'custwant', name: 'custwant', orderable: false },
-                { 'className': "text-left", data: 'custno', name: 'custno', orderable: false },
-                { 'className': "text-left", data: 'custname', name: 'custname', orderable: false, searchable: false },
+                { 'className': "text-center", data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+                { 'className': "text-center", data: 'orderno', name: 'orderno' },
+                { 'className': "text-center", data: 'company', name: 'company' },
+                { 'className': "text-center", data: 'inplan', name: 'inplan', searchable: false },
+                { 'className': "text-center", data: 'custwant', name: 'custwant' },
+                { 'className': "text-left", data: 'custno', name: 'custno' },
+                { 'className': "text-left", data: 'custname', name: 'custname', searchable: false },
                 { 'className': "text-left", data: 'status_list', name: 'status_list', orderable: false, searchable: false },
-                { 'className': "text-center", data: 'item_count', name: 'item_count', orderable: false, searchable: false },
+                { 'className': "text-center", data: 'item_count', name: 'item_count', searchable: false },
                 { 'className': "text-center", data: 'btnedit', name: 'btnedit', orderable: false, searchable: false },
             ],
             order: [
-                [0, 'asc']
+                [3, 'desc']  // ค่าเริ่มต้น: เรียงตาม Inplan ล่าสุด → เก่าสุด
             ],
             initComplete: function(settings, json) {
                 console.log('DataTable loaded');
@@ -128,6 +154,19 @@
 
     $(document).on('change', '#searchCompany', function(e){
         e.preventDefault();
+        oTable.draw();
+    });
+
+    // ค้นหาช่วงวันที่ Inplan / Custwant (ปฏิทินเลือกวันเริ่ม–สิ้นสุด)
+    $(document).on('change', '#inplanStart, #inplanEnd, #custwantStart, #custwantEnd', function(){
+        oTable.draw();
+    });
+
+    // ล้างตัวกรองทั้งหมด
+    $(document).on('click', '#btnClearFilter', function(){
+        $('#searchInput').val('');
+        $('#searchCompany').val('');
+        $('#inplanStart, #inplanEnd, #custwantStart, #custwantEnd').val('');
         oTable.draw();
     });
 
