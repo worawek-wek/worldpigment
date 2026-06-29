@@ -50,12 +50,13 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th class="col-1">#</th>
-                                        <th class="col-2">Planning Code</th>
                                         <th class="col-1">Orderno</th>
                                         <th class="col-1">Company</th>
-                                        <th class="col-1">Mdate</th>
+                                        <th class="col-1">Inplan</th>
                                         <th class="col-1">Custwant</th>
                                         <th class="col-1">Custno</th>
+                                        <th class="col-2">ชื่อลูกค้า</th>
+                                        <th class="col-2">สถานะ</th>
                                         <th class="col-1">รายการ</th>
                                         <th class="col-1">Manage</th>
                                     </tr>
@@ -101,12 +102,13 @@
             },
             columns: [
                 { 'className': "text-center", data: 'rownum', name: 'rownum', orderable: false },
-                { 'className': "text-left", data: 'planning_code', name: 'planning_code', orderable: false },
                 { 'className': "text-center", data: 'orderno', name: 'orderno', orderable: false },
                 { 'className': "text-center", data: 'company', name: 'company', orderable: false },
-                { 'className': "text-center", data: 'mdate', name: 'mdate', orderable: false },
+                { 'className': "text-center", data: 'inplan', name: 'inplan', orderable: false, searchable: false },
                 { 'className': "text-center", data: 'custwant', name: 'custwant', orderable: false },
                 { 'className': "text-left", data: 'custno', name: 'custno', orderable: false },
+                { 'className': "text-left", data: 'custname', name: 'custname', orderable: false, searchable: false },
+                { 'className': "text-left", data: 'status_list', name: 'status_list', orderable: false, searchable: false },
                 { 'className': "text-center", data: 'item_count', name: 'item_count', orderable: false, searchable: false },
                 { 'className': "text-center", data: 'btnedit', name: 'btnedit', orderable: false, searchable: false },
             ],

@@ -22,6 +22,7 @@
                 <th class="text-center">Machine No.</th>
                 <th class="text-center">Inplan</th>
                 <th class="text-center">Custwant</th>
+                <th class="text-center">สถานะ</th>
             </tr>
         </thead>
         <tbody>
@@ -41,13 +42,20 @@
                     <td class="text-center">{{ $subItem->machine_no ?? '-' }}</td>
                     <td class="text-center">{{ $subItem->inplan ? \Carbon\Carbon::parse($subItem->inplan)->format('d/m/Y') : '-' }}</td>
                     <td class="text-center">{{ $subItem->custwant ? \Carbon\Carbon::parse($subItem->custwant)->format('d/m/Y') : '-' }}</td>
+                    <td class="text-center">
+                        @if($subItem->planning_status)
+                            <span class="badge bg-label-info">{{ $subItem->planning_status }}</span>
+                        @else
+                            <span class="badge bg-label-secondary">-</span>
+                        @endif
+                    </td>
                 </tr>
 
                 {{-- recurse: ถ้า planning item ย่อยนี้ยังมีย่อยลงไปอีก --}}
                 @if(($subItem->subHeadersRecursive ?? collect())->count())
                 <tr>
                     <td></td>
-                    <td colspan="8" class="bg-light">
+                    <td colspan="9" class="bg-light">
                         @include('production-planning.order-plan.partials.related-plans', ['planning' => $subItem])
                     </td>
                 </tr>
@@ -61,7 +69,7 @@
                         </span>
                     </td>
                     <td>{{ $sub->planning_code ?? '-' }}</td>
-                    <td colspan="6" class="text-muted">ยังไม่มีรายการ</td>
+                    <td colspan="7" class="text-muted">ยังไม่มีรายการ</td>
                 </tr>
                 @endforelse
             @endforeach
