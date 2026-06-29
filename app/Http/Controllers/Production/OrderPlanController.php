@@ -72,8 +72,7 @@ class OrderPlanController extends Controller
         $planning_header_id = request('planning_header_id');
 
         $planning_header = PlanningHeader::with([
-            'plannings.semi_headers.plannings',
-            'plannings.pigment_headers.plannings',
+            'plannings.subHeadersRecursive',
         ])->find($planning_header_id);
 
         $html = view('production-planning.order-plan.detail', compact('planning_header'))->render();

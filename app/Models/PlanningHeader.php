@@ -19,6 +19,12 @@ class PlanningHeader extends Model
         return $this->hasMany(Planning::class, 'planning_header_id', 'id');
     }
 
+    // โหลด plannings พร้อม sub-headers ของแต่ละ planning แบบ recursive
+    public function planningsRecursive()
+    {
+        return $this->plannings()->with('subHeadersRecursive');
+    }
+
     // link กลับหา planning item แม่ (สำหรับ sub-order headers)
     public function parent_planning()
     {

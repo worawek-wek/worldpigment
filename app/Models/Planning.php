@@ -37,4 +37,17 @@ class Planning extends Model
                     ->where('plan_type', 'pigment');
     }
 
+    // sub-order headers ทั้งหมด (semi + pigment) ที่ auto-สร้างจาก planning นี้
+    public function sub_headers()
+    {
+        return $this->hasMany(PlanningHeader::class, 'parent_planning_id', 'id')
+                    ->whereIn('plan_type', ['semi', 'pigment']);
+    }
+
+    // โหลด sub-headers แบบ recursive (ย่อยลงไปได้ไม่จำกัดชั้น)
+    public function subHeadersRecursive()
+    {
+        return $this->sub_headers()->with('planningsRecursive');
+    }
+
 }

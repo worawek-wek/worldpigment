@@ -90,6 +90,7 @@
                         <th class="text-center col-1">Lot</th>
                         <th class="text-center col-1">Weight</th>
                         <th class="text-center col-2"">Machine No.</th>
+                        <th class="text-center col-1">Inplan</th>
                         <th class="text-center col-2">Custwant</th>
                         <th class="text-center col-1">สถานะ</th>
                         <th class="text-center col-3" >หมายเหตุ</th>
@@ -104,6 +105,7 @@
                         <td class="text-center">{{ $item->lot ?? '-' }}</td>
                         <td class="text-center">{{ $item->weight ? number_format($item->weight, 2) : '-' }}</td>
                         <td class="text-center">{{ $item->machine_no ?? '-' }}</td>
+                        <td class="text-center">{{ $item->inplan ? \Carbon\Carbon::parse($item->inplan)->format('d/m/Y') : '-' }}</td>
                         <td class="text-center">{{ $item->custwant ? \Carbon\Carbon::parse($item->custwant)->format('d/m/Y') : '-' }}</td>
                         <td class="text-center">
                             @if($item->planning_status)
@@ -115,49 +117,18 @@
                         <td class="text-center">{{ $item->remark ?? '-' }}</td>
                     </tr>
 
-                    {{-- รายละเอียดที่เกี่ยวข้อง: Semi / Pigment sub-plans ที่ระบบสร้างภายใน --}}
-                    @php
-                        $sub_headers = $item->semi_headers->concat($item->pigment_headers);
-                    @endphp
-                    @if($sub_headers->count())
+                    {{-- รายละเอียดที่เกี่ยวข้อง: Semi / Pigment sub-plans (แสดงย่อยลงไปแบบ recursive) --}}
+                    @if($item->subHeadersRecursive->count())
                     <tr>
                         <td></td>
-                        <td colspan="7" class="bg-light">
-                            <div class="small text-muted mb-1">
-                                <i class="ti ti-corner-down-right me-1"></i>รายการที่เกี่ยวข้อง (Semi / Pigment)
-                            </div>
-                            <table class="table table-sm table-bordered mb-0">
-                                <thead>
-                                    <tr>
-                                        <th class="text-center" style="width:40px">#</th>
-                                        <th class="text-center">ประเภท</th>
-                                        <th>Planning Code</th>
-                                        <th>Item No.</th>
-                                        <th class="text-center">จำนวนรายการ</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($sub_headers as $sub)
-                                    <tr>
-                                        <td class="text-center">{{ $loop->iteration }}</td>
-                                        <td class="text-center">
-                                            <span class="badge bg-label-{{ $sub->plan_type === 'semi' ? 'warning' : 'success' }}">
-                                                {{ strtoupper($sub->plan_type) }}
-                                            </span>
-                                        </td>
-                                        <td>{{ $sub->planning_code ?? '-' }}</td>
-                                        <td>{{ $sub->plannings->pluck('itemno')->filter()->implode(', ') ?: '-' }}</td>
-                                        <td class="text-center">{{ $sub->plannings->count() }}</td>
-                                    </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
+                        <td colspan="8" class="bg-light">
+                            @include('production-planning.order-plan.partials.related-plans', ['planning' => $item])
                         </td>
                     </tr>
                     @endif
                     @empty
                     <tr>
-                        <td colspan="8" class="text-center text-muted py-4">
+                        <td colspan="9" class="text-center text-muted py-4">
                             <i class="ti ti-inbox ti-lg d-block mb-1 opacity-50"></i>
                             ยังไม่มีรายการ Planning
                         </td>
