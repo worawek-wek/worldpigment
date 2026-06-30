@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Production as Production;
+use App\Http\Controllers\DepartmentController as DepartmentController;
 
 Route::prefix('production-planning')->group(function () {
 
@@ -45,5 +46,12 @@ Route::prefix('production-planning')->group(function () {
     // Semi & Pigment (อนุมัติแล้ว) — รวมเข้ากับหน้า semi-pigment แล้ว
     Route::get('/semi-pigment/detail', [Production\SemiPigmentController::class, 'detail'])->name('production.semipigment.detail');
     Route::post('/semi-pigment/convertplanning', [Production\SemiPigmentController::class, 'convertplanning'])->name('production.semipigment.convertplanning');
+
+
+    // department
+    Route::get('/department', [DepartmentController::class, 'index'])->name('department.index');
+    Route::get('/department/datatable', [DepartmentController::class, 'datatable'])->name('department.datatable');
+    Route::get('/department/edit', [DepartmentController::class, 'edit'])->name('department.edit');
+    Route::post('/department/store', [DepartmentController::class, 'store'])->name('department.store');
 
 });

@@ -85,9 +85,16 @@ return [
         'permission' => 'permission read',
     ],
     'LinkUser' => [
-        'title' => 'พนักงาน',
+        'title' => 'User',
         'icon' => 'ti-id-badge',
         'url' => 'user', // ใช้ url ตรง เพราะ route name 'user' ซ้ำ (index + user/{id}) → route() ต้องการ id
+    ],
+
+    'Department' => [
+        'title' => 'แผนก',
+        'icon' => 'ti-shopping-cart',
+        'route_name' => 'department.index',
+        'permission' => 'department read',
     ],
 
 
