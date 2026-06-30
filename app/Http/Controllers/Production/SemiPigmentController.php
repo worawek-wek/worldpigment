@@ -34,11 +34,7 @@ class SemiPigmentController extends Controller
             ->addColumn('status_badge', fn ($row) => $this->statusBadge($row))
             ->editColumn('order_date', fn ($row) => $row->order_date ? \Carbon\Carbon::parse($row->order_date)->format('d/m/Y') : '-')
             ->editColumn('want_date', fn ($row) => $row->want_date ? \Carbon\Carbon::parse($row->want_date)->format('d/m/Y') : '-')
-            ->addColumn('action', function ($row) {
-                return '<button class="btn btn-sm btn-icon btn-warning btn_edit" data-id="'.$row->id.'" title="แก้ไข / รายละเอียด">
-                            <i class="ti ti-pencil ti-sm"></i>
-                        </button>';
-            })
+            ->addColumn('action', fn ($row) => $this->actionButtons($row))
             ->rawColumns(['type_badge', 'status_badge', 'action'])
             ->make(true);
     }
@@ -62,53 +58,6 @@ class SemiPigmentController extends Controller
             'status' => 200,
             'data'   => $html
         ]);
-    }
-
-    /* ===================== หน้า: อนุมัติแล้ว ===================== */
-
-    public function approvedIndex()
-    {
-        return view('production-planning.semi-pigment.approved');
-    }
-
-    public function approvedDatatable()
-    {
-        // หน้านี้แสดงเฉพาะรายการที่อนุมัติแล้ว
-        $data = $this->baseQuery()
-            ->with('approver')
-            ->where('status', SemiPigment::STATUS_APPROVED);
-
-        return DataTables::of($data)
-            ->addColumn('rownum', fn ($row) => $row->rownum)
-            ->addColumn('type_badge', fn ($row) => $this->typeBadge($row))
-            ->editColumn('order_date', fn ($row) => $row->order_date ? \Carbon\Carbon::parse($row->order_date)->format('d/m/Y') : '-')
-            ->editColumn('want_date', fn ($row) => $row->want_date ? \Carbon\Carbon::parse($row->want_date)->format('d/m/Y') : '-')
-            ->addColumn('approver_name', fn ($row) => $row->approver?->name ?? '-')
-            ->addColumn('plan_badge', function ($row) {
-                if ($row->result_planning_id) {
-                    return '<span class="badge bg-label-success">สร้างแล้ว</span>';
-                }
-                return '<span class="badge bg-label-secondary">ยังไม่สร้าง</span>';
-            })
-            ->addColumn('action', function ($row) {
-                $btn_view = '<button class="btn btn-sm btn-icon btn-label-primary me-2 btn_view" data-id="'.$row->id.'" title="ดูรายละเอียด">
-                                <i class="ti ti-eye ti-sm"></i>
-                            </button>';
-
-                if ($row->result_planning_id) {
-                    $btn_plan = '<button class="btn btn-sm btn-icon btn-label-secondary btn_create_plan" data-id="'.$row->id.'" title="สร้างแผนการผลิตแล้ว" disabled>
-                                    <i class="ti ti-checks ti-sm"></i>
-                                </button>';
-                } else {
-                    $btn_plan = '<button class="btn btn-sm btn-icon btn-label-warning btn_create_plan" data-id="'.$row->id.'" title="สร้างแผนการผลิต">
-                                    <i class="ti ti-download ti-sm"></i>
-                                </button>';
-                }
-
-                return $btn_view.$btn_plan;
-            })
-            ->rawColumns(['type_badge', 'plan_badge', 'action'])
-            ->make(true);
     }
 
     /**
@@ -441,7 +390,55 @@ class SemiPigmentController extends Controller
             SemiPigment::STATUS_REJECT   => 'bg-label-danger',
         ][$row->status] ?? 'bg-label-secondary';
 
-        return '<span class="badge '.$cls.'">'.$row->statusLabel().'</span>';
+        $badge = '<span class="badge '.$cls.'">'.$row->statusLabel().'</span>';
+
+        // อนุมัติแล้ว → แสดงสถานะการสร้างแผนการผลิตต่อท้าย (ยังไม่สร้าง / สร้างแล้ว)
+        if ($row->status === SemiPigment::STATUS_APPROVED) {
+            $badge .= '<div class="mt-1">'.$this->planBadge($row).'</div>';
+        }
+
+        return $badge;
+    }
+
+    /**
+     * ป้ายสถานะการสร้างแผนการผลิตของรายการที่อนุมัติแล้ว
+     */
+    private function planBadge(SemiPigment $row): string
+    {
+        if ($row->result_planning_id) {
+            return '<span class="badge bg-label-success">สร้างแล้ว</span>';
+        }
+        return '<span class="badge bg-label-secondary">ยังไม่สร้าง</span>';
+    }
+
+    /**
+     * ปุ่มในคอลัมน์ "จัดการ" — กำหนดตามสถานะของรายการ
+     * - อนุมัติแล้ว: ดูรายละเอียด + สร้างแผนการผลิต (แบบหน้า "อนุมัติแล้ว")
+     * - รออนุมัติ / ไม่อนุมัติ: แก้ไข / รายละเอียด
+     */
+    private function actionButtons(SemiPigment $row): string
+    {
+        if ($row->status === SemiPigment::STATUS_APPROVED) {
+            $btn_view = '<button class="btn btn-sm btn-icon btn-label-primary me-2 btn_view" data-id="'.$row->id.'" title="ดูรายละเอียด">
+                            <i class="ti ti-eye ti-sm"></i>
+                        </button>';
+
+            if ($row->result_planning_id) {
+                $btn_plan = '<button class="btn btn-sm btn-icon btn-label-secondary btn_create_plan" data-id="'.$row->id.'" title="สร้างแผนการผลิตแล้ว" disabled>
+                                <i class="ti ti-checks ti-sm"></i>
+                            </button>';
+            } else {
+                $btn_plan = '<button class="btn btn-sm btn-icon btn-label-warning btn_create_plan" data-id="'.$row->id.'" title="สร้างแผนการผลิต">
+                                <i class="ti ti-download ti-sm"></i>
+                            </button>';
+            }
+
+            return $btn_view.$btn_plan;
+        }
+
+        return '<button class="btn btn-sm btn-icon btn-warning btn_edit" data-id="'.$row->id.'" title="แก้ไข / รายละเอียด">
+                    <i class="ti ti-pencil ti-sm"></i>
+                </button>';
     }
 
     /**

@@ -89,6 +89,21 @@
             </div>
         </div>
     </div>
+
+    <!-- Detail Modal (รายการที่อนุมัติแล้ว) -->
+    <div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header" style="padding: 1.25rem 1.5rem; color: white; background-color: #54BAB9;">
+                    <h5 class="modal-title text-white mb-0">
+                        <i class="ti ti-file-description me-1"></i>รายละเอียด Semi &amp; Pigment
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="result_detail"></div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @section('script')
@@ -280,6 +295,71 @@
                 success: function (response) {
                     if (response.status == 200) {
                         closeEditModal();
+                        oTable.draw();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'สำเร็จ',
+                            text: response.message,
+                            timer: 1800,
+                            showConfirmButton: false
+                        });
+                    } else {
+                        Swal.fire({ icon: 'warning', title: 'ผิดพลาด', text: response.message });
+                    }
+                },
+                error: function (xhr) {
+                    var msg = xhr.responseJSON?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                    Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: msg });
+                }
+            });
+        });
+    });
+
+    // ---- ดูรายละเอียด (รายการที่อนุมัติแล้ว) ----
+    $(document).on('click', '.btn_view', function () {
+        var id = $(this).data('id');
+        $.ajax({
+            type: 'GET',
+            url: '{{ route("production.semipigment.detail") }}',
+            dataType: 'json',
+            cache: false,
+            data: { id: id },
+            success: function (response) {
+                if (response.status == 200) {
+                    $('#result_detail').html(response.data);
+                    new bootstrap.Modal(document.getElementById('detailModal')).show();
+                } else {
+                    Swal.fire({ icon: 'warning', title: 'ผิดพลาด', text: response.message });
+                }
+            },
+            error: function (response) {
+                console.log(response.responseJSON);
+            }
+        });
+    });
+
+    // ---- สร้างแผนการผลิต (รายการที่อนุมัติแล้ว) ----
+    $(document).on('click', '.btn_create_plan', function () {
+        var id = $(this).data('id');
+
+        Swal.fire({
+            title: 'สร้างแผนการผลิต?',
+            text: 'นำข้อมูลรายการนี้ไปสร้างแผนการผลิต',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'สร้าง',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#ff9f43'
+        }).then(function (result) {
+            if (!result.isConfirmed) return;
+
+            $.ajax({
+                type: 'POST',
+                url: '{{ route("production.semipigment.convertplanning") }}',
+                dataType: 'json',
+                data: { id: id, _token: '{{ csrf_token() }}' },
+                success: function (response) {
+                    if (response.status == 200) {
                         oTable.draw();
                         Swal.fire({
                             icon: 'success',

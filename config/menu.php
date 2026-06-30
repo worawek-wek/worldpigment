@@ -39,25 +39,18 @@ return [
                 'route_name' => 'production.orderplan.index',
                 'permission' => 'productionplanning read',
             ],
-            'ProductionPlanning' => [
-                'title' => 'วางแผนการผลิต',
-                'icon' => '',
-                'menu_parent' => 'Production',
-                'route_name' => 'production.planning.index',
-                'permission' => 'productionplanning read',
-            ],
             'SemiPigment' => [
-                'title' => 'Semi & Pigment (รออนุมัติ)',
+                'title' => 'Semi & Pigment',
                 'icon' => '',
                 'menu_parent' => 'Production',
                 'route_name' => 'production.semipigment.index',
                 'permission' => 'productionplanning read',
             ],
-            'SemiPigmentApproved' => [
-                'title' => 'Semi & Pigment (อนุมัติแล้ว)',
+            'ProductionPlanning' => [
+                'title' => 'วางแผนการผลิต',
                 'icon' => '',
                 'menu_parent' => 'Production',
-                'route_name' => 'production.semipigment.approved',
+                'route_name' => 'production.planning.index',
                 'permission' => 'productionplanning read',
             ],
             'PlanningStatus' => [

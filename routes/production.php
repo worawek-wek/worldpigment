@@ -42,9 +42,7 @@ Route::prefix('production-planning')->group(function () {
     Route::post('/semi-pigment/approve', [Production\SemiPigmentController::class, 'approve'])->name('production.semipigment.approve');
     Route::post('/semi-pigment/reject', [Production\SemiPigmentController::class, 'reject'])->name('production.semipigment.reject');
 
-    // Semi & Pigment (อนุมัติแล้ว)
-    Route::get('/semi-pigment/approved', [Production\SemiPigmentController::class, 'approvedIndex'])->name('production.semipigment.approved');
-    Route::get('/semi-pigment/approved/datatable', [Production\SemiPigmentController::class, 'approvedDatatable'])->name('production.semipigment.approved.datatable');
+    // Semi & Pigment (อนุมัติแล้ว) — รวมเข้ากับหน้า semi-pigment แล้ว
     Route::get('/semi-pigment/detail', [Production\SemiPigmentController::class, 'detail'])->name('production.semipigment.detail');
     Route::post('/semi-pigment/convertplanning', [Production\SemiPigmentController::class, 'convertplanning'])->name('production.semipigment.convertplanning');
 
