@@ -713,11 +713,8 @@
         function fillSdColorInfo($f, resp) {
             resp = resp || {};
             fillForm('#form_sample_delivery', {
-                color:     resp.color     ?? '',
-                ColorChar: resp.ColorChar ?? '',
-                TestType:  resp.TestType  ?? '',
-                pop:       resp.pop       ?? '',
-                Model:     resp.Model     ?? '',
+                STD:      resp.STD   ?? '', // Standard: ดึงจากใบนำส่งเทียบสี (readonly)
+                TestDesc: resp.color ?? '', // รายละเอียด: ดึงจาก "สี" (color) ของใบนำส่งเทียบสี
             });
         }
 
@@ -970,6 +967,13 @@
                     }
                 });
             });
+        });
+
+        // กด Enter ในช่องกรอก ไม่ต้อง submit ฟอร์ม (ยกเว้น textarea)
+        $('#form_color_matching, #form_sample_delivery').on('keydown', function(e) {
+            if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+            }
         });
 </script>
 </body>

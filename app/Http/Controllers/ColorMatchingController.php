@@ -13,7 +13,7 @@ class ColorMatchingController extends Controller
     // ─── Columns ที่ testmain มีอยู่จริง (ใช้กรอง form input ก่อน mass-assign) ───
     private const TESTMAIN_COLUMNS = [
         'SendNo', 'TestDate', 'TestType', 'TestDesc', 'Testno', 'Type_Work', 'Model',
-        'custno', 'custname', 'custnameEN', 'sale', 'CodeNo', 'color', 'STD',
+        'custno', 'custname', 'custnameEN', 'sale', 'CodeNo', 'color', 'CustPigment', 'STD',
         'lotno', 'Adj', 'Resp', 'TyResp', 'Respdate', 'Wage', 'remark',
         'DsendT', 'Mems', 'TNname', 'rptno', 'pop', 'cancel', 'CancalRes',
         'TNDate', 'PHR', 'ResinMatch', 'startdate', 'SampleDate', 'ReadyDate',

@@ -126,7 +126,7 @@
 
                                 <div class="row g-3">
                                     <div class="col-md-4">
-                                        <label class="form-label small mb-1">เม็ดที่ลูกค้าใช้ <span class="text-muted fw-normal">(ชื่อสี เช่น DB PINK-Y AS50%+ABS50%)</span></label>
+                                        <label class="form-label small mb-1">สี <span class="text-muted fw-normal">(ชื่อสี เช่น DB PINK-Y)</span></label>
                                         <input type="text" name="color" class="form-control">
                                     </div>
                                     <div class="col-md-2">
@@ -163,7 +163,19 @@
                                             @endforeach
                                         </select>
                                     </div>
-                                    <div class="col-md-2">
+                                    {{-- ขึ้นแถวใหม่ --}}
+                                    <div class="w-100"></div>
+
+                                    {{-- เม็ดที่ลูกค้าใช้ — เก็บลง column CustPigment --}}
+                                    <div class="col-md-4">
+                                        <label class="form-label small mb-1">เม็ดที่ลูกค้าใช้ <span class="text-muted fw-normal">(เช่น AS50%+ABS50%)</span></label>
+                                        <input type="text" name="CustPigment" class="form-control">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small mb-1">Standard <span class="text-muted fw-normal">(เช่น PT 494 C)</span></label>
+                                        <input type="text" name="STD" class="form-control">
+                                    </div>
+                                    <div class="col-md-5">
                                         <label class="form-label small mb-1">นำไปทำชิ้นงาน (Model)</label>
                                         <select name="Model" class="form-select">
                                             <option value="">-- เลือก --</option>

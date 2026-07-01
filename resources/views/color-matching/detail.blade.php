@@ -62,6 +62,7 @@
             ]],
             ['ข้อมูลสี', 'ti-palette', [
                 'สี'                    => $v($row->color),
+                'เม็ดที่ลูกค้าใช้'      => $v($row->CustPigment),
                 'คุณสมบัติ'             => $v($row->pop),
                 'นำไปทำชิ้นงาน (Model)' => $v($row->Model),
             ]],
