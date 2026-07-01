@@ -4,7 +4,8 @@
     // ค่า default สำหรับแถว semi/pigment ใหม่
     $default_mdate     = $parent_header?->mdate ? substr($parent_header->mdate, 0, 10) : '';
     $default_custno    = $parent_header?->company  ?? '';   // custno = company ของ header แม่
-    $companies = ['CP', 'MB', 'DB', 'SPP'];
+    // ตัวเลือก Company ดึงจากตาราง department (value = name) — fallback เป็นค่าเดิมถ้าไม่มีข้อมูลส่งมา
+    $companies = isset($departments) ? $departments->pluck('name')->toArray() : ['CP', 'MB', 'DB', 'SPP'];
 
     // สีของ badge ตามสถานะ semi/pigment
     $spStatusCls = [

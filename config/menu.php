@@ -97,5 +97,19 @@ return [
         'permission' => 'department read',
     ],
 
+    'Employee' => [
+        'title' => 'พนักงาน',
+        'icon' => 'ti-users',
+        'route_name' => 'employee.index',
+        'permission' => 'employee read',
+    ],
+
+    'Role' => [
+        'title' => 'จัดการสิทธิ์',
+        'icon' => 'ti-shield-lock',
+        'route_name' => 'role.index',
+        'permission' => 'role read',
+    ],
+
 
 ];

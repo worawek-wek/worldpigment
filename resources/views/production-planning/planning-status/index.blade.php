@@ -43,10 +43,9 @@
                             <div class="col-md-3">
                                 <select id="searchDept" class="form-select">
                                     <option value="">ทุกแผนก</option>
-                                    <option value="CP">CP</option>
-                                    <option value="MB">MB</option>
-                                    <option value="DB">DB</option>
-                                    <option value="SPP">SPP</option>
+                                    @foreach($departments as $department)
+                                        <option value="{{ $department->id }}">{{ $department->name }}</option>
+                                    @endforeach
                                 </select>
                             </div>
                         </div>
@@ -106,7 +105,7 @@
             },
             columns: [
                 // { 'className': "text-center", data: 'rownum', name: 'rownum', orderable: false },
-                { 'className': "text-left", data: 'dept', name: 'dept', orderable: false },
+                { 'className': "text-left", data: 'dept_name', name: 'dept_name', orderable: false, searchable: false },
                 { 'className': "text-left", data: 'name', name: 'name', orderable: false },
                 { 'className': "text-center", data: 'sort', name: 'sort', orderable: false },
                 { 'className': "text-center", data: 'is_active_label', name: 'is_active_label', orderable: false, searchable: false },

@@ -12,12 +12,19 @@ use App\Models\Planning;
 use App\Models\SemiPigment;
 use App\Models\Machine;
 use App\Models\PlanningStatus;
+use App\Models\Department;
 
 class ProductionPlanController extends Controller
 {
     public function index()
     {
-        return view('production-planning.planning.index');
+        $departments = Department::where('is_active', 'Y')
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name']);
+
+        return view('production-planning.planning.index', [
+            'departments' => $departments,
+        ]);
     }
 
     public function datatable()
@@ -176,11 +183,18 @@ class ProductionPlanController extends Controller
         $machines = Machine::where('dept',$parent_header->company)->get();
 
         // สถานะ Planning ตามแผนก (company) ของ header — เฉพาะที่เปิดใช้งาน
-        $planning_statuses = PlanningStatus::where('dept', $parent_header->company)
+        // dept ใน tb_planning_status เก็บเป็น id ของ tb_departments จึง map ชื่อแผนก (company) → id ก่อน
+        $dept_id = \App\Models\Department::where('name', $parent_header->company)->value('id');
+        $planning_statuses = PlanningStatus::where('dept', $dept_id)
             ->where('is_active', 'Y')
             ->orderBy('sort', 'asc')
             ->orderBy('id', 'asc')
             ->get();
+
+        // รายชื่อแผนก (department) สำหรับ dropdown Company ใน modal เพิ่ม Semi/Pigment
+        $departments = Department::where('is_active', 'Y')
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name']);
 
         $html = view('production-planning.planning.planning-item-form', [
             'planning_item'      => $planning_item,
@@ -190,7 +204,8 @@ class ProductionPlanController extends Controller
             'pigment_list'       => $pigment_list,
             'parent_orderno'     => $parent_orderno,
             'machines' => $machines,
-            'planning_statuses' => $planning_statuses
+            'planning_statuses' => $planning_statuses,
+            'departments' => $departments
         ])->render();
 
         return response()->json([

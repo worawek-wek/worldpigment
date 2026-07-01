@@ -10,12 +10,19 @@ use Yajra\DataTables\Facades\DataTables;
 use App\Models\Morder;
 use App\Models\PlanningHeader;
 use App\Models\Planning;
+use App\Models\Department;
 
 class OrderController extends Controller
 {
     public function index()
     {
-        return view('production-planning.order.index');
+        $departments = Department::where('is_active', 'Y')
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name']);
+
+        return view('production-planning.order.index', [
+            'departments' => $departments,
+        ]);
     }
 
     public function datatable()

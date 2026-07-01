@@ -13,4 +13,9 @@ class PlanningStatus extends Model
 
     protected $guarded = [];
 
+    // แผนกที่ผูกกับสถานะ — dept เก็บ id ของ tb_departments
+    public function department()
+    {
+        return $this->belongsTo(Department::class, 'dept');
+    }
 }

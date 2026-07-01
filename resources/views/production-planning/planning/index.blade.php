@@ -43,10 +43,9 @@
                             <div class="col-md-2">
                                 <select id="searchCompany" class="form-select">
                                     <option value="">ทุกแผนก</option>
-                                    <option value="CP">CP</option>
-                                    <option value="DB">DB</option>
-                                    <option value="MB">MB</option>
-                                    <option value="SPP">SPP</option>
+                                    @foreach($departments as $department)
+                                        <option value="{{ $department->name }}">{{ $department->name }}</option>
+                                    @endforeach
                                 </select>
                             </div>
                             <div class="col-md-2">

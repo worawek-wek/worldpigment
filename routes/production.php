@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Production as Production;
 use App\Http\Controllers\DepartmentController as DepartmentController;
+use App\Http\Controllers\EmpController as EmpController;
+use App\Http\Controllers\RoleController as RoleController;
 
 Route::prefix('production-planning')->group(function () {
 
@@ -53,5 +55,20 @@ Route::prefix('production-planning')->group(function () {
     Route::get('/department/datatable', [DepartmentController::class, 'datatable'])->name('department.datatable');
     Route::get('/department/edit', [DepartmentController::class, 'edit'])->name('department.edit');
     Route::post('/department/store', [DepartmentController::class, 'store'])->name('department.store');
+    Route::post('/department/toggle-status', [DepartmentController::class, 'toggleStatus'])->name('department.toggle-status');
+
+    // พนักงาน (employee) — ข้อมูลจากตาราง emp
+    Route::get('/employee', [EmpController::class, 'index'])->name('employee.index');
+    Route::get('/employee/datatable', [EmpController::class, 'datatable'])->name('employee.datatable');
+    Route::get('/employee/edit', [EmpController::class, 'edit'])->name('employee.edit');
+    Route::post('/employee/store', [EmpController::class, 'store'])->name('employee.store');
+    Route::post('/employee/delete', [EmpController::class, 'destroy'])->name('employee.delete');
+
+    // จัดการสิทธิ์การใช้งาน (Role)
+    Route::get('/role', [RoleController::class, 'index'])->name('role.index');
+    Route::get('/role/datatable', [RoleController::class, 'datatable'])->name('role.datatable');
+    Route::get('/role/edit', [RoleController::class, 'edit'])->name('role.edit');
+    Route::post('/role/store', [RoleController::class, 'store'])->name('role.store');
+    Route::post('/role/delete', [RoleController::class, 'destroy'])->name('role.delete');
 
 });

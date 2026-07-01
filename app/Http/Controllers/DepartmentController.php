@@ -17,7 +17,7 @@ class DepartmentController extends Controller
 
     public function datatable()
     {
-        $departments = Department::select(['id', 'name', 'description']);
+        $departments = Department::select(['id', 'name', 'description', 'is_active']);
 
         $rownum = 0;
 
@@ -25,12 +25,19 @@ class DepartmentController extends Controller
             ->addColumn('rownum', function () use (&$rownum) {
                 return ++$rownum;
             })
+            ->addColumn('status_switch', function ($department) {
+                $checked = $department->is_active === 'Y' ? 'checked' : '';
+                return '<div class="form-check form-switch d-flex justify-content-center mb-0">
+                            <input class="form-check-input switch_status" type="checkbox" role="switch"
+                                data-id="'.$department->id.'" '.$checked.'>
+                        </div>';
+            })
             ->addColumn('btnedit', function ($department) {
                 return '<button type="button" class="btn btn-sm btn-icon btn-warning btn_edit" data-id="'.$department->id.'" title="แก้ไข">
                             <i class="ti ti-pencil ti-sm"></i>
                         </button>';
             })
-            ->rawColumns(['btnedit'])
+            ->rawColumns(['status_switch', 'btnedit'])
             ->make(true);
     }
 
@@ -69,6 +76,8 @@ class DepartmentController extends Controller
             [
                 'name' => $request->name,
                 'description' => $request->description,
+                // switch ในฟอร์ม: ติ๊ก = ส่ง is_active มา (Y), ไม่ติ๊ก = ไม่ส่ง (N)
+                'is_active' => $request->has('is_active') ? 'Y' : 'N',
             ]
         );
 
@@ -76,6 +85,28 @@ class DepartmentController extends Controller
             'status' => 200,
             'message' => 'Department saved successfully!',
             'data' => $department
+        ]);
+    }
+
+    // สลับสถานะเปิด-ปิดใช้งานจากหน้าตาราง
+    public function toggleStatus(Request $request)
+    {
+        $department = Department::find($request->id);
+
+        if (!$department) {
+            return response()->json([
+                'status' => 404,
+                'message' => 'ไม่พบแผนกที่ต้องการ'
+            ]);
+        }
+
+        $department->is_active = $request->is_active === 'Y' ? 'Y' : 'N';
+        $department->save();
+
+        return response()->json([
+            'status'    => 200,
+            'message'   => $department->is_active === 'Y' ? 'เปิดใช้งานแผนกแล้ว' : 'ปิดใช้งานแผนกแล้ว',
+            'is_active' => $department->is_active,
         ]);
     }
 }

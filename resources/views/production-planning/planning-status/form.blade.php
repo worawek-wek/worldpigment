@@ -10,13 +10,12 @@
     <form id="planning_status_form">
         <input type="hidden" name="id" value="{{ $planning_status?->id ?? '' }}">
 
-        @php $depts = ['CP', 'MB', 'DB', 'SPP']; @endphp
         <div class="mb-3">
             <label class="form-label">แผนก (Dept)</label>
             <select name="dept" class="form-select">
                 <option value="">เลือกแผนก</option>
-                @foreach($depts as $dept)
-                    <option value="{{ $dept }}" {{ ($planning_status?->dept ?? '') === $dept ? 'selected' : '' }}>{{ $dept }}</option>
+                @foreach($departments as $department)
+                    <option value="{{ $department->id }}" {{ (string)($planning_status?->dept ?? '') === (string)$department->id ? 'selected' : '' }}>{{ $department->name }}</option>
                 @endforeach
             </select>
         </div>

@@ -10,12 +10,12 @@
                     <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
                         <div>
                             <h3 class="mb-1">
-                                <i class="ti ti-calendar-stats text-primary"></i>
-                                จัดการใบคำสั่งซื้อ
+                                <i class="ti ti-users text-primary"></i>
+                                จัดการพนักงาน
                             </h3>
 
                             <p class="text-muted mb-0">
-                                ข้อมูลการสั่งซื้อและสร้างแผนการผลิต
+                                ข้อมูลพนักงาน (เพิ่ม / แก้ไข / ลบ / ค้นหา)
                             </p>
                         </div>
 
@@ -31,12 +31,12 @@
                         <div class="row g-3 align-items-center">
                             <div class="col-md-3">
                                 <input id="searchInput" type="text" class="form-control"
-                                placeholder="ค้นหา...">
+                                placeholder="ค้นหา รหัส / ชื่อ / นามสกุล...">
                             </div>
                             <div class="col-md-3 ms-auto text-end">
                                 <button type="button" class="btn btn-primary" id="btn_add"
-                                    data-bs-target="#departmentModal">
-                                    <i class="ti ti-plus me-1"></i> สร้างแผนก
+                                    data-bs-target="#employeeModal">
+                                    <i class="ti ti-plus me-1"></i> เพิ่มพนักงาน
                                 </button>
                             </div>
 
@@ -49,10 +49,14 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th class="col-1">#</th>
-                                        <th class="col-1">Name</th>
-                                        <th class="col-2">Description</th>
+                                        <th class="col-1">รหัสพนักงาน</th>
+                                        <th class="col-2">ชื่อ</th>
+                                        <th class="col-2">นามสกุล</th>
+                                        <th class="col-1">แผนก</th>
+                                        <th class="col-1">Role</th>
+                                        <th class="col-1">ผู้ใช้</th>
                                         <th class="col-1">สถานะ</th>
-                                        <th class="col-2">Manage</th>
+                                        <th class="col-2">จัดการ</th>
                                     </tr>
                                 </thead>
                             </table>
@@ -65,18 +69,17 @@
         </div>
     </div>
 
-    <!-- Create Department Modal -->
-    <div class="modal fade modalHeadDecor" id="departmentModal" tabindex="-1" aria-hidden="true">
+    <!-- Employee Modal (เพิ่ม / แก้ไข) -->
+    <div class="modal fade modalHeadDecor" id="employeeModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
-                        <i class="ti ti-plus me-1"></i>สร้างแผนก
+                        <i class="ti ti-user me-1"></i>ข้อมูลพนักงาน
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" id="result_detail">
-                    {{-- @include('department.department-form') --}}
                 </div>
             </div>
         </div>
@@ -96,7 +99,7 @@
             lengthChange: false,
             responsive: true,
             ajax: {
-                url: "{{ route('department.datatable') }}",
+                url: "{{ route('employee.datatable') }}",
                 data: function(d) {
                     d.search = $('#searchInput').val();
                 },
@@ -106,20 +109,18 @@
             },
             columns: [
                 { 'className': "text-center", data: 'rownum', name: 'rownum', orderable: false },
-                { 'className': "text-center", data: 'name', name: 'name', orderable: false },
-                { 'className': "text-center", data: 'description', name: 'description', orderable: false },
-                { 'className': "text-center", data: 'status_switch', name: 'status_switch', orderable: false, searchable: false },
+                { 'className': "text-center", data: 'empno', name: 'empno', orderable: false },
+                { 'className': "text-center", data: 'empname', name: 'empname', orderable: false },
+                { 'className': "text-center", data: 'empsur', name: 'empsur', orderable: false },
+                { 'className': "text-center", data: 'department_name', name: 'department_name', orderable: false, searchable: false },
+                { 'className': "text-center", data: 'role_name', name: 'role_name', orderable: false, searchable: false },
+                { 'className': "text-center", data: 'user', name: 'user', orderable: false },
+                { 'className': "text-center", data: 'status_badge', name: 'status_badge', orderable: false, searchable: false },
                 { 'className': "text-center", data: 'btnedit', name: 'btnedit', orderable: false, searchable: false },
             ],
             order: [
-                [0, 'asc']
-            ],
-            rowCallback: function(row, data, index) {
-
-            },
-            initComplete: function(settings, json) {
-                console.log('DataTable loaded');
-            }
+                [1, 'asc']
+            ]
         });
     });
 
@@ -128,81 +129,50 @@
         oTable.draw();
     });
 
-    // สลับสถานะเปิด-ปิดใช้งานจากตารางโดยตรง
-    $(document).on('change', '.switch_status', function(){
-        var $sw = $(this);
-        var id = $sw.data('id');
-        var is_active = $sw.is(':checked') ? 'Y' : 'N';
-
-        $sw.prop('disabled', true);
-        $.ajax({
-            url: "{{ route('department.toggle-status') }}",
-            method: "POST",
-            dataType: 'json',
-            data: { _token: "{{ csrf_token() }}", id: id, is_active: is_active },
-            success: function(res){
-                if (res.status == 200) {
-                    Swal.fire({ icon: 'success', title: res.message, toast: true,
-                        position: 'top-end', timer: 1500, showConfirmButton: false });
-                } else {
-                    $sw.prop('checked', !$sw.is(':checked'));
-                    Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: res.message || '' });
-                }
-            },
-            error: function(xhr){
-                $sw.prop('checked', !$sw.is(':checked'));
-                Swal.fire({ icon: 'error', title: 'ผิดพลาด',
-                    text: xhr.responseJSON?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่' });
-            },
-            complete: function(){ $sw.prop('disabled', false); }
-        });
-    });
-
+    // เพิ่มพนักงาน — เปิด modal ฟอร์มเปล่า
     $(document).on('click', '#btn_add', function(e){
         e.preventDefault();
         $.ajax({
-            url: "{{ route('department.edit') }}",
+            url: "{{ route('employee.edit') }}",
             method: "GET",
-            data: {
-                id: null
-            },
+            data: { empno: null },
             success: function(response) {
                 $('#result_detail').html(response.data);
-                $('#departmentModal').modal('show');
+                $('#employeeModal').modal('show');
             }
         });
     });
 
-    // แก้ไขแผนก — เปิด modal พร้อมข้อมูลเดิม
+    // แก้ไขพนักงาน — เปิด modal พร้อมข้อมูลเดิม
     $(document).on('click', '.btn_edit', function(e){
         e.preventDefault();
-        var id = $(this).data('id');
+        var empno = $(this).data('empno');
         $.ajax({
-            url: "{{ route('department.edit') }}",
+            url: "{{ route('employee.edit') }}",
             method: "GET",
-            data: { id: id },
+            data: { empno: empno },
             success: function(response) {
                 $('#result_detail').html(response.data);
-                $('#departmentModal').modal('show');
+                $('#employeeModal').modal('show');
             }
         });
     });
 
-    // บันทึกแผนก — ฟอร์มถูกโหลดผ่าน AJAX และปุ่มเป็น type=button จึงผูกแบบ delegation ที่ปุ่มบันทึก
-    $(document).on('click', '#btn_department_save', function(e) {
+    // บันทึกพนักงาน (เพิ่ม/แก้ไข)
+    $(document).on('click', '#btn_employee_save', function(e) {
         e.preventDefault();
         var $btn = $(this);
-        var formData = $('#department_form').serialize();
+        var formData = $('#employee_form').serialize();
 
         $btn.prop('disabled', true);
         $.ajax({
-            url: "{{ route('department.store') }}",
+            url: "{{ route('employee.store') }}",
             method: "POST",
             dataType: 'json',
             data: formData,
             success: function(response) {
                 if (response.status == 200) {
-                    $('#departmentModal').modal('hide');
+                    $('#employeeModal').modal('hide');
                     oTable.draw();
                     Swal.fire({
                         icon: 'success',
@@ -212,7 +182,7 @@
                         showConfirmButton: false
                     });
                 } else if (response.status == 400) {
-                    var msg = Object.values(response.errors).map(function (e) { return e[0]; }).join('<br>');
+                    var msg = Object.values(response.errors).map(function (er) { return er[0]; }).join('<br>');
                     Swal.fire({ icon: 'warning', title: 'ข้อมูลไม่ถูกต้อง', html: msg });
                 } else {
                     Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: response.message || '' });
@@ -223,6 +193,43 @@
                 Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: msg });
             },
             complete: function() { $btn.prop('disabled', false); }
+        });
+    });
+
+    // ลบพนักงาน — ยืนยันก่อนลบ
+    $(document).on('click', '.btn_delete', function(e){
+        e.preventDefault();
+        var empno = $(this).data('empno');
+
+        Swal.fire({
+            icon: 'warning',
+            title: 'ยืนยันการลบ',
+            text: 'ต้องการลบพนักงานรหัส ' + empno + ' หรือไม่?',
+            showCancelButton: true,
+            confirmButtonText: 'ลบ',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#d33'
+        }).then(function(result){
+            if (!result.isConfirmed) return;
+            $.ajax({
+                url: "{{ route('employee.delete') }}",
+                method: "POST",
+                dataType: 'json',
+                data: { _token: "{{ csrf_token() }}", empno: empno },
+                success: function(response) {
+                    if (response.status == 200) {
+                        oTable.draw();
+                        Swal.fire({ icon: 'success', title: 'สำเร็จ', text: response.message,
+                            timer: 1500, showConfirmButton: false });
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: response.message || '' });
+                    }
+                },
+                error: function(xhr) {
+                    var msg = xhr.responseJSON?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                    Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: msg });
+                }
+            });
         });
     });
 

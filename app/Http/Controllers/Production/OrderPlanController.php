@@ -7,12 +7,19 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 use App\Models\PlanningHeader;
+use App\Models\Department;
 
 class OrderPlanController extends Controller
 {
     public function index()
     {
-        return view('production-planning.order-plan.index');
+        $departments = Department::where('is_active', 'Y')
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name']);
+
+        return view('production-planning.order-plan.index', [
+            'departments' => $departments,
+        ]);
     }
 
     public function datatable()

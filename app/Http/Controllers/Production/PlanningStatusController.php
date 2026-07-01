@@ -8,12 +8,19 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\Facades\DataTables;
 use App\Models\PlanningStatus;
+use App\Models\Department;
 
 class PlanningStatusController extends Controller
 {
     public function index()
     {
-        return view('production-planning.planning-status.index');
+        $departments = Department::where('is_active', 'Y')
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name']);
+
+        return view('production-planning.planning-status.index', [
+            'departments' => $departments,
+        ]);
     }
 
     public function datatable()
@@ -24,6 +31,9 @@ class PlanningStatusController extends Controller
             ->addIndexColumn()
             ->addColumn('rownum', function($row) {
                 return $row->rownum;
+            })
+            ->addColumn('dept_name', function($row) {
+                return $row->dept_name ?? '-';
             })
             ->addColumn('is_active_label', function($row) {
                 if ($row->is_active === 'Y') {
@@ -46,8 +56,10 @@ class PlanningStatusController extends Controller
         $dept   = request('dept');
 
         $data = PlanningStatus::query()
+            ->leftJoin('tb_departments', 'tb_departments.id', '=', 'tb_planning_status.dept')
             ->select([
                 'tb_planning_status.*',
+                'tb_departments.name as dept_name',
                 DB::raw('ROW_NUMBER() OVER (ORDER BY tb_planning_status.sort ASC, tb_planning_status.id ASC) AS rownum')
             ])
             ->when(!empty($search), function ($query) use ($search) {
@@ -68,8 +80,13 @@ class PlanningStatusController extends Controller
 
         $planning_status = $id ? PlanningStatus::find($id) : null;
 
+        $departments = Department::where('is_active', 'Y')
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name']);
+
         $html = view('production-planning.planning-status.form', [
             'planning_status' => $planning_status,
+            'departments'     => $departments,
         ])->render();
 
         return response()->json([
@@ -82,7 +99,7 @@ class PlanningStatusController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name'      => 'required|string|max:255',
-            'dept'      => 'nullable|string|max:255',
+            'dept'      => 'nullable|integer|exists:tb_departments,id',
             'sort'      => 'nullable|integer|min:0',
             'is_active' => 'nullable|in:Y,N',
         ]);
@@ -97,7 +114,7 @@ class PlanningStatusController extends Controller
 
         $fields = [
             'name'      => $request->name,
-            'dept'      => $request->dept,
+            'dept'      => $request->dept ?: null,
             'sort'      => $request->sort ?: 0,
             'is_active' => $request->is_active ?: 'N',
         ];

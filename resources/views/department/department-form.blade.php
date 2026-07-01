@@ -16,6 +16,16 @@
             placeholder="รายละเอียดแผนก (ถ้ามี)">{{ $department?->description }}</textarea>
     </div>
 
+    <div class="mb-3">
+        <label class="form-label d-block">สถานะการใช้งาน</label>
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch"
+                id="department_is_active" name="is_active" value="Y"
+                {{ ($department?->is_active ?? 'Y') === 'Y' ? 'checked' : '' }}>
+            <label class="form-check-label" for="department_is_active">เปิดใช้งาน</label>
+        </div>
+    </div>
+
     <div class="d-flex justify-content-end gap-2">
         <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ยกเลิก</button>
         <button type="button" class="btn btn-primary" id="btn_department_save">
