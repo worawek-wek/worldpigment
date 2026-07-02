@@ -163,9 +163,12 @@
             </div>
             <div class="col-md-4 mb-3">
             <label class="form-label">สถานะ Qc (QC Status) </label>
-                <input type="text" name="qc_status"
-                       value="{{ $planning_item?->qc_status ?? '' }}"
-                       class="form-control" placeholder="สถานะ QC">
+                <select name="qc_status" class="form-select">
+                    <option value="">เลือกสถานะ</option>
+                    <option value="PASSED" @if($planning_item?->qc_status === 'PASSED') selected @endif>ผ่าน</option>
+                    <option value="FAILED" @if($planning_item?->qc_status === 'FAILED') selected @endif>ไม่ผ่าน</option>
+                    <option value="PENDINGREVISION" @if($planning_item?->qc_status === 'PENDINGREVISION') selected @endif>รอสูตรปรับแก้</option>
+                </select>
             </div>
         </div>
         <div class="row my-2"><hr /></div>
