@@ -3,21 +3,19 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use Illuminate\Support\Facades\Auth;
 
 class LoggedIn
 {
     /**
-     * Get the path the user should be redirected to when they are not authenticated.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return string|null
+     * ถ้า login แล้ว (admin หรือพนักงาน) ให้เด้งออกจากหน้า login/register
      */
     public function handle($request, Closure $next)
     {
-        if (!is_null(request()->user())) {
+        if (Auth::guard('web')->check() || Auth::guard('emp')->check()) {
             return redirect('/');
-        } else {
-            return $next($request);
         }
+
+        return $next($request);
     }
 }

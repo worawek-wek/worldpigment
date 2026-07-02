@@ -138,7 +138,7 @@
             email: email,
             password: password
         }).then(res => {
-            location.href = '/production-planning/planning'
+            location.href = '/'  // ให้เซิร์ฟเวอร์เลือกหน้าแรกตามสิทธิ์ของบัญชี
         }).catch(err => {
             $('#btn-login').html('Login')
 

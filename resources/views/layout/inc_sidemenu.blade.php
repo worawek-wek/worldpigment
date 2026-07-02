@@ -37,13 +37,35 @@
             @endif
 
             @php
+                // ── กรองสิทธิ์: ซ่อนเมนูที่บัญชีปัจจุบันไม่มีสิทธิ์ ──
+                $visibleSubMenu = [];
+                if (isset($menu['sub_menu'])) {
+                    foreach ($menu['sub_menu'] as $subMenuKey => $subMenu) {
+                        if (\App\Services\AccessControl::menuVisible($subMenuKey)) {
+                            $visibleSubMenu[$subMenuKey] = $subMenu;
+                        }
+                    }
+                }
+
+                // เมนูหลัก: มีเมนูย่อย → แสดงถ้ามีลูกที่มองเห็นอย่างน้อย 1 หรือ key แม่ได้สิทธิ์
+                //            ไม่มีเมนูย่อย → แสดงตามสิทธิ์ของ key ตัวเอง
+                if (isset($menu['sub_menu'])) {
+                    $canShowMenu = \App\Services\AccessControl::menuVisible($menuKey) || count($visibleSubMenu) > 0;
+                } else {
+                    $canShowMenu = \App\Services\AccessControl::menuVisible($menuKey);
+                }
+            @endphp
+
+            @continue(!$canShowMenu)
+
+            @php
                 $menu_role = isset($menu['role']) ? $menu['role'] : '';
                 $menu_name = isset($menu['route_name']) ? $menu['route_name'] : '';
                 $menu_toggle = isset($menu['sub_menu']) ? 'menu-toggle' : '';
                 $menu_active = $pageName == $menu_name ? 'active' : '';
 
                 if(isset($menu['sub_menu'])){
-                    foreach ($menu['sub_menu'] as $subMenuKey => $subMenu){
+                    foreach ($visibleSubMenu as $subMenuKey => $subMenu){
                         if($subMenu['route_name'] == $pageName){
                             if($subMenu['menu_parent'] == $menuKey){
                                 $menu_active = 'open';
@@ -62,7 +84,7 @@
                     </a>
                     @if(isset($menu['sub_menu']))
                         <ul class="menu-sub">
-                            @foreach ($menu['sub_menu'] as $subMenuKey => $subMenu)
+                            @foreach ($visibleSubMenu as $subMenuKey => $subMenu)
                                 @php
                                     $submenu_name = isset($subMenu['route_name']) ? $subMenu['route_name'] : '';
                                     $submenu_active = $pageName == $submenu_name ? 'active' : '';
@@ -87,7 +109,7 @@
                     </a>
                     @if(isset($menu['sub_menu']))
                         <ul class="menu-sub">
-                            @foreach ($menu['sub_menu'] as $subMenuKey => $subMenu)
+                            @foreach ($visibleSubMenu as $subMenuKey => $subMenu)
                                 @php
                                     $submenu_name = isset($subMenu['route_name']) ? $subMenu['route_name'] : '';
                                     $submenu_active = $pageName == $submenu_name ? 'active' : '';

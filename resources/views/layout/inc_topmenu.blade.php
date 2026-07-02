@@ -28,9 +28,23 @@
                       <img src="assets/img/avatars/1.png" alt class="h-auto rounded-circle" />
                     </div>
                   </a>
+                  @php
+                      $authUser = Auth::user();
+                      $isEmpAccount = $authUser instanceof \App\Models\Emp;
+                      if ($isEmpAccount) {
+                          // พนักงาน (ตาราง emp): ชื่อ-นามสกุล และ role/แผนก
+                          $displayName = trim(($authUser->empname ?? '') . ' ' . ($authUser->empsur ?? ''));
+                          $displayName = $displayName !== '' ? $displayName : ($authUser->user ?? 'พนักงาน');
+                          $displaySub  = optional($authUser->role)->name ?? optional($authUser->department)->name ?? 'พนักงาน';
+                      } else {
+                          // admin (ตาราง users)
+                          $displayName = $authUser->name ?? '';
+                          $displaySub  = optional($authUser->position)->position_name ?? '';
+                      }
+                  @endphp
                   <ul class="dropdown-menu dropdown-menu-end">
                     <li>
-                      <div class="dropdown-item" href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#insurance_2" onclick="user_view({{ Auth::id(); }})">
+                      <div class="dropdown-item" @if(!$isEmpAccount) data-bs-toggle="modal" data-bs-target="#insurance_2" onclick="user_view({{ Auth::id(); }})" @endif>
                         <div class="d-flex">
                           <div class="flex-shrink-0 me-3">
                             <div class="avatar avatar-online">
@@ -38,11 +52,11 @@
                             </div>
                           </div>
                           <div class="flex-grow-1">
-                            <span class="fw-medium d-block">{{ Auth::user()->name }}</span>
-                            <small class="text-muted">{{ Auth::user()->position->position_name }}</small>
+                            <span class="fw-medium d-block">{{ $displayName }}</span>
+                            <small class="text-muted">{{ $displaySub }}</small>
                           </div>
                         </div>
-                      </a>
+                      </div>
                     </li>
                     <li>
                       <div class="dropdown-divider"></div>

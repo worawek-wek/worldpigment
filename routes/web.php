@@ -40,8 +40,8 @@ Route::get('/clc', function() {
   });
 
 Route::get('/', function () {
-    if (Auth::check()) {
-        return redirect()->route('production.planning.index'); // หน้าเริ่มต้น = วางแผนการผลิต
+    if (Auth::guard('web')->check() || Auth::guard('emp')->check()) {
+        return redirect()->to(\App\Services\AccessControl::homeUrl()); // หน้าแรกตามสิทธิ์
     }
     return redirect()->route('login.index');
 });
@@ -59,7 +59,12 @@ Route::controller(UserController::class)->middleware('loggedin')->group(function
     // Route::post('register', 'store')->name('register.store');
     Route::post('user', 'store')->name('user.insert');    //////////////////////////
 });
-Route::middleware('auth')->group(function() {
+Route::middleware(['auth', 'access'])->group(function() {
+    // หน้าไม่มีสิทธิ์ (สำหรับพนักงานที่ยังไม่ได้กำหนดเมนู)
+    Route::get('no-access', function () {
+        return response()->view('no-access', [], 403);
+    })->name('no-access');
+
     Route::controller(Controller::class)->group(function() {                    //////////////////////////
         Route::get('get-summary-menu', 'get_summary_menu')->name('get-summary-menu');    //////////////////////////
     });

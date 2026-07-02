@@ -3,9 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 
-class Emp extends Model
+class Emp extends Authenticatable
 {
     use HasFactory;
 
@@ -21,6 +21,12 @@ class Emp extends Model
 
     // ไม่ส่งรหัสผ่าน (hash) ออกไปกับ response JSON
     protected $hidden = ['password', 'pwd'];
+
+    // ตาราง emp ไม่มีคอลัมน์ remember_token → ปิดการใช้ remember token
+    public function getRememberTokenName()
+    {
+        return '';
+    }
 
     // แผนกที่พนักงานสังกัด
     public function department()

@@ -40,6 +40,12 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // guard สำหรับพนักงาน (ตาราง emp) — login ด้วย username/password
+        'emp' => [
+            'driver' => 'session',
+            'provider' => 'emps',
+        ],
     ],
 
     /*
@@ -63,6 +69,11 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => App\Models\User::class,
+        ],
+
+        'emps' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Emp::class,
         ],
 
         // 'users' => [

@@ -3,21 +3,25 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use Illuminate\Support\Facades\Auth;
 
 class Authenticate
 {
     /**
-     * Get the path the user should be redirected to when they are not authenticated.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return string|null
+     * อนุญาตเมื่อ login แล้วไม่ว่าจะเป็น admin (web) หรือพนักงาน (emp)
+     * ถ้าเป็นพนักงาน ให้ตั้ง guard 'emp' เป็นตัว active เพื่อให้ Auth::user() ทั้งแอปคืนค่า Emp
      */
     public function handle($request, Closure $next)
     {
-        if (!is_null(request()->user())) {
+        if (Auth::guard('web')->check()) {
             return $next($request);
-        } else {
-            return redirect('login');
         }
+
+        if (Auth::guard('emp')->check()) {
+            Auth::shouldUse('emp');
+            return $next($request);
+        }
+
+        return redirect('login');
     }
 }
