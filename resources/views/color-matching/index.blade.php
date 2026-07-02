@@ -302,6 +302,11 @@
                         oninput="loadData(page)">
                 </div>
                 <div class="col-md-2">
+                    <label class="form-label small fw-medium mb-1">Resin (Match) <span class="text-muted fw-normal">(เช่น PVC, ABS)</span></label>
+                    <input type="text" name="resin" class="form-control p_search"
+                        oninput="loadData(page)">
+                </div>
+                <div class="col-md-2">
                     <label class="form-label small fw-medium mb-1">Lot No. <span class="text-muted fw-normal">(เช่น 690112-1-2/01)</span></label>
                     <input type="text" name="lot" class="form-control p_search"
                         oninput="loadData(page)">
@@ -727,7 +732,7 @@
             sdRefTimer = setTimeout(function () {
                 $.ajax({
                     type: 'GET',
-                    url: '{{$page_url}}/ref/' + encodeURIComponent(sendNo),
+                    url: '{{$page_url}}/ref?sendno=' + encodeURIComponent(sendNo),
                     success: function (resp) {
                         const $f = $('#form_sample_delivery');
                         // ไม่พบ → ล้างช่องที่ auto-fill มาจากใบอ้างอิง (ลูกค้า/ข้อมูลสี)
