@@ -164,8 +164,14 @@ class ColorMatchingController extends Controller
      * GET — ค้น record เทียบสี (CM) จากเลขที่ใบนำส่ง (SendNo)
      * ใช้ในฟอร์มใบส่ง ต.ย. เมื่อพิมพ์เลขอ้างอิง → ดึงข้อมูลที่ตรงกันมาเติม
      */
-    public function lookupBySendNo($sendno)
+    public function lookupBySendNo(Request $request)
     {
+        // รับผ่าน query string (?sendno=) เพราะ SendNo มี "/" — Apache บล็อก %2F ใน path
+        $sendno = $request->query('sendno', '');
+        if ($sendno === '') {
+            return response()->json(['found' => false]);
+        }
+
         // SendNo ซ้ำได้ → เลือก record CM (ไม่มี Testno) ก่อน, ไม่งั้น fallback แถวแรก
         $row = Testmain::where('SendNo', $sendno)
             ->where(function ($q) {

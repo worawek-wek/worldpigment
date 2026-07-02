@@ -13,7 +13,8 @@ Route::prefix('color-matching')->group(function () {
     Route::get('/customer/{code}',     [ColorMatchingController::class, 'customerLookup'])->name('color_matching.customer_lookup');
 
     // ─── Lookup record CM จาก SendNo (ฟอร์มใบส่ง ต.ย. → เลขอ้างอิง) ───
-    Route::get('/ref/{sendno}',        [ColorMatchingController::class, 'lookupBySendNo'])->where('sendno', '.+')->name('color_matching.ref');
+    // ใช้ query string (?sendno=) เพราะ SendNo มี "/" (เช่น 69/0143) — Apache บล็อก %2F ใน path (404)
+    Route::get('/ref',                 [ColorMatchingController::class, 'lookupBySendNo'])->name('color_matching.ref');
 
     // ─── รายละเอียด (อ่านอย่างเดียว) — อ้างอิงด้วย id ───
     Route::get('/detail/{id}',         [ColorMatchingController::class, 'detail'])->whereNumber('id')->name('color_matching.detail');

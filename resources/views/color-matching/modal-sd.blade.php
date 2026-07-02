@@ -63,14 +63,18 @@
                                         <label class="form-label small mb-1">รหัสลูกค้า <span class="text-muted fw-normal">(เช่น 00004)</span></label>
                                         <input type="text" name="custno" class="form-control">
                                     </div>
-                                    <div class="col-md-5">
+                                    <div class="col-md-2">
+                                        <label class="form-label small mb-1">Sale No. <span class="text-muted fw-normal">(เช่น NEW15)</span></label>
+                                        <input type="text" name="sale" class="form-control" maxlength="2">
+                                    </div>
+                                    <div class="col-md-4">
                                         <label class="form-label small mb-1">
                                             <span class="badge bg-label-secondary me-1">TH</span>
                                             ชื่อบริษัท (ไทย)
                                         </label>
                                         <input type="text" name="custname" class="form-control">
                                     </div>
-                                    <div class="col-md-5">
+                                    <div class="col-md-4">
                                         <label class="form-label small mb-1">
                                             <span class="badge bg-label-secondary me-1">EN</span>
                                             ชื่อบริษัท (อังกฤษ)
@@ -150,7 +154,7 @@
                                         <input type="number" name="Wage" class="form-control">
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label small mb-1">Standard <span class="text-muted fw-normal">(ดึงจากใบนำส่งเทียบสี)</span></label>
+                                        <label class="form-label small mb-1">Standard <span class="text-muted fw-normal">(เช่น PT 494 C)</span></label>
                                         <input type="text" name="STD" class="form-control bg-label-secondary" readonly>
                                     </div>
                                     <div class="w-100"></div>
@@ -199,10 +203,6 @@
                                 </div>
 
                                 <div class="row g-3 align-items-end">
-                                    <div class="col-md-2">
-                                        <label class="form-label small mb-1">Saleman Code <span class="text-muted fw-normal">(เช่น A1)</span></label>
-                                        <input type="text" name="sale" class="form-control" maxlength="2">
-                                    </div>
                                     <div class="col-md-4 px-4">
                                         <div class="form-check p-2 rounded border border-danger-subtle bg-danger-subtle">
                                             <input class="form-check-input" type="checkbox" name="cancel" value="1" id="cancel">

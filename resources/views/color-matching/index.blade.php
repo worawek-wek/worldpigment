@@ -727,7 +727,7 @@
             sdRefTimer = setTimeout(function () {
                 $.ajax({
                     type: 'GET',
-                    url: '{{$page_url}}/ref/' + encodeURIComponent(sendNo),
+                    url: '{{$page_url}}/ref?sendno=' + encodeURIComponent(sendNo),
                     success: function (resp) {
                         const $f = $('#form_sample_delivery');
                         // ไม่พบ → ล้างช่องที่ auto-fill มาจากใบอ้างอิง (ลูกค้า/ข้อมูลสี)
