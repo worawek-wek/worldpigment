@@ -302,6 +302,11 @@
                         oninput="loadData(page)">
                 </div>
                 <div class="col-md-2">
+                    <label class="form-label small fw-medium mb-1">Resin (Match) <span class="text-muted fw-normal">(เช่น PVC, ABS)</span></label>
+                    <input type="text" name="resin" class="form-control p_search"
+                        oninput="loadData(page)">
+                </div>
+                <div class="col-md-2">
                     <label class="form-label small fw-medium mb-1">Lot No. <span class="text-muted fw-normal">(เช่น 690112-1-2/01)</span></label>
                     <input type="text" name="lot" class="form-control p_search"
                         oninput="loadData(page)">

@@ -371,6 +371,9 @@ class ColorMatchingController extends Controller
         if (@$request->color) {
             $query->where('color', 'LIKE', "%{$request->color}%");
         }
+        if (@$request->resin) {
+            $query->where('ResinMatch', 'LIKE', "%{$request->resin}%");
+        }
         if (@$request->lot) {
             $query->where('lotno', 'LIKE', "%{$request->lot}%");
         }
