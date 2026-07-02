@@ -65,7 +65,7 @@
                                     </div>
                                     <div class="col-md-2">
                                         <label class="form-label small mb-1">Sale No. <span class="text-muted fw-normal">(เช่น NEW15)</span></label>
-                                        <input type="text" name="sale" class="form-control" maxlength="2">
+                                        <input type="text" name="sale" class="form-control">
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label small mb-1">
@@ -141,7 +141,7 @@
                                 {{-- ความกว้างแต่ละช่องปรับตามเนื้อหา (ไม่ยืดเต็มคอลัมน์) — ใช้ w-100 คั่นเพื่อขึ้นบรรทัดใหม่ --}}
                                 <div class="row g-3">
                                     {{-- แถว 1: Resin + PHR + น้ำหนัก + Standard --}}
-                                    <div class="col-md-3">
+                                    <div class="col-md-5">
                                         <label class="form-label small mb-1">Resin (Match) <span class="text-muted fw-normal">(เช่น PVC, ABS, PE)</span></label>
                                         <input type="text" name="ResinMatch" class="form-control">
                                     </div>
