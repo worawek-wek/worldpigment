@@ -116,7 +116,7 @@
                     <td class="{{ trim($sortActive('lotno')) }}">{{ $row->lotno ?: '-' }}</td>
 
                     <td class="td-status text-center{{ $sortActive('status') }}">
-                        <span class="badge {{ $statusClass }}">
+                        <span class="badge {{ $statusClass }} text-dark fw-bold">
                             <i class="ti {{ $statusIcon }} me-1"></i>
                             {{ $statusText }}
                         </span>

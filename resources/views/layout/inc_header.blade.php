@@ -244,11 +244,12 @@
   .select2-results__option {
     font-size: var(--wp-font-base);
   }
-  /* ตัวหนังสือเล็กพิเศษ (คำอธิบาย/label ย่อย/badge) — ดันขึ้นเล็กน้อยพออ่านออก */
+  /* ตัวหนังสือเล็กพิเศษ (คำอธิบาย/label ย่อย) — ดันขึ้นเล็กน้อยพออ่านออก
+     ไม่รวม .badge — badge เป็น pill ที่ควรมีขนาดสัมพัทธ์ (0.81em) เล็กตามดีไซน์
+     ถ้าดันให้ใหญ่จะดูหนา/เด่นผิดที่ โดยเฉพาะ badge สถานะในตาราง */
   small, .small,
   .form-label, .col-form-label,
-  .form-text,
-  .badge {
+  .form-text {
     font-size: var(--wp-font-sm);
   }
 </style>
