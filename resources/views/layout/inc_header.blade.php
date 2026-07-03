@@ -16,6 +16,9 @@
     rel="stylesheet" />
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@100;200;300;400;500;600;700&display=swap"
     rel="stylesheet">
+<link
+    href="https://fonts.googleapis.com/css2?family=Lexend:wght@100;200;300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet" />
 
 <!-- Icons -->
 <link rel="stylesheet" href="assets/vendor/fonts/fontawesome.css" />
@@ -148,6 +151,12 @@
   html[data-bs-theme="light"],
   html.light-style,
   :root {
+    /* ใช้ Lexend เป็นฟอนต์หลัก (ละติน/ตัวเลข)
+       Lexend ไม่มี glyph ไทย → ไม่ระบุฟอนต์ไทยไว้ ปล่อยให้ตัวไทยตกไปที่ sans-serif
+       (ฟอนต์ไทยเริ่มต้นของระบบ) ให้ตรงกับที่เห็นในหน้า font-preview เป๊ะ
+       ต้องตั้งตรงนี้ (หลัง core.css) ไม่งั้น core.css จะ override --bs-font-sans-serif กลับเป็น "Public Sans" */
+    --bs-font-sans-serif: "Lexend", sans-serif;
+
     --bs-body-color: #000000;                 /* เดิม #6f6b7d — ข้อความหลัก ดำสนิท */
     --bs-body-color-rgb: 0, 0, 0;
     --bs-heading-color: #000000;              /* เดิม #5d596c — หัวข้อ/heading ดำสนิท */
