@@ -5,7 +5,7 @@
 
 <head>
     @include('layout/inc_header')
-    <title>Dashboard - CRM | Vuexy - Bootstrap Admin Template</title>
+    <title>ใบเสนอราคา - World Pigment</title>
 
 </head>
 <style>
@@ -71,7 +71,7 @@
                     </div>
 
                     <div class="d-flex gap-2 flex-wrap">
-                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#quotationModal">
+                        <button class="btn btn-primary" onclick="openCreate()">
                             <i class="ti ti-plus me-1"></i>
                             สร้างใบเสนอราคา
                         </button>
@@ -171,290 +171,163 @@
         <!-- Drag Target Area To SlideIn Menu On Small Screens -->
         <div class="drag-target"></div>
     </div>
-    <!--add  Modal -->
-<!-- Quotation Modal -->
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- Modal: สร้าง / แก้ไข ใบเสนอราคา (ใช้ฟอร์มร่วมกัน)                  -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
 <div class="modal modalHeadDecor fade" id="quotationModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
 
             <div class="modal-header">
-                <h5 class="modal-title">
-                    สร้างใบเสนอราคา
-                </h5>
-
-                <button type="button" class="btn-close"
-                    data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="quotationModalTitle">สร้างใบเสนอราคา</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
-            <div class="modal-body px-5">
+            <form id="quotationForm">
+                <input type="hidden" name="mode" id="q_mode" value="insert">
+                {{-- qno เดิม (ใช้ตอน update/หา key) --}}
+                <input type="hidden" name="qno" id="q_qno_key">
 
-{{-- ////////////////////////////////////////////////////////////////////////////////////////// --}}
-            <!-- Top Form -->
-            <div class="row g-3">
+                <div class="modal-body px-5">
 
-                <div class="col-md-4">
-                    <label class="form-label">
-                        เลขที่ใบเสนอราคา
-                    </label>
+                    <!-- Top Form -->
+                    <div class="row g-3">
 
-                    <input type="text"
-                        class="form-control"
-                        value="WH690270">
-                </div>
-                <div class="col-md-8">
+                        <div class="col-md-4">
+                            <label class="form-label">เลขที่ใบเสนอราคา <span class="text-danger">*</span></label>
+                            <input type="text" name="Qno" id="q_Qno" class="form-control" maxlength="10" required>
+                        </div>
+                        <div class="col-md-4"></div>
+                        <div class="col-md-2">
+                            <label class="form-label">วันที่เสนอราคา</label>
+                            <input type="date" name="Qdate" id="q_Qdate" class="form-control">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-danger">Revise Date</label>
+                            <input type="date" name="Revisedate" id="q_Revisedate" class="form-control">
+                        </div>
 
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">
-                        วันที่เสนอราคา
-                    </label>
+                        <div class="col-md-2">
+                            <label class="form-label">ชนิดสินค้า</label>
+                            <select name="PDtype" id="q_PDtype" class="form-select">
+                                @foreach ($pdtypes as $pt)
+                                    <option value="{{ $pt->PDType }}">{{ $pt->PDType }} — {{ $pt->PDHead1 }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <div class="form-check">
+                                <input class="form-check-input" id="q_exam" name="exam" type="checkbox" value="1">
+                                <label class="form-check-label" for="q_exam">พร้อมตัวอย่าง</label>
+                            </div>
+                        </div>
+                        <div class="col-md-8"></div>
 
-                    <input type="date"
-                        class="form-control">
-                </div>
+                        <div class="col-md-3">
+                            <label class="form-label">รหัสพนักงานขาย</label>
+                            <input type="number" name="EmpID" id="q_EmpID" class="form-control">
+                        </div>
+                        <div class="col-md-9"></div>
 
-                <div class="col-md-2">
-                    <label class="form-label text-danger">
-                        Revise Date
-                    </label>
-
-                    <input type="date"
-                        class="form-control">
-                </div>
-
-
-                <div class="col-md-8"></div>
-                <div class="col-md-2">
-                    <label class="form-label">
-                        ชนิดสินค้า
-                    </label>
-
-                    <select class="form-select">
-                        <option>MB</option>
-                        <option>DB</option>
-                        <option>CP</option>
-                    </select>
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <div class="form-check">
-
-                        <input class="form-check-input" id="example"
-                            type="checkbox">
-
-                        <label class="form-check-label" for="example">
-                            พร้อมตัวอย่าง
-                        </label>
+                        <div class="col-md-2">
+                            <label class="form-label">รหัสลูกค้า</label>
+                            <input type="text" name="Custid" id="q_Custid" class="form-control" maxlength="6"
+                                oninput="lookupCustomer(this.value)">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label">ชื่อลูกค้า</label>
+                            <input type="text" name="CustName" id="q_CustName" class="form-control text-primary fw-bold">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label">ชื่อลูกค้า (ภาษาอังกฤษ)</label>
+                            <input type="text" name="Engname" id="q_Engname" class="form-control" maxlength="70">
+                        </div>
 
                     </div>
-                </div>
-                <div class="col-md-8"></div>
 
-                <div class="col-md-2">
-                    <label class="form-label">
-                        รหัสพนักงานขาย
-                    </label>
-                    <input type="text"
-                            class="form-control"
-                            value="9961">
-                </div>
-                <div class="col-md-1">
-                    <label class="form-label">
-                        &nbsp;
-                    </label>
-                        <input type="text"
-                            class="form-control text-center"
-                            value="8">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">
-                        &nbsp;
-                    </label>
-                        <input type="text"
-                            class="form-control"
-                            value="มานะ พงษ์ชูธนโชคภากร">
+                    <!-- ปุ่มเพิ่มรายการ -->
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="button" class="btn btn-label-warning" onclick="addQuotationItem()">
+                                    <i class="ti ti-plus me-1"></i>เพิ่มรายการ
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
-                </div>
-                <div class="col-md-5"></div>
-                <div class="col-md-2">
-                    <label class="form-label">
-                        รหัสลูกค้า
-                    </label>
+                    <!-- ตารางรายการสินค้า -->
+                    <div class="table-responsive mt-4">
+                        <table class="table table-bordered align-middle" id="quotationItemsTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th width="150">รหัสสินค้า</th>
+                                    <th>ชื่อสินค้า</th>
+                                    <th width="130">ราคาเก่า</th>
+                                    <th width="130">ราคาใหม่</th>
+                                    <th width="130">ราคารวมภาษี</th>
+                                    <th width="60" class="text-center">ลบ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="quotationItems">
+                                {{-- แถวเริ่มต้นเติมด้วย JS (resetItems) --}}
+                            </tbody>
+                        </table>
+                    </div>
 
-                    <select class="form-select">
-                        <option>36017</option>
-                    </select>
-                </div>
-
-                <div class="col-md-5">
-                    <label class="form-label">
-                        ชื่อลูกค้า
-                    </label>
-
-                    <input type="text"
-                        class="form-control text-primary fw-bold"
-                        value="บริษัท วนวิทย์ แมนูแฟคเจอริ่ง จำกัด">
-                </div>
-                <div class="col-md-5">
-                    <label class="form-label">
-                        ชื่อลูกค้า(ภาษาอังกฤษ)
-                    </label>
-
-                    <input type="text"
-                        class="form-control"
-                        value="Wanawit Manufacturing">
-                </div>
-
-            </div>
-
-            <!-- Price Buttons -->
-            <div class="row mt-4">
-
-                <div class="col-md-12">
-
-                    <div class="d-flex flex-wrap gap-2">
-
-                        <button type="button" class="btn btn-label-warning" onclick="addQuotationItem()">
-                            <i class="ti ti-plus me-1"></i>
-                            เพิ่มรายการ
-                        </button>
-
+                    <!-- Bottom Form -->
+                    <div class="row g-3 mt-3">
+                        <div class="col-md-3">
+                            <label class="form-label">ควรกำหนดยอดซื้อขั้นต่ำ (ก.ก.)</label>
+                            <input type="text" name="Qremark" id="q_Qremark" class="form-control text-center" maxlength="50">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Payment Term</label>
+                            <input type="text" name="Term" id="q_Term" class="form-control text-center" maxlength="20">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">ยืนราคาถึงวันที่</label>
+                            <input type="date" name="Validto" id="q_Validto" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">ส่งสินค้าได้ภายใน <span class="text-muted fw-normal">(วัน)</span></label>
+                            <input type="text" name="LeadTime" id="q_LeadTime" class="form-control" maxlength="3">
+                        </div>
                     </div>
 
                 </div>
 
-            </div>
-
-            <!-- Product Table -->
-            <div class="table-responsive mt-4">
-
-                <table class="table table-bordered align-middle" id="quotationItemsTable">
-
-                    <thead class="table-light">
-
-                        <tr>
-                            <th width="150">รหัสสินค้า</th>
-                            <th>ชื่อสินค้า</th>
-                            <th width="150">ราคาเก่า</th>
-                            <th width="150">ราคาใหม่</th>
-                            <th width="150">ราคารวมภาษี</th>
-                            <th width="60" class="text-center">ลบ</th>
-                        </tr>
-
-                    </thead>
-
-                    <tbody id="quotationItems">
-
-                        <tr>
-                            <td><input type="text" name="item_code[]" class="form-control" value="1908053"></td>
-                            <td><input type="text" name="item_name[]" class="form-control" value="MB BLUE-J [MB POM RAL 2308520]"></td>
-                            <td><input type="number" name="item_old_price[]" class="form-control text-end" value="275.00"></td>
-                            <td><input type="number" name="item_new_price[]" class="form-control text-end" value="285.00"></td>
-                            <td><input type="number" name="item_total_price[]" class="form-control text-end" value="304.95"></td>
-                            <td class="text-center">
-                                <button type="button" class="btn btn-sm btn-icon btn-label-danger" title="ลบรายการ" onclick="removeQuotationItem(this)">
-                                    <i class="ti ti-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td><input type="text" name="item_code[]" class="form-control"></td>
-                            <td><input type="text" name="item_name[]" class="form-control"></td>
-                            <td><input type="number" name="item_old_price[]" class="form-control text-end" value="0.00"></td>
-                            <td><input type="number" name="item_new_price[]" class="form-control text-end" value="0.00"></td>
-                            <td><input type="number" name="item_total_price[]" class="form-control text-end" value="0.00"></td>
-                            <td class="text-center">
-                                <button type="button" class="btn btn-sm btn-icon btn-label-danger" title="ลบรายการ" onclick="removeQuotationItem(this)">
-                                    <i class="ti ti-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-            <!-- Bottom Form -->
-            <div class="row g-3 mt-3">
-
-                <div class="col-md-3">
-                    <label class="form-label">
-                        MB ควรกำหนดยอดซื้อขั้นต่ำ (ก.ก.)
-                    </label>
-
-                    <input type="text"
-                        class="form-control text-center"
-                        value="-">
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="button" class="btn btn-primary" onclick="saveQuotation()">
+                        <i class="ti ti-device-floppy me-1"></i>บันทึกใบเสนอราคา
+                    </button>
                 </div>
-
-                <div class="col-md-2">
-                    <label class="form-label">
-                        Payment Term
-                    </label>
-
-                    <input type="text"
-                        class="form-control text-center"
-                        value="90 วัน">
-                </div>
-
-                <div class="col-md-3">
-                    <label class="form-label">
-                        ยืนราคาถึงวันที่
-                    </label>
-
-                    <input type="date"
-                        class="form-control">
-                </div>
-
-                <div class="col-md-3">
-                    <label class="form-label">
-                        ส่งสินค้าได้ภายใน <span class="text-muted fw-normal">(วัน)</span>
-                    </label>
-
-                    <input type="text"
-                        class="form-control">
-                </div>
-
-            </div>
-
-{{-- ////////////////////////////////////////////////////////////////////////////////////////// --}}
-
-            </div>
-
-            <div class="modal-footer">
-
-                <button class="btn btn-label-secondary"
-                    data-bs-dismiss="modal">
-                    ยกเลิก
-                </button>
-
-                <button class="btn btn-primary">
-                    บันทึกใบเสนอราคา
-                </button>
-
-            </div>
+            </form>
 
         </div>
     </div>
 </div>
 
-    <!--edit  Modal -->
-    <div class="modal fade modalHeadDecor" id="editModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
-            <form id="insert_category" enctype="multipart/form-data">
-                @csrf
-                <div class="modal-content rounded-0">
-                    <div class="modal-header rounded-0">
-                        <h5 class="modal-title" id="exampleModalLabel1">เพิ่มข้อมูลหมวดหมู่</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    @include('category/form')
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- Modal: ดูรายละเอียด (โหลด HTML จาก quotation/show)               -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="quotationViewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content" style="overflow:hidden;">
+            {{-- ปุ่มปิดลอย — แบนเนอร์ในเนื้อหาทำหน้าที่เป็น header แทน --}}
+            <button type="button" class="btn-close btn-close-white position-absolute"
+                style="top:1.15rem; right:1.25rem; z-index:1056;" data-bs-dismiss="modal" aria-label="ปิด"></button>
+            <div class="modal-body p-0" id="quotationViewBody">
+                <div class="text-center py-5">
+                    <div class="spinner-border spinner-border-sm me-2"></div>กำลังโหลด...
                 </div>
-            </form>
+            </div>
         </div>
     </div>
+</div>
+
     <!-- / Layout wrapper -->
     @include('layout/inc_js')
 <script>
@@ -467,20 +340,23 @@
         // ────────────────────────────────────────────────────────
         //  รายการสินค้าในใบเสนอราคา — เพิ่ม/ลบแถวได้
         // ────────────────────────────────────────────────────────
-        function addQuotationItem() {
-            var row = '<tr>'
-                + '<td><input type="text" name="item_code[]" class="form-control"></td>'
-                + '<td><input type="text" name="item_name[]" class="form-control"></td>'
-                + '<td><input type="number" name="item_old_price[]" class="form-control text-end" value="0.00"></td>'
-                + '<td><input type="number" name="item_new_price[]" class="form-control text-end" value="0.00"></td>'
-                + '<td><input type="number" name="item_total_price[]" class="form-control text-end" value="0.00"></td>'
+        function itemRow(it){
+            it = it || {};
+            return '<tr>'
+                + '<td><input type="text"   name="item_code[]"        class="form-control" value="'      + (it.code  ?? '') + '"></td>'
+                + '<td><input type="text"   name="item_name[]"        class="form-control" value="'      + (it.name  ?? '') + '"></td>'
+                + '<td><input type="number" name="item_old_price[]"   class="form-control text-end" step="0.01" value="' + (it.old ?? '') + '"></td>'
+                + '<td><input type="number" name="item_new_price[]"   class="form-control text-end" step="0.01" value="' + (it.newp ?? '') + '"></td>'
+                + '<td><input type="number" name="item_total_price[]" class="form-control text-end" step="0.01" value="' + (it.net ?? '') + '"></td>'
                 + '<td class="text-center">'
                 +   '<button type="button" class="btn btn-sm btn-icon btn-label-danger" title="ลบรายการ" onclick="removeQuotationItem(this)">'
-                +     '<i class="ti ti-trash"></i>'
-                +   '</button>'
+                +     '<i class="ti ti-trash"></i></button>'
                 + '</td>'
                 + '</tr>';
-            $('#quotationItems').append(row);
+        }
+
+        function addQuotationItem(it) {
+            $('#quotationItems').append(itemRow(it));
         }
 
         function removeQuotationItem(btn) {
@@ -492,6 +368,185 @@
             $(btn).closest('tr').remove();
         }
 
+        // ────────────────────────────────────────────────────────
+        //  ค้นชื่อลูกค้าจากรหัส (เติมชื่อไทย/อังกฤษ/เทอมอัตโนมัติ)
+        // ────────────────────────────────────────────────────────
+        // เรียกจาก oninput → debounce กันยิง AJAX ทุกตัวอักษร, ไม่เด้ง popup ระหว่างพิมพ์
+        var custLookupTimer = null, custLookupXhr = null;
+        function lookupCustomer(code){
+            code = (code || '').trim();
+            clearTimeout(custLookupTimer);
+            if (!code){ $('#q_CustName').val(''); return; }
+            custLookupTimer = setTimeout(function(){
+                if (custLookupXhr) custLookupXhr.abort();
+                custLookupXhr = $.getJSON("{{ $page_url }}/customer/" + encodeURIComponent(code), function(res){
+                    // กันผลเก่ามาทับ: เช็คว่ารหัสในช่องยังตรงกับที่ค้นอยู่
+                    if ($('#q_Custid').val().trim() !== code) return;
+                    if (res.found){
+                        $('#q_CustName').val(res.name || '');
+                        if (res.nameEN) $('#q_Engname').val(res.nameEN);
+                        if (res.term && !$('#q_Term').val()) $('#q_Term').val(res.term);
+                    } else {
+                        $('#q_CustName').val('');   // ยังพิมพ์ไม่ครบ/ไม่เจอ → เคลียร์เงียบๆ ไม่เด้ง popup
+                    }
+                });
+            }, 350);
+        }
+
+        // ────────────────────────────────────────────────────────
+        //  เปิดฟอร์มสร้างใหม่
+        // ────────────────────────────────────────────────────────
+        function resetItems(items){
+            var body = $('#quotationItems').empty();
+            if (items && items.length){
+                items.forEach(function(i){ body.append(itemRow(i)); });
+            } else {
+                body.append(itemRow()).append(itemRow());  // เริ่มต้น 2 แถวว่าง
+            }
+        }
+
+        function openCreate(){
+            document.getElementById('quotationForm').reset();
+            $('#q_mode').val('insert');
+            $('#q_qno_key').val('');
+            $('#quotationModalTitle').text('สร้างใบเสนอราคา');
+            $('#q_Qno').prop('readonly', false);
+            // วันที่เสนอราคา = วันนี้
+            $('#q_Qdate').val(new Date().toISOString().slice(0,10));
+            resetItems();
+            // ขอเลขที่ถัดไป (แก้ไขได้)
+            $.getJSON("{{ $page_url }}/next-qno", {prefix:'WH'}, function(res){
+                if (res.qno) $('#q_Qno').val(res.qno);
+            });
+            new bootstrap.Modal('#quotationModal').show();
+        }
+
+        // ────────────────────────────────────────────────────────
+        //  แก้ไข — ดึงข้อมูลเดิมมาเติมฟอร์ม
+        // ────────────────────────────────────────────────────────
+        function quotationEdit(qno){
+            $.getJSON("{{ $page_url }}/edit", {qno: qno}, function(res){
+                if (res.error){ Swal.fire('ไม่พบข้อมูล', qno, 'error'); return; }
+                var h = res.header || {};
+                document.getElementById('quotationForm').reset();
+                $('#q_mode').val('update');
+                $('#q_qno_key').val(h.Qno);
+                $('#quotationModalTitle').text('แก้ไขใบเสนอราคา ' + (h.Qno || ''));
+                $('#q_Qno').val((h.Qno || '').trim()).prop('readonly', true);   // ห้ามเปลี่ยนเลขที่
+                $('#q_Qdate').val(dateOnly(h.Qdate));
+                $('#q_Revisedate').val(dateOnly(h.Revisedate));
+                $('#q_Validto').val(dateOnly(h.Validto));
+                $('#q_PDtype').val(h.PDtype);
+                $('#q_exam').prop('checked', h.exam == 1);
+                $('#q_EmpID').val(h.EmpID);
+                $('#q_Custid').val(h.Custid);
+                // ชื่อไทยใช้จาก customer (join) ถ้ามี ไม่งั้น fallback CustName เดิม
+                $('#q_CustName').val((res.cust && res.cust.name) ? res.cust.name : (h.CustName || ''));
+                $('#q_Engname').val(h.Engname || (res.cust ? res.cust.nameEN : '') || '');
+                $('#q_Qremark').val(h.Qremark);
+                $('#q_Term').val(h.Term);
+                $('#q_LeadTime').val(h.LeadTime);
+                // รายการ
+                var items = (res.items || []).map(function(d){
+                    return {code:d.Qitemno||'', name:d.Qdesc||'', old:d.oldprice ?? '', newp:d.QPrice ?? '', net:d.QNet ?? ''};
+                });
+                resetItems(items);
+                new bootstrap.Modal('#quotationModal').show();
+            }).fail(function(){ Swal.fire('เกิดข้อผิดพลาด', 'โหลดข้อมูลไม่สำเร็จ', 'error'); });
+        }
+
+        // ตัดเวลาออกจาก datetime → 'YYYY-MM-DD' สำหรับ input[type=date]
+        function dateOnly(v){
+            if (!v) return '';
+            return String(v).substring(0,10);
+        }
+
+        // ────────────────────────────────────────────────────────
+        //  บันทึก (create/update)
+        // ────────────────────────────────────────────────────────
+        function saveQuotation(){
+            var form = document.getElementById('quotationForm');
+            if (!$('#q_Qno').val().trim()){
+                Swal.fire('กรอกไม่ครบ', 'กรุณากรอกเลขที่ใบเสนอราคา', 'warning');
+                return;
+            }
+            var mode = $('#q_mode').val();
+            var url  = mode === 'update' ? "{{ $page_url }}/update" : "{{ $page_url }}/insert";
+            var fd = new FormData(form);
+            fd.append('_token', '{{ csrf_token() }}');
+
+            $.ajax({
+                url: url, type: 'POST', data: fd, contentType: false, processData: false,
+                success: function(res){
+                    if (res.ok){
+                        bootstrap.Modal.getInstance(document.getElementById('quotationModal')).hide();
+                        Swal.fire('บันทึกเรียบร้อย', 'เลขที่ ' + res.qno, 'success');
+                        loadData(page);
+                    } else {
+                        Swal.fire('ไม่สำเร็จ', res.error || 'ไม่ทราบสาเหตุ', 'error');
+                    }
+                },
+                error: function(xhr){
+                    var msg = (xhr.responseJSON && xhr.responseJSON.error) ? xhr.responseJSON.error : 'เกิดข้อผิดพลาด';
+                    Swal.fire('ไม่สำเร็จ', msg, 'error');
+                }
+            });
+        }
+
+        // ────────────────────────────────────────────────────────
+        //  ดูรายละเอียด / พิมพ์ / ลบ
+        // ────────────────────────────────────────────────────────
+        function quotationView(qno){
+            var el = document.getElementById('quotationViewModal');
+            $('#quotationViewBody').html('<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>กำลังโหลด...</div>');
+            new bootstrap.Modal(el).show();
+            $.get("{{ $page_url }}/show", {qno: qno}, function(html){
+                $('#quotationViewBody').html(html);
+            }).fail(function(){
+                $('#quotationViewBody').html('<div class="text-center py-5 text-danger">ไม่พบข้อมูล</div>');
+            });
+        }
+
+        function quotationPrint(qno){
+            // พิมพ์ในหน้าเดิมผ่าน iframe ซ่อน (ไม่เปิดแท็บ/หน้าต่างใหม่)
+            var frame = document.getElementById('printFrame');
+            if (!frame){
+                frame = document.createElement('iframe');
+                frame.id = 'printFrame';
+                frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+                document.body.appendChild(frame);
+            }
+            frame.onload = function(){
+                try { frame.contentWindow.focus(); frame.contentWindow.print(); }
+                catch (e) { console.error(e); }
+            };
+            frame.src = "{{ $page_url }}/print?qno=" + encodeURIComponent(qno);
+        }
+
+        function quotationDelete(qno){
+            Swal.fire({
+                title: 'ยืนยันการลบ?',
+                html: 'ลบใบเสนอราคา <strong>' + qno + '</strong> และรายการทั้งหมด<br>การลบไม่สามารถย้อนกลับได้',
+                icon: 'warning', showCancelButton: true,
+                confirmButtonText: 'ลบ', cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#d33',
+            }).then(function(result){
+                if (!result.isConfirmed) return;
+                $.ajax({
+                    url: "{{ $page_url }}/delete", type: 'POST',
+                    data: {qno: qno, _token: '{{ csrf_token() }}'},
+                    success: function(res){
+                        if (res.ok){ Swal.fire('ลบเรียบร้อย', '', 'success'); loadData(page); }
+                        else { Swal.fire('ไม่สำเร็จ', res.error || '', 'error'); }
+                    },
+                    error: function(){ Swal.fire('เกิดข้อผิดพลาด', '', 'error'); }
+                });
+            });
+        }
+
+        // ────────────────────────────────────────────────────────
+        //  DataTable filter machinery (คงเดิม)
+        // ────────────────────────────────────────────────────────
         // เก็บ filter สด (เฉพาะที่มีค่า) ทุกครั้ง — ไม่สะสมค่าเก่า
         function collectSearchData(){
             var data = {};
@@ -531,245 +586,6 @@
         function resetFilters(){
             $('.p_search:not([name="limit"])').val('');
             loadData("{{$page_url}}/datatable");
-        }
-
-        // ── ปุ่มจัดการในตาราง (ยังไม่ได้ต่อ CRUD — จะทำสเตปถัดไป) ──
-        function quotationView(qno)   { Swal.fire('ดูรายละเอียด', 'อยู่ระหว่างพัฒนา (' + qno + ')', 'info'); }
-        function quotationEdit(qno)   { Swal.fire('แก้ไข', 'อยู่ระหว่างพัฒนา (' + qno + ')', 'info'); }
-        function quotationPrint(qno)  { Swal.fire('พิมพ์', 'อยู่ระหว่างพัฒนา (' + qno + ')', 'info'); }
-        function quotationDelete(qno) { Swal.fire('ลบ', 'อยู่ระหว่างพัฒนา (' + qno + ')', 'info'); }
-        var update_id = 999999999999;
-        function view(id){
-            update_id = id;
-            $.ajax({
-                type: "GET",
-                url: "{{ $page_url }}/"+id,
-                success: function(data) {
-                    $("#view").html(data);
-                    $('#exampleFormControlSelect'+id).select2({
-                        placeholder: 'เลือกผู้เช่า',
-                        allowClear: true,
-                        dropdownParent: $('#editModal'), // 💥 สำคัญมาก ถ้าอยู่ใน modal
-                        width: '100%'
-                    });
-                    // update_id = id;
-                }
-            });
-        }
-
-        var import_id = 999999999999;
-        function getImportForm(id){
-            import_id = id;
-            $.ajax({
-                type: "GET",
-                url: "{{ $page_url }}/import/"+id,
-                success: function(data) {
-                    $("#importStock").html(data);
-                }
-            });
-        }
-
-        function getHistory(id){
-            $.ajax({
-                type: "GET",
-                url: "{{ $page_url }}/history/"+id,
-                success: function(data) {
-                    $("#history-table").html(data);
-                }
-            });
-        }
-
-        $('#insert_category').on('submit', function(event) {
-            event.preventDefault(); // ป้องกันการส่งฟอร์มปกติ
-            if(!this.checkValidity()) {
-                // ถ้าฟอร์มไม่ถูกต้อง
-                this.reportValidity();
-                return console.log('ฟอร์มไม่ถูกต้อง');
-            }
-            // return alert(123);
-            Swal.fire({
-                title: 'ยืนยันการดำเนินการ?',
-                text: 'คุณต้องการเพิ่มหมวดหมู่หรือไม่?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'ตกลง',
-                cancelButtonText: 'ยกเลิก',
-                showDenyButton: false,
-                didOpen: () => {
-                    // โฟกัสที่ปุ่ม confirm
-                    Swal.getConfirmButton().focus();
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    let form = document.getElementById('insert_category');
-                    let formData = new FormData(form);
-                    formData.append('_token', '{{ csrf_token() }}'); // สำหรับ Laravel CSRF
-
-                    $.ajax({
-                        url: '{{$page_url}}/insert', // เปลี่ยน URL เป็นจุดหมายที่ต้องการ
-                        type: 'POST',
-                        data: formData,
-                        contentType: false, // ต้องมีเพื่อให้ส่ง multipart/form-data ได้
-                        processData: false,
-                        success: function(response) {
-                            if(response == true){
-                                $('#insert_category')[0].reset();
-                                Swal.fire('เพิ่มหมวดหมู่เรียบร้อยแล้ว', '', 'success');
-                                $('#addModal').modal('hide');
-                                loadData(page);
-                            }
-                        },
-                        error: function(error) {
-                            Swal.fire('เกิดข้อผิดพลาด', '', 'error');
-                            console.error('เกิดข้อผิดพลาด:', error);
-                        }
-                    });
-                } else if (result.isDismissed) {
-                    // Swal.fire('ยกเลิกการดำเนินการ', '', 'info');
-                }
-            });
-        });
-        $('#update_category').on('submit', function(event) {
-            event.preventDefault(); // ป้องกันการส่งฟอร์มปกติ
-            if(!this.checkValidity()) {
-                // ถ้าฟอร์มไม่ถูกต้อง
-                this.reportValidity();
-                return console.log('ฟอร์มไม่ถูกต้อง');
-            }
-            // return alert(123);
-            Swal.fire({
-                title: 'ยืนยันการดำเนินการ?',
-                text: 'คุณต้องการแก้ไขหมวดหมู่หรือไม่?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'ตกลง',
-                cancelButtonText: 'ยกเลิก',
-                showDenyButton: false,
-                didOpen: () => {
-                    // โฟกัสที่ปุ่ม confirm
-                    Swal.getConfirmButton().focus();
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-
-                    // ใช้ FormData แทน serialize เพื่อส่งไฟล์ได้
-                    let form = document.getElementById('update_category');
-                    let formData = new FormData(form);
-                    formData.append('_token', '{{ csrf_token() }}'); // สำหรับ Laravel CSRF
-
-                    $.ajax({
-                        url: '{{$page_url}}/update/'+update_id, // เปลี่ยน URL เป็นจุดหมายที่ต้องการ
-                        type: 'POST',
-                        data: formData,
-                        contentType: false, // ต้องมีเพื่อให้ส่ง multipart/form-data ได้
-                        processData: false,
-                        success: function(response) {
-                            if(response == true){
-                                Swal.fire('แก้ไขหมวดหมู่เรียบร้อยแล้ว', '', 'success');
-                                $('#editModal').modal('hide');
-                                loadData(page);
-                            }
-                        },
-                        error: function(error) {
-                            Swal.fire('เกิดข้อผิดพลาด', '', 'error');
-                            console.error('เกิดข้อผิดพลาด:', error);
-                        }
-                    });
-                } else if (result.isDismissed) {
-                    // Swal.fire('ยกเลิกการดำเนินการ', '', 'info');
-                }
-            });
-        });
-        $('#update_equipment_stocks').on('submit', function(event) {
-            event.preventDefault(); // ป้องกันการส่งฟอร์มปกติ
-            if(!this.checkValidity()) {
-                // ถ้าฟอร์มไม่ถูกต้อง
-                this.reportValidity();
-                return console.log('ฟอร์มไม่ถูกต้อง');
-            }
-            // return alert(123);
-            Swal.fire({
-                title: 'ยืนยันการดำเนินการ?',
-                text: 'คุณต้องการนำเข้าหมวดหมู่หรือไม่?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'ตกลง',
-                cancelButtonText: 'ยกเลิก',
-                showDenyButton: false,
-                didOpen: () => {
-                    // โฟกัสที่ปุ่ม confirm
-                    Swal.getConfirmButton().focus();
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-
-                    // ใช้ FormData แทน serialize เพื่อส่งไฟล์ได้
-                    let form = document.getElementById('update_equipment_stocks');
-                    let formData = new FormData(form);
-                    formData.append('_token', '{{ csrf_token() }}'); // สำหรับ Laravel CSRF
-
-                    $.ajax({
-                        url: '{{$page_url}}/update_stock/'+import_id, // เปลี่ยน URL เป็นจุดหมายที่ต้องการ
-                        type: 'POST',
-                        data: formData,
-                        contentType: false, // ต้องมีเพื่อให้ส่ง multipart/form-data ได้
-                        processData: false,
-                        success: function(response) {
-                            if(response == true){
-                                Swal.fire('นำเข้าหมวดหมู่เรียบร้อยแล้ว', '', 'success');
-                                $('#addStock').modal('hide');
-                                loadData(page);
-                            }
-                        },
-                        error: function(error) {
-                            Swal.fire('เกิดข้อผิดพลาด', '', 'error');
-                            console.error('เกิดข้อผิดพลาด:', error);
-                        }
-                    });
-                } else if (result.isDismissed) {
-                    // Swal.fire('ยกเลิกการดำเนินการ', '', 'info');
-                }
-            });
-        });
-
-        function Delete(id){
-                Swal.fire({
-                    title: 'ยืนยันการดำเนินการ?',
-                    text: 'คุณต้องการลบหมวดหมู่หรือไม่?',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'ตกลง',
-                    cancelButtonText: 'ยกเลิก',
-                    showDenyButton: false,
-                    didOpen: () => {
-                        // โฟกัสที่ปุ่ม confirm
-                        Swal.getConfirmButton().focus();
-                    }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            url: '{{$page_url}}/'+id, // เปลี่ยน URL เป็นจุดหมายที่ต้องการ
-                            type: 'DELETE',
-                            data: {
-                                _token : "{{ csrf_token() }}"
-                            },
-                            success: function(response) {
-                                if(response == true){
-                                    loadData(page);
-                                    Swal.fire('ลบหมวดหมู่เรียบร้อยแล้ว', '', 'success');
-                                }else{
-                                    Swal.fire('ไม่สามารถลบบัญชีได้', '', 'error');
-                                }
-                            },
-                            error: function(error) {
-                                Swal.fire('เกิดข้อผิดพลาด', '', 'error');
-                                console.error('เกิดข้อผิดพลาด:', error);
-                            }
-                        });
-                    } else if (result.isDismissed) {
-                        // Swal.fire('ยกเลิกการดำเนินการ', '', 'info');
-                    }
-                });
         }
 </script>
 </body>
