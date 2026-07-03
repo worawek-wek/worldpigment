@@ -219,6 +219,40 @@
   }
 </style>
 
+{{-- ─────────────────────────────────────────────────────────────────
+     เพิ่มขนาดฟอนต์ทั้งระบบให้ใหญ่ขึ้น (ลูกค้าแจ้งตัวหนังสือเล็กไป)
+     หลักการ: ดันเฉพาะ "ตัวปกติ/ตัวเล็ก" ให้ใหญ่ขึ้น ~2px
+              ไม่แตะหัวข้อใหญ่ (h1–h6 / .display-* / .fs-1..3) ที่ใหญ่อยู่แล้ว
+     ปรับง่าย: อยากใหญ่/เล็กกว่านี้ แก้แค่ตัวเลข --wp-font-base / --wp-font-sm 2 ค่าล่าง
+     ต้องอยู่หลัง core.css เพื่อ override ค่าเดิมของธีม
+   ───────────────────────────────────────────────────────────────── --}}
+<style>
+  :root {
+    --wp-font-base: 1.0625rem;   /* ตัวปกติ เดิม 0.9375rem (15px) → 17px */
+    --wp-font-sm:   0.9375rem;   /* ตัวเล็ก  เดิม 0.8125rem (13px) → 15px */
+    /* ดันข้อความ body และทุกอย่างที่ inherit ขนาดจาก body (ตาราง/ย่อหน้า/list ฯลฯ) */
+    --bs-body-font-size: var(--wp-font-base);
+  }
+  /* คอมโพเนนต์ที่กำหนดขนาดตัวเองไว้ (ไม่ได้ inherit body) — ดันขึ้นให้เท่ากัน */
+  .form-control, .form-select, .input-group-text,
+  .btn,
+  .dropdown-item,
+  .nav-link, .menu-link,
+  .table,
+  .table th, .table td,
+  .select2-container .select2-selection__rendered,
+  .select2-results__option {
+    font-size: var(--wp-font-base);
+  }
+  /* ตัวหนังสือเล็กพิเศษ (คำอธิบาย/label ย่อย/badge) — ดันขึ้นเล็กน้อยพออ่านออก */
+  small, .small,
+  .form-label, .col-form-label,
+  .form-text,
+  .badge {
+    font-size: var(--wp-font-sm);
+  }
+</style>
+
 <div id="loadingOverlay" style="display: none;">
     <div class="col">
         <!-- Chase -->

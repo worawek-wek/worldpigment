@@ -58,13 +58,13 @@
                                     </span>
                                 </div>
 
-                                <div class="row g-3">
+                                <div class="row g-3 align-items-end">
                                     <div class="col-md-2">
                                         <label class="form-label small mb-1">รหัสลูกค้า <span class="text-muted fw-normal">(เช่น 00004)</span></label>
                                         <input type="text" name="custno" class="form-control">
                                     </div>
                                     <div class="col-md-2">
-                                        <label class="form-label small mb-1">Sale No. <span class="text-muted fw-normal">(เช่น NEW15)</span></label>
+                                        <label class="form-label small mb-1">Sale No. <span class="text-muted fw-normal"><br>(เช่น NEW15)</span></label>
                                         <input type="text" name="sale" class="form-control">
                                     </div>
                                     <div class="col-md-4">
@@ -139,7 +139,8 @@
                                 </div>
 
                                 {{-- ความกว้างแต่ละช่องปรับตามเนื้อหา (ไม่ยืดเต็มคอลัมน์) — ใช้ w-100 คั่นเพื่อขึ้นบรรทัดใหม่ --}}
-                                <div class="row g-3">
+                                {{-- align-items-end: label ยาวไม่เท่ากันในแถว → ช่องกรอกชิดล่างเรียงตรงกัน --}}
+                                <div class="row g-3 align-items-end">
                                     {{-- แถว 1: Resin + PHR + น้ำหนัก + Standard --}}
                                     <div class="col-md-5">
                                         <label class="form-label small mb-1">Resin (Match) <span class="text-muted fw-normal">(เช่น PVC, ABS, PE)</span></label>
@@ -150,7 +151,7 @@
                                         <input type="number" step="0.0001" name="PHR" class="form-control text-end">
                                     </div>
                                     <div class="col-md-2">
-                                        <label class="form-label small mb-1">น้ำหนัก (กรัม) <span class="text-muted fw-normal">(เช่น 100)</span></label>
+                                        <label class="form-label small mb-1">น้ำหนัก (กรัม) <span class="text-muted fw-normal"><br>(เช่น 100)</span></label>
                                         <input type="number" name="Wage" class="form-control">
                                     </div>
                                     <div class="col-md-3">
@@ -189,7 +190,7 @@
                                                 <i class="ti ti-circle-check me-2" style="color: #1c6dbf;"></i>
                                                 <span class="fw-semibold small" style="color: #1c6dbf;">ข้อมูลที่ลูกค้าอนุมัติ</span>
                                             </div>
-                                            <div class="row g-3">
+                                            <div class="row g-3 align-items-end">
                                                 <div class="col-md-6">
                                                     <label class="form-label small mb-1">ลูกค้าอนุมัติเบอร์ตั้ง <span class="text-muted fw-normal">(เช่น CP1Y583PVC)</span></label>
                                                     <input type="text" name="CodeNo" class="form-control border-primary-subtle">

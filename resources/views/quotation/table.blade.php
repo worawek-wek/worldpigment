@@ -51,7 +51,7 @@
 
                     <td class="text-end">{{ number_format($row->item_count) }}</td>
 
-                    <td class="text-end fw-semibold">{{ number_format($row->total_net, 2) }}</td>
+                    <td class="text-end">{{ number_format($row->total_net, 2) }}</td>
 
                     <td>
                         @if ($row->exam == 1)
