@@ -134,19 +134,21 @@
                     console.error('AJAX Error:', error, thrown);
                 }
             },
+            // responsivePriority: เลขน้อย = สำคัญกว่า ถูกซ่อนทีหลังสุดเมื่อจอแคบ
+            // ตรึงคอลัมน์ #, สถานะ, จัดการ ไว้เสมอ (จัดการมีปุ่มสร้างแผน ห้ามหาย) — ถ้าจอแคบให้ยุบคอลัมน์กลางแทน
             columns: [
-                { className: "text-center", data: 'rownum',       name: 'rownum',       orderable: false },
-                { className: "text-center", data: 'type_badge',   name: 'type_badge',   orderable: false, searchable: false },
+                { className: "text-center", data: 'rownum',       name: 'rownum',       orderable: false, responsivePriority: 1 },
+                { className: "text-center", data: 'type_badge',   name: 'type_badge',   orderable: false, searchable: false, responsivePriority: 4 },
                 { className: "text-center", data: 'orderno',      name: 'orderno',      orderable: false },
                 { className: "text-center", data: 'company',      name: 'company',      orderable: false },
                 { className: "text-center", data: 'order_date',   name: 'order_date',   orderable: false },
                 { className: "text-center", data: 'want_date',    name: 'want_date',    orderable: false },
                 { className: "text-center", data: 'custno',       name: 'custno',       orderable: false },
-                { className: "text-left",   data: 'itemno',         name: 'itemno',         orderable: false },
+                { className: "text-left",   data: 'itemno',         name: 'itemno',         orderable: false, responsivePriority: 5 },
                 { className: "text-center", data: 'weight_request',    name: 'weight_request',    orderable: false, render: fmt2 },
                 { className: "text-center", data: 'weight_production', name: 'weight_production', orderable: false, render: fmt2 },
-                { className: "text-center", data: 'status_badge',      name: 'status_badge',      orderable: false, searchable: false },
-                { className: "text-center", data: 'action',       name: 'action',       orderable: false, searchable: false },
+                { className: "text-center", data: 'status_badge',      name: 'status_badge',      orderable: false, searchable: false, responsivePriority: 3 },
+                { className: "text-center", data: 'action',       name: 'action',       orderable: false, searchable: false, responsivePriority: 2 },
             ],
             order: [[0, 'asc']]
         });
