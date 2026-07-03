@@ -282,7 +282,7 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label small fw-medium mb-1">ปรับแก้ไข</label>
                     <select name="revision" class="form-select p_search" onchange="loadData(page)">
                         <option value="">ทั้งหมด</option>
@@ -301,7 +301,7 @@
                     <input type="text" name="color" class="form-control p_search"
                         oninput="loadData(page)">
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <label class="form-label small fw-medium mb-1">Resin (Match) <span class="text-muted fw-normal">(เช่น PVC, ABS)</span></label>
                     <input type="text" name="resin" class="form-control p_search"
                         oninput="loadData(page)">

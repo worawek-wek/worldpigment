@@ -16,6 +16,9 @@
     rel="stylesheet" />
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@100;200;300;400;500;600;700&display=swap"
     rel="stylesheet">
+<link
+    href="https://fonts.googleapis.com/css2?family=Lexend:wght@100;200;300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet" />
 
 <!-- Icons -->
 <link rel="stylesheet" href="assets/vendor/fonts/fontawesome.css" />
@@ -148,6 +151,12 @@
   html[data-bs-theme="light"],
   html.light-style,
   :root {
+    /* ใช้ Lexend เป็นฟอนต์หลัก (ละติน/ตัวเลข)
+       Lexend ไม่มี glyph ไทย → ไม่ระบุฟอนต์ไทยไว้ ปล่อยให้ตัวไทยตกไปที่ sans-serif
+       (ฟอนต์ไทยเริ่มต้นของระบบ) ให้ตรงกับที่เห็นในหน้า font-preview เป๊ะ
+       ต้องตั้งตรงนี้ (หลัง core.css) ไม่งั้น core.css จะ override --bs-font-sans-serif กลับเป็น "Public Sans" */
+    --bs-font-sans-serif: "Lexend", sans-serif;
+
     --bs-body-color: #000000;                 /* เดิม #6f6b7d — ข้อความหลัก ดำสนิท */
     --bs-body-color-rgb: 0, 0, 0;
     --bs-heading-color: #000000;              /* เดิม #5d596c — หัวข้อ/heading ดำสนิท */
@@ -207,6 +216,41 @@
   }
   #layout-menu .menu-header {
     color: #000000 !important;        /* หัวข้อกลุ่มเมนู เดิม rgba(75,70,92,.5) */
+  }
+</style>
+
+{{-- ─────────────────────────────────────────────────────────────────
+     เพิ่มขนาดฟอนต์ทั้งระบบให้ใหญ่ขึ้น (ลูกค้าแจ้งตัวหนังสือเล็กไป)
+     หลักการ: ดันเฉพาะ "ตัวปกติ/ตัวเล็ก" ให้ใหญ่ขึ้น ~2px
+              ไม่แตะหัวข้อใหญ่ (h1–h6 / .display-* / .fs-1..3) ที่ใหญ่อยู่แล้ว
+     ปรับง่าย: อยากใหญ่/เล็กกว่านี้ แก้แค่ตัวเลข --wp-font-base / --wp-font-sm 2 ค่าล่าง
+     ต้องอยู่หลัง core.css เพื่อ override ค่าเดิมของธีม
+   ───────────────────────────────────────────────────────────────── --}}
+<style>
+  :root {
+    --wp-font-base: 1.0625rem;   /* ตัวปกติ เดิม 0.9375rem (15px) → 17px */
+    --wp-font-sm:   0.9375rem;   /* ตัวเล็ก  เดิม 0.8125rem (13px) → 15px */
+    /* ดันข้อความ body และทุกอย่างที่ inherit ขนาดจาก body (ตาราง/ย่อหน้า/list ฯลฯ) */
+    --bs-body-font-size: var(--wp-font-base);
+  }
+  /* คอมโพเนนต์ที่กำหนดขนาดตัวเองไว้ (ไม่ได้ inherit body) — ดันขึ้นให้เท่ากัน */
+  .form-control, .form-select, .input-group-text,
+  .btn,
+  .dropdown-item,
+  .nav-link, .menu-link,
+  .table,
+  .table th, .table td,
+  .select2-container .select2-selection__rendered,
+  .select2-results__option {
+    font-size: var(--wp-font-base);
+  }
+  /* ตัวหนังสือเล็กพิเศษ (คำอธิบาย/label ย่อย) — ดันขึ้นเล็กน้อยพออ่านออก
+     ไม่รวม .badge — badge เป็น pill ที่ควรมีขนาดสัมพัทธ์ (0.81em) เล็กตามดีไซน์
+     ถ้าดันให้ใหญ่จะดูหนา/เด่นผิดที่ โดยเฉพาะ badge สถานะในตาราง */
+  small, .small,
+  .form-label, .col-form-label,
+  .form-text {
+    font-size: var(--wp-font-sm);
   }
 </style>
 
