@@ -64,17 +64,7 @@
                        value="{{ number_format((float) ($planning_item?->weight ?? 0), 2) }}"
                        class="form-control" placeholder="0.00">
             </div>
-            <div class="col-md-4 mb-3">
-                <label class="form-label">Machine No.</label>
-                <select name="machine_no" class="form-control">
-                    <option value="">เลือกเครื่องจักร</option>
-                    @foreach($machines as $machine)
-                        <option value="{{ $machine->MBX }}" {{ $planning_item && $planning_item->machine_no === $machine->MBX ? 'selected' : '' }}>
-                            {{ $machine->MBX }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
+
             <div class="col-md-4 mb-3">
                 <label class="form-label">Plan Type</label>
                 {{-- auto-fill จาก planning_header.plan_type --}}
@@ -85,10 +75,40 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-6 mb-3">
+            @php
+                // แผนกปัจจุบันของ item: ใช้ของ item ก่อน ถ้าว่างจึง fallback ไปที่ header
+                $current_company = $planning_item?->company ?: ($parent_header?->company ?? '');
+            @endphp
+            <div class="col-md-4 mb-3">
+                <label class="form-label">แผนก (Company)</label>
+                <select name="company" id="planning_item_company" class="form-select">
+                    @foreach($companies as $company_name)
+                        <option value="{{ $company_name }}" {{ $current_company === $company_name ? 'selected' : '' }}>
+                            {{ $company_name }}
+                        </option>
+                    @endforeach
+                    {{-- เผื่อค่าเดิมที่บันทึกไว้ไม่อยู่ในรายชื่อแผนกปัจจุบัน --}}
+                    @if($current_company !== '' && !in_array($current_company, $companies))
+                        <option value="{{ $current_company }}" selected>{{ $current_company }}</option>
+                    @endif
+                </select>
+                <small class="text-muted">เปลี่ยนแผนกเพื่อย้ายรายการนี้ไปให้แผนกอื่นทำ (เครื่องจักร/สถานะจะโหลดใหม่)</small>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Machine No.</label>
+                <select name="machine_no" id="planning_item_machine" class="form-control">
+                    <option value="">เลือกเครื่องจักร</option>
+                    @foreach($machines as $machine)
+                        <option value="{{ $machine->MBX }}" {{ $planning_item && $planning_item->machine_no === $machine->MBX ? 'selected' : '' }}>
+                            {{ $machine->MBX }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-4 mb-3">
                 <label class="form-label">Planning Status</label>
                 @php $current_status = $planning_item?->planning_status ?? ''; @endphp
-                <select name="planning_status" class="form-select">
+                <select name="planning_status" id="planning_item_status" class="form-select">
                     <option value="">เลือกสถานะ</option>
                     @foreach($planning_statuses as $status)
                         <option value="{{ $status->name }}" {{ $current_status === $status->name ? 'selected' : '' }}>
@@ -409,6 +429,43 @@
     var URL_ENTRY_STORE  = '{{ route('production.semipigment.entry.store') }}';
     var URL_ENTRY_UPDATE = '{{ route('production.semipigment.entry.update') }}';
     var URL_ENTRY_DELETE = '{{ route('production.semipigment.entry.delete') }}';
+    var URL_DEPT_OPTIONS = '{{ route('production.planning.dept-options') }}';
+
+    // ── เปลี่ยนแผนก (Company) → โหลดเครื่องจักร/สถานะของแผนกใหม่ แล้วล้างค่าที่เลือกไว้ ──
+    // (ค่า machine_no/planning_status เดิมเป็นของแผนกเก่า จึงต้องเลือกใหม่)
+    $('#planning_item_company').on('change', function () {
+        var company = $(this).val() || '';
+        var $machine = $('#planning_item_machine');
+        var $status  = $('#planning_item_status');
+
+        $machine.prop('disabled', true);
+        $status.prop('disabled', true);
+
+        $.ajax({
+            type: 'GET', url: URL_DEPT_OPTIONS, dataType: 'json',
+            data: { company: company },
+            success: function (res) {
+                var machineOpts = '<option value="">เลือกเครื่องจักร</option>';
+                (res.machines || []).forEach(function (m) {
+                    machineOpts += '<option value="' + esc(m) + '">' + esc(m) + '</option>';
+                });
+                $machine.html(machineOpts).val('');
+
+                var statusOpts = '<option value="">เลือกสถานะ</option>';
+                (res.statuses || []).forEach(function (s) {
+                    statusOpts += '<option value="' + esc(s) + '">' + esc(s) + '</option>';
+                });
+                $status.html(statusOpts).val('');
+            },
+            error: function () {
+                Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: 'โหลดข้อมูลแผนกไม่สำเร็จ กรุณาลองใหม่' });
+            },
+            complete: function () {
+                $machine.prop('disabled', false);
+                $status.prop('disabled', false);
+            }
+        });
+    });
 
     function toast(icon, text) {
         Swal.fire({ icon: icon, title: text, toast: true, position: 'top-end',

@@ -36,6 +36,8 @@ class ProductionPlanController extends Controller
             ->addColumn('rownum', function($row) {
                 return $row->rownum;
             })
+            // แผนกจริงของ item: ใช้ของ item ก่อน ถ้าว่างจึง fallback ไปที่ header
+            ->editColumn('company', fn ($row) => $row->company ?: $row->header_company)
             ->editColumn('inplan', fn ($row) => $row->inplan ? \Carbon\Carbon::parse($row->inplan)->format('d/m/Y') : '-')
             ->editColumn('custwant', fn ($row) => $row->custwant ? \Carbon\Carbon::parse($row->custwant)->format('d/m/Y') : '-')
             ->addColumn('btnedit', function($row) {
@@ -61,8 +63,10 @@ class ProductionPlanController extends Controller
         $data = Planning::
             leftJoin('tb_planning_header', 'tb_planning_header.id', '=', 'tb_planning.planning_header_id')
             ->select([
-                'tb_planning.*',
-                'tb_planning_header.company as company',
+                'tb_planning.*', // มีคอลัมน์ company (ของ item) อยู่แล้ว
+                // แผนกของ header ดึงมาเป็นชื่อแยก (header_company) กันชนกับ tb_planning.company
+                // เมื่อ Yajra ห่อ query เป็น subquery นับจำนวนแถว MySQL ห้ามมีชื่อคอลัมน์ซ้ำใน derived table
+                'tb_planning_header.company as header_company',
                 'tb_planning_header.orderno as orderno',
                 'tb_planning_header.planning_code as planning_code',
                 'tb_planning_header.mdate as header_mdate',
@@ -78,7 +82,8 @@ class ProductionPlanController extends Controller
                 });
             })
              ->when(!empty($company), function ($query) use ($company) {
-                $query->where('tb_planning_header.company', $company);
+                // กรองด้วยแผนกจริงของ item (item ก่อน แล้ว fallback header)
+                $query->whereRaw('COALESCE(tb_planning.company, tb_planning_header.company) = ?', [$company]);
             })
             ->orderby('tb_planning.id', 'desc');
 
@@ -180,11 +185,16 @@ class ProductionPlanController extends Controller
             $parent_orderno = $parent_header?->orderno;
         }
 
-        $machines = Machine::where('dept',$parent_header->company)->get();
+        // แผนกจริงของ item: ใช้แผนกที่ตั้งไว้ที่ item ก่อน ถ้าว่างจึง fallback ไปที่ header
+        $item_company = ($planning_item && $planning_item->company)
+            ? $planning_item->company
+            : $parent_header?->company;
 
-        // สถานะ Planning ตามแผนก (company) ของ header — เฉพาะที่เปิดใช้งาน
+        $machines = Machine::where('dept', $item_company)->get();
+
+        // สถานะ Planning ตามแผนก (company) ของ item — เฉพาะที่เปิดใช้งาน
         // dept ใน tb_planning_status เก็บเป็น id ของ tb_departments จึง map ชื่อแผนก (company) → id ก่อน
-        $dept_id = \App\Models\Department::where('name', $parent_header->company)->value('id');
+        $dept_id = \App\Models\Department::where('name', $item_company)->value('id');
         $planning_statuses = PlanningStatus::where('dept', $dept_id)
             ->where('is_active', 'Y')
             ->orderBy('sort', 'asc')
@@ -214,10 +224,39 @@ class ProductionPlanController extends Controller
         ]);
     }
 
+    // คืนตัวเลือกเครื่องจักร + สถานะ Planning ตามแผนก (company) ที่เลือก
+    // ใช้เมื่อผู้ใช้เปลี่ยน dropdown แผนกในโมดัลแก้ไข item เพื่อโหลดชุดตัวเลือกใหม่
+    public function deptOptions(Request $request)
+    {
+        $company = $request->get('company');
+
+        $machines = Machine::where('dept', $company)
+            ->get()
+            ->pluck('MBX')
+            ->values();
+
+        // dept ใน tb_planning_status เก็บเป็น id ของ tb_departments จึง map ชื่อแผนก → id ก่อน
+        $dept_id = Department::where('name', $company)->value('id');
+        $statuses = PlanningStatus::where('dept', $dept_id)
+            ->where('is_active', 'Y')
+            ->orderBy('sort', 'asc')
+            ->orderBy('id', 'asc')
+            ->get()
+            ->pluck('name')
+            ->values();
+
+        return response()->json([
+            'status'   => 200,
+            'machines' => $machines,
+            'statuses' => $statuses,
+        ]);
+    }
+
     public function saveItem(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'planning_header_id' => 'required|exists:tb_planning_header,id',
+            'company'            => 'nullable|string|max:255',
             'itemno'             => 'required|string|max:255',
             'quantity'           => 'nullable|numeric|min:0',
             'lot'                => 'nullable|string|max:255',
@@ -245,7 +284,7 @@ class ProductionPlanController extends Controller
         }
 
         $fields = $request->only([
-            'planning_header_id', 'itemno', 'quantity', 'lot', 'weight',
+            'planning_header_id', 'company', 'itemno', 'quantity', 'lot', 'weight',
             'machine_no', 'plan_type', 'planning_status', 'inplan','start_date',
             'qc_date', 'qc_time', 'qc_status', 'packing_datetie',
             'mdate', 'custwant', 'senddate', 'remark'
@@ -270,6 +309,15 @@ class ProductionPlanController extends Controller
                         $fields['senddate_log'] = $existing->senddate_log
                             ? $existing->senddate_log . ',' . $old_send
                             : $old_send;
+                    }
+
+                    // ถ้าย้ายแผนก (company เปลี่ยน) → เครื่องจักร/สถานะเดิมเป็นของแผนกเก่า ล้างทิ้งเพื่อกันค่าที่ไม่ตรงแผนกใหม่
+                    // (กันกรณี JS ฝั่งหน้าเว็บไม่ได้ล้างให้)
+                    $old_company = $existing->company ?: null;
+                    $new_company = !empty($fields['company']) ? $fields['company'] : null;
+                    if ($old_company !== $new_company) {
+                        $fields['machine_no']      = null;
+                        $fields['planning_status'] = null;
                     }
                 }
 
