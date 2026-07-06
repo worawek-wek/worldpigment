@@ -23,9 +23,11 @@ class SemiPigmentController extends Controller
 
     public function datatable()
     {
+        // หน้านี้แสดงเฉพาะ Semi แล้ว (Pigment แยกไปหน้า production.pigment.index)
         // กรองตามสถานะที่เลือก (รออนุมัติ / อนุมัติแล้ว / ไม่อนุมัติ) — ค่าว่าง = ทุกสถานะ
         $status = request('status');
         $data = $this->baseQuery()
+            ->where('type', 'semi')
             ->when(!empty($status), fn ($q) => $q->where('status', $status));
 
         return DataTables::of($data)

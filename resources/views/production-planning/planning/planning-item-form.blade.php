@@ -298,7 +298,6 @@
                 <thead class="table-success">
                     <tr>
                         <th class="text-center" style="width:36px">#</th>
-                        <th style="min-width:110px">Company</th>
                         <th style="min-width:120px">วันที่สั่ง</th>
                         <th style="min-width:120px">วันที่ต้องการรับ</th>
                         <th style="min-width:100px">Cust No.</th>
@@ -319,7 +318,6 @@
                         @if($isLocked)
                         <tr class="locked-row table-light">
                             <td class="text-center"><span class="row-num">{{ $i + 1 }}</span></td>
-                            <td>{{ $row['company'] ?? '-' }}</td>
                             <td>{{ !empty($row['mdate'])    ? \Carbon\Carbon::parse($row['mdate'])->format('d/m/Y')    : '-' }}</td>
                             <td>{{ !empty($row['custwant']) ? \Carbon\Carbon::parse($row['custwant'])->format('d/m/Y') : '-' }}</td>
                             <td>{{ $row['custno']   ?? '-' }}</td>
@@ -329,11 +327,11 @@
                             <td class="text-center"><i class="ti ti-lock text-muted" title="ดำเนินการแล้ว แก้ไขไม่ได้"></i></td>
                         </tr>
                         @else
-                        @include('production-planning.planning.partials.sp-row', ['row' => $row, 'i' => $i, 'default_custno' => $default_custno])
+                        @include('production-planning.planning.partials.pigment-row', ['row' => $row, 'i' => $i, 'default_custno' => $default_custno])
                         @endif
                     @empty
                     <tr class="empty-row">
-                        <td colspan="9" class="text-center text-muted py-2">ยังไม่มีรายการ Pigment</td>
+                        <td colspan="8" class="text-center text-muted py-2">ยังไม่มีรายการ Pigment</td>
                     </tr>
                     @endforelse
                 </tbody>
@@ -410,6 +408,34 @@
                     <i class="ti ti-x me-1"></i>ยกเลิก
                 </button>
                 <button type="button" class="btn btn-primary" id="btn_sp_entry_save">
+                    <i class="ti ti-device-floppy me-1"></i>บันทึก
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- ── Modal เพิ่ม / แก้ไข Pigment (แยกจาก Semi, อ้างอิงตาราง tb_pigment) ── --}}
+<div class="modal fade" id="pigment_entry_modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#28a745; padding:.75rem 1.25rem;">
+                <h6 class="modal-title text-white mb-0">
+                    <i class="ti ti-color-swatch me-1"></i><span id="pigment_entry_title">เพิ่ม Pigment</span>
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                @include('production-planning.pigment.partials.entry-fields', [
+                    'prefix'         => 'pg',
+                    'custnoReadonly' => true,
+                ])
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="ti ti-x me-1"></i>ยกเลิก
+                </button>
+                <button type="button" class="btn btn-success" id="btn_pigment_entry_save">
                     <i class="ti ti-device-floppy me-1"></i>บันทึก
                 </button>
             </div>
@@ -642,12 +668,11 @@
         setTimeout(function () { $('#sp_itemno').trigger('focus'); }, 300);
     }
 
-    // ── Add buttons → เปิด modal (โหมดเพิ่ม) ──
-    $('#btn_add_semi_row').on('click',    function () { openAddModal('tbody_semi', 'Semi'); });
-    $('#btn_add_pigment_row').on('click', function () { openAddModal('tbody_pigment', 'Pigment'); });
+    // ── Add button → เปิด modal (โหมดเพิ่ม) ── (Pigment แยกไปจัดการใน IIFE ของตัวเองด้านล่าง)
+    $('#btn_add_semi_row').on('click', function () { openAddModal('tbody_semi', 'Semi'); });
 
     // ── Edit buttons → เปิด modal (โหมดแก้ไข) ──
-    $('#tbody_semi, #tbody_pigment').on('click', '.btn_edit_row', function () {
+    $('#tbody_semi').on('click', '.btn_edit_row', function () {
         openEditModal($(this).closest('tr'));
     });
 
@@ -791,9 +816,6 @@
     $('#tbody_semi').on('click', '.btn_remove_row', function () {
         removeRow($(this).closest('tr'), 'tbody_semi', 'Semi');
     });
-    $('#tbody_pigment').on('click', '.btn_remove_row', function () {
-        removeRow($(this).closest('tr'), 'tbody_pigment', 'Pigment');
-    });
 
     // ── modal ประวัติ senddate ──
     // ย้าย modal ออกไปเป็น sibling ที่ body (Bootstrap จัดการ stacked modal แบบ sibling ได้ดีกว่าซ้อนใน .modal-content)
@@ -819,5 +841,295 @@
             bootstrap.Modal.getInstance($logModal[0])?.dispose();
             $logModal.remove();
         });
+})();
+
+// ══════════════════════════════════════════════════════════════════════
+//  Pigment — แยกจาก Semi โดยสมบูรณ์ (อ้างอิงตาราง tb_pigment ผ่าน PigmentController)
+//  ตัดฟิลด์ที่ไม่ใช้ออก: Company, Semi Code, Primary Color, Lot No., Red Bill, Increase
+// ══════════════════════════════════════════════════════════════════════
+(function () {
+    var CSRF             = '{{ csrf_token() }}';
+    var PLANNING_ID      = '{{ $planning_item?->id ?? '' }}';
+    var DEFAULT_MDATE    = '{{ $default_mdate }}';
+    var DEFAULT_CUSTNO   = '{{ $default_custno }}';
+    var URL_ENTRY_STORE  = '{{ route('production.pigment.entry.store') }}';
+    var URL_ENTRY_UPDATE = '{{ route('production.pigment.entry.update') }}';
+    var URL_ENTRY_DELETE = '{{ route('production.pigment.entry.delete') }}';
+
+    var TBODY = 'tbody_pigment';
+
+    function toast(icon, text) {
+        Swal.fire({ icon: icon, title: text, toast: true, position: 'top-end',
+            timer: 1800, showConfirmButton: false });
+    }
+
+    // escape ค่าให้ปลอดภัยเมื่อนำไปแสดงเป็น HTML / attribute
+    function esc(v) {
+        return $('<div>').text(v == null ? '' : v).html();
+    }
+
+    function renumber() {
+        $('#' + TBODY + ' tr:not(.empty-row)').each(function (i) {
+            $(this).find('.row-num').text(i + 1);
+        });
+    }
+
+    // แปลงวันที่ YYYY-MM-DD → DD/MM/YYYY สำหรับแสดงผล (ค่าจริงเก็บใน hidden input เป็น YYYY-MM-DD)
+    function fmtDate(s) {
+        s = (s || '').substr(0, 10);
+        if (!s) return '';
+        var p = s.split('-');
+        return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : s;
+    }
+
+    // ฟิลด์ที่เก็บไว้ใน hidden input (ไม่แสดงเป็นคอลัมน์ในตาราง)
+    var HIDDEN_FIELDS = ['balance', 'retrospective', 'weight_production'];
+    // ทุกฟิลด์ของแถว pigment (ทั้งที่แสดงผลและ hidden)
+    var ALL_FIELDS = ['mdate', 'custwant', 'custno', 'itemno', 'weight_request'].concat(HIDDEN_FIELDS);
+
+    // แถวแสดงผล (อ่านอย่างเดียว) + เก็บค่าจริงไว้ใน hidden input เพื่อให้ readRow อ่านได้
+    function displayRow(d) {
+        function cell(field, text) {
+            return '<td>' + (text === '' ? '-' : esc(text)) +
+                '<input type="hidden" data-field="' + field + '" value="' + esc(d[field] || '') + '"></td>';
+        }
+        function hid(field) {
+            return '<input type="hidden" data-field="' + field + '" value="' + esc(d[field] || '') + '">';
+        }
+        var hiddenInputs = HIDDEN_FIELDS.map(hid).join('');
+
+        return '<tr data-id="' + esc(d.id || '') + '">' +
+            '<td class="text-center"><span class="row-num">1</span>' + hiddenInputs + '</td>' +
+            cell('mdate',    fmtDate(d.mdate)) +
+            cell('custwant', fmtDate(d.custwant)) +
+            cell('custno',   d.custno   || '') +
+            cell('itemno',   d.itemno   || '') +
+            cell('weight_request', d.weight_request || '') +
+            '<td class="text-center"><span class="badge bg-label-warning">รออนุมัติ</span></td>' +
+            '<td class="text-center text-nowrap">' +
+                '<button type="button" class="btn btn-sm btn-warning btn-icon btn_edit_row" title="แก้ไข"><i class="ti ti-pencil ti-sm"></i></button> ' +
+                '<button type="button" class="btn btn-sm btn-danger btn-icon btn_remove_row" title="ลบ"><i class="ti ti-trash ti-sm"></i></button>' +
+            '</td>' +
+            '</tr>';
+    }
+
+    function addRow(data) {
+        var $tbody = $('#' + TBODY);
+        $tbody.find('.empty-row').remove();
+        $tbody.append(displayRow(data));
+        renumber();
+    }
+
+    function checkEmpty() {
+        if ($('#' + TBODY + ' tr').length === 0) {
+            $('#' + TBODY).append(
+                '<tr class="empty-row"><td colspan="8" class="text-center text-muted py-2">ยังไม่มีรายการ Pigment</td></tr>'
+            );
+        }
+    }
+
+    // อ่านค่าทุกฟิลด์จากแถว (อ่านจาก input/select ที่มี data-field)
+    function readRow($tr) {
+        var d = {};
+        ALL_FIELDS.forEach(function (f) {
+            d[f] = $tr.find('[data-field="' + f + '"]').val() || '';
+        });
+        return d;
+    }
+
+    // ── Modal เพิ่ม / แก้ไข Pigment ──
+    // ย้าย modal ออกไปเป็น sibling ที่ body (กัน stacked modal ซ้อนใน .modal-content แล้วเพี้ยน)
+    $('body').children('#pigment_entry_modal').remove();
+    var $modal = $('#pigment_entry_modal').appendTo('body');
+
+    // แถวที่กำลังแก้ไขผ่าน modal (null = โหมดเพิ่มใหม่)
+    var $editingRow = null;
+
+    // ── น้ำหนักที่จะผลิต: ดีฟอลต์ = น้ำหนักที่จะใช้ (Pigment ไม่มี "ผลิตเพิ่ม") ──
+    // ถ้าผู้ใช้พิมพ์แก้ช่อง "น้ำหนักที่จะผลิต" เอง จะล็อกค่านั้นไว้ (ไม่ถูกคำนวณทับ)
+    var prodManual = false;
+
+    function recalcWeightProduction() {
+        if (prodManual) return;
+        $('#pg_weight_production').val($('#pg_weight_request').val() || '');
+    }
+
+    $('#pg_weight_request').on('input', function () {
+        prodManual = false;
+        recalcWeightProduction();
+    });
+    $('#pg_weight_production').on('input', function () {
+        prodManual = true;
+    });
+
+    function fillModal(d) {
+        $('#pg_custno').val(d.custno || DEFAULT_CUSTNO);
+        $('#pg_mdate').val(d.mdate || '');
+        $('#pg_custwant').val(d.custwant || '');
+        $('#pg_itemno').val(d.itemno || '');
+        $('#pg_balance').val(d.balance || '');
+        $('#pg_retrospective').val(d.retrospective || '');
+        $('#pg_weight_request').val(d.weight_request || '');
+        $('#pg_itemno').removeClass('is-invalid');
+
+        // เปิด modal มา: ถ้ามีค่าน้ำหนักที่จะผลิตเดิม (เคยแก้/บันทึกไว้) ให้คงค่านั้นไว้
+        // ถ้าไม่มีค่าเดิม ให้คำนวณจากน้ำหนักที่จะใช้
+        var storedProd = (d.weight_production != null ? String(d.weight_production) : '').trim();
+        if (storedProd !== '') {
+            prodManual = true;
+            $('#pg_weight_production').val(storedProd);
+        } else {
+            prodManual = false;
+            recalcWeightProduction();
+        }
+    }
+
+    function openAddModal() {
+        $editingRow = null;
+        $('#pigment_entry_title').text('เพิ่ม Pigment');
+        $('#btn_pigment_entry_save').html('<i class="ti ti-plus me-1"></i>เพิ่มลงตาราง');
+        fillModal({ mdate: DEFAULT_MDATE, custno: DEFAULT_CUSTNO });
+        bootstrap.Modal.getOrCreateInstance($modal[0]).show();
+        setTimeout(function () { $('#pg_itemno').trigger('focus'); }, 300);
+    }
+
+    function openEditModal($tr) {
+        $editingRow = $tr;
+        $('#pigment_entry_title').text('แก้ไข Pigment');
+        $('#btn_pigment_entry_save').html('<i class="ti ti-check me-1"></i>อัปเดตในตาราง');
+        fillModal(readRow($tr));
+        bootstrap.Modal.getOrCreateInstance($modal[0]).show();
+        setTimeout(function () { $('#pg_itemno').trigger('focus'); }, 300);
+    }
+
+    $('#btn_add_pigment_row').on('click', function () { openAddModal(); });
+    $('#tbody_pigment').on('click', '.btn_edit_row', function () {
+        openEditModal($(this).closest('tr'));
+    });
+
+    // ── บันทึกจาก modal → บันทึกลงฐานข้อมูลทันที (เพิ่ม/แก้ไข) ──
+    $modal.find('#btn_pigment_entry_save').on('click', function () {
+        var $btn = $(this);
+        var itemno = ($('#pg_itemno').val() || '').trim();
+        if (!itemno) {
+            $('#pg_itemno').addClass('is-invalid').trigger('focus');
+            return;
+        }
+        $('#pg_itemno').removeClass('is-invalid');
+
+        var isEdit = !!($editingRow && $editingRow.length);
+
+        // ต้องบันทึก Planning Item ก่อน (มี planning_id) จึงจะเพิ่ม/แก้ไข Pigment ได้
+        if (!PLANNING_ID) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'ยังบันทึกไม่ได้',
+                text: 'กรุณาบันทึก Planning Item ก่อน แล้วจึงเพิ่ม Pigment'
+            });
+            return;
+        }
+
+        var payload = {
+            _token:            CSRF,
+            planning_id:       PLANNING_ID,
+            mdate:             $('#pg_mdate').val()    || '',
+            custwant:          $('#pg_custwant').val() || '',
+            custno:            $('#pg_custno').val()   || '',
+            itemno:            itemno,
+            balance:           $('#pg_balance').val() || '',
+            retrospective:     $('#pg_retrospective').val() || '',
+            weight_request:    $('#pg_weight_request').val() || '',
+            weight_production: $('#pg_weight_production').val() || ''
+        };
+
+        var url = URL_ENTRY_STORE;
+        if (isEdit) {
+            url = URL_ENTRY_UPDATE;
+            payload.id = $editingRow.data('id');
+        }
+
+        $btn.prop('disabled', true);
+        $.ajax({
+            type: 'POST', url: url, dataType: 'json', data: payload,
+            success: function (res) {
+                if (res.status == 200) {
+                    if (isEdit) {
+                        $editingRow.replaceWith($(displayRow(res.data)));
+                        renumber();
+                        $editingRow = null;
+                    } else {
+                        addRow(res.data);
+                    }
+                    bootstrap.Modal.getInstance($modal[0]).hide();
+                    toast('success', res.message || 'บันทึกสำเร็จ');
+                } else {
+                    Swal.fire({ icon: 'warning', title: 'ผิดพลาด', text: res.message || 'บันทึกไม่สำเร็จ' });
+                }
+            },
+            error: function (xhr) {
+                Swal.fire({ icon: 'error', title: 'ผิดพลาด',
+                    text: (xhr.responseJSON && xhr.responseJSON.message) || 'เกิดข้อผิดพลาด กรุณาลองใหม่' });
+            },
+            complete: function () { $btn.prop('disabled', false); }
+        });
+    });
+
+    // คง scroll-lock ของ body ไว้เมื่อปิด modal ย่อยแต่ modal หลักยังเปิด
+    $modal.on('hidden.bs.modal', function () {
+        if ($('.modal.show').length) {
+            $('body').addClass('modal-open');
+        }
+    });
+
+    // เก็บกวาด modal ที่ย้ายไป body เมื่อปิดฟอร์มหลัก
+    $('#planning_item_form').closest('.modal')
+        .off('hidden.bs.modal.pigmententry')
+        .on('hidden.bs.modal.pigmententry', function () {
+            bootstrap.Modal.getInstance($modal[0])?.dispose();
+            $modal.remove();
+        });
+
+    // ── Remove button → ลบออกจากฐานข้อมูลทันที ──
+    $('#tbody_pigment').on('click', '.btn_remove_row', function () {
+        var $tr = $(this).closest('tr');
+        var id  = $tr.data('id');
+
+        function done() {
+            $tr.remove();
+            renumber();
+            checkEmpty();
+        }
+
+        // แถวที่ยังไม่มี id (เผื่อกรณีพิเศษ) — ลบจากตารางอย่างเดียว
+        if (!id) { done(); return; }
+
+        Swal.fire({
+            icon: 'warning',
+            title: 'ยืนยันการลบ',
+            text: 'ต้องการลบรายการ Pigment นี้หรือไม่?',
+            showCancelButton: true,
+            confirmButtonText: 'ลบ',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#d33'
+        }).then(function (result) {
+            if (!result.isConfirmed) return;
+            $.ajax({
+                type: 'POST', url: URL_ENTRY_DELETE, dataType: 'json',
+                data: { _token: CSRF, id: id },
+                success: function (res) {
+                    if (res.status == 200) {
+                        done();
+                        toast('success', res.message || 'ลบสำเร็จ');
+                    } else {
+                        Swal.fire({ icon: 'warning', title: 'ผิดพลาด', text: res.message || 'ลบไม่สำเร็จ' });
+                    }
+                },
+                error: function (xhr) {
+                    Swal.fire({ icon: 'error', title: 'ผิดพลาด',
+                        text: (xhr.responseJSON && xhr.responseJSON.message) || 'เกิดข้อผิดพลาด กรุณาลองใหม่' });
+                }
+            });
+        });
+    });
 })();
 </script>

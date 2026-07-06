@@ -10,6 +10,7 @@ use Yajra\DataTables\Facades\DataTables;
 use App\Models\PlanningHeader;
 use App\Models\Planning;
 use App\Models\SemiPigment;
+use App\Models\Pigment;
 use App\Models\Machine;
 use App\Models\PlanningStatus;
 use App\Models\Department;
@@ -174,11 +175,27 @@ class ProductionPlanController extends Controller
                     ->orderBy('id')
                     ->get()->map($mapRow)->values()->toArray();
 
-                $pigment_list = SemiPigment::where('planning_id', $planning_id)
-                    ->where('type', 'pigment')
+                // Pigment แยกเป็นตารางของตัวเอง (tb_pigment) — ไม่มีฟิลด์ semi (company/semi_code/primary_color/lot_no/red_bill/increase)
+                $mapPigmentRow = function (Pigment $r) {
+                    return [
+                        'id'                => $r->id,
+                        'mdate'             => !empty($r->order_date) ? $r->order_date : null,
+                        'custwant'          => !empty($r->want_date) ? $r->want_date : null,
+                        'custno'            => $r->custno,
+                        'itemno'            => $r->itemno,
+                        'weight_request'    => $r->weight_request,
+                        'balance'           => $r->balance,
+                        'retrospective'     => $r->retrospective,
+                        'weight_production' => $r->weight_production,
+                        'status'            => $r->status,
+                        'status_label'      => $r->statusLabel(),
+                    ];
+                };
+
+                $pigment_list = Pigment::where('planning_id', $planning_id)
                     ->orderByRaw($orderByStatus)
                     ->orderBy('id')
-                    ->get()->map($mapRow)->values()->toArray();
+                    ->get()->map($mapPigmentRow)->values()->toArray();
             }
         } elseif ($planning_header_id) {
             $parent_header  = PlanningHeader::find($planning_header_id);

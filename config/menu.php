@@ -40,10 +40,17 @@ return [
                 'permission' => 'productionplanning read',
             ],
             'SemiPigment' => [
-                'title' => 'Semi & Pigment',
+                'title' => 'อนุมัติ Semi',
                 'icon' => '',
                 'menu_parent' => 'Production',
                 'route_name' => 'production.semipigment.index',
+                'permission' => 'productionplanning read',
+            ],
+            'PigmentApproval' => [
+                'title' => 'อนุมัติ Pigment',
+                'icon' => '',
+                'menu_parent' => 'Production',
+                'route_name' => 'production.pigment.index',
                 'permission' => 'productionplanning read',
             ],
             'ProductionPlanning' => [

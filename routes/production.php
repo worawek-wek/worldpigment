@@ -39,6 +39,20 @@ Route::prefix('production-planning')->group(function () {
     Route::post('/semi-pigment/entry/update', [Production\SemiPigmentController::class, 'entryUpdate'])->name('production.semipigment.entry.update');
     Route::post('/semi-pigment/entry/delete', [Production\SemiPigmentController::class, 'entryDestroy'])->name('production.semipigment.entry.delete');
 
+    // Pigment — เพิ่ม/แก้ไข/ลบ จาก modal ของหน้า Planning Item (แยกจาก Semi, บันทึกลง tb_pigment)
+    Route::post('/pigment/entry/store',  [Production\PigmentController::class, 'entryStore'])->name('production.pigment.entry.store');
+    Route::post('/pigment/entry/update', [Production\PigmentController::class, 'entryUpdate'])->name('production.pigment.entry.update');
+    Route::post('/pigment/entry/delete', [Production\PigmentController::class, 'entryDestroy'])->name('production.pigment.entry.delete');
+
+    // Pigment (หน้าอนุมัติ) — แยกจากหน้า Semi & Pigment เดิม
+    Route::get('/pigment', [Production\PigmentController::class, 'index'])->name('production.pigment.index');
+    Route::get('/pigment/datatable', [Production\PigmentController::class, 'datatable'])->name('production.pigment.datatable');
+    Route::get('/pigment/edit', [Production\PigmentController::class, 'editForm'])->name('production.pigment.edit');
+    Route::get('/pigment/detail', [Production\PigmentController::class, 'detail'])->name('production.pigment.detail');
+    Route::post('/pigment/approve', [Production\PigmentController::class, 'approve'])->name('production.pigment.approve');
+    Route::post('/pigment/reject', [Production\PigmentController::class, 'reject'])->name('production.pigment.reject');
+    Route::post('/pigment/convertplanning', [Production\PigmentController::class, 'convertplanning'])->name('production.pigment.convertplanning');
+
     // Semi & Pigment (รออนุมัติ)
     Route::get('/semi-pigment', [Production\SemiPigmentController::class, 'index'])->name('production.semipigment.index');
     Route::get('/semi-pigment/datatable', [Production\SemiPigmentController::class, 'datatable'])->name('production.semipigment.datatable');

@@ -9,11 +9,11 @@
                     <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
                         <div>
                             <h3 class="mb-1">
-                                <i class="ti ti-checklist text-primary"></i>
-                                Semi (รออนุมัติ)
+                                <i class="ti ti-color-swatch text-success"></i>
+                                Pigment (รออนุมัติ)
                             </h3>
                             <p class="text-muted mb-0">
-                                รายการ Semi ที่รออนุมัติ ก่อนนำไปสร้างแผนการผลิต
+                                รายการ Pigment ที่รออนุมัติ ก่อนนำไปสร้างแผนการผลิต
                             </p>
                         </div>
                     </div>
@@ -27,7 +27,7 @@
                         <div class="row g-3 align-items-center">
                             <div class="col-md-4">
                                 <input id="searchInput" type="text" class="form-control"
-                                    placeholder="ค้นหา Item No., รหัสลูกค้า, Order No., Company">
+                                    placeholder="ค้นหา Item No., รหัสลูกค้า, Order No.">
                             </div>
                             <div class="col-md-2">
                                 <select id="searchStatus" class="form-select">
@@ -47,7 +47,6 @@
                                     <tr>
                                         <th>#</th>
                                         <th>Order No.</th>
-                                        <th>Company</th>
                                         <th>วันที่สั่ง</th>
                                         <th>วันที่ต้องการรับ</th>
                                         <th>รหัสลูกค้า</th>
@@ -71,13 +70,13 @@
     <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
-                <div class="modal-header" style="padding: 1rem 1.5rem; color: white; background-color: #3A8EBA;">
+                <div class="modal-header" style="padding: 1rem 1.5rem; color: white; background-color: #28a745;">
                     <h5 class="modal-title text-white mb-0">
-                        <i class="ti ti-pencil me-1"></i>แก้ไข Semi
+                        <i class="ti ti-pencil me-1"></i>แก้ไข Pigment
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body" id="sp_edit_body"></div>
+                <div class="modal-body" id="pg_edit_body"></div>
             </div>
         </div>
     </div>
@@ -88,7 +87,7 @@
             <div class="modal-content">
                 <div class="modal-header" style="padding: 1.25rem 1.5rem; color: white; background-color: #54BAB9;">
                     <h5 class="modal-title text-white mb-0">
-                        <i class="ti ti-file-description me-1"></i>รายละเอียด Semi
+                        <i class="ti ti-file-description me-1"></i>รายละเอียด Pigment
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
@@ -116,7 +115,7 @@
             lengthChange: false,
             responsive: true,
             ajax: {
-                url: "{{ route('production.semipigment.datatable') }}",
+                url: "{{ route('production.pigment.datatable') }}",
                 data: function (d) {
                     d.search = $('#searchInput').val();
                     d.status = $('#searchStatus').val();
@@ -125,20 +124,17 @@
                     console.error('AJAX Error:', error, thrown);
                 }
             },
-            // responsivePriority: เลขน้อย = สำคัญกว่า ถูกซ่อนทีหลังสุดเมื่อจอแคบ
-            // ตรึงคอลัมน์ #, สถานะ, จัดการ ไว้เสมอ (จัดการมีปุ่มสร้างแผน ห้ามหาย) — ถ้าจอแคบให้ยุบคอลัมน์กลางแทน
             columns: [
-                { className: "text-center", data: 'rownum',       name: 'rownum',       orderable: false, responsivePriority: 1 },
-                { className: "text-center", data: 'orderno',      name: 'orderno',      orderable: false },
-                { className: "text-center", data: 'company',      name: 'company',      orderable: false },
-                { className: "text-center", data: 'order_date',   name: 'order_date',   orderable: false },
-                { className: "text-center", data: 'want_date',    name: 'want_date',    orderable: false },
-                { className: "text-center", data: 'custno',       name: 'custno',       orderable: false },
-                { className: "text-left",   data: 'itemno',         name: 'itemno',         orderable: false, responsivePriority: 5 },
+                { className: "text-center", data: 'rownum',            name: 'rownum',            orderable: false, responsivePriority: 1 },
+                { className: "text-center", data: 'orderno',           name: 'orderno',           orderable: false },
+                { className: "text-center", data: 'order_date',        name: 'order_date',        orderable: false },
+                { className: "text-center", data: 'want_date',         name: 'want_date',         orderable: false },
+                { className: "text-center", data: 'custno',            name: 'custno',            orderable: false },
+                { className: "text-left",   data: 'itemno',            name: 'itemno',            orderable: false, responsivePriority: 5 },
                 { className: "text-center", data: 'weight_request',    name: 'weight_request',    orderable: false, render: fmt2 },
                 { className: "text-center", data: 'weight_production', name: 'weight_production', orderable: false, render: fmt2 },
                 { className: "text-center", data: 'status_badge',      name: 'status_badge',      orderable: false, searchable: false, responsivePriority: 3 },
-                { className: "text-center", data: 'action',       name: 'action',       orderable: false, searchable: false, responsivePriority: 2 },
+                { className: "text-center", data: 'action',            name: 'action',            orderable: false, searchable: false, responsivePriority: 2 },
             ],
             order: [[0, 'asc']]
         });
@@ -160,13 +156,13 @@
         var id = $(this).data('id');
         $.ajax({
             type: 'GET',
-            url: '{{ route("production.semipigment.edit") }}',
+            url: '{{ route("production.pigment.edit") }}',
             dataType: 'json',
             cache: false,
             data: { id: id },
             success: function (response) {
                 if (response.status == 200) {
-                    $('#sp_edit_body').html(response.data);
+                    $('#pg_edit_body').html(response.data);
                     getEditModal().show();
                 } else {
                     Swal.fire({ icon: 'warning', title: 'ผิดพลาด', text: response.message });
@@ -180,21 +176,21 @@
     });
 
     // ---- บันทึกข้อมูล (แก้ไข) ----
-    $(document).on('click', '#btn_sp_save', function () {
+    $(document).on('click', '#btn_pg_save', function () {
         var $btn = $(this);
-        var itemno = ($('#sp_edit_form [name="itemno"]').val() || '').trim();
+        var itemno = ($('#pg_edit_form [name="itemno"]').val() || '').trim();
         if (!itemno) {
-            $('#sp_edit_form [name="itemno"]').addClass('is-invalid').trigger('focus');
+            $('#pg_edit_form [name="itemno"]').addClass('is-invalid').trigger('focus');
             return;
         }
-        $('#sp_edit_form [name="itemno"]').removeClass('is-invalid');
+        $('#pg_edit_form [name="itemno"]').removeClass('is-invalid');
 
-        var formData = $('#sp_edit_form').serialize() + '&_token={{ csrf_token() }}';
+        var formData = $('#pg_edit_form').serialize() + '&_token={{ csrf_token() }}';
 
         $btn.prop('disabled', true);
         $.ajax({
             type: 'POST',
-            url: '{{ route("production.semipigment.entry.update") }}',
+            url: '{{ route("production.pigment.entry.update") }}',
             dataType: 'json',
             data: formData,
             success: function (response) {
@@ -216,16 +212,16 @@
 
     // ---- อนุมัติ (บันทึกข้อมูลฟอร์ม + เปลี่ยนสถานะเป็นอนุมัติ) ----
     $(document).on('click', '.btn_approve', function () {
-        var itemno = ($('#sp_edit_form [name="itemno"]').val() || '').trim();
+        var itemno = ($('#pg_edit_form [name="itemno"]').val() || '').trim();
         if (!itemno) {
-            $('#sp_edit_form [name="itemno"]').addClass('is-invalid').trigger('focus');
+            $('#pg_edit_form [name="itemno"]').addClass('is-invalid').trigger('focus');
             return;
         }
-        $('#sp_edit_form [name="itemno"]').removeClass('is-invalid');
+        $('#pg_edit_form [name="itemno"]').removeClass('is-invalid');
 
         Swal.fire({
             title: 'ยืนยันการอนุมัติ?',
-            text: 'ระบบจะบันทึกข้อมูลและนำรายการนี้ไปสร้างแผนการผลิต',
+            text: 'ระบบจะบันทึกข้อมูลรายการนี้ (จากนั้นสร้างแผนการผลิตได้ที่ปุ่มในตาราง)',
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'อนุมัติ',
@@ -234,24 +230,18 @@
         }).then(function (result) {
             if (!result.isConfirmed) return;
 
-            var formData = $('#sp_edit_form').serialize() + '&_token={{ csrf_token() }}';
+            var formData = $('#pg_edit_form').serialize() + '&_token={{ csrf_token() }}';
 
             $.ajax({
                 type: 'POST',
-                url: '{{ route("production.semipigment.approve") }}',
+                url: '{{ route("production.pigment.approve") }}',
                 dataType: 'json',
                 data: formData,
                 success: function (response) {
                     if (response.status == 200) {
                         closeEditModal();
                         oTable.draw();
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'สำเร็จ',
-                            text: response.message,
-                            timer: 1800,
-                            showConfirmButton: false
-                        });
+                        Swal.fire({ icon: 'success', title: 'สำเร็จ', text: response.message, timer: 1800, showConfirmButton: false });
                     } else {
                         Swal.fire({ icon: 'warning', title: 'ผิดพลาด', text: response.message });
                     }
@@ -281,20 +271,14 @@
 
             $.ajax({
                 type: 'POST',
-                url: '{{ route("production.semipigment.reject") }}',
+                url: '{{ route("production.pigment.reject") }}',
                 dataType: 'json',
                 data: { id: id, _token: '{{ csrf_token() }}' },
                 success: function (response) {
                     if (response.status == 200) {
                         closeEditModal();
                         oTable.draw();
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'สำเร็จ',
-                            text: response.message,
-                            timer: 1800,
-                            showConfirmButton: false
-                        });
+                        Swal.fire({ icon: 'success', title: 'สำเร็จ', text: response.message, timer: 1800, showConfirmButton: false });
                     } else {
                         Swal.fire({ icon: 'warning', title: 'ผิดพลาด', text: response.message });
                     }
@@ -312,7 +296,7 @@
         var id = $(this).data('id');
         $.ajax({
             type: 'GET',
-            url: '{{ route("production.semipigment.detail") }}',
+            url: '{{ route("production.pigment.detail") }}',
             dataType: 'json',
             cache: false,
             data: { id: id },
@@ -347,19 +331,13 @@
 
             $.ajax({
                 type: 'POST',
-                url: '{{ route("production.semipigment.convertplanning") }}',
+                url: '{{ route("production.pigment.convertplanning") }}',
                 dataType: 'json',
                 data: { id: id, _token: '{{ csrf_token() }}' },
                 success: function (response) {
                     if (response.status == 200) {
                         oTable.draw();
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'สำเร็จ',
-                            text: response.message,
-                            timer: 1800,
-                            showConfirmButton: false
-                        });
+                        Swal.fire({ icon: 'success', title: 'สำเร็จ', text: response.message, timer: 1800, showConfirmButton: false });
                     } else {
                         Swal.fire({ icon: 'warning', title: 'ผิดพลาด', text: response.message });
                     }
