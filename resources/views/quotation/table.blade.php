@@ -75,10 +75,6 @@
                                 onclick="quotationPrint('{{ $row->Qno }}')">
                                 <i class="ti ti-printer"></i>
                             </button>
-                            <button class="btn btn-sm btn-icon btn-label-danger" title="ลบ"
-                                onclick="quotationDelete('{{ $row->Qno }}')">
-                                <i class="ti ti-trash"></i>
-                            </button>
                         </div>
                     </td>
                 </tr>

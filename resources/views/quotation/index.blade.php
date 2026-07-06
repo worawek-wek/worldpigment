@@ -30,6 +30,55 @@
     border-top: 65px solid #54BAB9;
     border-right: 65px solid transparent;
 }
+
+/* กล่อง section ในฟอร์มสร้าง/แก้ไข */
+.qf-sec {
+    border: 1px solid #e2e7ea;
+    border-radius: .6rem;
+    padding: 1rem 1.15rem 1.15rem;
+    margin-bottom: 1rem;
+}
+.qf-sec:last-child { margin-bottom: 0; }
+.qf-sec-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #2f7a78;
+    letter-spacing: .2px;
+    margin-bottom: .9rem;
+    padding-bottom: .55rem;
+    border-bottom: 2px solid #d9e6e6;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+.qf-sec-title i { font-size: 1.25rem; }
+
+/* ช่องกรอกในตารางรายการ (โชว์ทุกคอลัมน์ → ตารางกว้าง เลื่อนแนวนอนได้) */
+#quotationItemsTable th { white-space: nowrap; font-size: .82rem; }
+.qitem-input { min-width: 90px; }
+.qitem-input:not(.text-end) { min-width: 130px; }   /* คอลัมน์ข้อความ (ชื่อสินค้า/หมายเหตุ) กว้างกว่า */
+.qitem-input.qitem-name { min-width: 340px; }        /* ช่องชื่อสินค้า/รายละเอียด — ยาวเป็นพิเศษ */
+/* เน้นพื้นหลังคอลัมน์ปรับราคา (ปัจจุบัน/ใหม่) — สีเข้ม */
+#quotationItemsTable th.qcol-rev { background: #3e8c8b !important; color: #fff; }
+#quotationItemsTable td.qcol-rev { background: #8fcfc8 !important; }
+/* กรอบล้อมบล็อกปรับราคา (บน/ล่าง/ซ้าย/ขวา) + เส้นคั่นกลาง ปัจจุบัน|ใหม่ */
+#quotationItemsTable th.qcol-rev { border-top: 3px solid #2f6f6e !important; }
+#quotationItems tr:last-child td.qcol-rev { border-bottom: 3px solid #2f6f6e !important; }
+#quotationItemsTable th.qcol-rev-start,
+#quotationItemsTable td.qcol-rev-start { border-left: 3px solid #2f6f6e !important; }
+#quotationItemsTable th.qcol-rev-end,
+#quotationItemsTable td.qcol-rev-end { border-right: 3px solid #2f6f6e !important; }
+#quotationItemsTable th.qcol-sep,
+#quotationItemsTable td.qcol-sep { border-left: 3px solid #2f6f6e !important; }
+
+/* กล่อง "ราคา" (แยกต่างหาก — สีน้ำเงิน) */
+#quotationItemsTable th.qcol-price { background: #5b7fa6 !important; color: #fff; border-top: 3px solid #3f5f85 !important; }
+#quotationItemsTable td.qcol-price { background: #e9f0f7 !important; }
+#quotationItems tr:last-child td.qcol-price { border-bottom: 3px solid #3f5f85 !important; }
+#quotationItemsTable th.qcol-price-start,
+#quotationItemsTable td.qcol-price-start { border-left: 3px solid #3f5f85 !important; }
+#quotationItemsTable th.qcol-price-end,
+#quotationItemsTable td.qcol-price-end { border-right: 3px solid #3f5f85 !important; }
 </style>
 
 <body>
@@ -189,110 +238,110 @@
                 {{-- qno เดิม (ใช้ตอน update/หา key) --}}
                 <input type="hidden" name="qno" id="q_qno_key">
 
-                <div class="modal-body px-5">
+                <div class="modal-body px-4 py-4">
 
-                    <!-- Top Form -->
-                    <div class="row g-3">
-
-                        <div class="col-md-4">
-                            <label class="form-label">เลขที่ใบเสนอราคา <span class="text-danger">*</span></label>
-                            <input type="text" name="Qno" id="q_Qno" class="form-control" maxlength="10" required>
-                        </div>
-                        <div class="col-md-4"></div>
-                        <div class="col-md-2">
-                            <label class="form-label">วันที่เสนอราคา</label>
-                            <input type="date" name="Qdate" id="q_Qdate" class="form-control">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label text-danger">Revise Date</label>
-                            <input type="date" name="Revisedate" id="q_Revisedate" class="form-control">
-                        </div>
-
-                        <div class="col-md-2">
-                            <label class="form-label">ชนิดสินค้า</label>
-                            <select name="PDtype" id="q_PDtype" class="form-select">
-                                @foreach ($pdtypes as $pt)
-                                    <option value="{{ $pt->PDType }}">{{ $pt->PDType }} — {{ $pt->PDHead1 }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-2 d-flex align-items-end">
-                            <div class="form-check">
-                                <input class="form-check-input" id="q_exam" name="exam" type="checkbox" value="1">
-                                <label class="form-check-label" for="q_exam">พร้อมตัวอย่าง</label>
+                    {{-- ── Section 1: ข้อมูลเอกสาร ── --}}
+                    <div class="qf-sec">
+                        <div class="qf-sec-title"><i class="ti ti-clipboard-text"></i>ข้อมูลเอกสาร</div>
+                        {{-- แถวบน: เลขที่ / วันที่ / Revise Date --}}
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">เลขที่ใบเสนอราคา <span class="text-danger">*</span></label>
+                                <input type="text" name="Qno" id="q_Qno" class="form-control" maxlength="10" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">วันที่เสนอราคา <span class="text-danger">*</span></label>
+                                <input type="date" name="Qdate" id="q_Qdate" class="form-control" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-danger">Revise Date</label>
+                                <input type="date" name="Revisedate" id="q_Revisedate" class="form-control">
                             </div>
                         </div>
-                        <div class="col-md-8"></div>
-
-                        <div class="col-md-3">
-                            <label class="form-label">รหัสพนักงานขาย</label>
-                            <input type="number" name="EmpID" id="q_EmpID" class="form-control">
-                        </div>
-                        <div class="col-md-9"></div>
-
-                        <div class="col-md-2">
-                            <label class="form-label">รหัสลูกค้า</label>
-                            <input type="text" name="Custid" id="q_Custid" class="form-control" maxlength="6"
-                                oninput="lookupCustomer(this.value)">
-                        </div>
-                        <div class="col-md-5">
-                            <label class="form-label">ชื่อลูกค้า</label>
-                            <input type="text" name="CustName" id="q_CustName" class="form-control text-primary fw-bold">
-                        </div>
-                        <div class="col-md-5">
-                            <label class="form-label">ชื่อลูกค้า (ภาษาอังกฤษ)</label>
-                            <input type="text" name="Engname" id="q_Engname" class="form-control" maxlength="70">
-                        </div>
-
-                    </div>
-
-                    <!-- ปุ่มเพิ่มรายการ -->
-                    <div class="row mt-4">
-                        <div class="col-md-12">
-                            <div class="d-flex flex-wrap gap-2">
-                                <button type="button" class="btn btn-label-warning" onclick="addQuotationItem()">
-                                    <i class="ti ti-plus me-1"></i>เพิ่มรายการ
-                                </button>
+                        {{-- แถวล่าง: ชนิดสินค้า / พร้อมตัวอย่าง --}}
+                        <div class="row g-3 mt-1">
+                            <div class="col-md-4">
+                                <label class="form-label">ชนิดสินค้า</label>
+                                <select name="PDtype" id="q_PDtype" class="form-select">
+                                    @foreach ($pdtypes as $pt)
+                                        <option value="{{ $pt->PDType }}">{{ $pt->PDType }} — {{ $pt->PDHead1 }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" id="q_exam" name="exam" type="checkbox" value="1">
+                                    <label class="form-check-label" for="q_exam">พร้อมตัวอย่าง</label>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- ตารางรายการสินค้า -->
-                    <div class="table-responsive mt-4">
-                        <table class="table table-bordered align-middle" id="quotationItemsTable">
-                            <thead class="table-light">
-                                <tr>
-                                    <th width="150">รหัสสินค้า</th>
-                                    <th>ชื่อสินค้า</th>
-                                    <th width="130">ราคาเก่า</th>
-                                    <th width="130">ราคาใหม่</th>
-                                    <th width="130">ราคารวมภาษี</th>
-                                    <th width="60" class="text-center">ลบ</th>
-                                </tr>
-                            </thead>
-                            <tbody id="quotationItems">
-                                {{-- แถวเริ่มต้นเติมด้วย JS (resetItems) --}}
-                            </tbody>
-                        </table>
+                    {{-- ── Section 2: ข้อมูลลูกค้า ── --}}
+                    <div class="qf-sec">
+                        <div class="qf-sec-title"><i class="ti ti-building-store"></i>ข้อมูลลูกค้า</div>
+                        <div class="row g-3">
+                            <div class="col-md-2">
+                                <label class="form-label">รหัสลูกค้า <span class="text-danger">*</span></label>
+                                <input type="text" name="Custid" id="q_Custid" class="form-control" maxlength="6"
+                                    oninput="lookupCustomer(this.value)" required>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">ชื่อลูกค้า <span class="text-danger">*</span></label>
+                                <input type="text" name="CustName" id="q_CustName" class="form-control text-primary fw-bold" required>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">ชื่อลูกค้า (ภาษาอังกฤษ)</label>
+                                <input type="text" name="Engname" id="q_Engname" class="form-control" maxlength="70">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">รหัสพนักงานขาย</label>
+                                <input type="number" name="EmpID" id="q_EmpID" class="form-control">
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Bottom Form -->
-                    <div class="row g-3 mt-3">
-                        <div class="col-md-3">
-                            <label class="form-label">ควรกำหนดยอดซื้อขั้นต่ำ (ก.ก.)</label>
-                            <input type="text" name="Qremark" id="q_Qremark" class="form-control text-center" maxlength="50">
+                    {{-- ── Section 3: รายการสินค้า ── --}}
+                    <div class="qf-sec">
+                        <div class="qf-sec-title"><i class="ti ti-list-details"></i>รายการสินค้า</div>
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div class="alert alert-info py-2 px-3 mb-0 small">
+                                <i class="ti ti-info-circle me-1"></i>กรอกเฉพาะคอลัมน์ที่ต้องการ — คอลัมน์ที่ปล่อยว่างทั้งหมดจะไม่แสดงในใบเสนอราคา
+                                (หัวจดหมาย เสนอราคา/ปรับราคา ระบบตั้งให้อัตโนมัติ)
+                            </div>
+                            <button type="button" class="btn btn-label-warning" onclick="addQuotationItem()">
+                                <i class="ti ti-plus me-1"></i>เพิ่มรายการ
+                            </button>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Payment Term</label>
-                            <input type="text" name="Term" id="q_Term" class="form-control text-center" maxlength="20">
+
+                        <div class="table-responsive mt-3">
+                            <table class="table table-bordered align-middle mb-0" id="quotationItemsTable">
+                                <thead class="table-light"><tr id="quotationItemsHead"></tr></thead>
+                                <tbody id="quotationItems"></tbody>
+                            </table>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label">ยืนราคาถึงวันที่</label>
-                            <input type="date" name="Validto" id="q_Validto" class="form-control">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">ส่งสินค้าได้ภายใน <span class="text-muted fw-normal">(วัน)</span></label>
-                            <input type="text" name="LeadTime" id="q_LeadTime" class="form-control" maxlength="3">
+                    </div>
+
+                    {{-- ── Section 4: เงื่อนไข ── --}}
+                    <div class="qf-sec">
+                        <div class="qf-sec-title"><i class="ti ti-adjustments-horizontal"></i>เงื่อนไข</div>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">ควรกำหนดยอดซื้อขั้นต่ำ (ก.ก.)</label>
+                                <input type="text" name="Qremark" id="q_Qremark" class="form-control" maxlength="50">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Payment Term</label>
+                                <input type="text" name="Term" id="q_Term" class="form-control" maxlength="20">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">ยืนราคาถึงวันที่</label>
+                                <input type="date" name="Validto" id="q_Validto" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">ส่งสินค้าได้ภายใน <span class="text-muted fw-normal">(วัน)</span></label>
+                                <input type="text" name="LeadTime" id="q_LeadTime" class="form-control" maxlength="3">
+                            </div>
                         </div>
                     </div>
 
@@ -338,34 +387,133 @@
         loadData(page);
 
         // ────────────────────────────────────────────────────────
-        //  รายการสินค้าในใบเสนอราคา — เพิ่ม/ลบแถวได้
+        //  รายการสินค้า — คอลัมน์กำหนดเองได้ (config-driven)
         // ────────────────────────────────────────────────────────
-        function itemRow(it){
-            it = it || {};
-            return '<tr>'
-                + '<td><input type="text"   name="item_code[]"        class="form-control" value="'      + (it.code  ?? '') + '"></td>'
-                + '<td><input type="text"   name="item_name[]"        class="form-control" value="'      + (it.name  ?? '') + '"></td>'
-                + '<td><input type="number" name="item_old_price[]"   class="form-control text-end" step="0.01" value="' + (it.old ?? '') + '"></td>'
-                + '<td><input type="number" name="item_new_price[]"   class="form-control text-end" step="0.01" value="' + (it.newp ?? '') + '"></td>'
-                + '<td><input type="number" name="item_total_price[]" class="form-control text-end" step="0.01" value="' + (it.net ?? '') + '"></td>'
-                + '<td class="text-center">'
-                +   '<button type="button" class="btn btn-sm btn-icon btn-label-danger" title="ลบรายการ" onclick="removeQuotationItem(this)">'
-                +     '<i class="ti ti-trash"></i></button>'
-                + '</td>'
-                + '</tr>';
+        var COL_REG = @json($colRegistry);   // คลังคอลัมน์ทั้งหมด {key:{label,num,suffix}}
+        // แสดงทุกคอลัมน์เสมอ — คอลัมน์ที่ไม่มีใครกรอกจะถูกตัดออกตอนบันทึก (ฝั่ง server)
+        var ALL_COLS = Object.keys(COL_REG).map(function(k){
+            return {key: k, label: COL_REG[k].label, num: !!COL_REG[k].num};
+        });
+        // กล่อง "ค่าผลิต/ค่าแม่สี ปรับราคา" (ปัจจุบัน|ใหม่) — เน้นพื้นหลัง (ราคาไม่รวมในกล่องนี้)
+        var REVISION_COLS = {cur_process_fee:1, cur_pigment_price:1, new_process_fee:1, new_pigment_price:1};
+        // คอลัมน์แรกของกลุ่ม "ใหม่" — ใส่เส้นคั่นซ้าย แยกจากกลุ่ม "ปัจจุบัน"
+        var GROUP_SEP_COLS = {new_process_fee:1};
+        var REV_START = 'cur_process_fee';   // คอลัมน์แรกของกล่อง (เส้นซ้าย)
+        var REV_END   = 'new_pigment_price'; // คอลัมน์สุดท้ายของกล่อง (เส้นขวา)
+        // กล่อง "ราคา" (แยกต่างหาก คนละสี)
+        var PRICE_COLS   = {price_kg:1, new_price:1, price_vat:1};
+        var PRICE_START  = 'price_kg';
+        var PRICE_END    = 'price_vat';
+        // รวม class เน้น/กรอบของแต่ละกล่อง
+        function revClasses(key){
+            var cl = [];
+            if (REVISION_COLS[key])  cl.push('qcol-rev');
+            if (GROUP_SEP_COLS[key])  cl.push('qcol-sep');
+            if (key === REV_START)    cl.push('qcol-rev-start');
+            if (key === REV_END)      cl.push('qcol-rev-end');
+            if (PRICE_COLS[key])      cl.push('qcol-price');
+            if (key === PRICE_START)  cl.push('qcol-price-start');
+            if (key === PRICE_END)    cl.push('qcol-price-end');
+            return cl.join(' ');
         }
+        var currentItems = [];               // ข้อมูลรายการ (array ของ object)
 
-        function addQuotationItem(it) {
-            $('#quotationItems').append(itemRow(it));
-        }
+        function esc(v){ return String(v == null ? '' : v).replace(/"/g,'&quot;'); }
 
-        function removeQuotationItem(btn) {
-            // เหลืออย่างน้อย 1 แถว — ถ้าลบแถวสุดท้ายให้เคลียร์ค่าแทน
-            if ($('#quotationItems tr').length <= 1) {
-                $(btn).closest('tr').find('input').val('');
-                return;
+        // ── ตารางกรอกรายการ — โชว์ทุกคอลัมน์ ──
+        function renderItems(){
+            var head = '';
+            ALL_COLS.forEach(function(c){
+                var rc = revClasses(c.key);
+                head += '<th class="text-center'+(rc?' '+rc:'')+'">'+esc(c.label)+'</th>';
+            });
+            head += '<th width="46" class="text-center">ลบ</th>';
+            $('#quotationItemsHead').html(head);
+
+            var body = '';
+            if (!currentItems.length){
+                body = '<tr><td colspan="'+(ALL_COLS.length+1)+'" class="text-center py-3">ยังไม่มีรายการ — กด “เพิ่มรายการ”</td></tr>';
+            } else {
+                currentItems.forEach(function(row, idx){
+                    body += '<tr>';
+                    ALL_COLS.forEach(function(c){
+                        var typ = c.num ? 'number' : 'text';
+                        var cls = 'form-control form-control-sm qitem-input qitem-' + c.key + (c.num ? ' text-end' : '');
+                        var step = c.num ? ' step="0.01"' : '';
+                        var rc = revClasses(c.key);
+                        var tdcls = rc ? ' class="'+rc+'"' : '';
+                        // ช่องรหัสสินค้า → ค้นชื่อ/ราคา/รายละเอียดมาเติมช่องที่ว่าง (oninput + debounce)
+                        var oncode = (c.key === 'code') ? '; lookupItem('+idx+',this.value)' : '';
+                        body += '<td'+tdcls+'><input type="'+typ+'" class="'+cls+'"'+step+' value="'+esc(row[c.key])+'" oninput="updateItem('+idx+',\''+c.key+'\',this.value)'+oncode+'"></td>';
+                    });
+                    body += '<td class="text-center"><button type="button" class="btn btn-sm btn-icon btn-label-danger" title="ลบ" onclick="removeItemRow('+idx+')"><i class="ti ti-trash"></i></button></td>';
+                    body += '</tr>';
+                });
             }
-            $(btn).closest('tr').remove();
+            $('#quotationItems').html(body);
+        }
+
+        function updateItem(idx, key, val){
+            var row = currentItems[idx];
+            if (!row) return;
+            row[key] = val;
+            // ผู้ใช้แก้ช่องนี้เอง → ไม่ถือเป็น auto-fill อีก (กันโดนล้างตอนรหัสไม่เจอ)
+            if (row.__auto && row.__auto[key]) delete row.__auto[key];
+        }
+
+        // ── ค้นข้อมูลสินค้าจากรหัส (oninput + debounce) เติมช่องที่ว่าง / ไม่เจอ = เอาที่เติมไว้ออก ──
+        var itemLookupTimer = null, itemLookupXhr = null;
+        function lookupItem(idx, code){
+            code = (code || '').trim();
+            clearTimeout(itemLookupTimer);
+            itemLookupTimer = setTimeout(function(){ applyItemLookup(idx, code); }, 350);
+        }
+        function clearAutoFilled(row){
+            if (row.__auto){
+                Object.keys(row.__auto).forEach(function(k){ row[k] = ''; });
+                row.__auto = {};
+            }
+        }
+        // อัปเดตค่าในช่องของแถวนั้นจาก data model โดยไม่ re-render (คง focus/เคอร์เซอร์ช่องรหัส)
+        function refreshRowInputs(idx){
+            var $inputs = $('#quotationItems tr').eq(idx).find('input');
+            ALL_COLS.forEach(function(c, i){
+                if (c.key === 'code') return;   // อย่าแตะช่องที่กำลังพิมพ์
+                var v = currentItems[idx][c.key];
+                $inputs.eq(i).val(v == null ? '' : v);
+            });
+        }
+        function applyItemLookup(idx, code){
+            var row = currentItems[idx];
+            if (!row) return;
+            clearAutoFilled(row);              // ล้างที่เคยเติมไว้ก่อน (เผื่อรหัสเปลี่ยน/ไม่เจอ)
+            if (!code){ refreshRowInputs(idx); return; }
+            if (itemLookupXhr) itemLookupXhr.abort();
+            itemLookupXhr = $.getJSON("{{ $page_url }}/item-lookup", {code: code}, function(res){
+                if (currentItems[idx] !== row) return;   // แถวเปลี่ยนระหว่างรอผล
+                if (res.found && res.cells){
+                    row.__auto = {};
+                    Object.keys(res.cells).forEach(function(k){
+                        var cur = row[k];
+                        if (cur === undefined || cur === null || String(cur).trim() === ''){
+                            row[k] = res.cells[k];
+                            row.__auto[k] = true;   // จำว่าเติมอัตโนมัติ
+                        }
+                    });
+                }
+                refreshRowInputs(idx);
+            }).fail(function(){ refreshRowInputs(idx); });
+        }
+
+        function addQuotationItem(){ currentItems.push({}); renderItems(); }
+        function removeItemRow(idx){
+            currentItems.splice(idx, 1);
+            if (!currentItems.length) currentItems.push({});
+            renderItems();
+        }
+        function setItems(items){
+            currentItems = (items && items.length) ? items : [{}, {}];
+            renderItems();
         }
 
         // ────────────────────────────────────────────────────────
@@ -387,7 +535,9 @@
                         if (res.nameEN) $('#q_Engname').val(res.nameEN);
                         if (res.term && !$('#q_Term').val()) $('#q_Term').val(res.term);
                     } else {
-                        $('#q_CustName').val('');   // ยังพิมพ์ไม่ครบ/ไม่เจอ → เคลียร์เงียบๆ ไม่เด้ง popup
+                        // ไม่เจอ → เคลียร์ชื่อไทย + อังกฤษ เงียบๆ (ไม่เด้ง popup)
+                        $('#q_CustName').val('');
+                        $('#q_Engname').val('');
                     }
                 });
             }, 350);
@@ -396,15 +546,6 @@
         // ────────────────────────────────────────────────────────
         //  เปิดฟอร์มสร้างใหม่
         // ────────────────────────────────────────────────────────
-        function resetItems(items){
-            var body = $('#quotationItems').empty();
-            if (items && items.length){
-                items.forEach(function(i){ body.append(itemRow(i)); });
-            } else {
-                body.append(itemRow()).append(itemRow());  // เริ่มต้น 2 แถวว่าง
-            }
-        }
-
         function openCreate(){
             document.getElementById('quotationForm').reset();
             $('#q_mode').val('insert');
@@ -413,7 +554,7 @@
             $('#q_Qno').prop('readonly', false);
             // วันที่เสนอราคา = วันนี้
             $('#q_Qdate').val(new Date().toISOString().slice(0,10));
-            resetItems();
+            setItems();
             // ขอเลขที่ถัดไป (แก้ไขได้)
             $.getJSON("{{ $page_url }}/next-qno", {prefix:'WH'}, function(res){
                 if (res.qno) $('#q_Qno').val(res.qno);
@@ -446,11 +587,9 @@
                 $('#q_Qremark').val(h.Qremark);
                 $('#q_Term').val(h.Term);
                 $('#q_LeadTime').val(h.LeadTime);
-                // รายการ
-                var items = (res.items || []).map(function(d){
-                    return {code:d.Qitemno||'', name:d.Qdesc||'', old:d.oldprice ?? '', newp:d.QPrice ?? '', net:d.QNet ?? ''};
-                });
-                resetItems(items);
+                // รายการ: ใช้ค่าแบน (cells) จาก server ตรงๆ (ฟอร์มโชว์ทุกคอลัมน์)
+                var items = (res.items || []).map(function(d){ return Object.assign({}, d.cells || {}); });
+                setItems(items);
                 new bootstrap.Modal('#quotationModal').show();
             }).fail(function(){ Swal.fire('เกิดข้อผิดพลาด', 'โหลดข้อมูลไม่สำเร็จ', 'error'); });
         }
@@ -466,14 +605,37 @@
         // ────────────────────────────────────────────────────────
         function saveQuotation(){
             var form = document.getElementById('quotationForm');
-            if (!$('#q_Qno').val().trim()){
-                Swal.fire('กรอกไม่ครบ', 'กรุณากรอกเลขที่ใบเสนอราคา', 'warning');
-                return;
-            }
+
+            // ── ตรวจช่องที่ required ด้วย native validation ──
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+
             var mode = $('#q_mode').val();
+
+            // ── ยืนยันก่อนบันทึก ──
+            Swal.fire({
+                title: mode === 'update' ? 'ยืนยันการแก้ไข?' : 'ยืนยันการบันทึก?',
+                text: 'เลขที่ใบเสนอราคา ' + $('#q_Qno').val().trim(),
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'ยืนยัน',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#54BAB9',
+            }).then(function(result){
+                if (result.isConfirmed) submitQuotation(mode);
+            });
+        }
+
+        // ส่งข้อมูลจริงหลังผู้ใช้กดยืนยัน (แยกจาก saveQuotation เพื่อคั่นด้วย confirm)
+        function submitQuotation(mode){
+            var form = document.getElementById('quotationForm');
             var url  = mode === 'update' ? "{{ $page_url }}/update" : "{{ $page_url }}/insert";
             var fd = new FormData(form);
             fd.append('_token', '{{ csrf_token() }}');
+            // ตัด field ภายใน (__auto) ออกก่อนส่ง
+            var cleanItems = currentItems.map(function(r){
+                var o = {}; Object.keys(r).forEach(function(k){ if (k !== '__auto') o[k] = r[k]; }); return o;
+            });
+            fd.append('items_json', JSON.stringify(cleanItems));   // ข้อมูลรายการ (server จะ derive คอลัมน์ที่แสดงเอง)
 
             $.ajax({
                 url: url, type: 'POST', data: fd, contentType: false, processData: false,
@@ -494,7 +656,7 @@
         }
 
         // ────────────────────────────────────────────────────────
-        //  ดูรายละเอียด / พิมพ์ / ลบ
+        //  ดูรายละเอียด / พิมพ์
         // ────────────────────────────────────────────────────────
         function quotationView(qno){
             var el = document.getElementById('quotationViewModal');
@@ -521,27 +683,6 @@
                 catch (e) { console.error(e); }
             };
             frame.src = "{{ $page_url }}/print?qno=" + encodeURIComponent(qno);
-        }
-
-        function quotationDelete(qno){
-            Swal.fire({
-                title: 'ยืนยันการลบ?',
-                html: 'ลบใบเสนอราคา <strong>' + qno + '</strong> และรายการทั้งหมด<br>การลบไม่สามารถย้อนกลับได้',
-                icon: 'warning', showCancelButton: true,
-                confirmButtonText: 'ลบ', cancelButtonText: 'ยกเลิก',
-                confirmButtonColor: '#d33',
-            }).then(function(result){
-                if (!result.isConfirmed) return;
-                $.ajax({
-                    url: "{{ $page_url }}/delete", type: 'POST',
-                    data: {qno: qno, _token: '{{ csrf_token() }}'},
-                    success: function(res){
-                        if (res.ok){ Swal.fire('ลบเรียบร้อย', '', 'success'); loadData(page); }
-                        else { Swal.fire('ไม่สำเร็จ', res.error || '', 'error'); }
-                    },
-                    error: function(){ Swal.fire('เกิดข้อผิดพลาด', '', 'error'); }
-                });
-            });
         }
 
         // ────────────────────────────────────────────────────────

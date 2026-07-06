@@ -19,11 +19,14 @@ class QuotationController extends Controller
     // ─── คอลัมน์วันที่ใน qmast (input type=date ส่งมาเป็น Y-m-d) ───
     private const DATE_FIELDS = ['Qdate', 'ValidFrom', 'Validto', 'Revisedate'];
 
+    // ชนิดสินค้าตระกูล masterbatch → preset เริ่มต้นแบบขั้นบันได (นอกนั้นถือเป็น compound)
+    private const MB_FAMILY = ['MB', 'MP', 'RB', 'PO', 'SBR'];
+
     public function index(Request $request)
     {
         $data['page_url'] = 'quotation';
-        // ชนิดสินค้า (pdtype) สำหรับ filter + form — PDHead1 (ไทย) เพี้ยน จึงใช้ PDHead1E (อังกฤษ) เป็นคำอธิบาย
         $data['pdtypes'] = DB::table('pdtype')->get();
+        $data['colRegistry'] = $this->colRegistry();  // คลังคอลัมน์ทั้งหมด (ให้ฟอร์มสร้างคอลัมน์)
         return view('quotation.index', $data);
     }
 
@@ -69,6 +72,68 @@ class QuotationController extends Controller
             'nameEN' => $cust->nameEN,
             'term'   => $cust->term,
         ]);
+    }
+
+    /**
+     * GET — ค้นข้อมูลสินค้าจากรหัส (Qitemno) จากใบเสนอราคาเก่า
+     * คืนชื่อ + ราคา + รายละเอียดแยกย่อย (qdetail_ext) ที่ตรงกับคอลัมน์ในตาราง
+     * ให้ฟอร์มเติมช่องที่ยังว่างอัตโนมัติ
+     */
+    public function itemLookup(Request $request)
+    {
+        $code = trim((string) $request->query('code', ''));
+        if ($code === '') {
+            return response()->json(['found' => false]);
+        }
+
+        // ชื่อสินค้า = color ล่าสุดจาก testmain (จับคู่ด้วย CodeNo)
+        $name = DB::table('testmain')
+            ->whereRaw('TRIM(CodeNo) = ?', [$code])
+            ->whereNotNull('color')->where('color', '<>', '')
+            ->orderByDesc('id')
+            ->value('color');
+
+        // แถวราคาล่าสุด (มีราคาจริง) ของรหัสนี้ — ใช้ดึงราคา + ผูก breakdown
+        $priceRow = DB::table('qdetail')
+            ->whereRaw('TRIM(Qitemno) = ?', [$code])
+            ->whereNotNull('QNet')
+            ->orderByDesc('Qseq')
+            ->first();
+
+        if ($name === null && !$priceRow) {
+            return response()->json(['found' => false]);
+        }
+
+        $cells = [];
+        if ($name !== null && trim($name) !== '') {
+            $cells['name'] = $name;
+        }
+
+        if ($priceRow) {
+            $ext = DB::table('qdetail_ext')
+                ->whereRaw('TRIM(Qno) = ?', [trim($priceRow->Qno)])
+                ->where('Qseq', $priceRow->Qseq)
+                ->first();
+
+            $cells['price_kg']  = ($ext->price_kg  ?? null) ?? $priceRow->QPrice;
+            $cells['price_vat'] = ($ext->price_vat ?? null) ?? $priceRow->QNet;
+
+            // รายละเอียดแยกย่อย (ตรงกับคอลัมน์ในตาราง) จาก qdetail_ext
+            if ($ext) {
+                foreach (['delivery_qty', 'resin_price', 'process_fee', 'pigment_price', 'loss_pct',
+                          'cur_process_fee', 'new_process_fee', 'cur_pigment_price', 'new_pigment_price',
+                          'new_price', 'remark'] as $k) {
+                    if ($ext->$k !== null && $ext->$k !== '') {
+                        $cells[$k] = $ext->$k;
+                    }
+                }
+            }
+        }
+
+        // ตัดค่าว่างออก
+        $cells = array_filter($cells, fn ($v) => $v !== null && $v !== '');
+
+        return response()->json(['found' => !empty($cells), 'cells' => $cells]);
     }
 
     /**
@@ -118,9 +183,10 @@ class QuotationController extends Controller
 
         $data = $this->loadQuotation($row);
         return response()->json([
-            'header' => $data['header'],
-            'cust'   => $data['cust'],
-            'items'  => $data['items'],
+            'header'     => $data['header'],
+            'cust'       => $data['cust'],
+            'items'      => $data['items'],
+            'col_config' => $data['colConfig'],
         ]);
     }
 
@@ -154,11 +220,15 @@ class QuotationController extends Controller
         try {
             DB::beginTransaction();
 
+            $items = $this->parseItemsPayload($request);
+
             $header = $this->extractHeader($request);
             $header['Qno'] = $qno;
+            // คอลัมน์ที่แสดง = เฉพาะคอลัมน์ที่มีการกรอกจริง (ช่องว่างทั้งคอลัมน์ = ตัดออก)
+            $header['col_config'] = json_encode($this->deriveColConfig($items), JSON_UNESCAPED_UNICODE);
             DB::table('qmast')->insert($header);
 
-            $this->saveItems($qno, $request);
+            $this->saveItems($qno, $items);
 
             DB::commit();
             return response()->json(['ok' => true, 'qno' => $qno]);
@@ -182,13 +252,17 @@ class QuotationController extends Controller
         try {
             DB::beginTransaction();
 
+            $items = $this->parseItemsPayload($request);
+
             $header = $this->extractHeader($request);
             unset($header['Qno']);   // ไม่ให้เปลี่ยนเลขที่ (เป็น key)
+            $header['col_config'] = json_encode($this->deriveColConfig($items), JSON_UNESCAPED_UNICODE);
             DB::table('qmast')->whereRaw('TRIM(Qno) = ?', [$qno])->update($header);
 
-            // แทนที่รายการทั้งชุด: ลบของเดิม แล้ว insert ใหม่
+            // แทนที่รายการทั้งชุด: ลบของเดิม (รวมราคาแยกย่อย) แล้ว insert ใหม่
             DB::table('qdetail')->whereRaw('TRIM(Qno) = ?', [$qno])->delete();
-            $this->saveItems($qno, $request);
+            DB::table('qdetail_ext')->whereRaw('TRIM(Qno) = ?', [$qno])->delete();
+            $this->saveItems($qno, $items);
 
             DB::commit();
             return response()->json(['ok' => true, 'qno' => $qno]);
@@ -212,6 +286,7 @@ class QuotationController extends Controller
         try {
             DB::beginTransaction();
             DB::table('qdetail')->whereRaw('TRIM(Qno) = ?', [$qno])->delete();
+            DB::table('qdetail_ext')->whereRaw('TRIM(Qno) = ?', [$qno])->delete();
             DB::table('qmast')->whereRaw('TRIM(Qno) = ?', [$qno])->delete();
             DB::commit();
             return response()->json(['ok' => true]);
@@ -243,7 +318,17 @@ class QuotationController extends Controller
     }
 
     /**
-     * โหลดใบเสนอราคา 1 ใบ (หัว + ชื่อลูกค้าจริง + รายการ) สำหรับ show/edit/print
+     * เลือก preset เริ่มต้นของใบเก่าที่ยังไม่มี col_config — derive จาก PDtype
+     * (ตระกูล MB → 1.1, นอกนั้น compound → 1.2)
+     */
+    private function resolveFormat($header): string
+    {
+        $pd = trim((string) $header->PDtype);
+        return in_array($pd, self::MB_FAMILY, true) ? '1.1' : '1.2';
+    }
+
+    /**
+     * โหลดใบเสนอราคา 1 ใบ (หัว + ชื่อลูกค้าจริง + รายการ + ราคาแยกย่อย) สำหรับ show/edit/print
      */
     private function loadQuotation($row): array
     {
@@ -258,13 +343,126 @@ class QuotationController extends Controller
             ->orderBy('Qseq')
             ->get();
 
+        // แนบราคาแยกย่อย (qdetail_ext) + สร้างค่าแบน (cells) ต่อรายการ
+        $ext = DB::table('qdetail_ext')
+            ->whereRaw('TRIM(Qno) = ?', [$qno])
+            ->get()->keyBy('Qseq');
+        foreach ($items as $it) {
+            $it->ext = $ext->get($it->Qseq);
+            $it->cells = $this->itemCells($it);
+        }
+
         $pdtype = DB::table('pdtype')->where('PDType', $row->PDtype)->first();
 
+        $colConfig = $this->resolveColConfig($row);
+
+        // ประเภทจดหมาย = "ปรับราคา" ถ้าใบนี้มีคอลัมน์ราคาปัจจุบัน/ปัจจุบัน-ใหม่ ไม่งั้น "เสนอราคา"
+        $revisionKeys = ['cur_process_fee', 'new_process_fee', 'cur_pigment_price', 'new_pigment_price', 'new_price'];
+        $isRevision = false;
+        foreach ($colConfig as $c) {
+            if (in_array($c['key'], $revisionKeys, true)) { $isRevision = true; break; }
+        }
+
         return [
-            'header' => $row,
-            'cust'   => $cust,
-            'items'  => $items,
-            'pdtype' => $pdtype,
+            'header'      => $row,
+            'cust'        => $cust,
+            'items'       => $items,
+            'pdtype'      => $pdtype,
+            'isRevision'  => $isRevision,                     // true = แจ้งปรับราคา
+            'colConfig'   => $colConfig,                      // คอลัมน์ที่แสดง
+            'colRegistry' => $this->colRegistry(),
+        ];
+    }
+
+    /**
+     * คลังคอลัมน์ทั้งหมด (master registry) — key => [label, num, suffix?]
+     */
+    private function colRegistry(): array
+    {
+        return [
+            'code'              => ['label' => 'รหัสสินค้า',            'num' => false],
+            'name'              => ['label' => 'ชื่อสินค้า',            'num' => false],
+            'delivery_qty'      => ['label' => 'น้ำหนักส่งครั้งละ (กก)',     'num' => false],
+            'resin_price'       => ['label' => 'ราคาเม็ดพลาสติก',       'num' => true],
+            'process_fee'       => ['label' => 'ค่าผลิตและค่าแม่สี',        'num' => true],
+            'pigment_price'     => ['label' => 'ค่าแม่สี',                 'num' => true],
+            'loss_pct'          => ['label' => '% สูญเสีย',             'num' => true, 'suffix' => '%'],
+            // ── ค่าผลิต/ค่าแม่สี แบบปรับราคา (ปัจจุบัน | ใหม่) ── กล่องเน้นเฉพาะกลุ่มนี้
+            'cur_process_fee'   => ['label' => 'ค่าผลิต (ปัจจุบัน)',     'num' => true],
+            'cur_pigment_price' => ['label' => 'ค่าแม่สี (ปัจจุบัน)',       'num' => true],
+            'new_process_fee'   => ['label' => 'ค่าผลิต (ใหม่)',        'num' => true],
+            'new_pigment_price' => ['label' => 'ค่าแม่สี (ใหม่)',          'num' => true],
+            // ── ราคา (ส่วนราคา แยกต่างหาก) — ปัจจุบัน/ใหม่ ──
+            'price_kg'          => ['label' => 'ราคา (บาท/กก) ปัจจุบัน',  'num' => true],
+            'new_price'         => ['label' => 'ราคา (บาท/กก) ใหม่',     'num' => true],
+            'price_vat'         => ['label' => 'รวม VAT (บาท/กก)',      'num' => true],
+            'remark'            => ['label' => 'หมายเหตุ',             'num' => false],
+        ];
+    }
+
+    /**
+     * Preset คอลัมน์ของ 7 รูปแบบ (+ '' = อัตโนมัติ/ทั่วไป)
+     * ใช้เป็น "จุดเริ่มต้น" — ผู้ใช้ปรับ (เพิ่ม/ลบ/สลับ/แก้ชื่อ) เองต่อใบได้
+     */
+    private function presets(): array
+    {
+        $c = fn ($k, $l) => ['key' => $k, 'label' => $l];
+        return [
+            ''    => [$c('code','รหัสสินค้า'), $c('name','ชื่อสินค้า'), $c('price_kg','ราคา (บาท/กก)'), $c('price_vat','ราคารวมภาษี')],
+            '1.1' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักส่งครั้งละ (กก)'), $c('price_kg','ราคา (บาท/กก)'), $c('price_vat','รวม Vat (บาท/กก)'), $c('remark','หมายเหตุ')],
+            '2.1' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักส่งครั้งละ (กก)'), $c('price_kg','ราคา (บาท/กก) ปัจจุบัน'), $c('new_price','ราคา (บาท/กก) ใหม่'), $c('price_vat','รวม Vat ใหม่'), $c('remark','หมายเหตุ')],
+            '1.2' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักส่งครั้งละ (กก)'), $c('resin_price','ราคาเม็ดพลาสติก'), $c('process_fee','ค่าผลิตและค่าแม่สี'), $c('price_kg','ราคา (บาท/กก)'), $c('price_vat','รวม Vat (บาท/กก)')],
+            '2.2' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักส่งครั้งละ (กก)'), $c('resin_price','ราคาเม็ดพลาสติก'), $c('cur_process_fee','ค่าผลิตฯ ปัจจุบัน'), $c('new_process_fee','ค่าผลิตฯ ใหม่'), $c('price_kg','ราคา (บาท/กก)'), $c('price_vat','รวม Vat (บาท/กก)')],
+            '1.3' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักส่งครั้งละ (กก)'), $c('process_fee','ค่าผลิต'), $c('pigment_price','ค่าแม่สี'), $c('price_kg','ราคา (บาท/กก)'), $c('price_vat','รวม Vat (บาท/กก)')],
+            '2.3' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักส่งครั้งละ (กก)'), $c('cur_process_fee','ค่าผลิต ปัจจุบัน'), $c('cur_pigment_price','ค่าแม่สี ปัจจุบัน'), $c('new_process_fee','ค่าผลิต ใหม่'), $c('new_pigment_price','ค่าแม่สี ใหม่'), $c('price_kg','ราคา (บาท/กก)'), $c('price_vat','รวม Vat (บาท/กก)')],
+            '1.4' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักส่งครั้งละ (กก)'), $c('resin_price','ราคาเม็ดพลาสติก'), $c('process_fee','ค่าผลิตและค่าแม่สี'), $c('loss_pct','% สูญเสีย'), $c('price_kg','ราคา (บาท/กก)'), $c('price_vat','รวม Vat (บาท/กก)')],
+        ];
+    }
+
+    /**
+     * คอลัมน์ที่จะแสดงจริงของใบนี้ — ใช้ col_config ที่ผู้ใช้บันทึกไว้ก่อน
+     * ถ้าไม่มี → ใช้ preset ตามรูปแบบที่ derive ได้
+     */
+    private function resolveColConfig($header): array
+    {
+        $reg = $this->colRegistry();
+        if (!empty($header->col_config)) {
+            $decoded = json_decode($header->col_config, true);
+            if (is_array($decoded) && $decoded) {
+                $out = [];
+                foreach ($decoded as $c) {
+                    if (empty($c['key']) || !isset($reg[$c['key']])) continue;
+                    $out[] = ['key' => $c['key'], 'label' => $c['label'] ?? $reg[$c['key']]['label']];
+                }
+                if ($out) return $out;
+            }
+        }
+        $presets = $this->presets();
+        return $presets[$this->resolveFormat($header)] ?? $presets[''];
+    }
+
+    /**
+     * รวมค่าของ 1 รายการเป็น map แบน (key => value) ตาม registry
+     */
+    private function itemCells($it): array
+    {
+        $e = $it->ext ?? null;
+        return [
+            'code'              => $it->Qitemno,
+            'name'              => $it->Qdesc,
+            'delivery_qty'      => $e->delivery_qty ?? null,
+            'resin_price'       => $e->resin_price ?? null,
+            'process_fee'       => $e->process_fee ?? null,
+            'pigment_price'     => $e->pigment_price ?? null,
+            'loss_pct'          => $e->loss_pct ?? null,
+            'price_kg'          => $e->price_kg  ?? $it->QPrice,
+            'cur_process_fee'   => $e->cur_process_fee ?? null,
+            'cur_pigment_price' => $e->cur_pigment_price ?? null,
+            'new_process_fee'   => $e->new_process_fee ?? null,
+            'new_pigment_price' => $e->new_pigment_price ?? null,
+            'new_price'         => $e->new_price ?? null,
+            'price_vat'         => $e->price_vat ?? $it->QNet,
+            'remark'            => $e->remark ?? null,
         ];
     }
 
@@ -296,42 +494,112 @@ class QuotationController extends Controller
         return $header;
     }
 
-    /**
-     * บันทึกรายการสินค้า (qdetail) — Qseq เป็นเลข running ทั้งระบบ (max+1 ต่อแถว)
-     * ข้ามแถวที่ว่างเปล่าทั้งหมด
-     */
-    private function saveItems(string $qno, Request $request): void
-    {
-        $codes  = (array) $request->input('item_code', []);
-        $names  = (array) $request->input('item_name', []);
-        $olds   = (array) $request->input('item_old_price', []);
-        $news   = (array) $request->input('item_new_price', []);
-        $totals = (array) $request->input('item_total_price', []);
+    // ─── field ราคาแยกย่อยใน qdetail_ext (คอลัมน์แปรตามรูปแบบใบ) ───
+    private const EXT_NUM_FIELDS = [
+        'resin_price', 'process_fee', 'pigment_price', 'loss_pct', 'price_kg', 'price_vat',
+        'cur_process_fee', 'new_process_fee', 'cur_pigment_price', 'new_pigment_price',
+        'new_price',
+    ];
 
+    /**
+     * คอลัมน์ที่จะแสดง = เฉพาะคอลัมน์ที่มีการกรอกอย่างน้อย 1 แถว (ตามลำดับใน registry)
+     * → ช่องไหนไม่มีใครกรอกเลย ถูกตัดออกอัตโนมัติ
+     */
+    private function deriveColConfig(array $items): array
+    {
+        $reg = $this->colRegistry();
+        $used = [];
+        foreach ($items as $it) {
+            foreach ($reg as $k => $meta) {
+                if (isset($used[$k])) continue;
+                $v = $it[$k] ?? null;
+                if ($v !== null && trim((string) $v) !== '') {
+                    $used[$k] = true;
+                }
+            }
+        }
+        $out = [];
+        foreach ($reg as $k => $meta) {
+            if (isset($used[$k])) {
+                $out[] = ['key' => $k, 'label' => $meta['label']];
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * บันทึกรายการสินค้า (qdetail + qdetail_ext) — Qseq เป็นเลข running ทั้งระบบ (max+1 ต่อแถว)
+     * รับ items ที่ parse แล้ว (array) ; ข้ามแถวว่างเปล่า
+     */
+    private function saveItems(string $qno, array $items): void
+    {
         $seq = (int) DB::table('qdetail')->max('Qseq');
 
-        $rows = [];
-        foreach ($names as $i => $name) {
-            $code = trim((string) ($codes[$i] ?? ''));
-            $name = trim((string) $name);
-            // แถวว่างทั้งบรรทัด → ข้าม
+        $base = [];
+        $ext  = [];
+        foreach ($items as $it) {
+            $code = trim((string) ($it['code'] ?? ''));
+            $name = trim((string) ($it['name'] ?? ''));
             if ($code === '' && $name === '') {
-                continue;
+                continue;   // แถวว่างทั้งบรรทัด → ข้าม
             }
-            $rows[] = [
+            $seq++;
+
+            // qdetail (ราคาหลัก): QPrice = ราคาสุดท้าย (เสนอ/ใหม่), QNet = รวมภาษี, oldprice = ราคาปัจจุบัน
+            $base[] = [
                 'Qno'      => $qno,
-                'Qseq'     => ++$seq,
+                'Qseq'     => $seq,
                 'Qitemno'  => $code !== '' ? $code : null,
                 'Qdesc'    => $name !== '' ? $name : null,
-                'oldprice' => $this->num($olds[$i] ?? null),
-                'QPrice'   => $this->num($news[$i] ?? null),
-                'QNet'     => $this->num($totals[$i] ?? null),
+                'oldprice' => $this->num($it['price_kg'] ?? null),                      // ราคาปัจจุบัน
+                'QPrice'   => $this->num($it['new_price'] ?? ($it['price_kg'] ?? null)), // ราคาใหม่ (ไม่มี = ปัจจุบัน)
+                'QNet'     => $this->num($it['price_vat'] ?? null),
             ];
+
+            // qdetail_ext (ราคาแยกย่อย): เก็บเฉพาะถ้ามี field แยกย่อยอย่างน้อย 1
+            $extRow = ['Qno' => $qno, 'Qseq' => $seq];
+            $has = false;
+            $dq = trim((string) ($it['delivery_qty'] ?? ''));
+            $rm = trim((string) ($it['remark'] ?? ''));
+            if ($dq !== '') { $extRow['delivery_qty'] = $dq; $has = true; }
+            if ($rm !== '') { $extRow['remark'] = $rm; $has = true; }
+            foreach (self::EXT_NUM_FIELDS as $f) {
+                $v = $this->num($it[$f] ?? null);
+                if ($v !== null) { $extRow[$f] = $v; $has = true; }
+            }
+            if ($has) {
+                $ext[] = $extRow;
+            }
         }
 
-        if ($rows) {
-            DB::table('qdetail')->insert($rows);
+        if ($base) DB::table('qdetail')->insert($base);
+        if ($ext)  DB::table('qdetail_ext')->insert($ext);
+    }
+
+    /**
+     * แปลง payload รายการ — รับ items_json (คอลัมน์แปรตามรูปแบบ) เป็นหลัก
+     * fallback: array แยก field แบบเดิม (item_code[] ...)
+     */
+    private function parseItemsPayload(Request $request): array
+    {
+        if ($request->filled('items_json')) {
+            $decoded = json_decode($request->items_json, true);
+            return is_array($decoded) ? $decoded : [];
         }
+        // fallback รูปแบบเดิม
+        $codes = (array) $request->input('item_code', []);
+        $names = (array) $request->input('item_name', []);
+        $olds  = (array) $request->input('item_old_price', []);
+        $news  = (array) $request->input('item_new_price', []);
+        $tots  = (array) $request->input('item_total_price', []);
+        $out = [];
+        foreach ($names as $i => $nm) {
+            $out[] = [
+                'code' => $codes[$i] ?? '', 'name' => $nm,
+                'oldprice' => $olds[$i] ?? null, 'price_kg' => $news[$i] ?? null, 'price_vat' => $tots[$i] ?? null,
+            ];
+        }
+        return $out;
     }
 
     private function num($v): ?float

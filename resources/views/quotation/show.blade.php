@@ -78,6 +78,7 @@
         <div class="text-end">
             <div class="mb-1">
                 <span class="badge"><i class="ti ti-tag me-1"></i>{{ $header->PDtype }}@if($ptname) — {{ $ptname }}@endif</span>
+                <span class="badge"><i class="ti ti-{{ $isRevision ? 'discount-2' : 'file-invoice' }} me-1"></i>{{ $isRevision ? 'แจ้งปรับราคา' : 'เสนอราคา' }}</span>
                 @if ($header->exam == 1)
                     <span class="badge"><i class="ti ti-flask me-1"></i>พร้อมตัวอย่าง</span>
                 @endif
@@ -120,44 +121,38 @@
                 <thead>
                     <tr>
                         <th style="width:40px" class="text-center">#</th>
-                        <th style="width:140px">รหัสสินค้า</th>
-                        <th>ชื่อสินค้า</th>
-                        <th style="width:105px" class="text-end">ราคาเก่า</th>
-                        <th style="width:105px" class="text-end">ราคาใหม่</th>
-                        <th style="width:120px" class="text-end">ราคารวมภาษี</th>
+                        @foreach ($colConfig as $c)
+                            <th class="{{ ($colRegistry[$c['key']]['num'] ?? false) ? 'text-end' : '' }}">{{ $c['label'] }}</th>
+                        @endforeach
                     </tr>
                 </thead>
                 <tbody>
                     @php $no = 0; @endphp
                     @forelse ($items as $it)
                         @php
-                            $hasCode  = $it->Qitemno !== null && trim($it->Qitemno) !== '';
-                            $hasPrice = $it->oldprice !== null || $it->QPrice !== null || $it->QNet !== null;
-                            $hasDesc  = $it->Qdesc !== null && trim($it->Qdesc) !== '';
-                            $isProduct = $hasCode || $hasPrice;
+                            $hasAny = false;
+                            foreach ($colConfig as $c) {
+                                $cv = $it->cells[$c['key']] ?? null;
+                                if ($cv !== null && $cv !== '') { $hasAny = true; break; }
+                            }
                         @endphp
-                        {{-- ข้ามบรรทัดว่างเปล่า (row คั่น) เพื่อให้ดูเป็นระเบียบ --}}
-                        @if (!$isProduct && !$hasDesc)
-                            @continue
-                        @endif
-                        @if ($isProduct)
-                            <tr>
-                                <td class="text-center">{{ ++$no }}</td>
-                                <td class="qv-code">{{ $it->Qitemno ?: '—' }}</td>
-                                <td>{{ $it->Qdesc }}</td>
-                                <td class="qv-num">{{ $money($it->oldprice) }}</td>
-                                <td class="qv-num">{{ $money($it->QPrice) }}</td>
-                                <td class="qv-num fw-semibold">{{ $money($it->QNet) }}</td>
-                            </tr>
-                        @else
-                            {{-- บรรทัดต่อเนื่อง (คำอธิบายเพิ่มเติมของสินค้าด้านบน) --}}
-                            <tr class="qv-subrow">
-                                <td></td><td></td>
-                                <td class="qv-desc" colspan="4"><i class="ti ti-corner-down-right me-1"></i>{{ $it->Qdesc }}</td>
-                            </tr>
-                        @endif
+                        @if (!$hasAny) @continue @endif
+                        <tr>
+                            <td class="text-center">{{ ++$no }}</td>
+                            @foreach ($colConfig as $c)
+                                @php
+                                    $k = $c['key']; $reg = $colRegistry[$k] ?? [];
+                                    $num = $reg['num'] ?? false;
+                                    $v = $it->cells[$k] ?? null;
+                                    $disp = $num
+                                        ? (($v !== null && $v !== '') ? number_format((float) $v, 2) . ($reg['suffix'] ?? '') : '—')
+                                        : ($v ?: '');
+                                @endphp
+                                <td class="{{ $num ? 'qv-num' : '' }} {{ $k === 'code' ? 'qv-code' : '' }}">{{ $disp }}</td>
+                            @endforeach
+                        </tr>
                     @empty
-                        <tr><td colspan="6" class="text-center py-4">
+                        <tr><td colspan="{{ count($colConfig) + 1 }}" class="text-center py-4">
                             <i class="ti ti-database-off d-block fs-4 mb-1"></i>ไม่มีรายการสินค้า
                         </td></tr>
                     @endforelse
@@ -165,7 +160,7 @@
                 @if ($items->isNotEmpty())
                     <tfoot>
                         <tr class="qv-total-row">
-                            <td colspan="5" class="text-end">รวมมูลค่าทั้งสิ้น (รวมภาษี)</td>
+                            <td colspan="{{ count($colConfig) }}" class="text-end">รวมมูลค่าทั้งสิ้น (รวมภาษี)</td>
                             <td class="qv-num">{{ number_format($totalNet, 2) }}</td>
                         </tr>
                     </tfoot>

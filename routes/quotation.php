@@ -11,6 +11,7 @@ Route::prefix('quotation')->group(function () {
     // ─── Lookup / helper ────────────────────────────────────────────
     Route::get('/customer/{code}', [QuotationController::class, 'customerLookup'])->name('quotation.customer_lookup');
     Route::get('/next-qno',        [QuotationController::class, 'nextQno'])->name('quotation.next_qno');
+    Route::get('/item-lookup',     [QuotationController::class, 'itemLookup'])->name('quotation.item_lookup');
 
     // ─── อ่าน (ใช้ query string ?qno= เพราะ Qno เก่าบางตัวมีช่องว่าง/อักขระแปลก) ───
     Route::get('/show',  [QuotationController::class, 'show'])->name('quotation.show');   // → HTML partial (modal)

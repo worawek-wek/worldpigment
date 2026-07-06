@@ -1,10 +1,10 @@
 @php
     $qno   = trim($header->Qno);
     $tname = ($cust && $cust->name) ? $cust->name : $header->CustName;
-    // ชื่อชนิดสินค้าภาษาไทย (pdtype.PDHead1 เป็น UTF-8 ปกติ) → fallback code
     $ptname = $pdtype->PDHead1 ?? $header->PDtype;
 
-    // วันที่แบบไทย: "22 เมษายน 2569"
+    // $isRevision มาจาก controller (derive จากคอลัมน์ที่ใช้จริง)
+    // วันที่แบบไทย
     $thaiMonths = [1=>'มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
                    'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
     $thaiDate = function ($d) use ($thaiMonths) {
@@ -12,7 +12,11 @@
         $c = \Carbon\Carbon::parse($d);
         return $c->day . ' ' . $thaiMonths[$c->month] . ' ' . ($c->year + 543);
     };
-    $price = fn ($v) => $v !== null ? number_format($v, 2) : '';
+
+    $subject  = $isRevision ? 'ขอแจ้งปรับราคา' : 'ขอเสนอราคา';
+    $bodyText = $isRevision
+        ? 'เนื่องจากขณะนี้ราคาของวัตถุดิบมีการปรับตัวสูงขึ้น บริษัทฯ มีความจำเป็นอย่างยิ่งที่จะต้องขอปรับราคา ' . $ptname . ' ดังต่อไปนี้'
+        : 'บริษัทฯ ขอเสนอราคา ' . $ptname . ' ดังรายละเอียดต่อไปนี้';
 @endphp
 <!doctype html>
 <html lang="th">
@@ -34,20 +38,23 @@
         .subject { margin: 2px 0; }
         .body-text { text-indent: 40px; margin: 14px 0 10px; }
 
+        /* ── ตารางรายการ (ใช้ร่วมทุกรูปแบบ) ── */
         table.items { width: 100%; border-collapse: collapse; margin-top: 6px; }
-        table.items thead th {
-            border-bottom: 1px solid #000; padding: 4px 6px; text-align: left; font-weight: bold;
-        }
-        table.items td { padding: 3px 6px; vertical-align: top; }
+        table.items th, table.items td { border: 1px solid #999; padding: 4px 7px; vertical-align: top; }
+        table.items thead th { background: #eef4f4; text-align: center; font-weight: bold; line-height: 1.25; }
+        table.items thead th small { font-weight: normal; color: #333; font-size: .78em; }
+        table.items td { text-align: left; }
         .text-end { text-align: right; }
-        .col-price { width: 110px; }
-        .col-code  { width: 130px; }
+        .text-center { text-align: center; }
+        .code { font-family: ui-monospace, Consolas, monospace; }
+        tfoot th { background: #eef4f4; }
 
-        .footer-info { margin-top: 22px; }
+        .footer-info { margin-top: 20px; }
         .footer-info .row { margin: 2px 0; }
-        .sign { margin-top: 46px; display: flex; justify-content: flex-end; }
+        .sign { margin-top: 44px; display: flex; justify-content: flex-end; }
         .sign .box { text-align: center; width: 260px; }
         .sign .line { border-top: 1px dotted #000; margin-top: 42px; padding-top: 4px; }
+        .fmt-tag { font-size: .75em; color: #888; }
 
         @media print { .toolbar { display: none; } body { padding: 10px 24px; } }
     </style>
@@ -57,75 +64,64 @@
     <div class="toolbar">
         <button onclick="window.print()">🖨 พิมพ์</button>
         <button onclick="window.close()">ปิด</button>
+        <span class="fmt-tag">{{ $isRevision ? 'แจ้งปรับราคา' : 'เสนอราคา' }}</span>
     </div>
 
-    {{-- หัวเอกสาร: เลขที่ (ซ้าย) + วันที่ (ขวา) --}}
+    {{-- หัวเอกสาร --}}
     <div class="doc-head">
         <div><span class="field-label">ใบเสนอราคาเลขที่</span> &nbsp;&nbsp; <span class="qno">{{ $qno }}</span></div>
         <div>วันที่ {{ $thaiDate($header->Qdate) }}</div>
     </div>
 
-    {{-- เรื่อง / เรียน --}}
-    <div class="subject"><span class="field-label">เรื่อง</span> &nbsp;&nbsp; ขอแจ้งปรับราคา &nbsp; {{ $ptname }}</div>
+    <div class="subject"><span class="field-label">เรื่อง</span> &nbsp;&nbsp; {{ $subject }} &nbsp; {{ $ptname }}</div>
     <div class="subject">
         <span class="field-label">เรียน</span> &nbsp;&nbsp; ท่านผู้จัดการฝ่ายจัดซื้อ &nbsp;
         {{ $tname ?: '—' }} @if($header->Custid) ({{ $header->Custid }}) @endif
     </div>
 
-    {{-- ย่อหน้าเนื้อความ --}}
-    <div class="body-text">
-        เนื่องจากขณะนี้ราคาของวัตถุดิบมีการปรับตัวสูงขึ้น บริษัทฯ มีความจำเป็นอย่างยิ่งที่จะต้อง
-        ขอปรับราคา {{ $ptname }} ดังต่อไปนี้
-    </div>
+    <div class="body-text">{{ $bodyText }}</div>
 
-    {{-- ตารางรายการ --}}
+    {{-- ตารางรายการ — คอลัมน์ตาม col_config (ผู้ใช้กำหนดเอง) --}}
     <table class="items">
         <thead>
             <tr>
-                <th class="col-code">รหัสสินค้า</th>
-                <th>ชื่อสินค้า</th>
-                <th class="col-price text-end">ราคาเก่า</th>
-                <th class="col-price text-end">ราคาใหม่</th>
-                <th class="col-price text-end">ราคาใหม่รวมภาษี</th>
+                @foreach ($colConfig as $c)
+                    <th class="{{ ($colRegistry[$c['key']]['num'] ?? false) ? 'text-end' : '' }}">{{ $c['label'] }}</th>
+                @endforeach
             </tr>
         </thead>
         <tbody>
             @forelse ($items as $it)
                 <tr>
-                    <td>{{ $it->Qitemno }}</td>
-                    <td>{{ $it->Qdesc }}</td>
-                    <td class="text-end">{{ $price($it->oldprice) }}</td>
-                    <td class="text-end">{{ $price($it->QPrice) }}</td>
-                    <td class="text-end">{{ $price($it->QNet) }}</td>
+                    @foreach ($colConfig as $c)
+                        @php
+                            $k = $c['key']; $reg = $colRegistry[$k] ?? [];
+                            $num = $reg['num'] ?? false;
+                            $v = $it->cells[$k] ?? null;
+                            $disp = $num
+                                ? (($v !== null && $v !== '') ? number_format((float) $v, 2) . ($reg['suffix'] ?? '') : '')
+                                : $v;
+                        @endphp
+                        <td class="{{ $num ? 'text-end' : '' }} {{ $k === 'code' ? 'code' : '' }}">{{ $disp }}</td>
+                    @endforeach
                 </tr>
             @empty
-                <tr><td colspan="5" class="text-center">ไม่มีรายการ</td></tr>
+                <tr><td colspan="{{ count($colConfig) }}" class="text-center">ไม่มีรายการ</td></tr>
             @endforelse
         </tbody>
     </table>
 
     {{-- ข้อมูลท้ายเอกสาร --}}
     <div class="footer-info">
-        @if ($header->Term)
-            <div class="row">เงื่อนไขการชำระเงิน : {{ $header->Term }}</div>
-        @endif
-        @if ($header->Validto)
-            <div class="row">ยืนราคาถึงวันที่ : {{ $thaiDate($header->Validto) }}</div>
-        @endif
-        @if ($header->LeadTime)
-            <div class="row">ส่งสินค้าได้ภายใน : {{ $header->LeadTime }} วัน</div>
-        @endif
-        @if ($header->Qremark && $header->Qremark !== '-')
-            <div class="row">ควรกำหนดยอดซื้อขั้นต่ำ : {{ $header->Qremark }} ก.ก.</div>
-        @endif
+        @if ($header->Term)     <div class="row">เงื่อนไขการชำระเงิน : {{ $header->Term }}</div> @endif
+        @if ($header->Validto)  <div class="row">ยืนราคาถึงวันที่ : {{ $thaiDate($header->Validto) }}</div> @endif
+        @if ($header->LeadTime) <div class="row">ส่งสินค้าได้ภายใน : {{ $header->LeadTime }} วัน</div> @endif
+        @if ($header->Qremark && $header->Qremark !== '-') <div class="row">ควรกำหนดยอดซื้อขั้นต่ำ : {{ $header->Qremark }} ก.ก.</div> @endif
     </div>
 
     <div class="sign">
-        <div class="box">
-            <div class="line">ผู้เสนอราคา</div>
-        </div>
+        <div class="box"><div class="line">ผู้เสนอราคา</div></div>
     </div>
 
-    {{-- การพิมพ์สั่งจากหน้าหลักผ่าน iframe (quotationPrint) — ไม่ auto-print กันพิมพ์ซ้ำ --}}
 </body>
 </html>
