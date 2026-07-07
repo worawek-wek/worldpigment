@@ -120,6 +120,10 @@
                     </div>
 
                     <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-label-primary" onclick="quotationCustomers()">
+                            <i class="ti ti-users me-1"></i>
+                            ประวัติตามลูกค้า
+                        </button>
                         <button class="btn btn-primary" onclick="openCreate()">
                             <i class="ti ti-plus me-1"></i>
                             สร้างใบเสนอราคา
@@ -369,6 +373,40 @@
             <button type="button" class="btn-close btn-close-white position-absolute"
                 style="top:1.15rem; right:1.25rem; z-index:1056;" data-bs-dismiss="modal" aria-label="ปิด"></button>
             <div class="modal-body p-0" id="quotationViewBody">
+                <div class="text-center py-5">
+                    <div class="spinner-border spinner-border-sm me-2"></div>กำลังโหลด...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- Modal: ประวัติใบเสนอราคาของลูกค้า (โหลด HTML จาก quotation/history) -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="quotationHistoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="overflow:hidden;">
+            <button type="button" class="btn-close btn-close-white position-absolute"
+                style="top:1.1rem; right:1.25rem; z-index:1056;" data-bs-dismiss="modal" aria-label="ปิด"></button>
+            <div class="modal-body p-0" id="quotationHistoryBody">
+                <div class="text-center py-5">
+                    <div class="spinner-border spinner-border-sm me-2"></div>กำลังโหลด...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- Modal: รายชื่อลูกค้า (ขั้นแรก) — โหลด HTML จาก quotation/customers  -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="quotationCustomersModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content" style="overflow:hidden;">
+            <button type="button" class="btn-close btn-close-white position-absolute"
+                style="top:1.1rem; right:1.25rem; z-index:1056;" data-bs-dismiss="modal" aria-label="ปิด"></button>
+            <div class="modal-body p-0" id="quotationCustomersBody">
                 <div class="text-center py-5">
                     <div class="spinner-border spinner-border-sm me-2"></div>กำลังโหลด...
                 </div>
@@ -668,6 +706,44 @@
                 $('#quotationViewBody').html('<div class="text-center py-5 text-danger">ไม่พบข้อมูล</div>');
             });
         }
+
+        // ขั้นแรก: เปิดรายชื่อลูกค้าทั้งหมดที่มีใบเสนอราคา
+        function quotationCustomers(){
+            var el = document.getElementById('quotationCustomersModal');
+            $('#quotationCustomersBody').html('<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>กำลังโหลด...</div>');
+            new bootstrap.Modal(el).show();
+            $.get("{{ $page_url }}/customers", function(html){
+                $('#quotationCustomersBody').html(html);
+            }).fail(function(){
+                $('#quotationCustomersBody').html('<div class="text-center py-5 text-danger">โหลดรายชื่อลูกค้าไม่สำเร็จ</div>');
+            });
+        }
+
+        // ขั้นสอง: เปิดประวัติใบเสนอราคาทั้งหมดของลูกค้า (จับคู่ด้วย Custid)
+        function quotationHistory(custid){
+            var el = document.getElementById('quotationHistoryModal');
+            $('#quotationHistoryBody').html('<div class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>กำลังโหลด...</div>');
+            new bootstrap.Modal(el).show();
+            $.get("{{ $page_url }}/history", {custid: custid}, function(html){
+                $('#quotationHistoryBody').html(html);
+            }).fail(function(){
+                $('#quotationHistoryBody').html('<div class="text-center py-5 text-danger">โหลดประวัติไม่สำเร็จ</div>');
+            });
+        }
+
+        // รองรับ modal ซ้อน (ประวัติ → ดูรายละเอียด) — ยก z-index ตัวบนสุด + คง scroll-lock
+        $(document).on('show.bs.modal', '.modal', function () {
+            var zIndex = 1056 + (10 * $('.modal.show').length);
+            var self = this;
+            $(self).css('z-index', zIndex);
+            setTimeout(function () {
+                $('.modal-backdrop').not('.modal-stack').last()
+                    .css('z-index', zIndex - 1).addClass('modal-stack');
+            }, 0);
+        });
+        $(document).on('hidden.bs.modal', '.modal', function () {
+            if ($('.modal.show').length) { $('body').addClass('modal-open'); }
+        });
 
         function quotationPrint(qno){
             // พิมพ์ในหน้าเดิมผ่าน iframe ซ่อน (ไม่เปิดแท็บ/หน้าต่างใหม่)

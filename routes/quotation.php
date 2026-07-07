@@ -13,6 +13,10 @@ Route::prefix('quotation')->group(function () {
     Route::get('/next-qno',        [QuotationController::class, 'nextQno'])->name('quotation.next_qno');
     Route::get('/item-lookup',     [QuotationController::class, 'itemLookup'])->name('quotation.item_lookup');
 
+    // ─── ประวัติตามลูกค้า: รายชื่อลูกค้า → ใบเสนอราคาของลูกค้า → HTML partial (modal) ───
+    Route::get('/customers', [QuotationController::class, 'customers'])->name('quotation.customers');
+    Route::get('/history',   [QuotationController::class, 'history'])->name('quotation.history');
+
     // ─── อ่าน (ใช้ query string ?qno= เพราะ Qno เก่าบางตัวมีช่องว่าง/อักขระแปลก) ───
     Route::get('/show',  [QuotationController::class, 'show'])->name('quotation.show');   // → HTML partial (modal)
     Route::get('/edit',  [QuotationController::class, 'edit'])->name('quotation.edit');   // → JSON (เติมฟอร์ม)

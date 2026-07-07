@@ -55,6 +55,52 @@ class QuotationController extends Controller
     }
 
     /**
+     * GET — รายชื่อลูกค้าทั้งหมดที่เคยมีใบเสนอราคา (ขั้นแรกของ flow ดูประวัติ)
+     * คืน HTML partial ใส่ modal — กดลูกค้า 1 ราย → เปิดประวัติใบของรายนั้นต่อ
+     */
+    public function customers()
+    {
+        $list = Qmast::query()
+            ->leftJoin('customer as c', 'qmast.Custid', '=', 'c.code')
+            ->whereRaw("TRIM(COALESCE(qmast.Custid, '')) <> ''")
+            ->selectRaw('TRIM(qmast.Custid) as custid')
+            ->selectRaw('MAX(c.name) as name, MAX(c.nameEN) as nameEN')
+            ->selectRaw('COUNT(*) as qcount, MAX(qmast.Qdate) as last_date')
+            ->groupBy(DB::raw('TRIM(qmast.Custid)'))
+            ->orderByDesc('last_date')
+            ->get();
+
+        return view('quotation.customers', compact('list'));
+    }
+
+    /**
+     * GET — ประวัติใบเสนอราคาทั้งหมดของลูกค้า 1 ราย (ระบุด้วย Custid)
+     * คืน HTML partial ใส่ modal — ในรายการกดดูใบแต่ละใบต่อได้
+     */
+    public function history(Request $request)
+    {
+        $custid = trim((string) $request->query('custid', ''));
+        if ($custid === '') {
+            return response('ไม่พบรหัสลูกค้า', 404);
+        }
+
+        // ชื่อลูกค้าจริงจากตาราง customer (qmast.CustName เก่าภาษาไทยเสีย)
+        $cust = DB::table('customer')->where('code', $custid)->first(['name', 'nameEN']);
+
+        // ใบเสนอราคาทั้งหมดของลูกค้า + จำนวนรายการ/มูลค่ารวม (เหมือน datatable)
+        $list = Qmast::query()
+            ->whereRaw('TRIM(Custid) = ?', [$custid])
+            ->select('qmast.*')
+            ->selectRaw('(SELECT COUNT(*) FROM qdetail d WHERE d.Qno = qmast.Qno) as item_count')
+            ->selectRaw('(SELECT COALESCE(SUM(d.QNet),0) FROM qdetail d WHERE d.Qno = qmast.Qno) as total_net')
+            ->orderByDesc('qmast.Qdate')
+            ->orderByDesc('qmast.Qno')
+            ->get();
+
+        return view('quotation.history', compact('custid', 'cust', 'list'));
+    }
+
+    /**
      * GET — ค้นชื่อลูกค้าจากรหัส (Custid) ในตาราง customer
      * คืน name (ไทย) + nameEN (อังกฤษ) ให้ฟอร์มเติมอัตโนมัติ
      */

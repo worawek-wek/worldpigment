@@ -63,6 +63,12 @@
 
                     <td class="text-center">
                         <div class="d-inline-flex gap-1">
+                            @if ($row->Custid)
+                                <button class="btn btn-sm btn-icon btn-label-success" title="ประวัติใบเสนอราคาของลูกค้ารายนี้"
+                                    onclick="quotationHistory('{{ $row->Custid }}')">
+                                    <i class="ti ti-history"></i>
+                                </button>
+                            @endif
                             <button class="btn btn-sm btn-icon btn-label-secondary" title="ดูรายละเอียด"
                                 onclick="quotationView('{{ $row->Qno }}')">
                                 <i class="ti ti-eye"></i>
