@@ -14,7 +14,7 @@
 @endphp
 <div class="row">
     <div class="col-md-4 mb-3">
-        <label class="form-label">Company</label>
+        <label class="form-label">แผนกผลิต (Company)</label>
         <select class="form-select" id="{{ $prefix }}_company">
             <option value="">-- เลือก --</option>
             @foreach($companies as $c)
@@ -23,20 +23,20 @@
         </select>
     </div>
     <div class="col-md-4 mb-3">
-        <label class="form-label">Cust No.</label>
+        <label class="form-label">แผนกที่สั่ง (Cust No.)</label>
         <input type="text" class="form-control{{ $custnoReadonly ? ' bg-light' : '' }}"
                id="{{ $prefix }}_custno" placeholder="รหัสลูกค้า" {{ $custnoReadonly ? 'readonly' : '' }}>
     </div>
     <div class="col-md-4 mb-3">
-        <label class="form-label">วันที่สั่ง</label>
+        <label class="form-label">วันที่สั่ง (Order Date)</label>
         <input type="date" class="form-control" id="{{ $prefix }}_mdate">
     </div>
     <div class="col-md-4 mb-3">
-        <label class="form-label">วันที่ต้องการรับ</label>
+        <label class="form-label">วันที่ต้องการรับ (Want Date)</label>
         <input type="date" class="form-control" id="{{ $prefix }}_custwant">
     </div>
     <div class="col-md-4 mb-3">
-        <label class="form-label">Item No. <span class="text-danger">*</span></label>
+        <label class="form-label">รหัสสินค้า (Item No.) <span class="text-danger">*</span></label>
         <input type="text" class="form-control" id="{{ $prefix }}_itemno" placeholder="Item No.">
     </div>
     <div class="col-md-4 mb-3">
@@ -44,11 +44,11 @@
         <input type="text" class="form-control" id="{{ $prefix }}_semi_code" placeholder="รหัสกึ่งสำเร็จรูป">
     </div>
     <div class="col-md-4 mb-3">
-        <label class="form-label">ขาด แม่สี (Primary Color)</label>
+        <label class="form-label">ขาดแม่สี (Primary Color)</label>
         <input type="text" class="form-control" id="{{ $prefix }}_primary_color" placeholder="แม่สี">
     </div>
     <div class="col-md-4 mb-3">
-        <label class="form-label">Lot No.</label>
+        <label class="form-label">ล๊อด (Lot No.)</label>
         <input type="text" class="form-control" id="{{ $prefix }}_lot_no" placeholder="ล็อตที่">
     </div>
     <div class="col-md-4 mb-3">
@@ -63,19 +63,19 @@
         <input type="number" step="any" class="form-control" id="{{ $prefix }}_balance" placeholder="0.00">
     </div>
     <div class="col-md-4 mb-3">
-        <label class="form-label">ยอดใช้ย้อนหลัง 2 เดือน</label>
+        <label class="form-label">ยอดใช้ย้อนหลัง 2 เดือน (Retro)</label>
         <input type="number" step="any" class="form-control" id="{{ $prefix }}_retrospective" placeholder="0.00">
     </div>
     <div class="col-md-4 mb-3">
-        <label class="form-label">น้ำหนักที่จะใช้ (weight_request)</label>
+        <label class="form-label">น้ำหนักที่จะใช้ (Weight Request)</label>
         <input type="number" step="any" class="form-control" id="{{ $prefix }}_weight_request" placeholder="0.00">
     </div>
     <div class="col-md-4 mb-3">
-        <label class="form-label">ผลิตเพิ่ม (Increase)</label>
+        <label class="form-label">ผลิตเพิ่ม (Increase Production)</label>
         <input type="number" step="any" class="form-control" id="{{ $prefix }}_increase_production" placeholder="0.00">
     </div>
     <div class="col-md-4 mb-3">
-        <label class="form-label">น้ำหนักที่จะผลิต (weight_production)</label>
+        <label class="form-label">น้ำหนักที่จะผลิต (W Production)</label>
         <input type="number" step="any" class="form-control" id="{{ $prefix }}_weight_production" placeholder="0.00">
     </div>
 </div>

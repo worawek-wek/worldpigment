@@ -217,7 +217,7 @@
 
         <div class="row">
             <div class="col-md-6 mb-3">
-                <label class="form-label">Remark</label>
+                <label class="form-label">หมายเหตุ (Remark)</label>
                 <input type="text" name="remark"
                        value="{{ $planning_item?->remark ?? '' }}"
                        class="form-control" placeholder="หมายเหตุ">
