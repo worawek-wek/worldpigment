@@ -1,0 +1,23 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        // หัวกระดาษ (หัวเอกสารที่พิมพ์) — WPI / WPC / WH (ตรงกับ prefix ของเลขที่ใบเสนอราคา)
+        Schema::table('qmast', function (Blueprint $table) {
+            $table->string('letterhead', 10)->nullable()->default('WH')->after('PDtype');
+        });
+    }
+
+    public function down()
+    {
+        Schema::table('qmast', function (Blueprint $table) {
+            $table->dropColumn('letterhead');
+        });
+    }
+};

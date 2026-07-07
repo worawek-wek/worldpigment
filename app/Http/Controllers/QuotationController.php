@@ -14,6 +14,7 @@ class QuotationController extends Controller
     private const QMAST_COLUMNS = [
         'Qno', 'Qdate', 'PDtype', 'exam', 'EmpID', 'Custid', 'CustName',
         'Qremark', 'ValidFrom', 'Validto', 'Term', 'Engname', 'LeadTime', 'Revisedate',
+        'letterhead',   // หัวกระดาษที่พิมพ์ (WPI/WPC/WH)
         // ── section หมายเหตุ (คอลัมน์ใหม่) ──
         'resin_price_note', 'delivery_place', 'delivery_term', 'remark_lang',
     ];

@@ -299,8 +299,16 @@
                                 <input type="text" name="Revisedate" id="q_Revisedate" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
                             </div>
                         </div>
-                        {{-- แถวล่าง: ชนิดสินค้า / พร้อมตัวอย่าง --}}
+                        {{-- แถวล่าง: หัวกระดาษ / ชนิดสินค้า / พร้อมตัวอย่าง --}}
                         <div class="row g-3 mt-1">
+                            <div class="col-md-4">
+                                <label class="form-label">หัวกระดาษ <span class="text-muted fw-normal">(หัวเอกสารที่พิมพ์)</span></label>
+                                <select name="letterhead" id="q_letterhead" class="form-select" onchange="onLetterheadChange()">
+                                    <option value="WPI">WPI</option>
+                                    <option value="WPC">WPC</option>
+                                    <option value="WH">WH</option>
+                                </select>
+                            </div>
                             <div class="col-md-4">
                                 <label class="form-label">ชนิดสินค้า</label>
                                 <select name="PDtype" id="q_PDtype" class="form-select">
@@ -795,11 +803,20 @@
             setItems();
             renderNotes([]);   // เคลียร์หมายเหตุอื่น (reset() ไม่ล้าง input ที่ append เข้ามา)
             setRemarkLang('th');   // เริ่มที่ภาษาไทย
-            // ขอเลขที่ถัดไป (แก้ไขได้)
-            $.getJSON("{{ $page_url }}/next-qno", {prefix:'WH'}, function(res){
+            $('#q_letterhead').val('WH');   // หัวกระดาษเริ่มต้น = WH (ตรงกับ prefix เลขที่ default)
+            // ขอเลขที่ถัดไปตาม prefix ของหัวกระดาษ (แก้ไขได้)
+            $.getJSON("{{ $page_url }}/next-qno", {prefix: $('#q_letterhead').val()}, function(res){
                 if (res.qno) $('#q_Qno').val(res.qno);
             });
             new bootstrap.Modal('#quotationModal').show();
+        }
+
+        // เปลี่ยนหัวกระดาษ (เฉพาะตอนสร้างใหม่) → ออกเลขที่ใหม่ตาม prefix ของหัวกระดาษที่เลือก
+        function onLetterheadChange(){
+            if ($('#q_mode').val() !== 'insert') return;   // โหมดแก้ไข: ไม่เปลี่ยนเลขที่ (เป็น key)
+            $.getJSON("{{ $page_url }}/next-qno", {prefix: $('#q_letterhead').val()}, function(res){
+                if (res.qno) $('#q_Qno').val(res.qno);
+            });
         }
 
         // ────────────────────────────────────────────────────────
@@ -819,6 +836,7 @@
                 setFp('q_ValidFrom', h.ValidFrom);
                 setFp('q_Validto', h.Validto);
                 $('#q_PDtype').val(h.PDtype);
+                $('#q_letterhead').val(h.letterhead || 'WH');
                 $('#q_exam').prop('checked', h.exam == 1);
                 $('#q_EmpID').val(h.EmpID);
                 $('#q_Custid').val(h.Custid);
