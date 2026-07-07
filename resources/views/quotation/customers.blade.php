@@ -1,22 +1,4 @@
-{{-- ═══════════════════════════════════════════════════════════════════════
-     MOCKUP — รายชื่อลูกค้า (ข้อมูลนิ่ง ไม่พึ่ง DB) สำหรับขึ้น server โชว์ก่อน
-     ▶ ตอนจะกลับมาเขียนโปรแกรมต่อ: ลบไฟล์นี้ทิ้ง แล้วเปลี่ยนชื่อ
-       customers.blade.php.bak → customers.blade.php (ของจริงที่ดึงจาก DB)
-     ═══════════════════════════════════════════════════════════════════════ --}}
-@php
-    // ── ข้อมูลจำลอง (mockup) — แก้/เพิ่มแถวได้ที่นี่ ──
-    $mockCustomers = [
-        ['custid' => 'C0001', 'name' => 'บริษัท สยามพลาสติก จำกัด',      'nameEN' => 'Siam Plastic Co., Ltd.',        'qcount' => 14, 'last' => '05/07/2026'],
-        ['custid' => 'C0002', 'name' => 'บริษัท ไทยพิกเมนต์ อินดัสทรี จำกัด', 'nameEN' => 'Thai Pigment Industry Co., Ltd.', 'qcount' => 9,  'last' => '02/07/2026'],
-        ['custid' => 'C0003', 'name' => 'บริษัท มาสเตอร์แบทช์ เอเชีย จำกัด',  'nameEN' => 'Masterbatch Asia Co., Ltd.',     'qcount' => 7,  'last' => '28/06/2026'],
-        ['custid' => 'C0004', 'name' => 'หจก. รุ่งเรืองการพิมพ์',           'nameEN' => 'Rungruang Printing Ltd., Part.', 'qcount' => 5,  'last' => '21/06/2026'],
-        ['custid' => 'C0005', 'name' => 'บริษัท คัลเลอร์เทค (ประเทศไทย) จำกัด', 'nameEN' => 'ColorTech (Thailand) Co., Ltd.', 'qcount' => 4,  'last' => '15/06/2026'],
-        ['custid' => 'C0006', 'name' => 'บริษัท โพลิเมอร์ พลัส จำกัด',        'nameEN' => 'Polymer Plus Co., Ltd.',        'qcount' => 3,  'last' => '09/06/2026'],
-        ['custid' => 'C0007', 'name' => 'บริษัท อีสเทิร์น คอมพาวด์ จำกัด',    'nameEN' => 'Eastern Compound Co., Ltd.',    'qcount' => 2,  'last' => '30/05/2026'],
-        ['custid' => 'C0008', 'name' => 'บริษัท กรีนแพ็ค อุตสาหกรรม จำกัด',   'nameEN' => 'Greenpack Industry Co., Ltd.',  'qcount' => 1,  'last' => '18/05/2026'],
-    ];
-@endphp
-
+{{-- รายชื่อลูกค้าทั้งหมดที่มีใบเสนอราคา (ขั้นแรก) — กดลูกค้า → เปิดประวัติใบของรายนั้น --}}
 <div class="qcust">
 
     {{-- แบนเนอร์หัว --}}
@@ -25,7 +7,7 @@
             <i class="ti ti-users fs-4"></i>
             <span class="fw-bold fs-5">ประวัติใบเสนอราคา — เลือกลูกค้า</span>
         </div>
-        <div class="small opacity-75">ลูกค้าทั้งหมด {{ number_format(count($mockCustomers)) }} ราย — กดที่ลูกค้าเพื่อดูใบเสนอราคา</div>
+        <div class="small opacity-75">ลูกค้าทั้งหมด {{ number_format($list->count()) }} ราย — กดที่ลูกค้าเพื่อดูใบเสนอราคา</div>
     </div>
 
     <div class="p-3">
@@ -49,29 +31,38 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach ($mockCustomers as $i => $row)
+                    @forelse ($list as $i => $row)
                         <tr class="qcust-row" style="cursor:pointer;"
-                            data-search="{{ strtolower($row['custid'] . ' ' . $row['name'] . ' ' . $row['nameEN']) }}"
-                            onclick="quotationHistory('{{ $row['custid'] }}')">
+                            data-search="{{ strtolower($row->custid . ' ' . $row->name . ' ' . $row->nameEN) }}"
+                            onclick="quotationHistory('{{ $row->custid }}')">
                             <td class="text-center text-muted">{{ $i + 1 }}</td>
-                            <td><span class="badge bg-label-secondary">{{ $row['custid'] }}</span></td>
+                            <td><span class="badge bg-label-secondary">{{ $row->custid }}</span></td>
                             <td>
-                                <strong>{{ $row['name'] }}</strong>
-                                @if (!empty($row['nameEN']))
-                                    <br><small class="text-muted">{{ $row['nameEN'] }}</small>
+                                <strong>{{ $row->name ?: '—' }}</strong>
+                                @if (!empty($row->nameEN))
+                                    <br><small class="text-muted">{{ $row->nameEN }}</small>
                                 @endif
                             </td>
                             <td class="text-end">
-                                <span class="badge bg-label-primary">{{ number_format($row['qcount']) }} ใบ</span>
+                                <span class="badge bg-label-primary">{{ number_format($row->qcount) }} ใบ</span>
                             </td>
-                            <td class="text-center">
-                                <small class="text-muted">{{ $row['last'] }}</small>
+                            <td>
+                                <small class="text-muted">
+                                    {{ $row->last_date ? \Carbon\Carbon::parse($row->last_date)->format('d/m/Y') : '-' }}
+                                </small>
                             </td>
                             <td class="text-center">
                                 <i class="ti ti-chevron-right text-muted"></i>
                             </td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="ti ti-database-off fs-2 d-block mb-2 opacity-50"></i>
+                                ยังไม่มีใบเสนอราคาในระบบ
+                            </td>
+                        </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>

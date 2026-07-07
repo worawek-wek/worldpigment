@@ -168,25 +168,36 @@
             </table>
         </div>
 
-        {{-- ── เงื่อนไข ── --}}
-        <div class="qv-stats">
-            <div class="qv-stat">
-                <div class="s-label"><i class="ti ti-scale"></i>ยอดซื้อขั้นต่ำ (ก.ก.)</div>
-                <div class="s-val">{{ $header->Qremark ?: '—' }}</div>
+        {{-- ── หมายเหตุ (2 ภาษา — label ตาม remark_lang; แสดงเฉพาะช่องที่กรอก) ── --}}
+        @php
+            $isEn = ($header->remark_lang ?? 'th') === 'en';
+            $L = $isEn
+                ? ['title'=>'Remarks', 'resin'=>'Resin Price', 'valid'=>'Price validity from', 'to'=>'to',
+                   'minqty'=>'Minimum Quantity', 'unit'=>'kg', 'place'=>'Delivery Location',
+                   'dterm'=>'Price Term', 'pay'=>'Term of Payment']
+                : ['title'=>'หมายเหตุ', 'resin'=>'ราคาเม็ดพลาสติก', 'valid'=>'ราคานี้มีผลวันที่', 'to'=>'ถึง',
+                   'minqty'=>'จำนวนส่งมอบขั้นต่ำ', 'unit'=>'กก.', 'place'=>'สถานที่ส่งสินค้า',
+                   'dterm'=>'เทอมการส่งมอบสินค้า', 'pay'=>'เทอมการชำระเงิน'];
+
+            $noteRows = [];
+            if ($header->resin_price_note)                     $noteRows[] = [$L['resin'], $header->resin_price_note];
+            if ($header->ValidFrom || $header->Validto)        $noteRows[] = [$L['valid'], $fmtDate($header->ValidFrom) . ' ' . $L['to'] . ' ' . $fmtDate($header->Validto)];
+            if ($header->Qremark && $header->Qremark !== '-')  $noteRows[] = [$L['minqty'], $header->Qremark . ' ' . $L['unit']];
+            if ($header->delivery_place)                       $noteRows[] = [$L['place'], $header->delivery_place];
+            if ($header->delivery_term)                        $noteRows[] = [$L['dterm'], $header->delivery_term];
+            if ($header->Term)                                 $noteRows[] = [$L['pay'], $header->Term];
+        @endphp
+        @if (count($noteRows) || count($otherNotes))
+            <div class="qv-section"><i class="ti ti-note"></i>{{ $L['title'] }}</div>
+            <div class="qv-card">
+                @foreach ($noteRows as $r)
+                    <div class="qv-row"><div class="qv-label">{{ $r[0] }}</div><div class="qv-val">{{ $r[1] }}</div></div>
+                @endforeach
+                @foreach ($otherNotes as $n)
+                    <div class="qv-row"><div class="qv-label"><i class="ti ti-point-filled"></i></div><div class="qv-val">{{ $n }}</div></div>
+                @endforeach
             </div>
-            <div class="qv-stat">
-                <div class="s-label"><i class="ti ti-credit-card"></i>Payment Term</div>
-                <div class="s-val">{{ $header->Term ?: '—' }}</div>
-            </div>
-            <div class="qv-stat">
-                <div class="s-label"><i class="ti ti-calendar-check"></i>ยืนราคาถึงวันที่</div>
-                <div class="s-val">{{ $fmtDate($header->Validto) }}</div>
-            </div>
-            <div class="qv-stat">
-                <div class="s-label"><i class="ti ti-truck-delivery"></i>ส่งได้ภายใน (วัน)</div>
-                <div class="s-val">{{ $header->LeadTime ?: '—' }}</div>
-            </div>
-        </div>
+        @endif
 
         {{-- ── ปุ่มจัดการ ── --}}
         <div class="d-flex justify-content-end gap-2 mt-4">

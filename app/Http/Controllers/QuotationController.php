@@ -14,6 +14,8 @@ class QuotationController extends Controller
     private const QMAST_COLUMNS = [
         'Qno', 'Qdate', 'PDtype', 'exam', 'EmpID', 'Custid', 'CustName',
         'Qremark', 'ValidFrom', 'Validto', 'Term', 'Engname', 'LeadTime', 'Revisedate',
+        // ── section หมายเหตุ (คอลัมน์ใหม่) ──
+        'resin_price_note', 'delivery_place', 'delivery_term', 'remark_lang',
     ];
 
     // ─── คอลัมน์วันที่ใน qmast (input type=date ส่งมาเป็น Y-m-d) ───
@@ -409,6 +411,15 @@ class QuotationController extends Controller
             if (in_array($c['key'], $revisionKeys, true)) { $isRevision = true; break; }
         }
 
+        // หมายเหตุอื่น (JSON array) → array ให้ view วนแสดง
+        $otherNotes = [];
+        if (!empty($row->other_notes)) {
+            $decoded = json_decode($row->other_notes, true);
+            if (is_array($decoded)) {
+                $otherNotes = $decoded;
+            }
+        }
+
         return [
             'header'      => $row,
             'cust'        => $cust,
@@ -417,6 +428,7 @@ class QuotationController extends Controller
             'isRevision'  => $isRevision,                     // true = แจ้งปรับราคา
             'colConfig'   => $colConfig,                      // คอลัมน์ที่แสดง
             'colRegistry' => $this->colRegistry(),
+            'otherNotes'  => $otherNotes,                     // หมายเหตุอื่น (section หมายเหตุ)
         ];
     }
 
@@ -536,6 +548,14 @@ class QuotationController extends Controller
                 $header[$field] = $this->parseDate($header[$field]);
             }
         }
+
+        // หมายเหตุอื่น (เพิ่มได้ไม่จำกัด) — เก็บเป็น JSON array; ตัดบรรทัดว่างออก
+        // ตั้งค่าเสมอ (แม้เป็น null) เพื่อให้ตอน update สามารถล้างหมายเหตุที่ลบออกได้
+        $notes = array_values(array_filter(
+            array_map(fn ($v) => trim((string) $v), (array) $request->input('other_notes', [])),
+            fn ($v) => $v !== ''
+        ));
+        $header['other_notes'] = $notes ? json_encode($notes, JSON_UNESCAPED_UNICODE) : null;
 
         return $header;
     }

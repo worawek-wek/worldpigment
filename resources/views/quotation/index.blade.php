@@ -58,6 +58,15 @@
 .qitem-input { min-width: 90px; }
 .qitem-input:not(.text-end) { min-width: 130px; }   /* คอลัมน์ข้อความ (ชื่อสินค้า/หมายเหตุ) กว้างกว่า */
 .qitem-input.qitem-name { min-width: 340px; }        /* ช่องชื่อสินค้า/รายละเอียด — ยาวเป็นพิเศษ */
+/* สลับภาษา section หมายเหตุ — โชว์เฉพาะ span ของภาษาที่เลือก (ข้อมูลชุดเดียว) */
+#remarkSection.lang-th .i18n-en { display: none; }
+#remarkSection.lang-en .i18n-th { display: none; }
+/* สวิตช์ TH/EN — กล่องเดียวมี border รอบ (กัน border ขาดจาก btn-group) */
+.lang-switch { display: inline-flex; border: 1px solid #696cff; border-radius: .375rem; overflow: hidden; }
+.lang-switch .btn { border: 0; border-radius: 0; margin: 0; color: #696cff; background: #fff; font-weight: 600; min-width: 46px; }
+.lang-switch .btn + .btn { border-left: 1px solid #696cff; }
+.lang-switch .btn:hover:not(.active) { background: #eef0ff; color: #4b4dcc; }
+.lang-switch .btn.active { background: #696cff; color: #fff; }
 /* เน้นพื้นหลังคอลัมน์ปรับราคา (ปัจจุบัน/ใหม่) — สีเข้ม */
 #quotationItemsTable th.qcol-rev { background: #3e8c8b !important; color: #fff; }
 #quotationItemsTable td.qcol-rev { background: #8fcfc8 !important; }
@@ -120,7 +129,7 @@
                     </div>
 
                     <div class="d-flex gap-2 flex-wrap">
-                        <button class="btn btn-label-primary" onclick="quotationCustomers()">
+                        <button class="btn btn-label-primary border" style="color: #1f158e;" onclick="quotationCustomers()">
                             <i class="ti ti-users me-1"></i>
                             ประวัติตามลูกค้า
                         </button>
@@ -154,9 +163,9 @@
                     <label class="form-label small fw-medium mb-1">วันที่เสนอราคา</label>
                     <div class="d-flex align-items-center gap-2">
                         <span class="small fw-medium">ตั้งแต่</span>
-                        <input type="date" name="date_from" class="form-control p_search" autocomplete="off" onchange="loadData(page)">
+                        <input type="text" name="date_from" class="form-control flatpickr-date p_search" autocomplete="off" placeholder="วว/ดด/ปปปป">
                         <span class="small fw-medium">ถึง</span>
-                        <input type="date" name="date_to" class="form-control p_search" autocomplete="off" onchange="loadData(page)">
+                        <input type="text" name="date_to" class="form-control flatpickr-date p_search" autocomplete="off" placeholder="วว/ดด/ปปปป">
                     </div>
                 </div>
             </div>
@@ -255,11 +264,11 @@
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">วันที่เสนอราคา <span class="text-danger">*</span></label>
-                                <input type="date" name="Qdate" id="q_Qdate" class="form-control" required>
+                                <input type="text" name="Qdate" id="q_Qdate" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" required>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label text-danger">Revise Date</label>
-                                <input type="date" name="Revisedate" id="q_Revisedate" class="form-control">
+                                <input type="text" name="Revisedate" id="q_Revisedate" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
                             </div>
                         </div>
                         {{-- แถวล่าง: ชนิดสินค้า / พร้อมตัวอย่าง --}}
@@ -326,26 +335,97 @@
                         </div>
                     </div>
 
-                    {{-- ── Section 4: เงื่อนไข ── --}}
-                    <div class="qf-sec">
-                        <div class="qf-sec-title"><i class="ti ti-adjustments-horizontal"></i>เงื่อนไข</div>
-                        <div class="row g-3">
-                            <div class="col-md-3">
-                                <label class="form-label">ควรกำหนดยอดซื้อขั้นต่ำ (ก.ก.)</label>
-                                <input type="text" name="Qremark" id="q_Qremark" class="form-control" maxlength="50">
+                    {{-- ── Section 4: หมายเหตุ (2 ภาษา — สลับแค่ label ด้วยสวิตช์ TH/EN) ── --}}
+                    <input type="hidden" name="remark_lang" id="q_remark_lang" value="th">
+                    <div class="qf-sec lang-th" id="remarkSection">
+                        <div class="qf-sec-title d-flex justify-content-between align-items-center">
+                            <span><i class="ti ti-note"></i><span class="i18n-th">หมายเหตุ</span><span class="i18n-en">Remarks</span></span>
+                            {{-- สวิตช์ภาษา: สลับเฉพาะคำ (label) ข้อมูลชุดเดียว --}}
+                            <div class="lang-switch" role="group">
+                                <button type="button" class="btn btn-sm active" id="btnLangTh" onclick="setRemarkLang('th')">TH</button>
+                                <button type="button" class="btn btn-sm" id="btnLangEn" onclick="setRemarkLang('en')">EN</button>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Payment Term</label>
+                        </div>
+                        <div class="alert alert-info py-2 px-3 mb-3 small">
+                            <i class="ti ti-info-circle me-1"></i>ช่องที่มี <span class="text-danger fw-bold">*</span> ต้องกรอก — ช่องที่ปล่อยว่างจะไม่แสดงในใบเสนอราคา
+                        </div>
+
+                        <div class="row g-3">
+                            {{-- ราคาเม็ดพลาสติก --}}
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    <span class="i18n-th">ราคาเม็ดพลาสติก</span><span class="i18n-en">Resin Price</span>
+                                    <span class="text-muted fw-normal i18n-th">(เช่น 60.50 บาท เดือน มิย 2026)</span>
+                                </label>
+                                <input type="text" name="resin_price_note" id="q_resin_price_note" class="form-control"
+                                    maxlength="100">
+                            </div>
+
+                            {{-- ราคานี้มีผลวันที่ (from → to) --}}
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    <span class="i18n-th">ราคานี้มีผลวันที่</span><span class="i18n-en">Price validity from</span>
+                                    <span class="text-danger">*</span>
+                                </label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <input type="text" name="ValidFrom" id="q_ValidFrom" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" required>
+                                    <span class="small fw-medium"><span class="i18n-th">ถึง</span><span class="i18n-en">to</span></span>
+                                    <input type="text" name="Validto" id="q_Validto" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" required>
+                                </div>
+                            </div>
+
+                            {{-- จำนวนส่งมอบขั้นต่ำ --}}
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    <span class="i18n-th">จำนวนส่งมอบขั้นต่ำ</span><span class="i18n-en">Minimum Quantity</span>
+                                    <span class="text-danger">*</span>
+                                    <span class="text-muted fw-normal i18n-th">(เช่น 100)</span>
+                                </label>
+                                <div class="input-group">
+                                    <input type="text" name="Qremark" id="q_Qremark" class="form-control" maxlength="50" required>
+                                    <span class="input-group-text"><span class="i18n-th">กก.</span><span class="i18n-en">kg</span></span>
+                                </div>
+                            </div>
+
+                            {{-- สถานที่ส่งสินค้า --}}
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    <span class="i18n-th">สถานที่ส่งสินค้า</span><span class="i18n-en">Delivery Location</span>
+                                    <span class="text-muted fw-normal i18n-th">(เช่น กรุงเทพฯและปริมณฑล)</span>
+                                </label>
+                                <input type="text" name="delivery_place" id="q_delivery_place" class="form-control"
+                                    maxlength="100">
+                            </div>
+
+                            {{-- เทอมการส่งมอบสินค้า --}}
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    <span class="i18n-th">เทอมการส่งมอบสินค้า</span><span class="i18n-en">Price Term</span>
+                                    <span class="text-muted fw-normal i18n-th">(เช่น DDP)</span>
+                                </label>
+                                <input type="text" name="delivery_term" id="q_delivery_term" class="form-control"
+                                    maxlength="50">
+                            </div>
+
+                            {{-- เทอมการชำระเงิน --}}
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    <span class="i18n-th">เทอมการชำระเงิน</span><span class="i18n-en">Term of Payment</span>
+                                    <span class="text-muted fw-normal i18n-th">(เช่น 30วัน นับจากส่งสินค้า)</span>
+                                </label>
                                 <input type="text" name="Term" id="q_Term" class="form-control" maxlength="20">
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">ยืนราคาถึงวันที่</label>
-                                <input type="date" name="Validto" id="q_Validto" class="form-control">
+                        </div>
+
+                        {{-- หมายเหตุอื่น (เพิ่มได้ไม่จำกัด) --}}
+                        <div class="mt-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0"><span class="i18n-th">หมายเหตุอื่น</span><span class="i18n-en">Other remarks</span></label>
+                                <button type="button" class="btn btn-sm btn-label-warning" onclick="addNoteRow()">
+                                    <i class="ti ti-plus me-1"></i><span class="i18n-th">เพิ่มหมายเหตุ</span><span class="i18n-en">Add remark</span>
+                                </button>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">ส่งสินค้าได้ภายใน <span class="text-muted fw-normal">(วัน)</span></label>
-                                <input type="text" name="LeadTime" id="q_LeadTime" class="form-control" maxlength="3">
-                            </div>
+                            <div id="otherNotesList"></div>
                         </div>
                     </div>
 
@@ -423,6 +503,32 @@
         // ต้องประกาศก่อน loadData ครั้งแรก — เลี่ยง hoisting ทำให้ dtSeq เป็น NaN (spinner ค้าง)
         var dtXhr = null, dtSeq = 0;
         loadData(page);
+
+        // ── Flatpickr: ทุกช่องวันที่ใช้ flatpickr-date (รูปแบบ d/m/Y เหมือนทั้งระบบ) ──
+        $(function () {
+            flatpickr('.flatpickr-date', {
+                dateFormat: 'd/m/Y',
+                allowInput: true,
+                static: true,
+                disableMobile: true,
+                onChange: function (_, __, instance) {
+                    // ช่องกรอง (p_search) → โหลดตารางใหม่เมื่อเลือกวันที่
+                    if (instance.input.classList.contains('p_search')) loadData(page);
+                }
+            });
+        });
+
+        // ตั้งค่าวันที่ให้ flatpickr (รับ Y-m-d / datetime → แสดง d/m/Y); ว่าง = เคลียร์
+        function setFp(id, val) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            if (el._flatpickr) {
+                if (val) el._flatpickr.setDate(String(val).substring(0, 10), false);
+                else     el._flatpickr.clear();
+            } else {
+                $(el).val(val ? String(val).substring(0, 10) : '');
+            }
+        }
 
         // ────────────────────────────────────────────────────────
         //  รายการสินค้า — คอลัมน์กำหนดเองได้ (config-driven)
@@ -582,6 +688,35 @@
         }
 
         // ────────────────────────────────────────────────────────
+        //  หมายเหตุอื่น (เพิ่มได้ไม่จำกัด) — เก็บเป็น input name="other_notes[]"
+        // ────────────────────────────────────────────────────────
+        function noteRowHtml(val){
+            return '<div class="input-group mb-2 note-row">'
+                + '<input type="text" name="other_notes[]" class="form-control" maxlength="255" value="'+esc(val || '')+'">'
+                + '<button type="button" class="btn btn-outline-danger" onclick="removeNoteRow(this)" title="ลบ"><i class="ti ti-trash"></i></button>'
+                + '</div>';
+        }
+        function addNoteRow(val){
+            $('#otherNotesList').append(noteRowHtml(typeof val === 'string' ? val : ''));
+        }
+        function removeNoteRow(btn){ $(btn).closest('.note-row').remove(); }
+        function renderNotes(arr){
+            $('#otherNotesList').empty();
+            (arr && arr.length ? arr : []).forEach(function(n){ addNoteRow(n); });
+        }
+
+        // สลับภาษา section หมายเหตุ — เปลี่ยนแค่คำ (label) ข้อมูลกรอกชุดเดียว
+        function setRemarkLang(lang){
+            lang = (lang === 'en') ? 'en' : 'th';
+            var sec = document.getElementById('remarkSection');
+            sec.classList.toggle('lang-en', lang === 'en');
+            sec.classList.toggle('lang-th', lang !== 'en');
+            $('#q_remark_lang').val(lang);
+            $('#btnLangEn').toggleClass('active', lang === 'en');
+            $('#btnLangTh').toggleClass('active', lang !== 'en');
+        }
+
+        // ────────────────────────────────────────────────────────
         //  เปิดฟอร์มสร้างใหม่
         // ────────────────────────────────────────────────────────
         function openCreate(){
@@ -590,9 +725,14 @@
             $('#q_qno_key').val('');
             $('#quotationModalTitle').text('สร้างใบเสนอราคา');
             $('#q_Qno').prop('readonly', false);
-            // วันที่เสนอราคา = วันนี้
-            $('#q_Qdate').val(new Date().toISOString().slice(0,10));
+            // วันที่เสนอราคา = วันนี้ (ผ่าน flatpickr); เคลียร์ช่องวันที่อื่น (reset() ไม่ล้าง state flatpickr)
+            setFp('q_Qdate', new Date().toISOString().slice(0,10));
+            setFp('q_Revisedate', '');
+            setFp('q_ValidFrom', '');
+            setFp('q_Validto', '');
             setItems();
+            renderNotes([]);   // เคลียร์หมายเหตุอื่น (reset() ไม่ล้าง input ที่ append เข้ามา)
+            setRemarkLang('th');   // เริ่มที่ภาษาไทย
             // ขอเลขที่ถัดไป (แก้ไขได้)
             $.getJSON("{{ $page_url }}/next-qno", {prefix:'WH'}, function(res){
                 if (res.qno) $('#q_Qno').val(res.qno);
@@ -612,9 +752,10 @@
                 $('#q_qno_key').val(h.Qno);
                 $('#quotationModalTitle').text('แก้ไขใบเสนอราคา ' + (h.Qno || ''));
                 $('#q_Qno').val((h.Qno || '').trim()).prop('readonly', true);   // ห้ามเปลี่ยนเลขที่
-                $('#q_Qdate').val(dateOnly(h.Qdate));
-                $('#q_Revisedate').val(dateOnly(h.Revisedate));
-                $('#q_Validto').val(dateOnly(h.Validto));
+                setFp('q_Qdate', h.Qdate);
+                setFp('q_Revisedate', h.Revisedate);
+                setFp('q_ValidFrom', h.ValidFrom);
+                setFp('q_Validto', h.Validto);
                 $('#q_PDtype').val(h.PDtype);
                 $('#q_exam').prop('checked', h.exam == 1);
                 $('#q_EmpID').val(h.EmpID);
@@ -624,7 +765,14 @@
                 $('#q_Engname').val(h.Engname || (res.cust ? res.cust.nameEN : '') || '');
                 $('#q_Qremark').val(h.Qremark);
                 $('#q_Term').val(h.Term);
-                $('#q_LeadTime').val(h.LeadTime);
+                // ── section หมายเหตุ (ช่องใหม่) ──
+                $('#q_resin_price_note').val(h.resin_price_note || '');
+                $('#q_delivery_place').val(h.delivery_place || '');
+                $('#q_delivery_term').val(h.delivery_term || '');
+                var otherNotes = [];
+                try { otherNotes = h.other_notes ? JSON.parse(h.other_notes) : []; } catch (e) { otherNotes = []; }
+                renderNotes(otherNotes);
+                setRemarkLang(h.remark_lang === 'en' ? 'en' : 'th');   // ภาษาที่เคยเลือกไว้
                 // รายการ: ใช้ค่าแบน (cells) จาก server ตรงๆ (ฟอร์มโชว์ทุกคอลัมน์)
                 var items = (res.items || []).map(function(d){ return Object.assign({}, d.cells || {}); });
                 setItems(items);
@@ -801,7 +949,11 @@
         }
 
         function resetFilters(){
-            $('.p_search:not([name="limit"])').val('');
+            $('.p_search:not([name="limit"])').each(function(){
+                // flatpickr: เคลียร์ผ่าน instance ให้ปฏิทิน + ช่องว่างจริง
+                if (this._flatpickr) this._flatpickr.clear();
+                else $(this).val('');
+            });
             loadData("{{$page_url}}/datatable");
         }
 </script>

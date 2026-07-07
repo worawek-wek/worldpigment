@@ -38,16 +38,16 @@
         .subject { margin: 2px 0; }
         .body-text { text-indent: 40px; margin: 14px 0 10px; }
 
-        /* ── ตารางรายการ (ใช้ร่วมทุกรูปแบบ) ── */
+        /* ── ตารางรายการ (ไม่มีเส้นตาราง; หัวคอลัมน์ขีดเส้นใต้อย่างเดียว) ── */
         table.items { width: 100%; border-collapse: collapse; margin-top: 6px; }
-        table.items th, table.items td { border: 1px solid #999; padding: 4px 7px; vertical-align: top; }
-        table.items thead th { background: #eef4f4; text-align: center; font-weight: bold; line-height: 1.25; }
+        table.items th, table.items td { padding: 4px 7px; vertical-align: top; }
+        table.items thead th { text-align: left; font-weight: bold; line-height: 1.25; }
         table.items thead th small { font-weight: normal; color: #333; font-size: .78em; }
         table.items td { text-align: left; }
         .text-end { text-align: right; }
         .text-center { text-align: center; }
         .code { font-family: ui-monospace, Consolas, monospace; }
-        tfoot th { background: #eef4f4; }
+        tfoot th { border-top: 1px solid #000; }
 
         .footer-info { margin-top: 20px; }
         .footer-info .row { margin: 2px 0; }
@@ -86,7 +86,7 @@
         <thead>
             <tr>
                 @foreach ($colConfig as $c)
-                    <th class="{{ ($colRegistry[$c['key']]['num'] ?? false) ? 'text-end' : '' }}">{{ $c['label'] }}</th>
+                    <th class="{{ ($colRegistry[$c['key']]['num'] ?? false) ? 'text-end' : '' }}"><u>{{ $c['label'] }}</u></th>
                 @endforeach
             </tr>
         </thead>
@@ -111,12 +111,40 @@
         </tbody>
     </table>
 
-    {{-- ข้อมูลท้ายเอกสาร --}}
+    {{-- ── หมายเหตุ (2 ภาษา — label ตาม remark_lang; ช่องว่างไม่โชว์หัวข้อ) ── --}}
+    @php
+        $isEn = ($header->remark_lang ?? 'th') === 'en';
+        $L = $isEn
+            ? ['resin'=>'Resin Price', 'valid'=>'Price validity from', 'to'=>'to',
+               'minqty'=>'Minimum Quantity', 'unit'=>'kg', 'place'=>'Delivery Location',
+               'dterm'=>'Price Term', 'pay'=>'Term of Payment']
+            : ['resin'=>'ราคาเม็ดพลาสติก', 'valid'=>'ราคานี้มีผลวันที่', 'to'=>'ถึง',
+               'minqty'=>'จำนวนส่งมอบขั้นต่ำ', 'unit'=>'กก.', 'place'=>'สถานที่ส่งสินค้า',
+               'dterm'=>'เทอมการส่งมอบสินค้า', 'pay'=>'เทอมการชำระเงิน'];
+        $shortDate = fn ($d) => $d ? \Carbon\Carbon::parse($d)->format('d/m/Y') : '-';
+    @endphp
     <div class="footer-info">
-        @if ($header->Term)     <div class="row">เงื่อนไขการชำระเงิน : {{ $header->Term }}</div> @endif
-        @if ($header->Validto)  <div class="row">ยืนราคาถึงวันที่ : {{ $thaiDate($header->Validto) }}</div> @endif
-        @if ($header->LeadTime) <div class="row">ส่งสินค้าได้ภายใน : {{ $header->LeadTime }} วัน</div> @endif
-        @if ($header->Qremark && $header->Qremark !== '-') <div class="row">ควรกำหนดยอดซื้อขั้นต่ำ : {{ $header->Qremark }} ก.ก.</div> @endif
+        @if ($header->resin_price_note)
+            <div class="row">{{ $L['resin'] }} : {{ $header->resin_price_note }}</div>
+        @endif
+        @if ($header->ValidFrom || $header->Validto)
+            <div class="row">{{ $L['valid'] }} : {{ $shortDate($header->ValidFrom) }} {{ $L['to'] }} {{ $shortDate($header->Validto) }}</div>
+        @endif
+        @if ($header->Qremark && $header->Qremark !== '-')
+            <div class="row">{{ $L['minqty'] }} : {{ $header->Qremark }} {{ $L['unit'] }}</div>
+        @endif
+        @if ($header->delivery_place)
+            <div class="row">{{ $L['place'] }} : {{ $header->delivery_place }}</div>
+        @endif
+        @if ($header->delivery_term)
+            <div class="row">{{ $L['dterm'] }} : {{ $header->delivery_term }}</div>
+        @endif
+        @if ($header->Term)
+            <div class="row">{{ $L['pay'] }} : {{ $header->Term }}</div>
+        @endif
+        @foreach ($otherNotes as $note)
+            <div class="row">{{ $note }}</div>
+        @endforeach
     </div>
 
     <div class="sign">
