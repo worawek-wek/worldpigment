@@ -284,8 +284,19 @@
                     {{-- ── Section 1: ข้อมูลเอกสาร ── --}}
                     <div class="qf-sec">
                         <div class="qf-sec-title"><i class="ti ti-clipboard-text"></i>ข้อมูลเอกสาร</div>
-                        {{-- แถวบน: เลขที่ / วันที่ / Revise Date --}}
+                        {{-- หัวกระดาษ (บนสุด) — เลือกก่อน เพราะกำหนด prefix ของเลขที่ --}}
                         <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">หัวกระดาษ <span class="text-muted fw-normal">(หัวเอกสารที่พิมพ์)</span></label>
+                                <select name="letterhead" id="q_letterhead" class="form-select" onchange="onLetterheadChange()">
+                                    <option value="WPI">WPI</option>
+                                    <option value="WPC">WPC</option>
+                                    <option value="WH">WH</option>
+                                </select>
+                            </div>
+                        </div>
+                        {{-- แถว: เลขที่ / วันที่ / Revise Date --}}
+                        <div class="row g-3 mt-1">
                             <div class="col-md-4">
                                 <label class="form-label">เลขที่ใบเสนอราคา <span class="text-danger">*</span></label>
                                 <input type="text" name="Qno" id="q_Qno" class="form-control" maxlength="10" required>
@@ -299,16 +310,8 @@
                                 <input type="text" name="Revisedate" id="q_Revisedate" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
                             </div>
                         </div>
-                        {{-- แถวล่าง: หัวกระดาษ / ชนิดสินค้า / พร้อมตัวอย่าง --}}
+                        {{-- แถวล่าง: ชนิดสินค้า / พร้อมตัวอย่าง --}}
                         <div class="row g-3 mt-1">
-                            <div class="col-md-4">
-                                <label class="form-label">หัวกระดาษ <span class="text-muted fw-normal">(หัวเอกสารที่พิมพ์)</span></label>
-                                <select name="letterhead" id="q_letterhead" class="form-select" onchange="onLetterheadChange()">
-                                    <option value="WPI">WPI</option>
-                                    <option value="WPC">WPC</option>
-                                    <option value="WH">WH</option>
-                                </select>
-                            </div>
                             <div class="col-md-4">
                                 <label class="form-label">ชนิดสินค้า</label>
                                 <select name="PDtype" id="q_PDtype" class="form-select">
