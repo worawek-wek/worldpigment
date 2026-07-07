@@ -60,6 +60,13 @@ class ProductionPlanController extends Controller
     {
         $search = request('search');
         $company = request('company');
+        $planning_status = request('planning_status');
+
+        // ค้นหาช่วงวันที่: เลือกฟิลด์ได้เฉพาะ inplan / custwant (whitelist กัน SQL injection ที่ชื่อคอลัมน์)
+        $date_field = request('date_field');
+        $date_field = in_array($date_field, ['inplan', 'custwant'], true) ? $date_field : 'inplan';
+        $date_start = request('date_start');
+        $date_end   = request('date_end');
 
         $data = Planning::
             leftJoin('tb_planning_header', 'tb_planning_header.id', '=', 'tb_planning.planning_header_id')
@@ -85,6 +92,17 @@ class ProductionPlanController extends Controller
              ->when(!empty($company), function ($query) use ($company) {
                 // กรองด้วยแผนกจริงของ item (item ก่อน แล้ว fallback header)
                 $query->whereRaw('COALESCE(tb_planning.company, tb_planning_header.company) = ?', [$company]);
+            })
+            // กรองด้วยสถานะการวางแผน — สถานะผูกกับแผนก (ค่าที่ส่งมาเป็นชื่อสถานะของแผนกที่เลือก)
+            ->when(!empty($planning_status), function ($query) use ($planning_status) {
+                $query->where('tb_planning.planning_status', $planning_status);
+            })
+            // กรองช่วงวันที่ตามฟิลด์ที่เลือก (inplan / custwant) — ระบุด้านเดียวหรือทั้งช่วงก็ได้
+            ->when(!empty($date_start), function ($query) use ($date_field, $date_start) {
+                $query->whereDate('tb_planning.'.$date_field, '>=', $date_start);
+            })
+            ->when(!empty($date_end), function ($query) use ($date_field, $date_end) {
+                $query->whereDate('tb_planning.'.$date_field, '<=', $date_end);
             })
             ->orderby('tb_planning.id', 'desc');
 

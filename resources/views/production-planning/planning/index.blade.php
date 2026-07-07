@@ -35,12 +35,15 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="row g-3 align-items-center">
-                            <div class="col-md-3">
+                        {{-- แถวที่ 1: ค้นหาข้อความ + แผนก + สถานะ --}}
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-6">
+                                <label class="form-label mb-1 small text-muted">ค้นหา</label>
                                 <input id="searchInput" type="text" class="form-control"
                                 placeholder="ค้นหาเลขที่ใบสั่งซื้อ, รหัสลูกค้า, ขื่อลูกค้า">
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-md-3">
+                                <label class="form-label mb-1 small text-muted">แผนก</label>
                                 <select id="searchCompany" class="form-select">
                                     <option value="">ทุกแผนก</option>
                                     @foreach($departments as $department)
@@ -48,16 +51,35 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-2">
-                                <select class="form-select">
-                                    <option>ทุกสถานะ</option>
-                                    <option>Pending</option>
-                                    <option>Production</option>
-                                    <option>Completed</option>
+                            <div class="col-md-3">
+                                <label class="form-label mb-1 small text-muted">สถานะ</label>
+                                {{-- สถานะจะโหลดตามแผนกที่เลือก (อ้างอิงความสัมพันธ์แผนก↔สถานะในฐานข้อมูล) --}}
+                                <select id="searchStatus" class="form-select" disabled>
+                                    <option value="">ทุกสถานะ</option>
                                 </select>
                             </div>
+                        </div>
+                        {{-- แถวที่ 2: ค้นหาช่วงวันที่ — เลือกฟิลด์ (Inplan/Custwant) แล้วระบุวันที่เริ่ม–สิ้นสุด --}}
+                        <div class="row g-3 align-items-end mt-1">
+                            <div class="col-md-4">
+                                <label class="form-label mb-1 small text-muted">ค้นหาตามวันที่</label>
+                                <select id="searchDateField" class="form-select">
+                                    <option value="inplan">วันที่วางแผนผลิต (Inplan)</option>
+                                    <option value="custwant">วันที่ต้องการรับ (Custwant)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label mb-1 small text-muted">วันที่เริ่ม</label>
+                                <input id="searchDateStart" type="date" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label mb-1 small text-muted">วันที่สิ้นสุด</label>
+                                <input id="searchDateEnd" type="date" class="form-control">
+                            </div>
                             <div class="col-md-2">
-                                <input type="date" class="form-control">
+                                <button id="btn_clear_date" type="button" class="btn btn-outline-secondary w-100">
+                                    <i class="ti ti-x me-1"></i>ล้างวันที่
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -155,6 +177,10 @@
                 data: function(d) {
                     d.search = $('#searchInput').val();
                     d.company = $('#searchCompany').val();
+                    d.planning_status = $('#searchStatus').val();
+                    d.date_field = $('#searchDateField').val();
+                    d.date_start = $('#searchDateStart').val();
+                    d.date_end   = $('#searchDateEnd').val();
                 },
                 error: function(xhr, error, thrown) {
                     console.error('AJAX Error:', error, thrown);
@@ -189,8 +215,62 @@
         oTable.draw();
     });
 
+    // เปลี่ยนแผนก → โหลดสถานะของแผนกนั้น (ตามความสัมพันธ์แผนก↔สถานะในฐานข้อมูล) แล้วค้นหาใหม่
+    var URL_DEPT_OPTIONS = '{{ route('production.planning.dept-options') }}';
+
+    function escOption(v) {
+        return $('<div>').text(v == null ? '' : v).html();
+    }
+
     $(document).on('change', '#searchCompany', function(e){
         e.preventDefault();
+        var company = $(this).val() || '';
+        var $status = $('#searchStatus');
+
+        // ล้างสถานะเดิม (ของแผนกเก่า) ทุกครั้งที่เปลี่ยนแผนก
+        $status.prop('disabled', true).html('<option value="">ทุกสถานะ</option>');
+
+        // ไม่เลือกแผนก → ค้นหาแบบไม่กรองสถานะ
+        if (company === '') {
+            oTable.draw();
+            return;
+        }
+
+        $.ajax({
+            type: 'GET', url: URL_DEPT_OPTIONS, dataType: 'json',
+            data: { company: company },
+            success: function (res) {
+                var opts = '<option value="">ทุกสถานะ</option>';
+                (res.statuses || []).forEach(function (s) {
+                    opts += '<option value="' + escOption(s) + '">' + escOption(s) + '</option>';
+                });
+                $status.html(opts).prop('disabled', false);
+            },
+            error: function () {
+                Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: 'โหลดสถานะของแผนกไม่สำเร็จ กรุณาลองใหม่' });
+            },
+            complete: function () {
+                oTable.draw();
+            }
+        });
+    });
+
+    $(document).on('change', '#searchStatus', function(e){
+        e.preventDefault();
+        oTable.draw();
+    });
+
+    // ค้นหาช่วงวันที่ (Inplan/Custwant) — redraw เมื่อเปลี่ยนฟิลด์หรือวันที่
+    $(document).on('change', '#searchDateField, #searchDateStart, #searchDateEnd', function(e){
+        e.preventDefault();
+        oTable.draw();
+    });
+
+    // ล้างช่วงวันที่แล้วค้นหาใหม่
+    $(document).on('click', '#btn_clear_date', function(e){
+        e.preventDefault();
+        $('#searchDateStart').val('');
+        $('#searchDateEnd').val('');
         oTable.draw();
     });
 
