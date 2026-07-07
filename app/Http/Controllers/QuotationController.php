@@ -38,14 +38,39 @@ class QuotationController extends Controller
      */
     public function datatable(Request $request)
     {
+        // ── การเรียง (state เดียว sort_col/sort_dir ใช้ร่วมกับ dropdown + คลิกหัวตาราง) ──
+        // whitelist: key หัวตาราง → คอลัมน์/alias จริง (กัน SQL injection)
+        $sortable = [
+            'id'         => 'qmast.id',
+            'Qdate'      => 'qmast.Qdate',
+            'Custid'     => 'qmast.Custid',
+            'PDtype'     => 'qmast.PDtype',
+            'item_count' => 'agg.item_count',
+            'total_net'  => 'agg.total_net',
+        ];
+        $sortKey = (string) $request->sort_col;
+        $sortKey = isset($sortable[$sortKey]) ? $sortKey : 'id';   // default = id (ลำดับการเพิ่ม)
+        $sortDir = strtolower((string) $request->sort_dir) === 'asc' ? 'asc' : 'desc';
+
+        // จำนวนรายการ + มูลค่ารวม: ใช้ตารางสรุป (GROUP BY) แล้ว JOIN
+        // — คำนวณครั้งเดียว เรียงได้เร็ว (แทน correlated subquery ที่ช้ามากตอน ORDER BY)
+        $agg = DB::table('qdetail')
+            ->select('Qno')
+            ->selectRaw('COUNT(*) as item_count')
+            ->selectRaw('COALESCE(SUM(QNet), 0) as total_net')
+            ->groupBy('Qno');
+
         $results = Qmast::query()
             ->leftJoin('customer as c', 'qmast.Custid', '=', 'c.code')
+            ->leftJoinSub($agg, 'agg', 'agg.Qno', '=', 'qmast.Qno')
             ->select('qmast.*', 'c.name as cust_name', 'c.nameEN as cust_nameEN')
-            // จำนวนรายการ + มูลค่ารวม จาก qdetail
-            ->selectRaw('(SELECT COUNT(*) FROM qdetail d WHERE d.Qno = qmast.Qno) as item_count')
-            ->selectRaw('(SELECT COALESCE(SUM(d.QNet),0) FROM qdetail d WHERE d.Qno = qmast.Qno) as total_net')
-            ->orderByDesc('qmast.Qdate')
-            ->orderByDesc('qmast.Qno');
+            ->selectRaw('COALESCE(agg.item_count, 0) as item_count')
+            ->selectRaw('COALESCE(agg.total_net, 0) as total_net')
+            ->orderBy($sortable[$sortKey], $sortDir);
+        // เรียงรองด้วย id ให้ลำดับคงที่เมื่อค่าคอลัมน์หลักซ้ำกัน
+        if ($sortable[$sortKey] !== 'qmast.id') {
+            $results->orderBy('qmast.id', 'desc');
+        }
 
         $this->applyFilters($results, $request);
 
@@ -53,6 +78,8 @@ class QuotationController extends Controller
         $results = $results->paginate($limit);
 
         $data['list_data'] = $results;
+        $data['sort_col']  = $sortKey;
+        $data['sort_dir']  = $sortDir;
         return view('quotation.table', $data);
     }
 
@@ -274,6 +301,8 @@ class QuotationController extends Controller
             $header['Qno'] = $qno;
             // คอลัมน์ที่แสดง = เฉพาะคอลัมน์ที่มีการกรอกจริง (ช่องว่างทั้งคอลัมน์ = ตัดออก)
             $header['col_config'] = json_encode($this->deriveColConfig($items), JSON_UNESCAPED_UNICODE);
+            // timestamps (ใช้ Query Builder → ตั้งเอง; Eloquent ไม่ได้จัดการให้)
+            $header['created_at'] = $header['updated_at'] = now();
             DB::table('qmast')->insert($header);
 
             $this->saveItems($qno, $items);
@@ -303,8 +332,9 @@ class QuotationController extends Controller
             $items = $this->parseItemsPayload($request);
 
             $header = $this->extractHeader($request);
-            unset($header['Qno']);   // ไม่ให้เปลี่ยนเลขที่ (เป็น key)
+            unset($header['Qno']);   // ไม่ให้เปลี่ยนเลขที่ (เป็น key ทางธุรกิจ)
             $header['col_config'] = json_encode($this->deriveColConfig($items), JSON_UNESCAPED_UNICODE);
+            $header['updated_at'] = now();   // timestamps (Query Builder → ตั้งเอง)
             DB::table('qmast')->whereRaw('TRIM(Qno) = ?', [$qno])->update($header);
 
             // แทนที่รายการทั้งชุด: ลบของเดิม (รวมราคาแยกย่อย) แล้ว insert ใหม่

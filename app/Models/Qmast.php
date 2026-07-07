@@ -10,11 +10,11 @@ class Qmast extends Model
     use HasFactory;
 
     protected $table = 'qmast';
-    // qmast ไม่มี id — Qno เป็นเลขที่ใบเสนอราคา (unique) ใช้เป็น key
-    protected $primaryKey = 'Qno';
-    public $incrementing = false;
-    protected $keyType = 'string';
-    public $timestamps = false;
+    // id (AUTO_INCREMENT) เป็น PRIMARY KEY แล้ว; Qno = เลขที่ใบเสนอราคา (ยังใช้อ้างอิงในโค้ด)
+    protected $primaryKey = 'id';
+    public $incrementing = true;
+    protected $keyType = 'int';
+    public $timestamps = true;
 
     protected $guarded = [];
 }

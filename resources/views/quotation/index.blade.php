@@ -58,6 +58,15 @@
 .qitem-input { min-width: 90px; }
 .qitem-input:not(.text-end) { min-width: 130px; }   /* คอลัมน์ข้อความ (ชื่อสินค้า/หมายเหตุ) กว้างกว่า */
 .qitem-input.qitem-name { min-width: 340px; }        /* ช่องชื่อสินค้า/รายละเอียด — ยาวเป็นพิเศษ */
+/* เรียงตาม — คลิกหัวตาราง + เน้นคอลัมน์ที่กำลังเรียง (เหมือนหน้าเทียบสี) */
+#table-data th.th-sort { cursor: pointer; user-select: none; }
+#table-data th.th-sort:hover { background-color: #e9ecef; }
+.th-sort-icon { font-size: .9rem; opacity: .35; vertical-align: middle; }
+.th-sort-icon.active { opacity: 1; color: #ffd43b; font-size: 1.05rem; font-weight: 700; margin-left: .15rem; }
+#table-data thead th.col-sorted { background-color: #696cff; color: #fff; box-shadow: inset 0 -3px 0 #ffd43b; }
+#table-data thead th.col-sorted:hover { background-color: #5a5ef0; }
+#table-data thead th.col-sorted small { color: rgba(255,255,255,.8) !important; }
+#table-data tbody td.col-sorted { box-shadow: inset 2px 0 0 #696cff, inset -2px 0 0 #696cff; }
 /* สลับภาษา section หมายเหตุ — โชว์เฉพาะ span ของภาษาที่เลือก (ข้อมูลชุดเดียว) */
 #remarkSection.lang-th .i18n-en { display: none; }
 #remarkSection.lang-en .i18n-th { display: none; }
@@ -189,17 +198,36 @@
                 </button>
             </div>
 
-            {{-- จำนวนต่อหน้า (มุมขวาล่าง) --}}
-            <div class="d-flex justify-content-end align-items-center mt-3 pt-3 border-top">
-                <label class="form-label small fw-medium mb-0 me-2">แสดง</label>
-                <select name="limit" class="form-select form-select-sm p_search" style="width: 90px;"
-                    onchange='loadData("{{$page_url}}/datatable")'>
-                    <option value="15">15</option>
-                    <option value="50">50</option>
-                    <option value="75">75</option>
-                    <option value="100">100</option>
-                </select>
-                <span class="ms-2 small fw-medium">รายการ/หน้า</span>
+            {{-- state การเรียง — เก็บนอก #table-data เพื่อคงค่าเมื่อตารางโหลดใหม่ (default = id desc = ล่าสุด) --}}
+            <input type="hidden" name="sort_col" value="id" class="p_search">
+            <input type="hidden" name="sort_dir" value="desc" class="p_search">
+
+            {{-- เรียงตามลำดับการเพิ่ม (id) + จำนวนต่อหน้า --}}
+            <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                <div class="d-flex align-items-center">
+                    <label class="form-label small fw-medium mb-0 me-2 d-flex align-items-center"
+                        title="เรียงตามลำดับการเพิ่มข้อมูลเข้าระบบ">
+                        เรียงตามลำดับการเพิ่ม
+                        <i class="ti ti-info-circle ms-1 text-muted"></i>
+                    </label>
+                    <select name="sort" class="form-select form-select-sm" style="width: 210px;"
+                        onchange="onSortDropdown(this.value)">
+                        <option value="desc">ล่าสุด</option>
+                        <option value="asc">เก่าสุด</option>
+                        <option value="" hidden>เรียงตามคอลัมน์ (คลิกหัวตาราง)</option>
+                    </select>
+                </div>
+                <div class="d-flex align-items-center">
+                    <label class="form-label small fw-medium mb-0 me-2">แสดง</label>
+                    <select name="limit" class="form-select form-select-sm p_search" style="width: 90px;"
+                        onchange='loadData("{{$page_url}}/datatable")'>
+                        <option value="15">15</option>
+                        <option value="50">50</option>
+                        <option value="75">75</option>
+                        <option value="100">100</option>
+                    </select>
+                    <span class="ms-2 small fw-medium">รายการ/หน้า</span>
+                </div>
             </div>
         </div>
 
@@ -516,6 +544,40 @@
                     if (instance.input.classList.contains('p_search')) loadData(page);
                 }
             });
+            // sync dropdown "เรียงตาม" ให้ตรงกับ state เริ่มต้น (id desc = ล่าสุด)
+            syncSortDropdown();
+        });
+
+        // ────────────────────────────────────────────────────────
+        //  เรียงลำดับ — state เดียว (sort_col/sort_dir) ใช้ร่วม 2 ทาง:
+        //   1) dropdown "เรียงตามลำดับการเพิ่ม" (ล่าสุด/เก่าสุด = เรียงตาม id)
+        //   2) คลิกหัวตาราง (เรียงตามคอลัมน์ใดก็ได้)
+        // ────────────────────────────────────────────────────────
+        function setSort(col, dir) {
+            $('input[name="sort_col"]').val(col);
+            $('input[name="sort_dir"]').val(dir);
+            syncSortDropdown();
+            loadData(page);
+        }
+        // dropdown สะท้อนเฉพาะการเรียงตาม id → ล่าสุด/เก่าสุด; คอลัมน์อื่น = option ซ่อน
+        function syncSortDropdown() {
+            var col = $('input[name="sort_col"]').val();
+            var dir = $('input[name="sort_dir"]').val();
+            $('select[name="sort"]').val(col === 'id' ? dir : '');
+        }
+        // เลือกจาก dropdown → เรียงตาม id ทิศตามที่เลือก
+        function onSortDropdown(val) {
+            if (val === '') return;   // option บอกสถานะ (เรียงตามคอลัมน์) — ไม่ทำอะไร
+            setSort('id', val);
+        }
+        // คลิกหัวตาราง: คอลัมน์เดิมซ้ำ = สลับ asc/desc; คอลัมน์ใหม่ = เริ่มที่ asc
+        // (delegated เพราะ thead อยู่ใน #table-data ที่โหลดใหม่ทุกครั้ง)
+        $(document).on('click', '#table-data th[data-sort]', function () {
+            var col    = String($(this).data('sort'));
+            var curCol = $('input[name="sort_col"]').val();
+            var curDir = $('input[name="sort_dir"]').val();
+            var dir    = (curCol === col) ? (curDir === 'asc' ? 'desc' : 'asc') : 'asc';
+            setSort(col, dir);
         });
 
         // ตั้งค่าวันที่ให้ flatpickr (รับ Y-m-d / datetime → แสดง d/m/Y); ว่าง = เคลียร์
@@ -925,7 +987,7 @@
         // อัปเดตปุ่มล้างตัวกรองตามจำนวน filter ที่ใช้อยู่ (ไม่นับ limit)
         function updateFilterButtonState(){
             var count = 0;
-            $('.p_search:not([name="limit"])').each(function(){
+            $('.p_search:not([name="limit"]):not([name="sort_col"]):not([name="sort_dir"])').each(function(){
                 var v = $(this).val();
                 if (v !== '' && v !== null) count++;
             });
@@ -949,7 +1011,8 @@
         }
 
         function resetFilters(){
-            $('.p_search:not([name="limit"])').each(function(){
+            // ไม่ล้าง limit + sort_col/sort_dir (เป็นการตั้งค่าแสดงผล ไม่ใช่ตัวกรอง)
+            $('.p_search:not([name="limit"]):not([name="sort_col"]):not([name="sort_dir"])').each(function(){
                 // flatpickr: เคลียร์ผ่าน instance ให้ปฏิทิน + ช่องว่างจริง
                 if (this._flatpickr) this._flatpickr.clear();
                 else $(this).val('');
