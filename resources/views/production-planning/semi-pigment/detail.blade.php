@@ -38,11 +38,11 @@
             <span class="fw-semibold">{{ $sp->itemno ?? '-' }}</span>
         </div>
         <div class="col-md-4">
-            <label class="form-label text-muted small d-block">Semi Code</label>
+            <label class="form-label text-muted small d-block">ขาด Semi Code</label>
             <span class="fw-semibold">{{ $sp->semi_code ?? '-' }}</span>
         </div>
         <div class="col-md-4">
-            <label class="form-label text-muted small d-block">แม่สี (Primary Color)</label>
+            <label class="form-label text-muted small d-block">ขาด แม่สี (Primary Color)</label>
             <span class="fw-semibold">{{ $sp->primary_color ?? '-' }}</span>
         </div>
     </div>

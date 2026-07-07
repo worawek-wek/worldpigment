@@ -40,11 +40,11 @@
         <input type="text" class="form-control" id="{{ $prefix }}_itemno" placeholder="Item No.">
     </div>
     <div class="col-md-4 mb-3">
-        <label class="form-label">Semi Code</label>
+        <label class="form-label">ขาด Semi Code</label>
         <input type="text" class="form-control" id="{{ $prefix }}_semi_code" placeholder="รหัสกึ่งสำเร็จรูป">
     </div>
     <div class="col-md-4 mb-3">
-        <label class="form-label">แม่สี (Primary Color)</label>
+        <label class="form-label">ขาด แม่สี (Primary Color)</label>
         <input type="text" class="form-control" id="{{ $prefix }}_primary_color" placeholder="แม่สี">
     </div>
     <div class="col-md-4 mb-3">

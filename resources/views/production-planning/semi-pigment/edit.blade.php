@@ -54,11 +54,11 @@
             <input type="date" class="form-control" name="custwant" value="{{ $r_custwant }}" {{ $ro }}>
         </div>
         <div class="col-md-4 mb-3">
-            <label class="form-label">Semi Code</label>
+            <label class="form-label">ขาด Semi Code</label>
             <input type="text" class="form-control" name="semi_code" value="{{ $sp->semi_code }}" {{ $ro }}>
         </div>
         <div class="col-md-4 mb-3">
-            <label class="form-label">แม่สี (Primary Color)</label>
+            <label class="form-label">ขาด แม่สี (Primary Color)</label>
             <input type="text" class="form-control" name="primary_color" value="{{ $sp->primary_color }}" {{ $ro }}>
         </div>
         <div class="col-md-4 mb-3">

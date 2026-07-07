@@ -38,33 +38,18 @@
 
         {{-- ── ข้อมูลหลัก ── --}}
         <div class="row">
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Item No. <span class="text-danger">*</span></label>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">รหัสสินค้า (Item No.) <span class="text-danger">*</span></label>
                 <input type="text" name="itemno"
                        value="{{ $planning_item?->itemno ?? '' }}"
                        class="form-control" placeholder="กรอก Item No.">
             </div>
-            <div class="col-md-3 mb-3">
-                <label class="form-label">Quantity</label>
-                <input type="text" name="quantity"
-                       value="{{ $planning_item?->quantity ?? '' }}"
-                       class="form-control" placeholder="0">
-            </div>
-            <div class="col-md-3 mb-3">
-                <label class="form-label">Lot</label>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">ล๊อค (Lot)</label>
                 <input type="text" name="lot"
                        value="{{ $planning_item?->lot ?? '' }}"
                        class="form-control" placeholder="Lot">
             </div>
-        </div>
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <label class="form-label">Weight</label>
-                <input type="text" name="weight"
-                       value="{{ number_format((float) ($planning_item?->weight ?? 0), 2) }}"
-                       class="form-control" placeholder="0.00">
-            </div>
-
             <div class="col-md-4 mb-3">
                 <label class="form-label">Plan Type</label>
                 {{-- auto-fill จาก planning_header.plan_type --}}
@@ -75,6 +60,35 @@
             </div>
         </div>
         <div class="row">
+            <div class="col-md-4 mb-3">
+                <label class="form-label">น้ำหนักสั่งตาม Order (Quantity)</label>
+                <input type="text" name="quantity"
+                       value="{{ number_format((float) ($planning_item?->quantity ?? 0), 2) }}"
+                       class="form-control" placeholder="0.00">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">น้ำหนัก TP (Weight)</label>
+                <input type="text" name="weight"
+                       value="{{ number_format((float) ($planning_item?->weight ?? 0), 2) }}"
+                       class="form-control" placeholder="0.00">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">น้ำหนักที่ผลิตได้ (Weight Produced)</label>
+                <input type="text" name="weight_produced"
+                       value="{{ $planning_item && $planning_item->weight_produced !== null ? number_format((float) $planning_item->weight_produced, 2) : '' }}"
+                       class="form-control" placeholder="0.00">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label class="form-label">เลขที่ใบเบิกออกใบแดง (Red Bill)</label>
+                <input type="text" name="red_bill_code"
+                       value="{{ $planning_item?->red_bill_code ?? '' }}"
+                       class="form-control" placeholder="เลขที่ใบเบิกออกใบแดง">
+            </div>
+        </div>
+        <div class="row my-2"><hr /></div>
+        <div class="row p-3 rounded" style="background-color: #e5f4ff; border: 1px dashed #3f50e2;">
             @php
                 // แผนกปัจจุบันของ item: ใช้ของ item ก่อน ถ้าว่างจึง fallback ไปที่ header
                 $current_company = $planning_item?->company ?: ($parent_header?->company ?? '');
@@ -95,7 +109,7 @@
                 <small class="text-muted">เปลี่ยนแผนกเพื่อย้ายรายการนี้ไปให้แผนกอื่นทำ (เครื่องจักร/สถานะจะโหลดใหม่)</small>
             </div>
             <div class="col-md-4 mb-3">
-                <label class="form-label">Machine No.</label>
+                <label class="form-label">เครื่องจักร (Machine No.)</label>
                 <select name="machine_no" id="planning_item_machine" class="form-control">
                     <option value="">เลือกเครื่องจักร</option>
                     @foreach($machines as $machine)
@@ -106,7 +120,7 @@
                 </select>
             </div>
             <div class="col-md-4 mb-3">
-                <label class="form-label">Planning Status</label>
+                <label class="form-label">สถานะการวางแผน (Planning Status)</label>
                 @php $current_status = $planning_item?->planning_status ?? ''; @endphp
                 <select name="planning_status" id="planning_item_status" class="form-select">
                     <option value="">เลือกสถานะ</option>
@@ -123,7 +137,7 @@
             </div>
         </div>
         <div class="row my-2"><hr /></div>
-        <div class="row p-3 rounded" style="background-color: #fffaf0; border: 1px dashed #ffc107;">
+        <div class="row p-3 rounded" style="background-color: #fff1ca; border: 1px dashed #ffc107;">
             <div class="row">
                 <div class="col-md-4 mb-3">
                     <label class="form-label">วันที่สั่ง (mdate)</label>

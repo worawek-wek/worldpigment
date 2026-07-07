@@ -271,6 +271,16 @@ class ProductionPlanController extends Controller
 
     public function saveItem(Request $request)
     {
+        // ช่องตัวเลขในฟอร์มแสดงผลด้วย number_format จึงอาจมีจุลภาคหลักพัน (เช่น "1,250.00")
+        // ตัดจุลภาคออกก่อน validate ไม่งั้น rule numeric จะไม่ผ่าน
+        foreach (['quantity', 'weight', 'weight_produced'] as $numeric_field) {
+            if ($request->filled($numeric_field)) {
+                $request->merge([
+                    $numeric_field => str_replace(',', '', $request->input($numeric_field)),
+                ]);
+            }
+        }
+
         $validator = Validator::make($request->all(), [
             'planning_header_id' => 'required|exists:tb_planning_header,id',
             'company'            => 'nullable|string|max:255',
@@ -278,6 +288,8 @@ class ProductionPlanController extends Controller
             'quantity'           => 'nullable|numeric|min:0',
             'lot'                => 'nullable|string|max:255',
             'weight'             => 'nullable|numeric|min:0',
+            'weight_produced'    => 'nullable|numeric|min:0',
+            'red_bill_code'      => 'nullable|string|max:255',
             'machine_no'         => 'nullable|string|max:255',
             'plan_type'          => 'nullable|string|max:255',
             'planning_status'    => 'nullable|string|max:255',
@@ -302,6 +314,7 @@ class ProductionPlanController extends Controller
 
         $fields = $request->only([
             'planning_header_id', 'company', 'itemno', 'quantity', 'lot', 'weight',
+            'weight_produced', 'red_bill_code',
             'machine_no', 'plan_type', 'planning_status', 'inplan','start_date',
             'qc_date', 'qc_time', 'qc_status', 'packing_datetie',
             'mdate', 'custwant', 'senddate', 'remark'
