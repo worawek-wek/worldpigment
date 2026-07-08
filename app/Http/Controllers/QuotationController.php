@@ -281,6 +281,74 @@ class QuotationController extends Controller
     }
 
     /**
+     * POST — ตัวอย่างพิมพ์จากฟอร์มที่ "ยังไม่บันทึก"
+     * ประกอบข้อมูลจาก request แล้ว render view เดียวกับพิมพ์จริง (quotation.print)
+     * โดยไม่แตะ DB (มี lookup pdtype อ่านอย่างเดียวเท่านั้น) — หน้าตาตรงกับพิมพ์จริง 100%
+     */
+    public function printPreview(Request $request)
+    {
+        $items = $this->parseItemsPayload($request);
+
+        // หัวใบจากฟอร์ม — เติม key ตาม QMAST_COLUMNS ให้ครบ (กัน undefined property ใน view)
+        $headerArr = $this->extractHeader($request);
+        $header = (object) array_merge(array_fill_keys(self::QMAST_COLUMNS, null), $headerArr);
+        // คอลัมน์ที่แสดง derive จากรายการที่กรอก (เหมือนตอนบันทึก)
+        $header->col_config = json_encode($this->deriveColConfig($items), JSON_UNESCAPED_UNICODE);
+
+        // สร้างรายการสำหรับ view: cells (map แบน key => value) จากค่าที่ฟอร์มส่งมา
+        // ข้ามแถวว่างทั้งบรรทัด (ไม่มีทั้งรหัสและชื่อ) เหมือน saveItems
+        $reg = $this->colRegistry();
+        $itemsForView = [];
+        foreach ($items as $it) {
+            if (trim((string) ($it['code'] ?? '')) === '' && trim((string) ($it['name'] ?? '')) === '') {
+                continue;
+            }
+            $cells = [];
+            foreach ($reg as $k => $meta) {
+                $cells[$k] = $it[$k] ?? null;
+            }
+            $itemsForView[] = (object) ['cells' => $cells];
+        }
+
+        // ชื่อลูกค้า/อังกฤษ ใช้ค่าจากฟอร์มโดยตรง (ไม่ query DB)
+        $cust = (object) [
+            'name'   => $request->input('CustName'),
+            'nameEN' => $request->input('Engname'),
+        ];
+
+        // ชนิดสินค้า — lookup อ่านอย่างเดียว (ไม่มีก็ fallback เป็นรหัส PDtype ใน view)
+        $pdtype = $header->PDtype
+            ? DB::table('pdtype')->where('PDType', $header->PDtype)->first()
+            : null;
+
+        $colConfig = $this->resolveColConfig($header);
+        $revisionKeys = ['cur_process_fee', 'new_process_fee', 'cur_pigment_price', 'new_pigment_price', 'new_price'];
+        $isRevision = false;
+        foreach ($colConfig as $c) {
+            if (in_array($c['key'], $revisionKeys, true)) { $isRevision = true; break; }
+        }
+
+        $otherNotes = [];
+        if (!empty($header->other_notes)) {
+            $decoded = json_decode($header->other_notes, true);
+            if (is_array($decoded)) {
+                $otherNotes = $decoded;
+            }
+        }
+
+        return view('quotation.print', [
+            'header'      => $header,
+            'cust'        => $cust,
+            'items'       => $itemsForView,
+            'pdtype'      => $pdtype,
+            'isRevision'  => $isRevision,
+            'colConfig'   => $colConfig,
+            'colRegistry' => $reg,
+            'otherNotes'  => $otherNotes,
+        ]);
+    }
+
+    /**
      * POST — สร้างใบเสนอราคาใหม่ (qmast + qdetail)
      */
     public function insert(Request $request)

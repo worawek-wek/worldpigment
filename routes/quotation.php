@@ -21,6 +21,7 @@ Route::prefix('quotation')->group(function () {
     Route::get('/show',  [QuotationController::class, 'show'])->name('quotation.show');   // → HTML partial (modal)
     Route::get('/edit',  [QuotationController::class, 'edit'])->name('quotation.edit');   // → JSON (เติมฟอร์ม)
     Route::get('/print', [QuotationController::class, 'print'])->name('quotation.print'); // → หน้าพิมพ์
+    Route::post('/print-preview', [QuotationController::class, 'printPreview'])->name('quotation.print_preview'); // → หน้าพิมพ์จากฟอร์มที่ยังไม่บันทึก
 
     // ─── เขียน ───────────────────────────────────────────────────────
     Route::post('/insert',   [QuotationController::class, 'insert'])->name('quotation.insert');

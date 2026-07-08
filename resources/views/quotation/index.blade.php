@@ -472,6 +472,10 @@
 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="button" class="btn btn-label-info" onclick="quotationPrintPreview()"
+                        title="พิมพ์ตัวอย่างจากข้อมูลในฟอร์ม (ยังไม่บันทึก)">
+                        <i class="ti ti-printer me-1"></i>พิมพ์ตัวอย่าง
+                    </button>
                     <button type="button" class="btn btn-primary" onclick="saveQuotation()">
                         <i class="ti ti-device-floppy me-1"></i>บันทึกใบเสนอราคา
                     </button>
@@ -990,6 +994,43 @@
                 catch (e) { console.error(e); }
             };
             frame.src = "{{ $page_url }}/print?qno=" + encodeURIComponent(qno);
+        }
+
+        // ── พิมพ์ตัวอย่างจากฟอร์มที่ยังไม่บันทึก ──
+        // fetch POST ข้อมูลฟอร์ม (+ items_json) → รับ HTML → ยัดเข้า iframe ซ่อนด้วย srcdoc แล้วสั่งพิมพ์
+        // ไม่เปิดหน้า/แท็บใหม่, ไม่บันทึก DB, ไม่บังคับกรอกครบ — ดูตัวอย่างได้ทันที
+        function quotationPrintPreview(){
+            var fd = new FormData(document.getElementById('quotationForm'));   // รวม other_notes[] ครบ
+            fd.append('_token', '{{ csrf_token() }}');
+            // รายการสินค้า — ส่งเป็น items_json เหมือนตอนบันทึก (ตัด __auto ออก)
+            var cleanItems = currentItems.map(function(r){
+                var o = {}; Object.keys(r).forEach(function(k){ if (k !== '__auto') o[k] = r[k]; }); return o;
+            });
+            fd.append('items_json', JSON.stringify(cleanItems));
+
+            fetch("{{ $page_url }}/print-preview", {
+                method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function(res){ return res.text(); })
+            .then(function(html){
+                // iframe แยกสำหรับพิมพ์ตัวอย่าง (ไม่ชนกับ printFrame ของปุ่มพิมพ์ในตาราง)
+                var frame = document.getElementById('printPreviewFrame');
+                if (!frame){
+                    frame = document.createElement('iframe');
+                    frame.id = 'printPreviewFrame';
+                    frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+                    document.body.appendChild(frame);
+                }
+                frame.onload = function(){
+                    try { frame.contentWindow.focus(); frame.contentWindow.print(); }
+                    catch (e) { console.error(e); }
+                };
+                frame.srcdoc = html;   // โหลดในหน้าเดิม → ไม่เปิดแท็บใหม่
+            })
+            .catch(function(e){
+                console.error(e);
+                Swal.fire('พิมพ์ตัวอย่างไม่สำเร็จ', 'โหลดตัวอย่างไม่สำเร็จ', 'error');
+            });
         }
 
         // ────────────────────────────────────────────────────────
