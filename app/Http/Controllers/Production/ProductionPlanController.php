@@ -39,8 +39,30 @@ class ProductionPlanController extends Controller
             })
             // แผนกจริงของ item: ใช้ของ item ก่อน ถ้าว่างจึง fallback ไปที่ header
             ->editColumn('company', fn ($row) => $row->company ?: $row->header_company)
-            ->editColumn('inplan', fn ($row) => $row->inplan ? \Carbon\Carbon::parse($row->inplan)->format('d/m/Y') : '-')
+            // Inplan: แสดงวันที่ แล้วขึ้นบรรทัดใหม่แสดงกะการผลิต (work_shift) ถ้ามี — เช่น "กะ A"
+            ->editColumn('inplan', function ($row) {
+                $date = $row->inplan ? \Carbon\Carbon::parse($row->inplan)->format('d/m/Y') : '-';
+                if (!empty($row->work_shift)) {
+                    $date .= '<br><span class="badge bg-label-info">กะ '.e($row->work_shift).'</span>';
+                }
+                return $date;
+            })
             ->editColumn('custwant', fn ($row) => $row->custwant ? \Carbon\Carbon::parse($row->custwant)->format('d/m/Y') : '-')
+            // สถานะภายใน: รวม planning_status ของ planning item ที่อยู่ใน header (planning_code) เดียวกัน
+            // เฉพาะรายการ planning เท่านั้น — ไม่ดึงสถานะของ semi/pigment มา — ตัดค่าซ้ำ คั่นด้วย ,
+            ->addColumn('inner_status', function ($row) {
+                $statuses = Planning::where('planning_header_id', $row->planning_header_id)
+                    ->pluck('planning_status')
+                    ->filter(fn ($s) => $s !== null && $s !== '')
+                    ->unique()
+                    ->values();
+
+                if ($statuses->isEmpty()) {
+                    return '-';
+                }
+
+                return $statuses->map(fn ($s) => e($s))->implode(', ');
+            })
             ->addColumn('btnedit', function($row) {
                 $btn_view = '<button class="btn btn-sm btn-icon btn-info me-2 btn_view" data-planning_id="'.$row->id.'" title ="ลบ">
                     <i class="ti ti-eye text-white ti-sm"></i>
@@ -52,7 +74,7 @@ class ProductionPlanController extends Controller
                 // return $btn_view.$btn_edit;
                 return $btn_edit;
             })
-            ->rawColumns(['btnedit']) // 👈 บอกให้ column นี้ render HTML
+            ->rawColumns(['inplan', 'inner_status', 'btnedit']) // 👈 บอกให้ column นี้ render HTML
             ->make(true);
     }
 
@@ -312,7 +334,9 @@ class ProductionPlanController extends Controller
             'plan_type'          => 'nullable|string|max:255',
             'planning_status'    => 'nullable|string|max:255',
             'inplan'         => 'nullable|date',
+            'work_shift'         => 'nullable|in:A,B,C',
             'start_date'         => 'nullable|date',
+            'start_time'         => 'nullable|date_format:H:i',
             'qc_date'            => 'nullable|date',
             'qc_time'            => 'nullable|string|max:10',
             'qc_status'          => 'nullable|string|max:255',
@@ -333,7 +357,7 @@ class ProductionPlanController extends Controller
         $fields = $request->only([
             'planning_header_id', 'company', 'itemno', 'quantity', 'lot', 'weight',
             'weight_produced', 'red_bill_code',
-            'machine_no', 'plan_type', 'planning_status', 'inplan','start_date',
+            'machine_no', 'plan_type', 'planning_status', 'inplan', 'work_shift', 'start_date', 'start_time',
             'qc_date', 'qc_time', 'qc_status', 'packing_datetie',
             'mdate', 'custwant', 'senddate', 'remark'
         ]);

@@ -98,6 +98,7 @@
                                         <th class="col-1">Itemno</th>
                                         {{-- <th class="col-1">Quantity</th> --}}
                                         <th class="col-2">MachineNo</th>
+                                        <th class="col-1">สถานะภายใน</th>
                                         <th class="col-1">Manage</th>
                                     </tr>
                                 </thead>
@@ -196,6 +197,7 @@
                 { 'className': "text-left", data: 'itemno', name: 'itemno', orderable: false },
                 // { 'className': "text-left", data: 'quantity', name: 'quantity', orderable: false },
                 { 'className': "text-left", data: 'machine_no', name: 'machine_no', orderable: false },
+                { 'className': "text-center", data: 'inner_status', name: 'inner_status', orderable: false, searchable: false },
                 { 'className': "text-center", data: 'btnedit', name: 'btnedit', orderable: false, searchable: false },
             ],
             order: [

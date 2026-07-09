@@ -127,6 +127,7 @@ class SemiPigmentController extends Controller
      */
     public function entryStore(Request $request)
     {
+        dd($request->all());
         $validator = Validator::make($request->all(), [
             'planning_id' => 'required|exists:tb_planning,id',
             'type'        => 'required|in:semi,pigment',

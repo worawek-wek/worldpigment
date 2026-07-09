@@ -153,7 +153,7 @@
                 </div>
                 <div class="col-md-4 mb-3">
                     <label class="form-label d-flex align-items-center justify-content-between">
-                        <span>วันที่ส่งสินค้า (senddate)</span>
+                        <span>วันที่กำหนดทบทวน (senddate)</span>
                         @if($planning_item && count($senddate_logs))
                             <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none" id="btn_senddate_log">
                                 <i class="ti ti-history me-1"></i>ประวัติ
@@ -167,16 +167,32 @@
                 </div>
             </div>
             <div class="row">
-                <div class="col-md-6 mb-3">
+                <div class="col-md-3 mb-3">
                     <label class="form-label">วันที่วางแผนผลิต (Inplan)</label>
                     <input type="date" name="inplan"
                         value="{{ $planning_item?->inplan ?? '' }}"
                         class="form-control">
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">กะการผลิต (Work Shift)</label>
+                    @php $current_shift = $planning_item?->work_shift ?? ''; @endphp
+                    <select name="work_shift" class="form-select">
+                        <option value="">เลือกกะ</option>
+                        @foreach(['A', 'B', 'C'] as $shift)
+                            <option value="{{ $shift }}" {{ $current_shift === $shift ? 'selected' : '' }}>{{ $shift }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
                     <label class="form-label">วันที่เริ่มผลิต (Start Date)</label>
                     <input type="date" name="start_date"
                         value="{{ $planning_item?->start_date ?? '' }}"
+                        class="form-control">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">เวลาที่เริ่มผลิต (Start Time)</label>
+                    <input type="time" name="start_time"
+                        value="{{ $planning_item?->start_time ? substr($planning_item->start_time, 0, 5) : '' }}"
                         class="form-control">
                 </div>
             </div>
@@ -364,19 +380,19 @@
     </button>
 </div>
 
-{{-- ── Modal ประวัติวันที่ส่งสินค้า (senddate_log) ── --}}
+{{-- ── Modal ประวัติวันที่กำหนดทบทวน (senddate_log) ── --}}
 <div class="modal fade" id="senddate_log_modal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="max-width:300px;">
         <div class="modal-content">
             <div class="modal-header" style="background-color:#3A8EBA; padding:.75rem 1.25rem;">
                 <h6 class="modal-title text-white mb-0">
-                    <i class="ti ti-history me-1"></i>ประวัติวันที่ส่งสินค้า
+                    <i class="ti ti-history me-1"></i>ประวัติวันที่กำหนดทบทวน
                 </h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-2 small text-muted">
-                    วันที่ส่งปัจจุบัน:
+                    วันที่กำหนดทบทวนปัจจุบัน:
                     <strong>{{ $planning_item?->senddate ? \Carbon\Carbon::parse($planning_item->senddate)->format('d/m/Y') : '-' }}</strong>
                 </div>
                 @if(count($senddate_logs))
@@ -694,11 +710,24 @@
     $entryModal.find('#btn_sp_entry_save').on('click', function () {
         var $btn = $(this);
         var itemno = ($('#sp_itemno').val() || '').trim();
+        var semi_code = ($('#sp_semi_code').val() || '').trim();
+        var primary_color = ($('#sp_primary_color').val() || '').trim();
+
         if (!itemno) {
             $('#sp_itemno').addClass('is-invalid').trigger('focus');
             return;
         }
+        if (!semi_code) {
+            $('#sp_semi_code').addClass('is-invalid').trigger('focus');
+            return;
+        }
+        if (!primary_color) {
+            $('#sp_primary_color').addClass('is-invalid').trigger('focus');
+            return;
+        }
         $('#sp_itemno').removeClass('is-invalid');
+        $('#sp_semi_code').removeClass('is-invalid');
+        $('#sp_primary_color').removeClass('is-invalid');
 
         var isEdit  = !!($editingRow && $editingRow.length);
         var tbodyId = isEdit ? $editingRow.closest('tbody').attr('id') : $('#sp_entry_target').val();
