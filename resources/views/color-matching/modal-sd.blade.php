@@ -142,11 +142,11 @@
                                 {{-- align-items-end: label ยาวไม่เท่ากันในแถว → ช่องกรอกชิดล่างเรียงตรงกัน --}}
                                 <div class="row g-3 align-items-end">
                                     {{-- แถว 1: Resin + PHR + น้ำหนัก + Standard --}}
-                                    <div class="col-md-5">
+                                    <div class="col-md-6">
                                         <label class="form-label small mb-1">Resin (Match) <span class="text-muted fw-normal">(เช่น PVC, ABS, PE)</span></label>
                                         <input type="text" name="ResinMatch" class="form-control">
                                     </div>
-                                    <div class="col-md-2">
+                                    <div class="col-md-1">
                                         <label class="form-label small mb-1">PHR <span class="text-muted fw-normal">(0.0000)</span></label>
                                         <input type="number" step="0.0001" name="PHR" class="form-control text-end">
                                     </div>

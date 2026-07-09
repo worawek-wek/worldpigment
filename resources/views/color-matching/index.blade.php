@@ -718,8 +718,9 @@
         function fillSdColorInfo($f, resp) {
             resp = resp || {};
             fillForm('#form_sample_delivery', {
-                STD:      resp.STD   ?? '', // Standard: ดึงจากใบนำส่งเทียบสี (readonly)
-                TestDesc: resp.color ?? '', // รายละเอียด: ดึงจาก "สี" (color) ของใบนำส่งเทียบสี
+                STD:        resp.STD         ?? '', // Standard: ดึงจากใบนำส่งเทียบสี (readonly)
+                TestDesc:   resp.color       ?? '', // รายละเอียด: ดึงจาก "สี" (color) ของใบนำส่งเทียบสี
+                ResinMatch: resp.CustPigment ?? '', // Resin (Match): ดึงจาก "เม็ดที่ลูกค้าใช้" (CustPigment) เช่น AS50%+ABS50%
             });
         }
 
@@ -749,6 +750,10 @@
                         // นำ SendNo ตั้งต้นในช่องเลขที่ใบส่ง ต.ย. เฉพาะเมื่อยังว่าง (กันทับค่าตอนแก้ไข)
                         if (!$f.find('[name="Testno"]').val()) {
                             $f.find('[name="Testno"]').val(sendNo);
+                        }
+                        // นำ SendNo แสดงในช่องเลขที่ใบรายงานผลด้วย เฉพาะเมื่อยังว่าง (กันทับค่าที่แก้ไข)
+                        if (!$f.find('[name="rptno"]').val()) {
+                            $f.find('[name="rptno"]').val(sendNo);
                         }
                     }
                 });
@@ -793,6 +798,39 @@
                     sdEditing = false;
                     Swal.fire('ไม่พบข้อมูล', '', 'error');
                 }
+            });
+        }
+
+        // ── ลบ record testmain (CM/SD) — ยืนยันก่อน แล้ว POST ไป /delete/{id} ──
+        function deleteRow(id, label) {
+            const name = label ? String(label) : '#' + id;
+            Swal.fire({
+                title: 'ยืนยันการลบ?',
+                html: 'ต้องการลบรายการ <strong>' + $('<div>').text(name).html() + '</strong> ใช่หรือไม่?'
+                    + '<br><small class="text-muted">การลบไม่สามารถกู้คืนได้</small>',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ลบ',
+                confirmButtonColor: '#d33',
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (!result.isConfirmed) return;
+                $.ajax({
+                    url: "{{$page_url}}/delete/" + encodeURIComponent(id),
+                    type: 'POST',
+                    data: { _token: CSRF },
+                    success: function(resp) {
+                        if (resp && resp.ok) {
+                            Swal.fire('ลบเรียบร้อย', '', 'success');
+                            loadData(page);
+                        } else {
+                            Swal.fire('เกิดข้อผิดพลาด', resp.error ?? '', 'error');
+                        }
+                    },
+                    error: function(xhr) {
+                        Swal.fire('เกิดข้อผิดพลาด', xhr.responseJSON?.error ?? '', 'error');
+                    }
+                });
             });
         }
 

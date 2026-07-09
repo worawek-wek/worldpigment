@@ -22,6 +22,7 @@ Route::prefix('color-matching')->group(function () {
     // ─── CRUD (อ้างอิงด้วย id auto-increment) ────────────────────────
     Route::post('/insert',             [ColorMatchingController::class, 'insert'])->name('color_matching.insert');
     Route::post('/update/{id}',        [ColorMatchingController::class, 'update'])->whereNumber('id')->name('color_matching.update');
+    Route::post('/delete/{id}',        [ColorMatchingController::class, 'destroy'])->whereNumber('id')->name('color_matching.delete');
     Route::get('/{id}',                [ColorMatchingController::class, 'edit'])->whereNumber('id')->name('color_matching.edit');
 
 });

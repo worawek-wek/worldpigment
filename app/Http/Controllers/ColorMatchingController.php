@@ -286,6 +286,30 @@ class ColorMatchingController extends Controller
     }
 
     /**
+     * POST — ลบ testmain row (ระบุด้วย id auto-increment)
+     * ลบเฉพาะแถวที่ระบุ (1 row) — ไม่ลบ SD/CM ที่ใช้ SendNo เดียวกันตามไปด้วย
+     */
+    public function destroy($id)
+    {
+        try {
+            DB::beginTransaction();
+
+            $row = Testmain::find($id);
+            if (!$row) {
+                return response()->json(['error' => 'not_found'], 404);
+            }
+
+            $row->delete();
+
+            DB::commit();
+            return response()->json(['ok' => true]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * ดึงเฉพาะ field ที่มีอยู่จริงใน testmain + แปลง type พิเศษ
      */
     private function extractPayload(Request $request): array
