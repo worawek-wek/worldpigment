@@ -43,13 +43,18 @@
         <label class="form-label">ล๊อด (Lot No.)</label>
         <input type="text" class="form-control" id="{{ $prefix }}_lot_no" placeholder="ล็อตที่">
     </div>
-    <div class="col-md-4 mb-3 p-3 rounded" style="background-color: #f8cdcd; border: 1px dashed #e93508;">
-        <label class="form-label">ขาด Semi Code  <span class="text-danger">*</span></label></label>
-        <input type="text" class="form-control" id="{{ $prefix }}_semi_code" placeholder="รหัสกึ่งสำเร็จรูป">
-    </div>
-    <div class="col-md-4 mb-3 p-3 rounded" style="background-color: #f8cdcd; border: 1px dashed #e93508;">
-        <label class="form-label">ขาดแม่สี (Primary Color)  <span class="text-danger">*</span></label></label>
-        <input type="text" class="form-control" id="{{ $prefix }}_primary_color" placeholder="แม่สี">
+    <div class="col-md-8 mb-3 p-3 rounded" style="background-color: #f8cdcd; border: 1px dashed #e93508;">
+        <div class="row">
+            <div class="col-md-6">
+            <label class="form-label">ขาด Semi Code  <span class="text-danger">*</span></label></label>
+            <input type="text" class="form-control" id="{{ $prefix }}_semi_code" placeholder="รหัสกึ่งสำเร็จรูป">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">ขาดแม่สี (Primary Color)  <span class="text-danger">*</span></label></label>
+            <input type="text" class="form-control" id="{{ $prefix }}_primary_color" placeholder="แม่สี">
+        </div>
+        </div>
+
     </div>
 
     <div class="col-md-4 mb-3 p-3">
