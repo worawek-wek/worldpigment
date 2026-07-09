@@ -144,6 +144,13 @@
                                     <i class="ti ti-edit"></i>
                                 </button>
                             @endif
+
+                            {{-- ลบ (ยืนยันก่อนลบ) — ป้ายกำกับ = เลขที่ SD (Testno) หรือ CM (SendNo) --}}
+                            <button class="btn btn-sm btn-icon btn-danger"
+                                title="ลบ"
+                                onclick='deleteRow({{ $row->id }}, @json($isSD ? ($row->Testno ?: "") : ($row->SendNo ?: "")))'>
+                                <i class="ti ti-trash"></i>
+                            </button>
                         </div>
                     </td>
                 </tr>
