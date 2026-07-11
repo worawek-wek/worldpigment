@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\Facades\DataTables;
 use App\Models\SemiPigment;
+use App\Models\Pigment;
 use App\Models\Planning;
 use App\Models\PlanningHeader;
 
@@ -120,6 +121,95 @@ class SemiPigmentController extends Controller
         ]);
     }
 
+    /**
+     * ต้นไม้สถานะแผนการผลิตที่สร้างจาก Semi (recursive)
+     * - แสดงแผนการผลิต (planning_code, orderno, สถานะการผลิต, วันที่วางแผนผลิต) ที่ได้จาก semi นี้
+     * - พร้อม semi_code / primary_color ของ semi
+     * - ถ้าใต้แผนนั้นมี semi ย่อย → แสดงซ้อนลงไปเรื่อยๆ (recursive)
+     * - รวมถึงตาราง pigment ของแต่ละแผน
+     */
+    public function planTree(Request $request)
+    {
+        $sp = SemiPigment::with('result_planning.planning_header')->find($request->id);
+
+        if (!$sp) {
+            return response()->json(['status' => 404, 'message' => 'ไม่พบรายการ']);
+        }
+
+        $node = $this->buildSemiPlanNode($sp);
+
+        $html = view('production-planning.planning.partials.semi-plan-tree', [
+            'node'  => $node,
+            'level' => 0,
+        ])->render();
+
+        return response()->json(['status' => 200, 'data' => $html]);
+    }
+
+    /**
+     * สร้างโครงสร้างต้นไม้ของ semi 1 รายการ:
+     *  - ข้อมูล semi (semi_code, primary_color, ...)
+     *  - แผนการผลิตที่ได้ (result_planning) ถ้ามี
+     *  - semi ย่อย + pigment ที่สร้างใต้แผนนั้น (recursive)
+     * $depth ป้องกันการวนซ้ำลึกเกินไป (กันข้อมูลอ้างวนกันเป็น loop)
+     */
+    private function buildSemiPlanNode(SemiPigment $sp, int $depth = 0): array
+    {
+        $planning = $sp->result_planning;
+
+        $childSemis    = [];
+        $childPigments = [];
+
+        if ($planning && $depth < 20) {
+            $childSemis = SemiPigment::with('result_planning.planning_header')
+                ->where('planning_id', $planning->id)
+                ->where('type', 'semi')
+                ->orderBy('id')
+                ->get()
+                ->map(fn (SemiPigment $child) => $this->buildSemiPlanNode($child, $depth + 1))
+                ->toArray();
+
+            $childPigments = Pigment::with('result_planning.planning_header')
+                ->where('planning_id', $planning->id)
+                ->orderBy('id')
+                ->get()
+                ->map(fn (Pigment $pg) => [
+                    'id'             => $pg->id,
+                    'order_date'     => $pg->order_date,
+                    'want_date'      => $pg->want_date,
+                    'custno'         => $pg->custno,
+                    'itemno'         => $pg->itemno,
+                    'weight_request' => $pg->weight_request,
+                    'status'         => $pg->status,
+                    'status_label'   => $pg->statusLabel(),
+                    'plan_code'      => $pg->result_planning?->planning_header?->planning_code,
+                    'plan_status'    => $pg->result_planning?->planning_status,
+                ])
+                ->toArray();
+        }
+
+        return [
+            'semi' => [
+                'id'            => $sp->id,
+                'itemno'        => $sp->itemno,
+                'semi_code'     => $sp->semi_code,
+                'primary_color' => $sp->primary_color,
+                'company'       => $sp->company,
+                'status'        => $sp->status,
+                'status_label'  => $sp->statusLabel(),
+            ],
+            'planning' => $planning ? [
+                'id'              => $planning->id,
+                'planning_code'   => $planning->planning_header?->planning_code,
+                'orderno'         => $planning->planning_header?->orderno,
+                'planning_status' => $planning->planning_status,
+                'inplan'          => $planning->inplan,
+            ] : null,
+            'child_semis'    => $childSemis,
+            'child_pigments' => $childPigments,
+        ];
+    }
+
     /* ===================== เพิ่ม / แก้ไข / ลบ จาก modal หน้า Planning Item ===================== */
 
     /**
@@ -127,7 +217,6 @@ class SemiPigmentController extends Controller
      */
     public function entryStore(Request $request)
     {
-        dd($request->all());
         $validator = Validator::make($request->all(), [
             'planning_id' => 'required|exists:tb_planning,id',
             'type'        => 'required|in:semi,pigment',

@@ -291,7 +291,22 @@
                             <td>{{ $row['itemno']   ?? '-' }}</td>
                             <td>{{ $row['weight_request'] ?? '-' }}</td>
                             <td class="text-center"><span class="badge {{ $stCls }}">{{ $stLabel }}</span></td>
-                            <td class="text-center"><i class="ti ti-lock text-muted" title="ดำเนินการแล้ว แก้ไขไม่ได้"></i></td>
+                            {{-- จัดการ: อนุมัติแล้ว → ถ้าสร้างแผนแล้วแสดงสถานะการผลิต (คลิกดูต้นไม้แผน), ถ้ายังไม่สร้างแสดง "ยังไม่สร้างแผน" --}}
+                            <td class="text-center">
+                                @if($st === 'approved' && !empty($row['result_planning_id']))
+                                    <button type="button" class="btn btn-sm btn-label-primary btn_view_plan_tree"
+                                            data-sp-id="{{ $row['id'] }}"
+                                            title="ดูสถานะแผนการผลิตที่สร้างจาก Semi นี้">
+                                        <i class="ti ti-sitemap me-1"></i>{{ $row['plan_status'] ?: 'ดูแผนการผลิต' }}
+                                    </button>
+                                @elseif($st === 'approved')
+                                    <span class="badge bg-label-secondary" title="อนุมัติแล้ว แต่ยังไม่ได้สร้างแผนการผลิต">
+                                        <i class="ti ti-clock me-1"></i>ยังไม่สร้างแผน
+                                    </span>
+                                @else
+                                    <i class="ti ti-lock text-muted" title="ดำเนินการแล้ว แก้ไขไม่ได้"></i>
+                                @endif
+                            </td>
                         </tr>
                         @else
                         @include('production-planning.planning.partials.sp-row', ['row' => $row, 'i' => $i, 'default_custno' => $default_custno])
@@ -468,6 +483,25 @@
                 <button type="button" class="btn btn-success" id="btn_pigment_entry_save">
                     <i class="ti ti-device-floppy me-1"></i>บันทึก
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- ── Modal แสดงสถานะแผนการผลิตที่สร้างจาก Semi (recursive tree) ── --}}
+<div class="modal fade" id="plan_tree_modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#3A8EBA; padding:.75rem 1.25rem;">
+                <h6 class="modal-title text-white mb-0">
+                    <i class="ti ti-sitemap me-1"></i>สถานะแผนการผลิตจาก Semi
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="plan_tree_body">
+                <div class="text-center text-muted py-4">
+                    <div class="spinner-border spinner-border-sm me-2"></div>กำลังโหลด...
+                </div>
             </div>
         </div>
     </div>
@@ -1174,5 +1208,56 @@
             });
         });
     });
+})();
+
+// ══════════════════════════════════════════════════════════════════════
+//  Semi → ต้นไม้สถานะแผนการผลิต (recursive)
+//  คลิกปุ่มในคอลัมน์ "จัดการ" ของแถว semi ที่อนุมัติแล้ว → เปิด modal แสดงต้นไม้
+// ══════════════════════════════════════════════════════════════════════
+(function () {
+    var URL_PLAN_TREE = '{{ route('production.semipigment.plan-tree') }}';
+    var LOADING_HTML  = '<div class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm me-2"></div>กำลังโหลด...</div>';
+
+    // ย้าย modal ไปเป็น sibling ที่ body (กัน stacked modal ซ้อนใน .modal-content แล้วเพี้ยน)
+    $('body').children('#plan_tree_modal').remove();
+    var $treeModal = $('#plan_tree_modal').appendTo('body');
+
+    // ปุ่ม "จัดการ" ของแถว semi ที่อนุมัติแล้ว → โหลดต้นไม้แล้วเปิด modal
+    $('#tbody_semi').on('click', '.btn_view_plan_tree', function () {
+        var spId = $(this).data('sp-id');
+        $('#plan_tree_body').html(LOADING_HTML);
+        bootstrap.Modal.getOrCreateInstance($treeModal[0]).show();
+
+        $.ajax({
+            type: 'GET', url: URL_PLAN_TREE, dataType: 'json', cache: false,
+            data: { id: spId },
+            success: function (res) {
+                if (res.status === 200) {
+                    $('#plan_tree_body').html(res.data);
+                } else {
+                    $('#plan_tree_body').html('<div class="text-center text-danger py-4">' + (res.message || 'ไม่พบข้อมูล') + '</div>');
+                }
+            },
+            error: function (xhr) {
+                $('#plan_tree_body').html('<div class="text-center text-danger py-4">' +
+                    ((xhr.responseJSON && xhr.responseJSON.message) || 'เกิดข้อผิดพลาด กรุณาลองใหม่') + '</div>');
+            }
+        });
+    });
+
+    // คง scroll-lock ของ body ไว้เมื่อปิด modal ย่อยแต่ modal หลักยังเปิด
+    $treeModal.on('hidden.bs.modal', function () {
+        if ($('.modal.show').length) {
+            $('body').addClass('modal-open');
+        }
+    });
+
+    // เก็บกวาด modal ที่ย้ายไป body เมื่อปิดฟอร์มหลัก
+    $('#planning_item_form').closest('.modal')
+        .off('hidden.bs.modal.plantree')
+        .on('hidden.bs.modal.plantree', function () {
+            bootstrap.Modal.getInstance($treeModal[0])?.dispose();
+            $treeModal.remove();
+        });
 })();
 </script>

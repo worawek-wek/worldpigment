@@ -203,13 +203,18 @@ class ProductionPlanController extends Controller
                         'red_bill_code'       => $r->red_bill_code,
                         'status'              => $r->status,
                         'status_label'        => $r->statusLabel(),
+                        // แผนการผลิตที่สร้างจาก semi นี้ (ถ้าอนุมัติแล้ว) — ใช้แสดงสถานะในคอลัมน์ "จัดการ"
+                        'result_planning_id'  => $r->result_planning_id,
+                        'plan_status'         => $r->result_planning?->planning_status,
+                        'plan_code'           => $r->result_planning?->planning_header?->planning_code,
                     ];
                 };
 
                 // เรียงให้ "รออนุมัติ" อยู่บนสุด แล้วตามด้วยอนุมัติ/ปฏิเสธ
                 $orderByStatus = "FIELD(status, 'request', 'approved', 'reject')";
 
-                $semi_list = SemiPigment::where('planning_id', $planning_id)
+                $semi_list = SemiPigment::with('result_planning.planning_header')
+                    ->where('planning_id', $planning_id)
                     ->where('type', 'semi')
                     ->orderByRaw($orderByStatus)
                     ->orderBy('id')
