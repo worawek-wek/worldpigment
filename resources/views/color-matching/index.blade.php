@@ -887,11 +887,12 @@
                     return;
                 }
 
-                // flatpickr: ใช้ instance.setDate() ที่ parse Y-m-d ได้เลย แสดงผลเป็น d/m/Y
+                // flatpickr: setDate() ต้องระบุ format ของ string ที่ส่งไป ('Y-m-d') เป็น argument ที่ 3
+                // ไม่งั้น flatpickr จะ parse ด้วย dateFormat ของตัวเอง (d/m/Y) แล้วได้วันที่มั่ว
                 if ($input.hasClass('flatpickr-date')) {
                     const fp = $input[0]._flatpickr;
                     if (val) {
-                        if (fp) fp.setDate(String(val).substring(0, 10), false);
+                        if (fp) fp.setDate(String(val).substring(0, 10), false, 'Y-m-d');
                         else    $input.val(String(val).substring(0, 10));
                     } else {
                         if (fp) fp.clear();

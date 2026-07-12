@@ -42,7 +42,7 @@
                             <div class="row g-3 mb-4 pb-3 border-bottom">
                                 <div class="col-md-4">
                                     <label class="form-label small mb-1 fw-semibold" style="color:#4b3fb8;">
-                                        <i class="ti ti-link me-1"></i>เลขที่ใบนำส่งเทียบสี (อ้างอิง) <span class="text-muted fw-normal">(เช่น 26/0001)</span>
+                                        <i class="ti ti-link me-1"></i>เลขที่ใบนำส่งเทียบสี (อ้างอิง) <br> <span class="text-muted fw-normal">(เช่น 26/0001)</span>
                                     </label>
                                     <input type="text" name="SendNo" class="form-control">
                                 </div>

@@ -70,12 +70,12 @@
 /* สลับภาษา section หมายเหตุ — โชว์เฉพาะ span ของภาษาที่เลือก (ข้อมูลชุดเดียว) */
 #remarkSection.lang-th .i18n-en { display: none; }
 #remarkSection.lang-en .i18n-th { display: none; }
-/* สวิตช์ TH/EN — กล่องเดียวมี border รอบ (กัน border ขาดจาก btn-group) */
-.lang-switch { display: inline-flex; border: 1px solid #696cff; border-radius: .375rem; overflow: hidden; }
-.lang-switch .btn { border: 0; border-radius: 0; margin: 0; color: #696cff; background: #fff; font-weight: 600; min-width: 46px; }
-.lang-switch .btn + .btn { border-left: 1px solid #696cff; }
-.lang-switch .btn:hover:not(.active) { background: #eef0ff; color: #4b4dcc; }
-.lang-switch .btn.active { background: #696cff; color: #fff; }
+/* สวิตช์ TH/EN — segmented control (กล่องเดียวมี border รอบ กัน border ขาดจาก btn-group) */
+.lang-switch { display: inline-flex; border: 1px solid #CBD5E1; border-radius: .375rem; overflow: hidden; }
+.lang-switch .btn { border: 0; border-radius: 0; margin: 0; color: #0D6EFD; background: #fff; font-weight: 600; min-width: 46px; }
+.lang-switch .btn + .btn { border-left: 1px solid #CBD5E1; }
+.lang-switch .btn:hover:not(.active) { background: #e7f0ff; color: #0a58ca; }
+.lang-switch .btn.active { background: #0D6EFD; color: #fff; }
 /* เน้นพื้นหลังคอลัมน์ปรับราคา (ปัจจุบัน/ใหม่) — สีเข้ม */
 #quotationItemsTable th.qcol-rev { background: #3e8c8b !important; color: #fff; }
 #quotationItemsTable td.qcol-rev { background: #8fcfc8 !important; }
@@ -97,6 +97,16 @@
 #quotationItemsTable td.qcol-price-start { border-left: 3px solid #3f5f85 !important; }
 #quotationItemsTable th.qcol-price-end,
 #quotationItemsTable td.qcol-price-end { border-right: 3px solid #3f5f85 !important; }
+
+/* ─── ช่องวันที่ในฟอร์ม: ให้ label อยู่บนหัวช่องเสมอ (เรียงตรงแถวกับช่องอื่น) ───
+   flatpickr(static:true) ห่อ input ด้วย .flatpickr-wrapper ที่เป็น inline-block
+   ซึ่ง .form-label ของ Bootstrap ก็ inline-block → label สั้น ๆ อย่าง "Revise Date"
+   จึงไปอยู่บรรทัดเดียวกับช่องกรอก (label ยาวกว่าถึงจะดันตกบรรทัด)
+   scope เฉพาะในฟอร์ม — ช่องวันที่ในตัวกรองอยู่ใน d-flex ต้องคง inline-block ไว้ */
+#quotationForm .flatpickr-wrapper {
+    display: block;
+    width: 100%;
+}
 </style>
 
 <body>
@@ -316,7 +326,12 @@
                                 <label class="form-label">ชนิดสินค้า</label>
                                 <select name="PDtype" id="q_PDtype" class="form-select">
                                     @foreach ($pdtypes as $pt)
-                                        <option value="{{ $pt->PDType }}">{{ $pt->PDType }} — {{ $pt->PDHead1 }}</option>
+                                        @php
+                                            // CP: แสดงเป็น "Compound" ในฟอร์ม (เข้าใจง่ายกว่า)
+                                            // — ไม่แก้ pdtype.PDHead1 ใน DB เพราะค่านั้นถูกใช้เป็นหัวเรื่องบนใบเสนอราคาที่พิมพ์ออก
+                                            $ptLabel = $pt->PDType === 'CP' ? 'Compound' : $pt->PDHead1;
+                                        @endphp
+                                        <option value="{{ $pt->PDType }}">{{ $pt->PDType }} — {{ $ptLabel }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -361,9 +376,18 @@
                                 <i class="ti ti-info-circle me-1"></i>กรอกเฉพาะคอลัมน์ที่ต้องการ — คอลัมน์ที่ปล่อยว่างทั้งหมดจะไม่แสดงในใบเสนอราคา
                                 (หัวจดหมาย เสนอราคา/ปรับราคา ระบบตั้งให้อัตโนมัติ)
                             </div>
-                            <button type="button" class="btn btn-label-warning" onclick="addQuotationItem()">
-                                <i class="ti ti-plus me-1"></i>เพิ่มรายการ
-                            </button>
+                            <div class="d-flex align-items-center gap-3">
+                                {{-- รหัสสินค้าใน PDF: กรอกรหัสไว้เพื่อค้นหาชื่อ/ราคาเสมอ แต่เลือกได้ว่าจะโชว์ให้ลูกค้าเห็นไหม --}}
+                                <div class="form-check mb-0 mt-2">
+                                    <input type="hidden" name="show_code" value="0">
+                                    <input class="form-check-input" id="q_show_code" name="show_code" type="checkbox" value="1" checked>
+                                    <label class="form-check-label" for="q_show_code">
+                                        แสดงรหัสสินค้าใน PDF
+                                        <i class="ti ti-info-circle text-muted"
+                                            title="ไม่ติ๊ก = ยังกรอกรหัสเพื่อค้นหาสินค้าได้ แต่คอลัมน์รหัสจะไม่ขึ้นบนใบเสนอราคาที่พิมพ์"></i>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="table-responsive mt-3">
@@ -372,13 +396,20 @@
                                 <tbody id="quotationItems"></tbody>
                             </table>
                         </div>
+
+                        {{-- ปุ่มเพิ่มรายการ — อยู่ใต้ตาราง (แถวใหม่จะไปต่อท้ายตรงนี้พอดี) --}}
+                        <div class="mt-3">
+                            <button type="button" class="btn btn-label-warning" onclick="addQuotationItem()">
+                                <i class="ti ti-plus me-1"></i>เพิ่มรายการ
+                            </button>
+                        </div>
                     </div>
 
                     {{-- ── Section 4: หมายเหตุ (2 ภาษา — สลับแค่ label ด้วยสวิตช์ TH/EN) ── --}}
                     <input type="hidden" name="remark_lang" id="q_remark_lang" value="th">
                     <div class="qf-sec lang-th" id="remarkSection">
-                        <div class="qf-sec-title d-flex justify-content-between align-items-center">
-                            <span><i class="ti ti-note"></i><span class="i18n-th">หมายเหตุ</span><span class="i18n-en">Remarks</span></span>
+                        <div class="qf-sec-title d-flex align-items-center">
+                            <span><i class="ti ti-note me-2"></i><span class="i18n-th">หมายเหตุ</span><span class="i18n-en">Remarks</span></span>
                             {{-- สวิตช์ภาษา: สลับเฉพาะคำ (label) ข้อมูลชุดเดียว --}}
                             <div class="lang-switch" role="group">
                                 <button type="button" class="btn btn-sm active" id="btnLangTh" onclick="setRemarkLang('th')">TH</button>
@@ -596,11 +627,13 @@
         });
 
         // ตั้งค่าวันที่ให้ flatpickr (รับ Y-m-d / datetime → แสดง d/m/Y); ว่าง = เคลียร์
+        // ⚠ ต้องส่ง 'Y-m-d' เป็น argument ที่ 3 เสมอ — ไม่งั้น flatpickr จะ parse string ที่เราส่งไป
+        // ด้วย dateFormat ของตัวเอง (d/m/Y) แล้วได้วันที่มั่ว (ทุกวันกลายเป็น 20/06/<ปีปัจจุบัน>)
         function setFp(id, val) {
             var el = document.getElementById(id);
             if (!el) return;
             if (el._flatpickr) {
-                if (val) el._flatpickr.setDate(String(val).substring(0, 10), false);
+                if (val) el._flatpickr.setDate(String(val).substring(0, 10), false, 'Y-m-d');
                 else     el._flatpickr.clear();
             } else {
                 $(el).val(val ? String(val).substring(0, 10) : '');
@@ -845,6 +878,9 @@
                 $('#q_PDtype').val(h.PDtype);
                 $('#q_letterhead').val(h.letterhead || 'WH');
                 $('#q_exam').prop('checked', h.exam == 1);
+                // แสดงรหัสสินค้าใน PDF: ติ๊กไว้ถ้า col_config ที่บันทึกไว้ของใบนี้มีคอลัมน์ "code"
+                var savedCols = res.col_config || [];
+                $('#q_show_code').prop('checked', savedCols.some(function (c) { return c.key === 'code'; }));
                 $('#q_EmpID').val(h.EmpID);
                 $('#q_Custid').val(h.Custid);
                 // ชื่อไทยใช้จาก customer (join) ถ้ามี ไม่งั้น fallback CustName เดิม

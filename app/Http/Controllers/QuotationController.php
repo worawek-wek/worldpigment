@@ -293,7 +293,7 @@ class QuotationController extends Controller
         $headerArr = $this->extractHeader($request);
         $header = (object) array_merge(array_fill_keys(self::QMAST_COLUMNS, null), $headerArr);
         // คอลัมน์ที่แสดง derive จากรายการที่กรอก (เหมือนตอนบันทึก)
-        $header->col_config = json_encode($this->deriveColConfig($items), JSON_UNESCAPED_UNICODE);
+        $header->col_config = json_encode($this->deriveColConfig($items, $request->boolean('show_code')), JSON_UNESCAPED_UNICODE);
 
         // สร้างรายการสำหรับ view: cells (map แบน key => value) จากค่าที่ฟอร์มส่งมา
         // ข้ามแถวว่างทั้งบรรทัด (ไม่มีทั้งรหัสและชื่อ) เหมือน saveItems
@@ -369,7 +369,7 @@ class QuotationController extends Controller
             $header = $this->extractHeader($request);
             $header['Qno'] = $qno;
             // คอลัมน์ที่แสดง = เฉพาะคอลัมน์ที่มีการกรอกจริง (ช่องว่างทั้งคอลัมน์ = ตัดออก)
-            $header['col_config'] = json_encode($this->deriveColConfig($items), JSON_UNESCAPED_UNICODE);
+            $header['col_config'] = json_encode($this->deriveColConfig($items, $request->boolean('show_code')), JSON_UNESCAPED_UNICODE);
             // timestamps (ใช้ Query Builder → ตั้งเอง; Eloquent ไม่ได้จัดการให้)
             $header['created_at'] = $header['updated_at'] = now();
             DB::table('qmast')->insert($header);
@@ -402,7 +402,7 @@ class QuotationController extends Controller
 
             $header = $this->extractHeader($request);
             unset($header['Qno']);   // ไม่ให้เปลี่ยนเลขที่ (เป็น key ทางธุรกิจ)
-            $header['col_config'] = json_encode($this->deriveColConfig($items), JSON_UNESCAPED_UNICODE);
+            $header['col_config'] = json_encode($this->deriveColConfig($items, $request->boolean('show_code')), JSON_UNESCAPED_UNICODE);
             $header['updated_at'] = now();   // timestamps (Query Builder → ตั้งเอง)
             DB::table('qmast')->whereRaw('TRIM(Qno) = ?', [$qno])->update($header);
 
@@ -669,8 +669,11 @@ class QuotationController extends Controller
     /**
      * คอลัมน์ที่จะแสดง = เฉพาะคอลัมน์ที่มีการกรอกอย่างน้อย 1 แถว (ตามลำดับใน registry)
      * → ช่องไหนไม่มีใครกรอกเลย ถูกตัดออกอัตโนมัติ
+     *
+     * $showCode = ผู้ใช้เลือกจากฟอร์มว่าจะให้ "รหัสสินค้า" ขึ้นใน PDF ไหม
+     * (รหัสต้องกรอกไว้เพื่อใช้ค้นหาชื่อ/ราคา แต่บางใบไม่อยากโชว์รหัสให้ลูกค้าเห็น)
      */
-    private function deriveColConfig(array $items): array
+    private function deriveColConfig(array $items, bool $showCode = true): array
     {
         $reg = $this->colRegistry();
         $used = [];
@@ -682,6 +685,10 @@ class QuotationController extends Controller
                     $used[$k] = true;
                 }
             }
+        }
+        // ไม่ติ๊ก "แสดงรหัสสินค้าใน PDF" → ตัดคอลัมน์รหัสออก แม้จะกรอกไว้ก็ตาม
+        if (!$showCode) {
+            unset($used['code']);
         }
         $out = [];
         foreach ($reg as $k => $meta) {
