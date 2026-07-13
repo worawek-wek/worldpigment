@@ -656,6 +656,8 @@
             $('#form_color_matching [name="custname"], #form_color_matching [name="custnameEN"]').prop('readonly', false);
             $('#form_color_matching [name="_mode"]').val('create');
             $('#form_color_matching [name="_pk"]').val('');
+            // โหมดสร้างใหม่ → ยังไม่มี record ให้ลบ
+            $('#btn_delete_cm').addClass('d-none').removeData('id').removeData('label');
         }
 
         // ── Auto-fill ชื่อลูกค้าจากรหัส (custno) ในฟอร์มเทียบสี ──
@@ -708,6 +710,8 @@
             $('#form_sample_delivery [name="_mode"]').val('create');
             $('#form_sample_delivery [name="_pk"]').val('');
             $('#form_sample_delivery [name="SendNo"]').val('');
+            // โหมดสร้างใหม่ → ยังไม่มี record ให้ลบ
+            $('#btn_delete_sd').addClass('d-none').removeData('id').removeData('label');
         }
 
         // ── พิมพ์ "เลขที่ใบนำส่งเทียบสี (อ้างอิง)" ในฟอร์ม SD ──
@@ -770,6 +774,11 @@
                     fillForm('#form_color_matching', row);
                     $('#form_color_matching [name="_mode"]').val('edit');
                     $('#form_color_matching [name="_pk"]').val(row.id);
+                    // โหมดแก้ไข → เปิดปุ่มลบใน footer ของ form (ป้ายกำกับ = เลขที่ใบนำส่งเทียบสี)
+                    $('#btn_delete_cm')
+                        .removeClass('d-none')
+                        .data('id', row.id)
+                        .data('label', row.SendNo ?? '');
                     $('#colorMatchingModal').modal('show');
                 },
                 error: function() {
@@ -790,6 +799,11 @@
                     $('#form_sample_delivery [name="_mode"]').val('edit');
                     $('#form_sample_delivery [name="_pk"]').val(row.id);
                     $('#form_sample_delivery [name="SendNo"]').val(row.SendNo ?? '');
+                    // โหมดแก้ไข → เปิดปุ่มลบใน footer ของ form (ป้ายกำกับ = เลขที่ใบส่ง ต.ย.)
+                    $('#btn_delete_sd')
+                        .removeClass('d-none')
+                        .data('id', row.id)
+                        .data('label', row.Testno ?? '');
                     // ข้อมูลสี (color/ColorChar/TestType/pop/Model) ถูก fillForm เติมจากแถว SD แล้ว
                     // — ไม่ trigger ดึงจาก CM ซ้ำ เพื่อไม่ให้ทับค่าที่บันทึกไว้ของใบส่ง ต.ย.
                     $('#sampleDeliveryModal').modal('show');
@@ -802,7 +816,8 @@
         }
 
         // ── ลบ record testmain (CM/SD) — ยืนยันก่อน แล้ว POST ไป /delete/{id} ──
-        function deleteRow(id, label) {
+        // เรียกจากปุ่มลบใน footer ของ form (โหมดแก้ไข) — modalSel = modal ที่ต้องปิดเมื่อลบสำเร็จ
+        function deleteRow(id, label, modalSel) {
             const name = label ? String(label) : '#' + id;
             Swal.fire({
                 title: 'ยืนยันการลบ?',
@@ -812,7 +827,9 @@
                 showCancelButton: true,
                 confirmButtonText: 'ลบ',
                 confirmButtonColor: '#d33',
-                cancelButtonText: 'ยกเลิก'
+                cancelButtonText: 'ยกเลิก',
+                // Swal เปิดซ้อนบน modal → กัน bootstrap ปรับความสูง body จนหน้ากระตุก
+                heightAuto: false
             }).then((result) => {
                 if (!result.isConfirmed) return;
                 $.ajax({
@@ -821,18 +838,33 @@
                     data: { _token: CSRF },
                     success: function(resp) {
                         if (resp && resp.ok) {
-                            Swal.fire('ลบเรียบร้อย', '', 'success');
+                            if (modalSel) $(modalSel).modal('hide');
+                            Swal.fire({ title: 'ลบเรียบร้อย', icon: 'success', heightAuto: false });
                             loadData(page);
                         } else {
-                            Swal.fire('เกิดข้อผิดพลาด', resp.error ?? '', 'error');
+                            Swal.fire({ title: 'เกิดข้อผิดพลาด', text: resp.error ?? '', icon: 'error', heightAuto: false });
                         }
                     },
                     error: function(xhr) {
-                        Swal.fire('เกิดข้อผิดพลาด', xhr.responseJSON?.error ?? '', 'error');
+                        Swal.fire({ title: 'เกิดข้อผิดพลาด', text: xhr.responseJSON?.error ?? '', icon: 'error', heightAuto: false });
                     }
                 });
             });
         }
+
+        // ปุ่มลบใน footer ของหน้ารายละเอียด (detail.blade.php) — เนื้อหาอาจอยู่ใน modal ชั้น 1 หรือ ชั้น 2
+        // ลบสำเร็จ → ปิดทั้งสองชั้น (ชั้น 1 อาจเป็นใบ CM ที่ลิสต์ใบ ต.ย. ซึ่งเพิ่งถูกลบไป — ข้อมูลจะค้าง)
+        function deleteFromDetail(id, label) {
+            deleteRow(id, label, '#detailModal2, #detailModal');
+        }
+
+        // ปุ่มลบใน footer ของ form (id/label ถูกผูกไว้ตอนเปิด modal โหมดแก้ไข)
+        $('#btn_delete_cm').on('click', function () {
+            deleteRow($(this).data('id'), $(this).data('label'), '#colorMatchingModal');
+        });
+        $('#btn_delete_sd').on('click', function () {
+            deleteRow($(this).data('id'), $(this).data('label'), '#sampleDeliveryModal');
+        });
 
         // ────────────────────────────────────────────────────────
         //  ดูรายละเอียด (อ่านอย่างเดียว) — โหลด HTML จาก server (CM/SD ต่างกัน)

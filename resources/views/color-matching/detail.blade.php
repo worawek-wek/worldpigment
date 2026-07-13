@@ -212,7 +212,13 @@
     </div>
 
     <!-- Footer -->
-    <div class="modal-footer justify-content-end">
+    <div class="modal-footer justify-content-between flex-wrap gap-2">
+        {{-- ลบเอกสารนี้ — ป้ายกำกับยืนยัน = เลขที่ SD (Testno) หรือ CM (SendNo) --}}
+        <button type="button" class="btn btn-label-danger"
+            onclick='deleteFromDetail({{ $row->id }}, @json($isSD ? ($row->Testno ?: "") : ($row->SendNo ?: "")))'>
+            <i class="ti ti-trash me-1"></i>
+            {{ $isSD ? 'ลบใบส่ง ต.ย.' : 'ลบใบนำส่งเทียบสี' }}
+        </button>
         <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ปิด</button>
     </div>
 
