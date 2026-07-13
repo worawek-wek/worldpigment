@@ -199,6 +199,26 @@
     border-color: #7367f0;
   }
 
+  /* bootstrap-select (.selectpicker) — render เป็น <button> ไม่ใช่ <select>
+     กฎด้านบนจึงไม่โดน ต้องจัดให้หน้าตาเท่า form-select: ขอบเข้ม + ตัวหนังสือดำ
+     (ธีมตั้งขอบจาง #dbdade + ตัวหนังสือสีจาง ทำให้ดูซีดกว่าช่องกรอกอื่นในฟอร์มเดียวกัน) */
+  html[data-bs-theme="light"] .bootstrap-select > .btn.dropdown-toggle,
+  html.light-style .bootstrap-select > .btn.dropdown-toggle {
+    border-color: #a8a5b3;
+    background-color: #fff;
+    color: #000;
+  }
+  .bootstrap-select > .btn.dropdown-toggle .filter-option-inner-inner {
+    color: #000;
+  }
+  /* เปิด dropdown อยู่ = สถานะ focus → ขอบม่วง primary เหมือน input อื่น */
+  html[data-bs-theme="light"] .bootstrap-select.show > .btn.dropdown-toggle,
+  html[data-bs-theme="light"] .bootstrap-select > .btn.dropdown-toggle:focus,
+  html.light-style .bootstrap-select.show > .btn.dropdown-toggle,
+  html.light-style .bootstrap-select > .btn.dropdown-toggle:focus {
+    border-color: #7367f0;
+  }
+
   /* เมนูซ้าย (sidebar) — ธีมตั้ง link สถานะปกติเป็น rgba(75,70,92,.5) จางมาก
      พึ่ง id #layout-menu + !important → ชนะทุก theme class แน่นอน
      scope เฉพาะ menu-item ที่ "ไม่ใช่ active" (active มีพื้นเข้ม+ไอคอนขาว ห้ามแตะ) */

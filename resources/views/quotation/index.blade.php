@@ -193,7 +193,7 @@
             <div class="row g-3 align-items-end mt-1">
                 <div class="col-md-4">
                     <label class="form-label small fw-medium mb-1">ชนิดสินค้า</label>
-                    <select name="product_type" class="form-select p_search" onchange="loadData(page)">
+                    <select name="product_type" class="selectpicker w-100 p_search" data-style="btn-default" onchange="loadData(page)">
                         <option value="">ทั้งหมด</option>
                         @foreach ($pdtypes as $pt)
                             <option value="{{ $pt->PDType }}">{{ $pt->PDType }} — {{ $pt->PDHead1 }}</option>
@@ -298,7 +298,7 @@
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <label class="form-label">หัวกระดาษ <span class="text-muted fw-normal">(หัวเอกสารที่พิมพ์)</span></label>
-                                <select name="letterhead" id="q_letterhead" class="form-select" onchange="onLetterheadChange()">
+                                <select name="letterhead" id="q_letterhead" class="selectpicker w-100" data-style="btn-default" onchange="onLetterheadChange()">
                                     <option value="WPI">WPI</option>
                                     <option value="WPC">WPC</option>
                                     <option value="WH">WH</option>
@@ -324,7 +324,7 @@
                         <div class="row g-3 mt-1">
                             <div class="col-md-4">
                                 <label class="form-label">ชนิดสินค้า</label>
-                                <select name="PDtype" id="q_PDtype" class="form-select">
+                                <select name="PDtype" id="q_PDtype" class="selectpicker w-100" data-style="btn-default">
                                     @foreach ($pdtypes as $pt)
                                         @php
                                             // CP: แสดงเป็น "Compound" ในฟอร์ม (เข้าใจง่ายกว่า)
@@ -371,6 +371,32 @@
                     {{-- ── Section 3: รายการสินค้า ── --}}
                     <div class="qf-sec">
                         <div class="qf-sec-title"><i class="ti ti-list-details"></i>รายการสินค้า</div>
+
+                        {{-- รูปแบบตาราง: เลือก preset (1.1–2.3) → ตารางกรอก + PDF ใช้คอลัมน์ชุดนั้น
+                             ไม่เลือก = อัตโนมัติ (โชว์ทุกคอลัมน์ในฟอร์ม, PDF ตัดคอลัมน์ที่ไม่มีใครกรอกออกเอง) --}}
+                        <div class="row g-3 align-items-end mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-medium mb-1" for="q_col_format">รูปแบบตารางรายการ</label>
+                                <select name="col_format" id="q_col_format" class="selectpicker w-100" data-style="btn-default" onchange="onColFormatChange()">
+                                    <option value="">อัตโนมัติ — โชว์ทุกคอลัมน์</option>
+                                    <optgroup label="1. ใบเสนอราคา">
+                                        @foreach ($formatLabels as $code => $label)
+                                            @if (str_starts_with($code, '1.'))
+                                                <option value="{{ $code }}">{{ $code }} — {{ $label }}</option>
+                                            @endif
+                                        @endforeach
+                                    </optgroup>
+                                    <optgroup label="2. ใบขอปรับราคา (ปัจจุบัน / ใหม่)">
+                                        @foreach ($formatLabels as $code => $label)
+                                            @if (str_starts_with($code, '2.'))
+                                                <option value="{{ $code }}">{{ $code }} — {{ $label }}</option>
+                                            @endif
+                                        @endforeach
+                                    </optgroup>
+                                </select>
+                            </div>
+                        </div>
+
                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <div class="alert alert-info py-2 px-3 mb-0 small">
                                 <i class="ti ti-info-circle me-1"></i>กรอกเฉพาะคอลัมน์ที่ต้องการ — คอลัมน์ที่ปล่อยว่างทั้งหมดจะไม่แสดงในใบเสนอราคา
@@ -483,7 +509,7 @@
                                     <span class="i18n-th">เทอมการชำระเงิน</span><span class="i18n-en">Term of Payment</span>
                                     <span class="text-muted fw-normal i18n-th">(เช่น 30วัน นับจากส่งสินค้า)</span>
                                 </label>
-                                <input type="text" name="Term" id="q_Term" class="form-control" maxlength="20">
+                                <input type="text" name="Term" id="q_Term" class="form-control">
                             </div>
                         </div>
 
@@ -626,6 +652,15 @@
             setSort(col, dir);
         });
 
+        // bootstrap-select (.selectpicker) ไม่รู้ตัวเมื่อ JS เปลี่ยนค่าด้วย .val() หรือ form.reset()
+        // → ต้องสั่งให้วาดหน้าปุ่มใหม่ ไม่งั้นโชว์ค่าเดิมค้าง
+        // ⚠ ใช้ 'render' ไม่ใช่ 'refresh': refresh = สร้าง option list ใหม่ทั้งชุด ซึ่ง bootstrap-select
+        // เวอร์ชันนี้ (เขียนมาสำหรับ Bootstrap 4 แต่เรารันบน 5.3) วาดซ้อนกัน ทำให้ข้อความ option ต่อกันมั่ว
+        // render = อัปเดตแค่หน้าปุ่มให้ตรงกับค่าที่เลือกอยู่ ซึ่งเป็นสิ่งที่เราต้องการจริง ๆ
+        function refreshPickers(scope){
+            $(scope || document).find('.selectpicker').selectpicker('render');
+        }
+
         // ตั้งค่าวันที่ให้ flatpickr (รับ Y-m-d / datetime → แสดง d/m/Y); ว่าง = เคลียร์
         // ⚠ ต้องส่ง 'Y-m-d' เป็น argument ที่ 3 เสมอ — ไม่งั้น flatpickr จะ parse string ที่เราส่งไป
         // ด้วย dateFormat ของตัวเอง (d/m/Y) แล้วได้วันที่มั่ว (ทุกวันกลายเป็น 20/06/<ปีปัจจุบัน>)
@@ -644,10 +679,46 @@
         //  รายการสินค้า — คอลัมน์กำหนดเองได้ (config-driven)
         // ────────────────────────────────────────────────────────
         var COL_REG = @json($colRegistry);   // คลังคอลัมน์ทั้งหมด {key:{label,num,suffix}}
-        // แสดงทุกคอลัมน์เสมอ — คอลัมน์ที่ไม่มีใครกรอกจะถูกตัดออกตอนบันทึก (ฝั่ง server)
+        // โหมดอัตโนมัติ: แสดงทุกคอลัมน์ — คอลัมน์ที่ไม่มีใครกรอกจะถูกตัดออกตอนบันทึก (ฝั่ง server)
         var ALL_COLS = Object.keys(COL_REG).map(function(k){
             return {key: k, label: COL_REG[k].label, num: !!COL_REG[k].num};
         });
+        // preset คอลัมน์ของแต่ละรูปแบบ {'1.1': [{key,label}, ...], ...} — ต้องตรงกับ presets() ฝั่ง server
+        var PRESETS = @json($presets);
+
+        // คอลัมน์ที่ตารางกรอกใช้อยู่ตอนนี้ — ตามรูปแบบที่เลือก, ไม่เลือก = ทุกคอลัมน์ (พฤติกรรมเดิม)
+        // label เอาจาก preset (ชื่อหัวคอลัมน์ของรูปแบบนั้น) แต่ num/ชนิดช่องกรอกยังอิง registry
+        function activeCols(){
+            var fmt = $('#q_col_format').val() || '';
+            var preset = PRESETS[fmt];
+            if (!fmt || !preset) return ALL_COLS;
+            return preset.map(function(c){
+                return {key: c.key, label: c.label, num: !!(COL_REG[c.key] && COL_REG[c.key].num)};
+            });
+        }
+
+        // เดารูปแบบของใบที่บันทึกไว้ — เทียบลำดับ key ของ col_config กับแต่ละ preset
+        // ไม่เก็บรหัสรูปแบบลง DB (ไม่ต้องเพิ่มคอลัมน์) เพราะ col_config บอกได้อยู่แล้วว่าใช้คอลัมน์ชุดไหน
+        // ตัด 'code' ออกจากทั้งสองฝั่งก่อนเทียบ — ใบที่ไม่ติ๊ก "แสดงรหัสสินค้าใน PDF" จะไม่มี code ใน col_config
+        // ไม่ตรงกับ preset ไหนเลย → '' = อัตโนมัติ
+        function detectColFormat(savedCols){
+            var strip = function(list){
+                return (list || []).map(function(c){ return c.key; })
+                                   .filter(function(k){ return k !== 'code'; }).join(',');
+            };
+            var saved = strip(savedCols);
+            if (!saved) return '';
+            var found = '';
+            Object.keys(PRESETS).forEach(function(fmt){
+                if (fmt && !found && strip(PRESETS[fmt]) === saved) found = fmt;
+            });
+            return found;
+        }
+
+        // เปลี่ยนรูปแบบ → วาดตารางใหม่ (ข้อมูลที่กรอกไว้ยังอยู่ครบใน currentItems ไม่หาย)
+        function onColFormatChange(){
+            renderItems();
+        }
         // กล่อง "ค่าผลิต/ค่าแม่สี ปรับราคา" (ปัจจุบัน|ใหม่) — เน้นพื้นหลัง (ราคาไม่รวมในกล่องนี้)
         var REVISION_COLS = {cur_process_fee:1, cur_pigment_price:1, new_process_fee:1, new_pigment_price:1};
         // คอลัมน์แรกของกลุ่ม "ใหม่" — ใส่เส้นคั่นซ้าย แยกจากกลุ่ม "ปัจจุบัน"
@@ -674,10 +745,11 @@
 
         function esc(v){ return String(v == null ? '' : v).replace(/"/g,'&quot;'); }
 
-        // ── ตารางกรอกรายการ — โชว์ทุกคอลัมน์ ──
+        // ── ตารางกรอกรายการ — คอลัมน์ตามรูปแบบที่เลือก (ไม่เลือก = ทุกคอลัมน์) ──
         function renderItems(){
+            var cols = activeCols();
             var head = '';
-            ALL_COLS.forEach(function(c){
+            cols.forEach(function(c){
                 var rc = revClasses(c.key);
                 head += '<th class="text-center'+(rc?' '+rc:'')+'">'+esc(c.label)+'</th>';
             });
@@ -686,11 +758,11 @@
 
             var body = '';
             if (!currentItems.length){
-                body = '<tr><td colspan="'+(ALL_COLS.length+1)+'" class="text-center py-3">ยังไม่มีรายการ — กด “เพิ่มรายการ”</td></tr>';
+                body = '<tr><td colspan="'+(cols.length+1)+'" class="text-center py-3">ยังไม่มีรายการ — กด “เพิ่มรายการ”</td></tr>';
             } else {
                 currentItems.forEach(function(row, idx){
                     body += '<tr>';
-                    ALL_COLS.forEach(function(c){
+                    cols.forEach(function(c){
                         var typ = c.num ? 'number' : 'text';
                         var cls = 'form-control form-control-sm qitem-input qitem-' + c.key + (c.num ? ' text-end' : '');
                         var step = c.num ? ' step="0.01"' : '';
@@ -787,7 +859,11 @@
                     if (res.found){
                         $('#q_CustName').val(res.name || '');
                         if (res.nameEN) $('#q_Engname').val(res.nameEN);
-                        if (res.term && !$('#q_Term').val()) $('#q_Term').val(res.term);
+                        // เทอมการชำระเงิน — ดึงจาก customer.term มาเติมให้ (ถ้าช่องยังว่าง)
+                        // ยกเว้นค่า "CASH" (เงินสด) ที่ไม่ต้องการให้ขึ้นบนใบเสนอราคา → ปล่อยช่องว่างไว้
+                        if (res.term && !$('#q_Term').val() && String(res.term).trim().toUpperCase() !== 'CASH') {
+                            $('#q_Term').val(res.term);
+                        }
                     } else {
                         // ไม่เจอ → เคลียร์ชื่อไทย + อังกฤษ เงียบๆ (ไม่เด้ง popup)
                         $('#q_CustName').val('');
@@ -840,10 +916,13 @@
             setFp('q_Revisedate', '');
             setFp('q_ValidFrom', '');
             setFp('q_Validto', '');
+            $('#q_col_format').val('');   // เริ่มที่โหมดอัตโนมัติ (พฤติกรรมเดิม)
+            onColFormatChange();
             setItems();
             renderNotes([]);   // เคลียร์หมายเหตุอื่น (reset() ไม่ล้าง input ที่ append เข้ามา)
             setRemarkLang('th');   // เริ่มที่ภาษาไทย
             $('#q_letterhead').val('WH');   // หัวกระดาษเริ่มต้น = WH (ตรงกับ prefix เลขที่ default)
+            refreshPickers('#quotationForm');   // ให้ selectpicker วาดปุ่มตามค่าที่เพิ่ง set
             // ขอเลขที่ถัดไปตาม prefix ของหัวกระดาษ (แก้ไขได้)
             $.getJSON("{{ $page_url }}/next-qno", {prefix: $('#q_letterhead').val()}, function(res){
                 if (res.qno) $('#q_Qno').val(res.qno);
@@ -881,6 +960,10 @@
                 // แสดงรหัสสินค้าใน PDF: ติ๊กไว้ถ้า col_config ที่บันทึกไว้ของใบนี้มีคอลัมน์ "code"
                 var savedCols = res.col_config || [];
                 $('#q_show_code').prop('checked', savedCols.some(function (c) { return c.key === 'code'; }));
+                // รูปแบบตาราง: เทียบ col_config ที่บันทึกไว้กับ preset — ตรงกับอันไหน = ใบนี้ใช้รูปแบบนั้น
+                $('#q_col_format').val(detectColFormat(savedCols));
+                refreshPickers('#quotationForm');   // ให้ selectpicker วาดปุ่มตามค่าที่โหลดมา
+                onColFormatChange();
                 $('#q_EmpID').val(h.EmpID);
                 $('#q_Custid').val(h.Custid);
                 // ชื่อไทยใช้จาก customer (join) ถ้ามี ไม่งั้น fallback CustName เดิม
@@ -1115,6 +1198,7 @@
                 if (this._flatpickr) this._flatpickr.clear();
                 else $(this).val('');
             });
+            refreshPickers('.card-header');   // selectpicker ของตัวกรอง — วาดปุ่มใหม่หลังล้างค่า
             loadData("{{$page_url}}/datatable");
         }
 </script>
