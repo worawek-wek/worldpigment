@@ -13,6 +13,12 @@ return [
         'route_name' => 'quotation.index',
         'permission' => 'quotation read',
     ],
+    'Saleinfo' => [
+        'title' => 'กำหนดราคา',
+        'icon' => 'ti-tag',
+        'route_name' => 'saleinfo.index',
+        'permission' => 'saleinfo read',
+    ],
     'Order' => [
         'title' => 'Order',
         'icon' => 'ti-shopping-cart',

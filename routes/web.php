@@ -100,6 +100,7 @@ Route::middleware(['auth', 'access'])->group(function() {
     // ─── Page routes (แยกแต่ละเมนูเป็นไฟล์ + controller ของตัวเอง) ─────
     @include_once('color-matching.php');
     @include_once('quotation.php');
+    @include_once('saleinfo.php');
     @include_once('order.php');
     @include_once('customer.php');
     @include_once('report.php');
