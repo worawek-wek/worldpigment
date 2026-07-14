@@ -744,24 +744,13 @@
     $entryModal.find('#btn_sp_entry_save').on('click', function () {
         var $btn = $(this);
         var itemno = ($('#sp_itemno').val() || '').trim();
-        var semi_code = ($('#sp_semi_code').val() || '').trim();
-        var primary_color = ($('#sp_primary_color').val() || '').trim();
 
         if (!itemno) {
             $('#sp_itemno').addClass('is-invalid').trigger('focus');
             return;
         }
-        if (!semi_code) {
-            $('#sp_semi_code').addClass('is-invalid').trigger('focus');
-            return;
-        }
-        if (!primary_color) {
-            $('#sp_primary_color').addClass('is-invalid').trigger('focus');
-            return;
-        }
+        // ไม่ตรวจสอบค่าว่างของ ขาด Semi Code / ขาดแม่สี (Primary Color) แล้ว ปล่อยว่างได้
         $('#sp_itemno').removeClass('is-invalid');
-        $('#sp_semi_code').removeClass('is-invalid');
-        $('#sp_primary_color').removeClass('is-invalid');
 
         var isEdit  = !!($editingRow && $editingRow.length);
         var tbodyId = isEdit ? $editingRow.closest('tbody').attr('id') : $('#sp_entry_target').val();

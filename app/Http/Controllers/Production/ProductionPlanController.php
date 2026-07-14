@@ -48,6 +48,8 @@ class ProductionPlanController extends Controller
                 return $date;
             })
             ->editColumn('custwant', fn ($row) => $row->custwant ? \Carbon\Carbon::parse($row->custwant)->format('d/m/Y') : '-')
+            // เลขที่ใบเบิก: ดึงจาก red_bill_code (ว่าง = แสดง -)
+            ->addColumn('red_bill_code', fn ($row) => $row->red_bill_code ?: '-')
             // สถานะภายใน: รวม planning_status ของ planning item ที่อยู่ใน header (planning_code) เดียวกัน
             // เฉพาะรายการ planning เท่านั้น — ไม่ดึงสถานะของ semi/pigment มา — ตัดค่าซ้ำ คั่นด้วย ,
             ->addColumn('inner_status', function ($row) {

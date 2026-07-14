@@ -86,12 +86,13 @@
 
                     <div class="card-header">
                         <div class="table-responsive">
-                            <table id="dataTable" class="table table-striped table-hover">
+                            <table id="dataTable" class="table table-striped table-hover nowrap" style="width:100%">
                                 <thead class="table-light">
                                     <tr>
                                         <th class="col-1">#</th>
                                         <th class="col-2">Planning Code</th>
                                         <th class="col-1">Orderno</th>
+                                        <th class="col-1">เลขที่ใบเบิก</th>
                                         <th class="col-1">Company</th>
                                         <th class="col-1">Inplan</th>
                                         <th class="col-1">Custwant</th>
@@ -172,7 +173,8 @@
             serverSide: true,
             searching: false,
             lengthChange: false,
-            responsive: true,
+            // ปิด responsive (ไม่ยุบคอลัมน์) — ให้ตารางเลื่อนซ้าย-ขวาผ่าน wrapper .table-responsive แทน
+            responsive: false,
             ajax: {
                 url: "{{ route('production.planning.datatable') }}",
                 data: function(d) {
@@ -191,6 +193,7 @@
                 { 'className': "text-center", data: 'rownum', name: 'rownum', orderable: false },
                 { 'className': "text-left", data: 'planning_code', name: 'planning_code', orderable: false },
                 { 'className': "text-center", data: 'orderno', name: 'orderno', orderable: false },
+                { 'className': "text-center", data: 'red_bill_code', name: 'red_bill_code', orderable: false, searchable: false },
                 { 'className': "text-center", data: 'company', name: 'company', orderable: false },
                 { 'className': "text-center", data: 'inplan', name: 'inplan', orderable: false },
                 { 'className': "text-center", data: 'custwant', name: 'custwant', orderable: false },
