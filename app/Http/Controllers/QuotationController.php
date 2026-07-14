@@ -30,6 +30,9 @@ class QuotationController extends Controller
         $data['page_url'] = 'quotation';
         $data['pdtypes'] = DB::table('pdtype')->get();
         $data['colRegistry'] = $this->colRegistry();  // คลังคอลัมน์ทั้งหมด (ให้ฟอร์มสร้างคอลัมน์)
+        // รูปแบบตารางรายการที่เลือกได้ (1.1–2.3) — ฟอร์มใช้ตั้งคอลัมน์ของตารางกรอก
+        $data['presets']      = $this->presets();
+        $data['formatLabels'] = $this->formatLabels();
         return view('quotation.index', $data);
     }
 
@@ -292,8 +295,8 @@ class QuotationController extends Controller
         // หัวใบจากฟอร์ม — เติม key ตาม QMAST_COLUMNS ให้ครบ (กัน undefined property ใน view)
         $headerArr = $this->extractHeader($request);
         $header = (object) array_merge(array_fill_keys(self::QMAST_COLUMNS, null), $headerArr);
-        // คอลัมน์ที่แสดง derive จากรายการที่กรอก (เหมือนตอนบันทึก)
-        $header->col_config = json_encode($this->deriveColConfig($items), JSON_UNESCAPED_UNICODE);
+        // คอลัมน์ที่แสดง — ตามรูปแบบที่เลือก หรือ derive จากรายการที่กรอก (เหมือนตอนบันทึก)
+        $header->col_config = json_encode($this->buildColConfig($request, $items), JSON_UNESCAPED_UNICODE);
 
         // สร้างรายการสำหรับ view: cells (map แบน key => value) จากค่าที่ฟอร์มส่งมา
         // ข้ามแถวว่างทั้งบรรทัด (ไม่มีทั้งรหัสและชื่อ) เหมือน saveItems
@@ -368,8 +371,7 @@ class QuotationController extends Controller
 
             $header = $this->extractHeader($request);
             $header['Qno'] = $qno;
-            // คอลัมน์ที่แสดง = เฉพาะคอลัมน์ที่มีการกรอกจริง (ช่องว่างทั้งคอลัมน์ = ตัดออก)
-            $header['col_config'] = json_encode($this->deriveColConfig($items), JSON_UNESCAPED_UNICODE);
+            $header['col_config'] = json_encode($this->buildColConfig($request, $items), JSON_UNESCAPED_UNICODE);
             // timestamps (ใช้ Query Builder → ตั้งเอง; Eloquent ไม่ได้จัดการให้)
             $header['created_at'] = $header['updated_at'] = now();
             DB::table('qmast')->insert($header);
@@ -402,7 +404,7 @@ class QuotationController extends Controller
 
             $header = $this->extractHeader($request);
             unset($header['Qno']);   // ไม่ให้เปลี่ยนเลขที่ (เป็น key ทางธุรกิจ)
-            $header['col_config'] = json_encode($this->deriveColConfig($items), JSON_UNESCAPED_UNICODE);
+            $header['col_config'] = json_encode($this->buildColConfig($request, $items), JSON_UNESCAPED_UNICODE);
             $header['updated_at'] = now();   // timestamps (Query Builder → ตั้งเอง)
             DB::table('qmast')->whereRaw('TRIM(Qno) = ?', [$qno])->update($header);
 
@@ -558,6 +560,23 @@ class QuotationController extends Controller
     }
 
     /**
+     * ชื่อกำกับของแต่ละรูปแบบตาราง (ให้ผู้ใช้เลือกใน dropdown)
+     * 1.x = ใบเสนอราคา, 2.x = ใบขอปรับราคา (มีคอลัมน์ ปัจจุบัน/ใหม่)
+     */
+    private function formatLabels(): array
+    {
+        return [
+            '1.1' => 'ราคาต่อ กก. (ตามน้ำหนักส่ง)',
+            '1.2' => 'เม็ดพลาสติก + ค่าผลิตและค่าแม่สี',
+            '1.3' => 'ค่าผลิต + ค่าแม่สี (แยกกัน)',
+            '1.4' => 'เม็ดพลาสติก + ค่าผลิตฯ + % สูญเสีย',
+            '2.1' => 'ราคา ปัจจุบัน/ใหม่',
+            '2.2' => 'ค่าผลิตและค่าแม่สี ปัจจุบัน/ใหม่',
+            '2.3' => 'ค่าผลิต + ค่าแม่สี ปัจจุบัน/ใหม่',
+        ];
+    }
+
+    /**
      * Preset คอลัมน์ของ 7 รูปแบบ (+ '' = อัตโนมัติ/ทั่วไป)
      * ใช้เป็น "จุดเริ่มต้น" — ผู้ใช้ปรับ (เพิ่ม/ลบ/สลับ/แก้ชื่อ) เองต่อใบได้
      */
@@ -667,10 +686,40 @@ class QuotationController extends Controller
     ];
 
     /**
+     * คอลัมน์ที่จะแสดงใน PDF ของใบนี้ — ตัดสินจากรูปแบบตารางที่ผู้ใช้เลือกในฟอร์ม (col_format)
+     *
+     *  - เลือกรูปแบบ (1.1–2.3) → ใช้คอลัมน์ตาม preset นั้นตรง ๆ (คงคอลัมน์ไว้ครบแม้บางช่องยังว่าง
+     *    เพราะผู้ใช้จงใจเลือกหน้าตาตารางแบบนั้น)
+     *  - ไม่เลือก (ค่าเริ่มต้น) → พฤติกรรมเดิม: derive จากคอลัมน์ที่มีคนกรอกจริง
+     *
+     * ทั้งสองทางเคารพ checkbox "แสดงรหัสสินค้าใน PDF" เหมือนกัน
+     */
+    private function buildColConfig(Request $request, array $items): array
+    {
+        $showCode = $request->boolean('show_code');
+        $format   = trim((string) $request->input('col_format', ''));
+        $presets  = $this->presets();
+
+        if ($format === '' || !isset($presets[$format])) {
+            return $this->deriveColConfig($items, $showCode);
+        }
+
+        $cols = $presets[$format];
+        if (!$showCode) {
+            $cols = array_values(array_filter($cols, fn ($c) => $c['key'] !== 'code'));
+        }
+
+        return $cols;
+    }
+
+    /**
      * คอลัมน์ที่จะแสดง = เฉพาะคอลัมน์ที่มีการกรอกอย่างน้อย 1 แถว (ตามลำดับใน registry)
      * → ช่องไหนไม่มีใครกรอกเลย ถูกตัดออกอัตโนมัติ
+     *
+     * $showCode = ผู้ใช้เลือกจากฟอร์มว่าจะให้ "รหัสสินค้า" ขึ้นใน PDF ไหม
+     * (รหัสต้องกรอกไว้เพื่อใช้ค้นหาชื่อ/ราคา แต่บางใบไม่อยากโชว์รหัสให้ลูกค้าเห็น)
      */
-    private function deriveColConfig(array $items): array
+    private function deriveColConfig(array $items, bool $showCode = true): array
     {
         $reg = $this->colRegistry();
         $used = [];
@@ -682,6 +731,10 @@ class QuotationController extends Controller
                     $used[$k] = true;
                 }
             }
+        }
+        // ไม่ติ๊ก "แสดงรหัสสินค้าใน PDF" → ตัดคอลัมน์รหัสออก แม้จะกรอกไว้ก็ตาม
+        if (!$showCode) {
+            unset($used['code']);
         }
         $out = [];
         foreach ($reg as $k => $meta) {
@@ -738,7 +791,19 @@ class QuotationController extends Controller
         }
 
         if ($base) DB::table('qdetail')->insert($base);
-        if ($ext)  DB::table('qdetail_ext')->insert($ext);
+
+        if ($ext) {
+            // insert หลายแถวในคำสั่งเดียว → ทุกแถวต้องมีคอลัมน์ชุดเดียวกัน
+            // (Laravel ยึดคอลัมน์จากแถวแรก ถ้าแถวอื่นมี key ไม่ครบ จะได้ SQL ที่จำนวนค่าไม่ตรงคอลัมน์)
+            // $extRow ด้านบนใส่เฉพาะ key ที่มีค่า → เติมช่องที่ขาดเป็น null ให้ครบก่อน
+            $template = array_fill_keys(
+                array_merge(['Qno', 'Qseq', 'delivery_qty', 'remark'], self::EXT_NUM_FIELDS),
+                null
+            );
+            $ext = array_map(fn ($row) => array_merge($template, $row), $ext);
+
+            DB::table('qdetail_ext')->insert($ext);
+        }
     }
 
     /**

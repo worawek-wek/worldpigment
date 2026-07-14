@@ -145,12 +145,7 @@
                                 </button>
                             @endif
 
-                            {{-- ลบ (ยืนยันก่อนลบ) — ป้ายกำกับ = เลขที่ SD (Testno) หรือ CM (SendNo) --}}
-                            <button class="btn btn-sm btn-icon btn-danger"
-                                title="ลบ"
-                                onclick='deleteRow({{ $row->id }}, @json($isSD ? ($row->Testno ?: "") : ($row->SendNo ?: "")))'>
-                                <i class="ti ti-trash"></i>
-                            </button>
+                            {{-- ปุ่มลบย้ายไปอยู่ใน form แก้ไข (modal-cm / modal-sd) แล้ว --}}
                         </div>
                     </td>
                 </tr>

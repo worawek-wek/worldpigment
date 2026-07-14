@@ -42,7 +42,7 @@
                             <div class="row g-3 mb-4 pb-3 border-bottom">
                                 <div class="col-md-4">
                                     <label class="form-label small mb-1 fw-semibold" style="color:#4b3fb8;">
-                                        <i class="ti ti-link me-1"></i>เลขที่ใบนำส่งเทียบสี (อ้างอิง) <span class="text-muted fw-normal">(เช่น 26/0001)</span>
+                                        <i class="ti ti-link me-1"></i>เลขที่ใบนำส่งเทียบสี (อ้างอิง) <br> <span class="text-muted fw-normal">(เช่น 26/0001)</span>
                                     </label>
                                     <input type="text" name="SendNo" class="form-control">
                                 </div>
@@ -237,13 +237,14 @@
                 </div>
 
                 <!-- Footer -->
-                <div class="modal-footer justify-content-end flex-wrap gap-2">
-                    {{-- <div class="d-flex gap-2 flex-wrap">
-                        <button type="button" class="btn btn-label-primary">
-                            <i class="ti ti-link me-1"></i>
-                            อ้างอิงใบนำส่งเทียบสี
+                <div class="modal-footer justify-content-between flex-wrap gap-2">
+                    <div class="d-flex gap-2 flex-wrap">
+                        {{-- ลบใบส่ง ต.ย. — แสดงเฉพาะโหมดแก้ไข (JS ถอด d-none ให้ตอนเปิดจากปุ่มแก้ไข) --}}
+                        <button type="button" id="btn_delete_sd" class="btn btn-label-danger d-none">
+                            <i class="ti ti-trash me-1"></i>
+                            ลบใบส่ง ต.ย.
                         </button>
-                    </div> --}}
+                    </div>
                     <div class="d-flex gap-2">
                         <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">
                             ปิด
