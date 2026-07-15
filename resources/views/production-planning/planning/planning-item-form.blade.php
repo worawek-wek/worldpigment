@@ -19,11 +19,11 @@
 @endphp
 
 <div class="modal-header" style="background-color: #3A8EBA; padding: 1rem 1.5rem;">
-    <h5 class="modal-title text-white mb-0">
+    <h5 class="modal-title text-white mb-0" style="font-size:1.5rem; font-weight:600;">
         <i class="ti ti-{{ $planning_item ? 'pencil' : 'plus' }} me-1"></i>
         {{ $planning_item ? 'แก้ไข Planning Item' : 'เพิ่ม Planning Item' }}
         @if($parent_header)
-            <span class="badge bg-white text-primary ms-2 fw-normal" style="font-size:.75rem">
+            <span class="badge bg-white text-primary ms-2 fw-normal" style="font-size:1.1rem">
                 {{ $parent_header->planning_code }}
             </span>
         @endif
@@ -62,8 +62,9 @@
         <div class="row">
             <div class="col-md-4 mb-3">
                 <label class="form-label">น้ำหนักสั่งตาม Order (Quantity)</label>
+                {{-- เพิ่มใหม่: ดึง netqty จาก header มาตั้งต้น / แก้ไข: ใช้ค่าเดิมของ item --}}
                 <input type="text" name="quantity"
-                       value="{{ number_format((float) ($planning_item?->quantity ?? 0), 2) }}"
+                       value="{{ $planning_item ? number_format((float) ($planning_item->quantity ?? 0), 2) : number_format((float) ($parent_header?->netqty ?? 0), 2) }}"
                        class="form-control" placeholder="0.00">
             </div>
             <div class="col-md-4 mb-3">
@@ -82,8 +83,9 @@
         <div class="row">
             <div class="col-md-4 mb-3">
                 <label class="form-label">เลขที่ใบเบิกออกใบแดง (Red Bill)</label>
+                {{-- เพิ่มใหม่: ดึง orderno จาก header มาตั้งต้น / แก้ไข: ใช้ค่าเดิมของ item --}}
                 <input type="text" name="red_bill_code"
-                       value="{{ $planning_item?->red_bill_code ?? '' }}"
+                       value="{{ $planning_item ? ($planning_item->red_bill_code ?? '') : ($parent_header?->orderno ?? '') }}"
                        class="form-control" placeholder="เลขที่ใบเบิกออกใบแดง">
             </div>
         </div>

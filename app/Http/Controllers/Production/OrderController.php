@@ -155,6 +155,8 @@ class OrderController extends Controller
                 'mdate'              => $order->Mdate ?: null,
                 'custwant'           => $suborder->custwant ?: null,
                 'remark'             => $suborder->Remark ?: null,
+                'red_bill_code'      => $order->Orderno, // เลขที่ Order → ใส่เป็นเลขที่ใบเบิก
+                'quantity'           => $order->netqty, // น้ำหนักสั่งตาม Order
             ];
 
             Planning::create($planning);
