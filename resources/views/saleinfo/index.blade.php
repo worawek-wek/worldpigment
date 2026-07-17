@@ -92,6 +92,18 @@
                     </div>
 
                     <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-label-secondary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#testPriceModal">
+                            <i class="ti ti-flask me-1"></i>
+                            Test Price
+                        </button>
+                        <button class="btn btn-label-secondary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#newPriceModal">
+                            <i class="ti ti-search me-1"></i>
+                            ค้นหาราคาสินค้า
+                        </button>
                         <button class="btn btn-theme-saleinfo"
                             data-bs-toggle="modal"
                             data-bs-target="#saleinfoModal">
@@ -102,15 +114,6 @@
 
                 </div>
             </div>
-        </div>
-    </div>
-
-    {{-- แจ้งสถานะ: หน้านี้ยังเป็น UI + ข้อมูลจำลอง --}}
-    <div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
-        <i class="ti ti-alert-triangle me-2"></i>
-        <div>
-            หน้านี้ยังเป็น <strong>UI + ข้อมูลจำลอง</strong> — ยังไม่ได้ต่อกับตาราง <code>uprice</code> จริง
-            (บันทึก / ลบ ยังไม่ทำงาน)
         </div>
     </div>
 
@@ -185,6 +188,8 @@
     <!-- / Layout wrapper -->
 
     @include('saleinfo.modal-price')
+    @include('saleinfo.modal-newprice')
+    @include('saleinfo.modal-testprice')
 
     @include('layout/inc_js')
 
@@ -261,7 +266,6 @@
 
     // ────────────────────────────────────────────────────────
     //  ฟอร์มกำหนดราคา
-    //  ⚠ ยังไม่ต่อ DB — โหมดแก้ไขยังไม่ดึงข้อมูลจริง, บันทึก/ลบ ยังไม่ทำงาน
     // ────────────────────────────────────────────────────────
     let saleinfoEditing = false;
 
@@ -280,7 +284,6 @@
     }
 
     // แถบข้อมูลลูกค้า (อ่านอย่างเดียว) ในฟอร์ม
-    // TODO: ต่อ endpoint lookup ลูกค้า (customer: code/name/road/term/cashdisc) แล้วเติมจริง
     function setCustomerPanel(cust) {
         $('#saleinfo_cust_code').text(cust?.code ?? '—');
         $('#saleinfo_cust_name').text(cust?.name ?? '—');
@@ -288,33 +291,257 @@
         $('#saleinfo_cust_term').text(cust?.term ?? '—');
     }
 
-    // แก้ไขราคา — เปิด modal โหมดแก้ไข
-    // TODO: ดึง record จริงจาก uprice ตาม id แล้วเติมฟอร์ม
+    // กรอกรหัสลูกค้าเสร็จ → ดึงชื่อ/ที่อยู่/เงื่อนไข มาเติมแถบขวา
+    let custLookupXhr = null;
+    function lookupCustomer(code) {
+        code = (code || '').trim();
+        if (!code) {
+            setCustomerPanel(null);
+            return;
+        }
+
+        if (custLookupXhr) custLookupXhr.abort();
+        custLookupXhr = $.ajax({
+            type: "GET",
+            url: "{{ $page_url }}/customer/" + encodeURIComponent(code),
+            success: function (res) {
+                setCustomerPanel(res.found ? res : null);
+            },
+            complete: function () { custLookupXhr = null; }
+        });
+    }
+
+    $('#form_saleinfo [name="CustNo"]').on('change', function () {
+        lookupCustomer($(this).val());
+    });
+
+    // แก้ไขราคา — ดึงข้อมูลจริงมาเติมฟอร์มแล้วเปิด modal โหมดแก้ไข
     function viewSaleinfo(id) {
-        saleinfoEditing = true;
-        $('#form_saleinfo [name="_mode"]').val('edit');
-        $('#form_saleinfo [name="_pk"]').val(id);
-        $('#btn_delete_saleinfo').removeClass('d-none').data('id', id);
-        $('#saleinfoModal').modal('show');
+        $.ajax({
+            type: "GET",
+            url: "{{ $page_url }}/edit/" + id,
+            success: function (res) {
+                if (!res.found) return;
+
+                resetSaleinfoForm();
+                saleinfoEditing = true;
+
+                const d = res.data;
+                $('#form_saleinfo [name="_mode"]').val('edit');
+                $('#form_saleinfo [name="_pk"]').val(id);
+
+                // เติมทุกช่องที่ชื่อตรงกับคอลัมน์ (ยกเว้น checkbox จัดการแยก)
+                ['CustNo', 'st_code', 'ITEMNO', 'DATE', 'PRICE', 'REM1', 'REM2', 'PackRem', 'Label', 'Author']
+                    .forEach(function (name) {
+                        $('#form_saleinfo [name="' + name + '"]').val(d[name] ?? '');
+                    });
+                // NoAcp ปิดไว้ก่อน — ช่องในฟอร์มถูกคอมเมนต์ไว้ รอลูกค้ายืนยันความหมาย
+                // $('#saleinfo_noacp').prop('checked', Number(d.NoAcp) === 1);
+
+                $('#btn_delete_saleinfo').removeClass('d-none').data('id', id);
+                lookupCustomer(d.CustNo);
+                $('#saleinfoModal').modal('show');
+            },
+            error: function () {
+                Swal.fire({ title: 'ไม่พบข้อมูล', text: 'รายการนี้อาจถูกลบไปแล้ว', icon: 'error', heightAuto: false });
+            }
+        });
     }
 
     $('#btn_delete_saleinfo').on('click', function () {
+        const id = $(this).data('id');
+
         Swal.fire({
-            title: 'ยังลบไม่ได้',
-            text: 'หน้านี้ยังไม่ได้ต่อกับฐานข้อมูล (uprice)',
-            icon: 'info',
+            title: 'ยืนยันการลบ',
+            text: 'ต้องการลบราคานี้ใช่หรือไม่? ลบแล้วกู้คืนไม่ได้',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'ลบ',
+            cancelButtonText: 'ยกเลิก',
+            customClass: { confirmButton: 'btn btn-danger', cancelButton: 'btn btn-label-secondary' },
+            buttonsStyling: false,
             heightAuto: false
+        }).then(function (result) {
+            if (!result.isConfirmed) return;
+
+            $.ajax({
+                type: "POST",
+                url: "{{ $page_url }}/delete",
+                data: { _token: "{{ csrf_token() }}", id: id },
+                success: function () {
+                    $('#saleinfoModal').modal('hide');
+                    loadData(page);
+                    Swal.fire({ title: 'ลบแล้ว', icon: 'success', timer: 1200, showConfirmButton: false, heightAuto: false });
+                },
+                error: function (xhr) {
+                    Swal.fire({
+                        title: 'ลบไม่สำเร็จ',
+                        text: xhr.responseJSON?.error ?? 'เกิดข้อผิดพลาด',
+                        icon: 'error',
+                        heightAuto: false
+                    });
+                }
+            });
         });
     });
 
     $('#form_saleinfo').on('submit', function (e) {
         e.preventDefault();
-        Swal.fire({
-            title: 'ยังบันทึกไม่ได้',
-            text: 'หน้านี้ยังไม่ได้ต่อกับฐานข้อมูล (uprice)',
-            icon: 'info',
-            heightAuto: false
+
+        const isEdit = $('#form_saleinfo [name="_mode"]').val() === 'edit';
+        const url    = "{{ $page_url }}/" + (isEdit ? 'update' : 'insert');
+
+        const formData = $(this).serializeArray();
+        if (isEdit) {
+            formData.push({ name: 'id', value: $('#form_saleinfo [name="_pk"]').val() });
+        }
+
+        const $btn = $(this).find('button[type="submit"]');
+        $btn.prop('disabled', true);
+
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: $.param(formData),
+            success: function () {
+                $('#saleinfoModal').modal('hide');
+                loadData(page);
+                Swal.fire({
+                    title: isEdit ? 'แก้ไขราคาแล้ว' : 'บันทึกราคาแล้ว',
+                    icon: 'success',
+                    timer: 1200,
+                    showConfirmButton: false,
+                    heightAuto: false
+                });
+            },
+            error: function (xhr) {
+                Swal.fire({
+                    title: 'บันทึกไม่สำเร็จ',
+                    text: xhr.responseJSON?.error ?? 'เกิดข้อผิดพลาด',
+                    icon: 'error',
+                    heightAuto: false
+                });
+            },
+            complete: function () { $btn.prop('disabled', false); }
         });
+    });
+
+    // ────────────────────────────────────────────────────────
+    //  ค้นหาราคาสินค้า (modal "New Price") — อ่านอย่างเดียว ไม่มีบันทึก
+    //  วางรหัสสินค้า → ราคาขึ้นเอง (ไม่ต้องกดปุ่ม)
+    //  ⚠ ตัวเลขยังไม่ต่อ DB — ยังไม่รู้ที่มา/สูตรของราคาขาย 1/2/3 (รอลูกค้า)
+    // ────────────────────────────────────────────────────────
+    const NP_FIELDS = ['#np_price_1', '#np_price_2', '#np_price_3', '#np_db_3_4', '#np_db_1_2'];
+    let npTimer = null;
+
+    function clearNewPrice() {
+        NP_FIELDS.forEach(function (sel) { $(sel).val(''); });
+    }
+
+    // TODO: ต่อ endpoint จริง (saleinfo/price-lookup?code=...) แล้วเติมราคาลง NP_FIELDS
+    //       ตอนนี้แค่โชว์ว่ายังไม่มีข้อมูล เพื่อไม่ให้เข้าใจผิดว่าราคาเป็น 0
+    function lookupNewPrice(code) {
+        code = (code || '').trim();
+        if (!code) {
+            clearNewPrice();
+            return;
+        }
+        NP_FIELDS.forEach(function (sel) { $(sel).val('รอต่อข้อมูล'); });
+    }
+
+    // หน่วง 400ms กันยิงรัวตอนพิมพ์ (วาง/พิมพ์ทีละตัวก็ทำงานเหมือนกัน)
+    $('#np_code').on('input', function () {
+        const code = $(this).val();
+        clearTimeout(npTimer);
+        npTimer = setTimeout(function () { lookupNewPrice(code); }, 400);
+    });
+
+    // ฟอร์มนี้ไม่มี submit — กัน Enter รีโหลดหน้า
+    $('#np_code').on('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            clearTimeout(npTimer);
+            lookupNewPrice($(this).val());
+        }
+    });
+
+    $('#np_clear').on('click', function () {
+        $('#np_code').val('').focus();
+        clearNewPrice();
+    });
+
+    // เปิด modal ทีไร = เริ่มใหม่ + โฟกัสช่องรหัสให้วางได้เลย
+    $('#newPriceModal').on('show.bs.modal', function () {
+        $('#np_code').val('');
+        clearNewPrice();
+    });
+    $('#newPriceModal').on('shown.bs.modal', function () {
+        $('#np_code').focus();
+    });
+
+    // ────────────────────────────────────────────────────────
+    //  Test Price — อ่านอย่างเดียว ไม่มีบันทึก
+    //  กรอกได้แค่ Customer / Test No. / Lot Test → ที่เหลือขึ้นเอง
+    //  ⚠ ยังไม่ต่อ DB — ยังไม่รู้ว่าจอนี้ดึงจากตารางไหน (รอลูกค้า)
+    // ────────────────────────────────────────────────────────
+    const TP_KEYS   = ['#tp_customer', '#tp_testno', '#tp_lottest'];   // ช่องที่กรอกได้
+    const TP_RESULT = ['#tp_sample', '#tp_resin_cust', '#tp_resin_match', '#tp_quotation',
+                       '#tp_price_1', '#tp_price_2', '#tp_price_3', '#tp_db_3_4', '#tp_db_1_2'];
+    let tpTimer = null;
+
+    function clearTestPrice() {
+        TP_RESULT.forEach(function (sel) { $(sel).val(''); });
+        $('#tp_cust_name').text('—');
+        $('#tp_setcode').text('—');
+    }
+
+    // TODO: ต่อ endpoint จริง (saleinfo/test-price?customer=&testno=&lottest=)
+    //       แล้วเติมผลลง TP_RESULT + ชื่อลูกค้า + "ตั้งเบอร์เป็น"
+    //       ตอนนี้แค่โชว์ว่ายังไม่มีข้อมูล เพื่อไม่ให้เข้าใจผิดว่าราคาเป็น 0
+    function lookupTestPrice() {
+        const hasKey = TP_KEYS.some(function (sel) { return $(sel).val().trim() !== ''; });
+        if (!hasKey) {
+            clearTestPrice();
+            return;
+        }
+        TP_RESULT.forEach(function (sel) { $(sel).val('รอต่อข้อมูล'); });
+        $('#tp_cust_name').text('รอต่อข้อมูล');
+        $('#tp_setcode').text('รอต่อข้อมูล');
+    }
+
+    // หน่วง 400ms กันยิงรัวตอนพิมพ์
+    $(TP_KEYS.join(', ')).on('input', function () {
+        clearTimeout(tpTimer);
+        tpTimer = setTimeout(lookupTestPrice, 400);
+    });
+
+    // ฟอร์มนี้ไม่มี submit — กด Enter = ค้นเลย ไม่ใช่รีโหลดหน้า
+    $(TP_KEYS.join(', ')).on('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            clearTimeout(tpTimer);
+            lookupTestPrice();
+        }
+    });
+
+    $('#tp_search').on('click', function () {
+        clearTimeout(tpTimer);
+        lookupTestPrice();
+    });
+
+    // Refresh — ล้างทุกช่องแล้วเริ่มใหม่
+    $('#tp_refresh').on('click', function () {
+        TP_KEYS.forEach(function (sel) { $(sel).val(''); });
+        clearTestPrice();
+        $('#tp_customer').focus();
+    });
+
+    $('#testPriceModal').on('show.bs.modal', function () {
+        TP_KEYS.forEach(function (sel) { $(sel).val(''); });
+        clearTestPrice();
+    });
+    $('#testPriceModal').on('shown.bs.modal', function () {
+        $('#tp_customer').focus();
     });
 </script>
 

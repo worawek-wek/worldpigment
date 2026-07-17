@@ -2,87 +2,278 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Saleinfo;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * กำหนดราคา (ราคาสินค้าต่อลูกค้า)
  *
- * ⚠ ตอนนี้เป็น UI อย่างเดียว — ข้อมูลทั้งหมดเป็น mock ยังไม่ต่อ DB
- *   ตารางปลายทางที่ตั้งใจไว้คือ `uprice` (CustNo, st_code, ITEMNO, DATE, PRICE,
- *   REM1, REM2, PackRem, Label, Author, AuthDate, NoAcp, Black)
- *   และ join `customer` (code, name, road, term, cashdisc) สำหรับแถบข้อมูลลูกค้า
+ * เขียนลงตาราง `tb_saleinfo` — ชื่อคอลัมน์ยึดตาม `uprice` ของเดิม
+ * (`uprice` = ข้อมูลจอเก่าของลูกค้า ใช้อ่านอย่างเดียว ห้ามเขียนทับ)
+ * แถบข้อมูลลูกค้าดึงจากตาราง `customer` ผ่าน CustNo → code
+ *
+ * ยังไม่ทำ: ราคา 1/2/3 (DB tier) + ค่าสี/%สี — รอสรุปสูตรกับลูกค้า
  */
 class SaleinfoController extends Controller
 {
+    /** คอลัมน์ที่รับจากฟอร์มได้ */
+    private const COLUMNS = [
+        'CustNo', 'st_code', 'ITEMNO', 'DATE', 'PRICE',
+        'REM1', 'REM2', 'PackRem', 'Label', 'Author',
+        // 'NoAcp',   // ปิดไว้ก่อน — รอลูกค้ายืนยันความหมาย (ดู extractForm)
+    ];
+
     public function index(Request $request)
     {
-        $data['page_url']  = 'saleinfo';
-        $data['list_data'] = $this->paginateMock($request);
+        $data['page_url'] = 'saleinfo';
 
         return view('saleinfo.index', $data);
     }
 
     /**
-     * ตารางรายการ (โหลดผ่าน AJAX) — คืน HTML partial เหมือนโมดูลอื่น
+     * GET — รายการราคา (tb_saleinfo) + ชื่อ/เงื่อนไขลูกค้าจากตาราง customer
      */
     public function datatable(Request $request)
     {
-        $data['list_data'] = $this->paginateMock($request);
+        $results = Saleinfo::query()
+            ->leftJoin('customer as c', 'tb_saleinfo.CustNo', '=', 'c.code')
+            ->select('tb_saleinfo.*', 'c.name as custname', 'c.term as term')
+            ->orderByDesc('tb_saleinfo.id');
+
+        $this->applyFilters($results, $request);
+
+        $limit = @$request['limit'] ?: 15;
+
+        $data['list_data'] = $results->paginate($limit);
 
         return view('saleinfo.table', $data);
     }
 
     /**
-     * ข้อมูลจำลอง — โครงคอลัมน์ตาม uprice + ชื่อลูกค้าจาก customer
-     * TODO: แทนที่ด้วย query จริงจากตาราง uprice เมื่อสรุปคีย์/เงื่อนไขกับลูกค้าแล้ว
+     * GET — ข้อมูลลูกค้าจากรหัส (ให้ฟอร์มเติมแถบข้อมูลลูกค้าอัตโนมัติ)
      */
-    private function mockRows(): Collection
+    public function customerLookup($code)
     {
-        $rows = [
-            ['41008', 'CP8462B',  'CP8462B',  '2004-03-04', 46.72,  'บริษัท ฮอนด้า เทรดดิ้ง เอเชีย จำกัด', '30 วัน 0 %', 'PP AZ 864 (NH- 361L)', 'เฉพาะเบอร์คิดราคาพิเศษ เช็คราคาก่อนเปิด ORDER', 'ไม่มีแม่สี 1103019'],
-            ['41008', 'CP8462G',  'CP8462G',  '2019-06-11', 52.10,  'บริษัท ฮอนด้า เทรดดิ้ง เอเชีย จำกัด', '30 วัน 0 %', 'PP AZ 864 (NH- 120P)', '',                                              'ไม่มีแม่สี 1103019'],
-            ['00001', 'VM5A112R', 'VM5A112R', '2025-05-05', 68.00,  'บริษัท วี.เอ็ม. พลาสติก จำกัด',       '60 วัน 0 %', '[PMS 2387U]',           'VM BLUE-R [L-680403-1/97 15RRVR807CL=10PHR]',   ''],
-            ['00002', '1108030',  '1108030',  '2007-09-07', 400.00, 'บริษัท สยามคัลเลอร์ จำกัด',           'เงินสด',      '',                      'ราคาพิเศษเฉพาะลอต',                              ''],
-            ['30215', 'AB7710W',  'AB7710W',  '2023-11-20', 118.50, 'บริษัท ไทยโพลิเมอร์ อุตสาหกรรม จำกัด', '45 วัน 2 %', 'ABS WHITE 9003',        '',                                              'อนุมัติโดยฝ่ายขาย'],
-            ['30215', 'AB7710K',  'AB7710K',  '2024-02-14', 97.25,  'บริษัท ไทยโพลิเมอร์ อุตสาหกรรม จำกัด', '45 วัน 2 %', 'ABS BLACK 9005',        'ปรับราคาตามต้นทุนเม็ดพลาสติก',                   ''],
-        ];
+        $cust = DB::table('customer')
+            ->where('code', $code)
+            ->first(['code', 'name', 'nameEN', 'road', 'term']);
 
-        return collect($rows)->map(fn (array $r, int $i) => (object) [
-            'id'        => $i + 1,
-            'CustNo'    => $r[0],
-            'st_code'   => $r[1],
-            'ITEMNO'    => $r[2],
-            'DATE'      => $r[3],
-            'PRICE'     => $r[4],
-            'custname'  => $r[5],
-            'term'      => $r[6],
-            'PackRem'   => $r[7],
-            'Label'     => $r[7],
-            'REM1'      => $r[8],
-            'REM2'      => '',
-            'Author'    => $r[9],
-            'AuthDate'  => $r[3],
-            'NoAcp'     => 0,
+        if (!$cust) {
+            return response()->json(['found' => false]);
+        }
+
+        return response()->json([
+            'found' => true,
+            'code'   => $cust->code,
+            'name'   => $cust->name ?: $cust->nameEN,
+            'road'   => $cust->road,
+            'term'   => $cust->term,
         ]);
     }
 
     /**
-     * ตัดหน้า mock ให้ใช้กับ layout/pagination ตัวเดิมได้
+     * GET — อ่านราคา 1 รายการ (JSON) สำหรับเติมฟอร์มโหมดแก้ไข
      */
-    private function paginateMock(Request $request): LengthAwarePaginator
+    public function edit($id)
     {
-        $rows    = $this->mockRows();
-        $perPage = (int) $request->input('limit', 15) ?: 15;
-        $page    = LengthAwarePaginator::resolveCurrentPage();
+        $row = Saleinfo::find($id);
+        if (!$row) {
+            return response()->json(['error' => 'not_found'], 404);
+        }
 
-        return new LengthAwarePaginator(
-            $rows->forPage($page, $perPage)->values(),
-            $rows->count(),
-            $perPage,
-            $page,
-            ['path' => url('saleinfo/datatable')]
-        );
+        // ฟอร์มใช้ flatpickr d/m/Y → แปลงให้ตรงรูปแบบก่อนส่งกลับ
+        $data = $row->toArray();
+        $data['DATE'] = $row->DATE ? Carbon::parse($row->DATE)->format('d/m/Y') : '';
+
+        return response()->json(['found' => true, 'data' => $data]);
+    }
+
+    /**
+     * POST — เพิ่มราคาใหม่
+     */
+    public function insert(Request $request)
+    {
+        $error = $this->validateForm($request);
+        if ($error) {
+            return response()->json(['error' => $error], 422);
+        }
+
+        $custno = trim((string) $request->CustNo);
+        $itemno = trim((string) $request->ITEMNO);
+
+        // 1 ลูกค้า + 1 สินค้า = 1 ราคา (ประวัติการปรับราคาเก็บเป็นข้อความใน REM2)
+        if ($this->priceExists($custno, $itemno)) {
+            return response()->json([
+                'error' => "ลูกค้า {$custno} มีราคาของสินค้า {$itemno} อยู่แล้ว — ให้แก้ไขรายการเดิมแทน",
+            ], 422);
+        }
+
+        try {
+            $row = $this->extractForm($request);
+            $row['AuthDate'] = now();   // เวลาที่บันทึกราคานี้
+
+            $saleinfo = Saleinfo::create($row);
+
+            return response()->json(['ok' => true, 'id' => $saleinfo->id]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST — แก้ไขราคาเดิม (ระบุด้วย id)
+     */
+    public function update(Request $request)
+    {
+        $row = Saleinfo::find($request->id);
+        if (!$row) {
+            return response()->json(['error' => 'not_found'], 404);
+        }
+
+        $error = $this->validateForm($request);
+        if ($error) {
+            return response()->json(['error' => $error], 422);
+        }
+
+        $custno = trim((string) $request->CustNo);
+        $itemno = trim((string) $request->ITEMNO);
+
+        // ย้ายไปชนคู่ลูกค้า/สินค้าของรายการอื่นไม่ได้
+        if ($this->priceExists($custno, $itemno, $row->id)) {
+            return response()->json([
+                'error' => "ลูกค้า {$custno} มีราคาของสินค้า {$itemno} อยู่แล้วในอีกรายการหนึ่ง",
+            ], 422);
+        }
+
+        try {
+            $data = $this->extractForm($request);
+            $data['AuthDate'] = now();   // เวลาที่แก้ราคาล่าสุด
+
+            $row->update($data);
+
+            return response()->json(['ok' => true, 'id' => $row->id]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST — ลบราคา (ระบุด้วย id)
+     */
+    public function destroy(Request $request)
+    {
+        $row = Saleinfo::find($request->id);
+        if (!$row) {
+            return response()->json(['error' => 'not_found'], 404);
+        }
+
+        try {
+            $row->delete();
+
+            return response()->json(['ok' => true]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    //  Helpers
+    // ────────────────────────────────────────────────────────────────
+
+    /**
+     * ตรวจช่องบังคับ (ตรงกับ required ในฟอร์ม) — คืนข้อความ error หรือ null ถ้าผ่าน
+     */
+    private function validateForm(Request $request): ?string
+    {
+        if (trim((string) $request->CustNo) === '') {
+            return 'รหัสลูกค้าห้ามว่าง';
+        }
+        if (trim((string) $request->st_code) === '') {
+            return 'ชื่อสินค้าห้ามว่าง';
+        }
+        if ($request->PRICE === null || $request->PRICE === '') {
+            return 'ราคาห้ามว่าง';
+        }
+        if (!is_numeric($request->PRICE)) {
+            return 'ราคาต้องเป็นตัวเลข';
+        }
+
+        return null;
+    }
+
+    /**
+     * ดึงเฉพาะคอลัมน์ที่รับได้จากฟอร์ม + แปลงชนิดข้อมูลให้ตรงกับตาราง
+     */
+    private function extractForm(Request $request): array
+    {
+        $row = [];
+        foreach (self::COLUMNS as $col) {
+            $row[$col] = $request->input($col);
+        }
+
+        $row['CustNo']  = trim((string) $row['CustNo']);
+        $row['st_code'] = trim((string) $row['st_code']);
+        // รหัสสินค้าไม่ได้กรอก → ใช้ชื่อสินค้าแทน (ในข้อมูลเก่าสองช่องนี้มักตรงกัน)
+        $row['ITEMNO']  = trim((string) $row['ITEMNO']) ?: $row['st_code'];
+
+        $row['DATE']  = $this->parseDate($row['DATE']);
+        $row['PRICE'] = $row['PRICE'] !== null && $row['PRICE'] !== '' ? (float) $row['PRICE'] : null;
+
+        // NoAcp ปิดไว้ก่อน — ช่องในฟอร์มถูกคอมเมนต์ไว้ ค่าที่บันทึกจะเป็น default 0 ของตาราง
+        // เปิดใช้เมื่อลูกค้ายืนยันความหมายแล้ว (คืน 'NoAcp' เข้า COLUMNS ด้วย):
+        // $row['NoAcp'] = $request->boolean('NoAcp') ? 1 : 0;   // checkbox ไม่ติ๊ก = ไม่ส่งค่ามา
+
+        return $row;
+    }
+
+    /**
+     * มีราคาของคู่ลูกค้า/สินค้านี้อยู่แล้วไหม ($ignoreId = ข้ามรายการที่กำลังแก้ไข)
+     */
+    private function priceExists(string $custno, string $itemno, ?int $ignoreId = null): bool
+    {
+        $query = Saleinfo::whereRaw('TRIM(CustNo) = ?', [$custno])
+            ->whereRaw('TRIM(ITEMNO) = ?', [$itemno]);
+
+        if ($ignoreId) {
+            $query->where('id', '!=', $ignoreId);
+        }
+
+        return $query->exists();
+    }
+
+    /**
+     * รับได้ทั้ง d/m/Y (flatpickr) และ Y-m-d — คืน Y-m-d หรือ null
+     */
+    private function parseDate(?string $input): ?string
+    {
+        if (empty($input)) return null;
+        try { return Carbon::createFromFormat('d/m/Y', $input)->format('Y-m-d'); } catch (\Exception $e) {}
+        try { return Carbon::createFromFormat('Y-m-d', $input)->format('Y-m-d'); } catch (\Exception $e) {}
+        try { return Carbon::parse($input)->format('Y-m-d'); } catch (\Exception $e) {}
+
+        return null;
+    }
+
+    private function applyFilters($query, Request $request): void
+    {
+        if (@$request->search) {
+            $s = $request->search;
+            $query->where(function ($q) use ($s) {
+                $q->where('tb_saleinfo.CustNo', 'LIKE', "%{$s}%")
+                  ->orWhere('tb_saleinfo.st_code', 'LIKE', "%{$s}%")
+                  ->orWhere('tb_saleinfo.ITEMNO', 'LIKE', "%{$s}%")
+                  ->orWhere('c.name', 'LIKE', "%{$s}%");
+            });
+        }
+        if (@$request->date_from) {
+            $d = $this->parseDate($request->date_from);
+            if ($d) $query->whereDate('tb_saleinfo.DATE', '>=', $d);
+        }
+        if (@$request->date_to) {
+            $d = $this->parseDate($request->date_to);
+            if ($d) $query->whereDate('tb_saleinfo.DATE', '<=', $d);
+        }
     }
 }

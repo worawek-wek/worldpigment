@@ -65,6 +65,8 @@
                 'เม็ดที่ลูกค้าใช้'      => $v($row->CustPigment),
                 'คุณสมบัติ'             => $v($row->pop),
                 'นำไปทำชิ้นงาน (Model)' => $v($row->Model),
+                'ยี่ห้อ'                => $v($row->Brand),
+                'Chemical Safety'       => $v($row->ChemSafety),
             ]],
             ['วันที่ดำเนินการ และผู้เทียบสี', 'ti-calendar-event', [
                 'Start Date'    => $d($row->startdate),

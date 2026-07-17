@@ -115,6 +115,9 @@
                                         </label>
                                         <input type="number" step="0.01" name="PRICE" class="form-control text-end" required>
                                     </div>
+                                    {{-- ปิดไว้ก่อน: NoAcp เป็นคอลัมน์ใน uprice ของเดิม (มีค่า 1 อยู่ 114 จาก 60,603 แถว)
+                                         แต่ "ไม่รับ Order เบอร์นี้" เป็นการเดาความหมายจากชื่อคอลัมน์ — ไม่มีช่องนี้ในจอเก่า
+                                         รอลูกค้ายืนยันความหมายก่อนค่อยเปิดใช้ (คอลัมน์ใน tb_saleinfo ยังอยู่)
                                     <div class="col-md-6">
                                         <div class="form-check p-2 rounded border border-danger-subtle bg-danger-subtle ms-2">
                                             <input class="form-check-input" type="checkbox" name="NoAcp" value="1" id="saleinfo_noacp">
@@ -123,6 +126,7 @@
                                             </label>
                                         </div>
                                     </div>
+                                    --}}
 
                                     <div class="col-12">
                                         <label class="form-label small mb-1">
