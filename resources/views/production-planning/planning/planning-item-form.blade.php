@@ -1,6 +1,8 @@
 @php
     // plan_type: ใช้ของ planning item ก่อน ถ้าไม่มีดึงจาก parent header
     $default_plan_type = $planning_item?->plan_type ?? $parent_header?->plan_type ?? '';
+    // Item No.: แก้ไข = ค่าเดิมของ item / เพิ่มใหม่ = itemno ของ item ล่าสุดใน header เดียวกัน
+    $default_itemno    = $planning_item ? ($planning_item->itemno ?? '') : ($last_itemno ?? '');
     // ค่า default สำหรับแถว semi/pigment ใหม่
     $default_mdate     = $parent_header?->mdate ? substr($parent_header->mdate, 0, 10) : '';
     $default_custno    = $parent_header?->company  ?? '';   // custno = company ของ header แม่
@@ -41,7 +43,7 @@
             <div class="col-md-4 mb-3">
                 <label class="form-label">รหัสสินค้า (Item No.) <span class="text-danger">*</span></label>
                 <input type="text" name="itemno"
-                       value="{{ $planning_item?->itemno ?? '' }}"
+                       value="{{ $default_itemno }}"
                        class="form-control" placeholder="กรอก Item No.">
             </div>
             <div class="col-md-4 mb-3">

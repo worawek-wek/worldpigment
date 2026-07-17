@@ -175,6 +175,7 @@ class ProductionPlanController extends Controller
         $semi_list      = [];
         $pigment_list   = [];
         $parent_orderno = null;
+        $last_itemno    = null;
 
         $parent_header = null;
 
@@ -247,6 +248,13 @@ class ProductionPlanController extends Controller
         } elseif ($planning_header_id) {
             $parent_header  = PlanningHeader::find($planning_header_id);
             $parent_orderno = $parent_header?->orderno;
+
+            // ตั้งต้น Item No. ให้ item ใหม่ ด้วย itemno ของ item ล่าสุดใน header เดียวกัน
+            $last_itemno = Planning::where('planning_header_id', $planning_header_id)
+                ->whereNotNull('itemno')
+                ->where('itemno', '!=', '')
+                ->orderByDesc('id')
+                ->value('itemno');
         }
 
         // แผนกจริงของ item: ใช้แผนกที่ตั้งไว้ที่ item ก่อน ถ้าว่างจึง fallback ไปที่ header
@@ -277,6 +285,7 @@ class ProductionPlanController extends Controller
             'semi_list'          => $semi_list,
             'pigment_list'       => $pigment_list,
             'parent_orderno'     => $parent_orderno,
+            'last_itemno'        => $last_itemno,
             'machines' => $machines,
             'planning_statuses' => $planning_statuses,
             'departments' => $departments
