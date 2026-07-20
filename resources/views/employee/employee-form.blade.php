@@ -38,11 +38,11 @@
 
     <div class="mb-3">
         <label class="form-label" for="employee_department">แผนก</label>
-        <select class="form-select" id="employee_department" name="department_id">
+        <select class="form-select" id="employee_department" name="dept">
             <option value="">-- เลือกแผนก --</option>
             @foreach($departments as $department)
-                <option value="{{ $department->id }}"
-                    {{ (string)($employee?->department_id ?? '') === (string)$department->id ? 'selected' : '' }}>
+                <option value="{{ $department->name }}"
+                    {{ ($employee?->dept ?? '') === $department->name ? 'selected' : '' }}>
                     {{ $department->name }}
                 </option>
             @endforeach

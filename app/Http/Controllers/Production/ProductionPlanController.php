@@ -14,6 +14,7 @@ use App\Models\Pigment;
 use App\Models\Machine;
 use App\Models\PlanningStatus;
 use App\Models\Department;
+use App\Models\Emp;
 
 class ProductionPlanController extends Controller
 {
@@ -148,16 +149,20 @@ class ProductionPlanController extends Controller
         if ($planning_id) {
             $planning = Planning::find($planning_id);
             if ($planning) {
-                $planning_header = PlanningHeader::with('plannings')
+                $planning_header = PlanningHeader::with('plannings.subHeadersRecursive')
                     ->find($planning->planning_header_id);
             }
         } elseif ($planning_header_id) {
-            $planning_header = PlanningHeader::with('plannings')
+            $planning_header = PlanningHeader::with('plannings.subHeadersRecursive')
                 ->find($planning_header_id);
         }
 
+        // เงื่อนไขปิดออเดอร์: end_job ของ item ทั้งต้นไม้ (recursive) ต้องเป็น 'Y' ครบทุกแถว
+        $all_jobs_done = $planning_header ? $this->allEndJobsDone($planning_header) : false;
+
         $html = view('production-planning.planning.planning-form', [
             'planning_header' => $planning_header,
+            'all_jobs_done'   => $all_jobs_done,
         ])->render();
 
         return response()->json([
@@ -278,6 +283,13 @@ class ProductionPlanController extends Controller
             ->orderBy('name', 'asc')
             ->get(['id', 'name']);
 
+        // เงื่อนไขปิดงาน (end_job): งาน Semi ของ item นี้ต้องจบงานครบก่อนจึงจะติ๊กได้ (item ใหม่ยังไม่มี semi → true)
+        $item_semi_jobs_done = $planning_item ? $this->itemSemiJobsDone($planning_item) : true;
+
+        // พนักงานผู้รับผิดชอบ: รายชื่อพนักงานในแผนก (emp.dept = company ของ item)
+        $employees    = $this->employeesByDept($item_company);
+        $selected_emp = $planning_item?->empno ? Emp::find($planning_item->empno) : null;
+
         $html = view('production-planning.planning.planning-item-form', [
             'planning_item'      => $planning_item,
             'planning_header_id' => $planning_header_id,
@@ -288,7 +300,10 @@ class ProductionPlanController extends Controller
             'last_itemno'        => $last_itemno,
             'machines' => $machines,
             'planning_statuses' => $planning_statuses,
-            'departments' => $departments
+            'departments' => $departments,
+            'item_semi_jobs_done' => $item_semi_jobs_done,
+            'employees'    => $employees,
+            'selected_emp' => $selected_emp,
         ])->render();
 
         return response()->json([
@@ -297,7 +312,20 @@ class ProductionPlanController extends Controller
         ]);
     }
 
-    // คืนตัวเลือกเครื่องจักร + สถานะ Planning ตามแผนก (company) ที่เลือก
+    // รายชื่อพนักงานผู้รับผิดชอบตามแผนก (emp.dept = ชื่อแผนก) เฉพาะที่เปิดใช้งาน
+    private function employeesByDept(?string $dept)
+    {
+        if (!$dept) {
+            return collect();
+        }
+
+        return Emp::where('dept', $dept)
+            ->where('is_active', 'Y')
+            ->orderBy('empname', 'asc')
+            ->get(['empno', 'empname', 'empsur']);
+    }
+
+    // คืนตัวเลือกเครื่องจักร + สถานะ Planning + พนักงาน ตามแผนก (company) ที่เลือก
     // ใช้เมื่อผู้ใช้เปลี่ยน dropdown แผนกในโมดัลแก้ไข item เพื่อโหลดชุดตัวเลือกใหม่
     public function deptOptions(Request $request)
     {
@@ -318,10 +346,16 @@ class ProductionPlanController extends Controller
             ->pluck('name')
             ->values();
 
+        $employees = $this->employeesByDept($company)->map(fn ($e) => [
+            'empno' => $e->empno,
+            'name'  => trim($e->empname.' '.$e->empsur),
+        ])->values();
+
         return response()->json([
-            'status'   => 200,
-            'machines' => $machines,
-            'statuses' => $statuses,
+            'status'    => 200,
+            'machines'  => $machines,
+            'statuses'  => $statuses,
+            'employees' => $employees,
         ]);
     }
 
@@ -346,6 +380,8 @@ class ProductionPlanController extends Controller
             'weight'             => 'nullable|numeric|min:0',
             'weight_produced'    => 'nullable|numeric|min:0',
             'red_bill_code'      => 'nullable|string|max:255',
+            'end_job'            => 'nullable|in:Y,N',
+            'empno'              => 'nullable|string|max:50|exists:emp,empno',
             'machine_no'         => 'nullable|string|max:255',
             'plan_type'          => 'nullable|string|max:255',
             'planning_status'    => 'nullable|string|max:255',
@@ -353,6 +389,8 @@ class ProductionPlanController extends Controller
             'work_shift'         => 'nullable|in:A,B,C',
             'start_date'         => 'nullable|date',
             'start_time'         => 'nullable|date_format:H:i',
+            'end_date'           => 'nullable|date',
+            'end_time'           => 'nullable|date_format:H:i',
             'qc_date'            => 'nullable|date',
             'qc_time'            => 'nullable|string|max:10',
             'qc_status'          => 'nullable|string|max:255',
@@ -372,8 +410,8 @@ class ProductionPlanController extends Controller
 
         $fields = $request->only([
             'planning_header_id', 'company', 'itemno', 'quantity', 'lot', 'weight',
-            'weight_produced', 'red_bill_code',
-            'machine_no', 'plan_type', 'planning_status', 'inplan', 'work_shift', 'start_date', 'start_time',
+            'weight_produced', 'red_bill_code', 'end_job', 'empno',
+            'machine_no', 'plan_type', 'planning_status', 'inplan', 'work_shift', 'start_date', 'start_time', 'end_date', 'end_time',
             'qc_date', 'qc_time', 'qc_status', 'packing_datetie',
             'mdate', 'custwant', 'senddate', 'remark'
         ]);
@@ -383,6 +421,18 @@ class ProductionPlanController extends Controller
 
         $planning_id = $request->planning_id;
         $is_update   = !empty($planning_id);
+
+        // เงื่อนไขปิดงาน (end_job = Y): ถ้า item มีงาน Semi งาน Semi ทั้งหมดต้องจบงาน (end_job = Y) ก่อน
+        // ตรวจซ้ำฝั่ง server กันการ bypass attribute disabled ฝั่ง client
+        if (($request->end_job ?? 'N') === 'Y' && $is_update) {
+            $item = Planning::find($planning_id);
+            if ($item && !$this->itemSemiJobsDone($item)) {
+                return response()->json([
+                    'status'  => 422,
+                    'message' => 'ยังปิดงานไม่ได้ เพราะงาน Semi ยังจบงาน (End Job) ไม่ครบทุกรายการ',
+                ]);
+            }
+        }
 
         DB::beginTransaction();
         try {
@@ -427,6 +477,88 @@ class ProductionPlanController extends Controller
             'status'             => 200,
             'message'            => $is_update ? 'แก้ไขข้อมูล Planning สำเร็จ' : 'เพิ่มข้อมูล Planning สำเร็จ',
             'planning_header_id' => $fields['planning_header_id']
+        ]);
+    }
+
+    /**
+     * รวบรวมค่า end_job ของ item ตรงของ header + item ของ sub-header (semi/pigment) ทุกชั้นแบบ recursive
+     * (อ้างอิงรูปแบบเดียวกับ OrderPlanController::collectStatuses)
+     */
+    private function collectEndJobs($plannings, array &$jobs): void
+    {
+        foreach ($plannings as $p) {
+            $jobs[] = $p->end_job;
+            foreach ($p->subHeadersRecursive as $header) {
+                $this->collectEndJobs($header->planningsRecursive, $jobs);
+            }
+        }
+    }
+
+    /**
+     * true เมื่อมี item อย่างน้อย 1 รายการ และ end_job ทุกแถวที่เกี่ยวข้อง (recursive) = 'Y'
+     */
+    private function allEndJobsDone(PlanningHeader $header): bool
+    {
+        $header->loadMissing('plannings.subHeadersRecursive');
+        $jobs = [];
+        $this->collectEndJobs($header->plannings, $jobs);
+
+        return count($jobs) > 0 && collect($jobs)->every(fn ($j) => $j === 'Y');
+    }
+
+    /**
+     * true เมื่องาน Semi ของ item นี้ (แผนการผลิตใต้ semi_headers ทั้งต้นไม้) มี end_job = 'Y' ครบทุกแถว
+     * - ถ้า item ไม่มีงาน Semi เลย → ไม่มีข้อจำกัด (คืน true)
+     * - ใช้เป็นเงื่อนไขก่อนอนุญาตให้ปิดงาน (end_job) ของ item
+     */
+    private function itemSemiJobsDone(Planning $item): bool
+    {
+        $item->loadMissing('semi_headers.planningsRecursive');
+
+        $jobs = [];
+        foreach ($item->semi_headers as $header) {
+            $this->collectEndJobs($header->planningsRecursive, $jobs);
+        }
+
+        return collect($jobs)->every(fn ($j) => $j === 'Y');
+    }
+
+    /**
+     * บันทึกสถานะปิดออเดอร์ (end_order) ของ PlanningHeader
+     * - ปลด (N) ได้ตลอด
+     * - ติ๊ก (Y) ได้ต่อเมื่อ end_job ของ item ที่เกี่ยวข้องทั้งต้นไม้เป็น 'Y' ครบ (ตรวจซ้ำฝั่ง server กัน bypass)
+     */
+    public function saveEndOrder(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'planning_header_id' => 'required|exists:tb_planning_header,id',
+            'end_order'          => 'required|in:Y,N',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status'  => 422,
+                'message' => $validator->errors()->first(),
+                'errors'  => $validator->errors(),
+            ]);
+        }
+
+        $header = PlanningHeader::find($request->planning_header_id);
+
+        // ตรวจเงื่อนไขเฉพาะตอนจะติ๊กปิดออเดอร์ (Y); การปลด (N) ทำได้เสมอ
+        if ($request->end_order === 'Y' && !$this->allEndJobsDone($header)) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'ยังปิดออเดอร์ไม่ได้ เพราะยังมีรายการที่ยังไม่จบงาน (End Job)',
+            ]);
+        }
+
+        $header->update(['end_order' => $request->end_order]);
+
+        return response()->json([
+            'status'             => 200,
+            'message'            => $request->end_order === 'Y' ? 'ปิดออเดอร์สำเร็จ' : 'ยกเลิกการปิดออเดอร์แล้ว',
+            'planning_header_id' => $header->id,
         ]);
     }
 }

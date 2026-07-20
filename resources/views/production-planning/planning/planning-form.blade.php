@@ -71,6 +71,23 @@
                         <div class="fw-semibold">{{ $planning_header->remark }}</div>
                     </div>
                     @endif
+
+                    {{-- ปิดออเดอร์ (end_order): ติ๊กได้ต่อเมื่อ end_job ของทุกรายการที่เกี่ยวข้องเป็น Y ครบ --}}
+                    <div class="col-md-12 mt-2 pt-2 border-top">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="planning_end_order"
+                                   data-planning_header_id="{{ $planning_header->id }}"
+                                   value="Y"
+                                   {{ ($planning_header->end_order ?? 'N') === 'Y' ? 'checked' : '' }}
+                                   {{ (($planning_header->end_order ?? 'N') !== 'Y' && !$all_jobs_done) ? 'disabled' : '' }}>
+                            <label class="form-check-label fw-semibold" for="planning_end_order">ปิดออเดอร์ (End Order)</label>
+                        </div>
+                        @unless($all_jobs_done)
+                            <div class="form-text text-warning">
+                                <i class="ti ti-alert-triangle me-1"></i>ต้องจบงาน (End Job) ทุกรายการที่เกี่ยวข้องก่อน จึงจะปิดออเดอร์ได้
+                            </div>
+                        @endunless
+                    </div>
                 </div>
             </div>
         </div>

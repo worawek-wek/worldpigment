@@ -518,5 +518,55 @@
         });
     });
 
+    // ---- ปิดออเดอร์ (end_order) จากโมดัลแผนการผลิต ----
+    $(document).on('change', '#planning_end_order', function () {
+        var $cb = $(this);
+        var planning_header_id = $cb.data('planning_header_id');
+        var end_order = $cb.is(':checked') ? 'Y' : 'N';
+
+        $cb.prop('disabled', true);
+
+        $.ajax({
+            type: 'POST',
+            url: '{{ route("production.planning.save-end-order") }}',
+            dataType: 'json',
+            data: {
+                planning_header_id: planning_header_id,
+                end_order: end_order,
+                _token: '{{ csrf_token() }}'
+            },
+            success: function (res) {
+                if (res.status == 200) {
+                    // รีเฟรชการ์ด Modal 1 (สถานะ checkbox/disabled จะถูกคำนวณใหม่ฝั่ง server)
+                    reloadPlanningHeaderContent(planning_header_id);
+                    oTable.draw();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'สำเร็จ',
+                        text: res.message,
+                        timer: 1600,
+                        showConfirmButton: false
+                    });
+                } else {
+                    // ย้อนสถานะ checkbox กลับ
+                    $cb.prop('checked', !$cb.is(':checked'));
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'ผิดพลาด',
+                        text: res.message
+                    });
+                }
+            },
+            error: function (xhr) {
+                $cb.prop('checked', !$cb.is(':checked'));
+                var msg = xhr.responseJSON?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: msg });
+            },
+            complete: function () {
+                $cb.prop('disabled', false);
+            }
+        });
+    });
+
 </script>
 @endsection

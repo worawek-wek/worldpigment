@@ -110,6 +110,13 @@ return [
         'permission' => 'department read',
     ],
 
+    'Machine' => [
+        'title' => 'เครื่องจักร',
+        'icon' => 'ti-tools',
+        'route_name' => 'machine.index',
+        'permission' => 'machine read',
+    ],
+
     'Employee' => [
         'title' => 'พนักงาน',
         'icon' => 'ti-users',

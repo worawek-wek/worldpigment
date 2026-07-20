@@ -21,12 +21,10 @@ class EmpController extends Controller
     public function datatable(Request $request)
     {
         $employees = Emp::query()
-            ->leftJoin('tb_departments', 'tb_departments.id', '=', 'emp.department_id')
             ->leftJoin('roles', 'roles.id', '=', 'emp.role_id')
             ->select([
                 'emp.empno', 'emp.empname', 'emp.empsur', 'emp.supno',
-                'emp.user', 'emp.department_id', 'emp.role_id', 'emp.is_active',
-                'tb_departments.name as department_name',
+                'emp.user', 'emp.dept', 'emp.role_id', 'emp.is_active',
                 'roles.name as role_name',
             ]);
 
@@ -50,7 +48,7 @@ class EmpController extends Controller
                 return ++$rownum;
             })
             ->addColumn('department_name', function ($emp) {
-                return $emp->department_name ?? '-';
+                return $emp->dept ?: '-';
             })
             ->addColumn('role_name', function ($emp) {
                 return $emp->role_name ?? '-';
@@ -109,7 +107,7 @@ class EmpController extends Controller
             'empsur'        => 'nullable|string|max:20',
             'supno'         => 'nullable|string|max:2',
             'password'      => 'nullable|string|min:4|max:255',
-            'department_id' => 'nullable|integer|exists:tb_departments,id',
+            'dept'          => 'nullable|string|exists:tb_departments,name',
             'role_id'       => 'nullable|integer|exists:roles,id',
             'is_active'     => 'nullable|in:Y,N',
         ];
@@ -141,7 +139,7 @@ class EmpController extends Controller
             'empsur'        => $request->empsur,
             'supno'         => $request->supno,
             'user'          => $request->user ?: null,
-            'department_id' => $request->department_id ?: null,
+            'dept'          => $request->dept ?: null,
             'role_id'       => $request->role_id ?: null,
             // switch ในฟอร์ม: ติ๊ก = ส่ง is_active (Y), ไม่ติ๊ก = ไม่ส่ง (N)
             'is_active'     => $request->has('is_active') ? 'Y' : 'N',

@@ -90,6 +90,30 @@
                        value="{{ $planning_item ? ($planning_item->red_bill_code ?? '') : ($parent_header?->orderno ?? '') }}"
                        class="form-control" placeholder="เลขที่ใบเบิกออกใบแดง">
             </div>
+            <div class="col-md-4 mb-3 d-flex align-items-end">
+                @php
+                    $item_end_job     = ($planning_item?->end_job ?? 'N') === 'Y';
+                    $semi_jobs_done   = $item_semi_jobs_done ?? true;
+                    // ปิดใช้งานเฉพาะตอน "ยังไม่จบงาน และงาน Semi ยังไม่ครบ" (จบงานอยู่แล้วยังปลดได้เสมอ)
+                    $end_job_disabled = !$item_end_job && !$semi_jobs_done;
+                @endphp
+                <div>
+                    <div class="form-check">
+                        {{-- hidden ส่งค่า N เมื่อไม่ติ๊ก (checkbox N มาก่อน, ค่า Y จะ override เมื่อติ๊ก) --}}
+                        <input type="hidden" name="end_job" value="N">
+                        <input type="checkbox" class="form-check-input" id="planning_item_end_job"
+                               name="end_job" value="Y"
+                               {{ $item_end_job ? 'checked' : '' }}
+                               {{ $end_job_disabled ? 'disabled' : '' }}>
+                        <label class="form-check-label" for="planning_item_end_job">จบงาน (End Job)</label>
+                    </div>
+                    @if($end_job_disabled)
+                        <div class="form-text text-warning">
+                            <i class="ti ti-alert-triangle me-1"></i>ต้องจบงาน (End Job) ของงาน Semi ให้ครบก่อน
+                        </div>
+                    @endif
+                </div>
+            </div>
         </div>
         <div class="row my-2"><hr /></div>
         <div class="row p-3 rounded" style="background-color: #e5f4ff; border: 1px dashed #3f50e2;">
@@ -188,6 +212,26 @@
                     </select>
                 </div>
                 <div class="col-md-3 mb-3">
+                    <label class="form-label">พนักงานผู้รับผิดชอบ</label>
+                    @php $current_empno = $planning_item?->empno ?? ''; @endphp
+                    <select name="empno" id="planning_item_empno" class="form-select">
+                        <option value="">เลือกพนักงาน</option>
+                        @foreach($employees as $e)
+                            <option value="{{ $e->empno }}" {{ $current_empno === $e->empno ? 'selected' : '' }}>
+                                {{ trim($e->empname.' '.$e->empsur) }}
+                            </option>
+                        @endforeach
+                        {{-- fallback: พนักงานเดิมไม่อยู่ในลิสต์แผนกปัจจุบัน (ย้ายแผนก/ปิดใช้งาน) --}}
+                        @if($current_empno !== '' && !$employees->contains('empno', $current_empno))
+                            <option value="{{ $current_empno }}" selected>
+                                {{ $selected_emp ? trim($selected_emp->empname.' '.$selected_emp->empsur) : $current_empno }} (เดิม)
+                            </option>
+                        @endif
+                    </select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3 mb-3">
                     <label class="form-label">วันที่เริ่มผลิต (Start Date)</label>
                     <input type="date" name="start_date"
                         value="{{ $planning_item?->start_date ?? '' }}"
@@ -197,6 +241,18 @@
                     <label class="form-label">เวลาที่เริ่มผลิต (Start Time)</label>
                     <input type="time" name="start_time"
                         value="{{ $planning_item?->start_time ? substr($planning_item->start_time, 0, 5) : '' }}"
+                        class="form-control">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">วันที่ผลิตเสร็จ (End Date)</label>
+                    <input type="date" name="end_date"
+                        value="{{ $planning_item?->end_date ?? '' }}"
+                        class="form-control">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">เวลาที่ผลิตเสร็จ (End Time)</label>
+                    <input type="time" name="end_time"
+                        value="{{ $planning_item?->end_time ? substr($planning_item->end_time, 0, 5) : '' }}"
                         class="form-control">
                 </div>
             </div>
@@ -531,9 +587,11 @@
         var company = $(this).val() || '';
         var $machine = $('#planning_item_machine');
         var $status  = $('#planning_item_status');
+        var $emp     = $('#planning_item_empno');
 
         $machine.prop('disabled', true);
         $status.prop('disabled', true);
+        $emp.prop('disabled', true);
 
         $.ajax({
             type: 'GET', url: URL_DEPT_OPTIONS, dataType: 'json',
@@ -550,6 +608,13 @@
                     statusOpts += '<option value="' + esc(s) + '">' + esc(s) + '</option>';
                 });
                 $status.html(statusOpts).val('');
+
+                // พนักงานผู้รับผิดชอบของแผนกใหม่ — ล้างค่าที่เลือกไว้ (เป็นของแผนกเก่า)
+                var empOpts = '<option value="">เลือกพนักงาน</option>';
+                (res.employees || []).forEach(function (e) {
+                    empOpts += '<option value="' + esc(e.empno) + '">' + esc(e.name) + '</option>';
+                });
+                $emp.html(empOpts).val('');
             },
             error: function () {
                 Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: 'โหลดข้อมูลแผนกไม่สำเร็จ กรุณาลองใหม่' });
@@ -557,6 +622,7 @@
             complete: function () {
                 $machine.prop('disabled', false);
                 $status.prop('disabled', false);
+                $emp.prop('disabled', false);
             }
         });
     });

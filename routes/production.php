@@ -4,6 +4,7 @@ use App\Http\Controllers\Production as Production;
 use App\Http\Controllers\DepartmentController as DepartmentController;
 use App\Http\Controllers\EmpController as EmpController;
 use App\Http\Controllers\RoleController as RoleController;
+use App\Http\Controllers\MachineController as MachineController;
 
 Route::prefix('production-planning')->group(function () {
 
@@ -25,6 +26,7 @@ Route::prefix('production-planning')->group(function () {
     Route::get('/planning/edit-item', [Production\ProductionPlanController::class, 'editItem'])->name('production.planning.edit-item');
     Route::get('/planning/dept-options', [Production\ProductionPlanController::class, 'deptOptions'])->name('production.planning.dept-options');
     Route::post('/planning/save-item', [Production\ProductionPlanController::class, 'saveItem'])->name('production.planning.save-item');
+    Route::post('/planning/save-end-order', [Production\ProductionPlanController::class, 'saveEndOrder'])->name('production.planning.save-end-order');
 
     // สถานะ Planning (master data)
     Route::get('/planning-status', [Production\PlanningStatusController::class, 'index'])->name('production.planningstatus.index');
@@ -87,5 +89,12 @@ Route::prefix('production-planning')->group(function () {
     Route::get('/role/edit', [RoleController::class, 'edit'])->name('role.edit');
     Route::post('/role/store', [RoleController::class, 'store'])->name('role.store');
     Route::post('/role/delete', [RoleController::class, 'destroy'])->name('role.delete');
+
+    // เครื่องจักร (Machine)
+    Route::get('/machine', [MachineController::class, 'index'])->name('machine.index');
+    Route::get('/machine/datatable', [MachineController::class, 'datatable'])->name('machine.datatable');
+    Route::get('/machine/edit', [MachineController::class, 'edit'])->name('machine.edit');
+    Route::post('/machine/store', [MachineController::class, 'store'])->name('machine.store');
+    Route::post('/machine/delete', [MachineController::class, 'destroy'])->name('machine.delete');
 
 });

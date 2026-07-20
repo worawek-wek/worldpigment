@@ -28,10 +28,10 @@ class Emp extends Authenticatable
         return '';
     }
 
-    // แผนกที่พนักงานสังกัด
+    // แผนกที่พนักงานสังกัด (เก็บเป็นชื่อแผนกใน emp.dept → อ้าง tb_departments.name)
     public function department()
     {
-        return $this->belongsTo(Department::class, 'department_id');
+        return $this->belongsTo(Department::class, 'dept', 'name');
     }
 
     // สิทธิ์การใช้งาน (role) ของพนักงาน
