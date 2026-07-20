@@ -405,6 +405,7 @@ class ProductionPlanController extends Controller
             'qc_time'            => 'nullable|string|max:10',
             'qc_status'          => 'nullable|string|max:255',
             'packing_datetie'    => 'nullable|string|max:255',
+            'pack_remark'        => 'nullable|string|max:1000',
             'mdate'              => 'nullable|date',
             'custwant'           => 'nullable|date',
             'senddate'           => 'nullable|date',
@@ -428,7 +429,7 @@ class ProductionPlanController extends Controller
             'planning_header_id', 'company', 'itemno', 'quantity', 'lot', 'weight',
             'weight_produced', 'red_bill_code', 'end_job', 'empno',
             'machine_no', 'plan_type', 'planning_status', 'inplan', 'work_shift', 'start_date', 'start_time', 'end_date', 'end_time',
-            'qc_date', 'qc_time', 'qc_status', 'packing_datetie',
+            'qc_date', 'qc_time', 'qc_status', 'packing_datetie', 'pack_remark',
             'mdate', 'custwant', 'senddate', 'remark'
         ]);
 

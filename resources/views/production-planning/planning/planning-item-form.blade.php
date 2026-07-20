@@ -356,6 +356,12 @@
                        value="{{ $planning_item?->packing_datetie ?? '' }}"
                        class="form-control" placeholder="วันเวลาจัดแพ็ค">
             </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">หมายเหตุการบรรจุ (Pack Remark)</label>
+                <input type="text" name="pack_remark"
+                       value="{{ $planning_item?->pack_remark ?? '' }}"
+                       class="form-control" placeholder="หมายเหตุการบรรจุ">
+            </div>
         </div>
 
         <div class="row">
