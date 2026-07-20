@@ -258,6 +258,8 @@
             </div>
         </div>
 
+        <div class="row my-2"><hr /></div>
+
         {{-- ── การ์ดสีน้ำเงิน: สถานะวิธีการผลิต (บันทึกลง tb_planning_prod_method) ── --}}
         <div class="row p-3 rounded mt-2" style="background-color: #e5f4ff; border: 1px dashed #3f50e2;">
             <div class="col-12 d-flex justify-content-between align-items-center mb-2">
