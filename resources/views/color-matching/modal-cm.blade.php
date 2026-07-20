@@ -175,11 +175,46 @@
                                         <label class="form-label small mb-1">Standard <span class="text-muted fw-normal">(เช่น PT 494 C)</span></label>
                                         <input type="text" name="STD" class="form-control">
                                     </div>
-                                    <div class="col-md-5">
+                                    <div class="col-md-3">
                                         <label class="form-label small mb-1">นำไปทำชิ้นงาน (Model)</label>
                                         <select name="Model" class="form-select">
                                             <option value="">-- เลือก --</option>
                                             @foreach ($options['Model'] as $opt)
+                                                <option>{{ $opt }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    {{-- ยี่ห้อของชิ้นงานที่นำไปทำ — วางคู่กับ Model --}}
+                                    <div class="col-md-2">
+                                        <label class="form-label small mb-1">ยี่ห้อ <span class="text-muted fw-normal">(ยี่ห้อของชิ้นงาน)</span></label>
+                                        <input type="text" name="Brand" class="form-control">
+                                    </div>
+                                    {{-- ขึ้นแถวใหม่ --}}
+                                    <div class="w-100"></div>
+
+                                    {{-- Chemical Safety — มาตรฐานความปลอดภัยสารเคมี --}}
+                                    {{-- select2 ของ modal นี้ตั้ง tags:true → พิมพ์ค่านอกรายการเองได้ (= ช่อง "อื่นๆ ระบุ" ในฟอร์มกระดาษ) --}}
+                                    <div class="col-md-4">
+                                        <label class="form-label small mb-1">
+                                            <i class="ti ti-shield-check me-1"></i>
+                                            Chemical Safety <span class="text-muted fw-normal">(เลือก หรือพิมพ์ค่าอื่นได้)</span>
+                                        </label>
+                                        @php $chemSafetyFixed = [
+                                            'EN 71:3',
+                                            'AP (89)',
+                                            'EU 94/62/EC',
+                                            'JHOSPA',
+                                            'EU 2002/72/EC',
+                                            'RoHS2 (EU2011/65/EU)',
+                                        ]; @endphp
+                                        <select name="ChemSafety" class="form-select">
+                                            <option value="">-- เลือก --</option>
+                                            {{-- ตัวเลือกตายตัวตามฟอร์มกระดาษ (บนสุด) --}}
+                                            @foreach ($chemSafetyFixed as $opt)
+                                                <option>{{ $opt }}</option>
+                                            @endforeach
+                                            {{-- ค่าที่เคยบันทึกใน DB (ต่อท้าย) — ตัดที่ซ้ำกับตัวตายตัวออก --}}
+                                            @foreach (array_diff($options['ChemSafety'], $chemSafetyFixed) as $opt)
                                                 <option>{{ $opt }}</option>
                                             @endforeach
                                         </select>
