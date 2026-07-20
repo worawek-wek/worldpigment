@@ -5,6 +5,7 @@ use App\Http\Controllers\DepartmentController as DepartmentController;
 use App\Http\Controllers\EmpController as EmpController;
 use App\Http\Controllers\RoleController as RoleController;
 use App\Http\Controllers\MachineController as MachineController;
+use App\Http\Controllers\ProdMethodController as ProdMethodController;
 
 Route::prefix('production-planning')->group(function () {
 
@@ -96,5 +97,12 @@ Route::prefix('production-planning')->group(function () {
     Route::get('/machine/edit', [MachineController::class, 'edit'])->name('machine.edit');
     Route::post('/machine/store', [MachineController::class, 'store'])->name('machine.store');
     Route::post('/machine/delete', [MachineController::class, 'destroy'])->name('machine.delete');
+
+    // วิธีการผลิต (Production Method — master)
+    Route::get('/prod-method', [ProdMethodController::class, 'index'])->name('prodmethod.index');
+    Route::get('/prod-method/datatable', [ProdMethodController::class, 'datatable'])->name('prodmethod.datatable');
+    Route::get('/prod-method/edit', [ProdMethodController::class, 'edit'])->name('prodmethod.edit');
+    Route::post('/prod-method/store', [ProdMethodController::class, 'store'])->name('prodmethod.store');
+    Route::post('/prod-method/toggle-status', [ProdMethodController::class, 'toggleStatus'])->name('prodmethod.toggle-status');
 
 });

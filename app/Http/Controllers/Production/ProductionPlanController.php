@@ -15,6 +15,8 @@ use App\Models\Machine;
 use App\Models\PlanningStatus;
 use App\Models\Department;
 use App\Models\Emp;
+use App\Models\ProdMethod;
+use App\Models\PlanningProdMethod;
 
 class ProductionPlanController extends Controller
 {
@@ -290,6 +292,12 @@ class ProductionPlanController extends Controller
         $employees    = $this->employeesByDept($item_company);
         $selected_emp = $planning_item?->empno ? Emp::find($planning_item->empno) : null;
 
+        // สถานะวิธีการผลิต: master (dropdown) + แถวเดิมของ item
+        $prod_methods     = ProdMethod::where('is_active', 'Y')
+            ->orderBy('sort', 'asc')->orderBy('name', 'asc')
+            ->get(['id', 'name']);
+        $prod_method_rows = $planning_item ? $planning_item->prodMethods : collect();
+
         $html = view('production-planning.planning.planning-item-form', [
             'planning_item'      => $planning_item,
             'planning_header_id' => $planning_header_id,
@@ -304,6 +312,8 @@ class ProductionPlanController extends Controller
             'item_semi_jobs_done' => $item_semi_jobs_done,
             'employees'    => $employees,
             'selected_emp' => $selected_emp,
+            'prod_methods'     => $prod_methods,
+            'prod_method_rows' => $prod_method_rows,
         ])->render();
 
         return response()->json([
@@ -398,6 +408,12 @@ class ProductionPlanController extends Controller
             'mdate'              => 'nullable|date',
             'custwant'           => 'nullable|date',
             'senddate'           => 'nullable|date',
+            // สถานะวิธีการผลิต (การ์ดสีน้ำเงิน) — array คู่ขนาน
+            'prod_method_id'     => 'nullable|array',
+            'prod_method_id.*'   => 'nullable|integer|exists:tb_prod_method,id',
+            'prod_method_date.*' => 'nullable|date',
+            'prod_method_start.*'=> 'nullable|date_format:H:i',
+            'prod_method_end.*'  => 'nullable|date_format:H:i',
         ]);
 
         if ($validator->fails()) {
@@ -461,8 +477,12 @@ class ProductionPlanController extends Controller
 
                 Planning::where('id', $planning_id)->update($fields);
             } else {
-                Planning::create($fields);
+                $created     = Planning::create($fields);
+                $planning_id = $created->id;
             }
+
+            // 2) sync สถานะวิธีการผลิต (การ์ดสีน้ำเงิน) — ลบของเดิมแล้ว insert ใหม่จาก array ที่ส่งมา
+            $this->syncProdMethods($planning_id, $request);
 
             DB::commit();
         } catch (\Exception $e) {
@@ -478,6 +498,44 @@ class ProductionPlanController extends Controller
             'message'            => $is_update ? 'แก้ไขข้อมูล Planning สำเร็จ' : 'เพิ่มข้อมูล Planning สำเร็จ',
             'planning_header_id' => $fields['planning_header_id']
         ]);
+    }
+
+    /**
+     * sync สถานะวิธีการผลิต (tb_planning_prod_method) ของ planning หนึ่ง ๆ
+     * ลบแถวเดิมทั้งหมดแล้ว insert ใหม่จาก array คู่ขนานที่ส่งมา (ข้ามแถวที่ว่างทั้งหมด)
+     * เรียกภายในทรานแซกชันของ saveItem
+     */
+    private function syncProdMethods($planning_id, Request $request): void
+    {
+        PlanningProdMethod::where('planning_id', $planning_id)->delete();
+
+        $methods = $request->input('prod_method_id', []);
+        $dates   = $request->input('prod_method_date', []);
+        $starts  = $request->input('prod_method_start', []);
+        $ends    = $request->input('prod_method_end', []);
+
+        $count = max(count($methods), count($dates), count($starts), count($ends));
+
+        for ($i = 0; $i < $count; $i++) {
+            $method_id = $methods[$i] ?? null;
+            $work_date = $dates[$i]   ?? null;
+            $start     = $starts[$i]  ?? null;
+            $end       = $ends[$i]    ?? null;
+
+            // ข้ามแถวที่ว่างทั้งหมด
+            if (empty($method_id) && empty($work_date) && empty($start) && empty($end)) {
+                continue;
+            }
+
+            PlanningProdMethod::create([
+                'planning_id'    => $planning_id,
+                'prod_method_id' => $method_id ?: null,
+                'work_date'      => $work_date ?: null,
+                'start_time'     => $start ?: null,
+                'end_time'       => $end ?: null,
+                'sort'           => $i,
+            ]);
+        }
     }
 
     /**

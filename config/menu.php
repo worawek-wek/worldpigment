@@ -117,6 +117,13 @@ return [
         'permission' => 'machine read',
     ],
 
+    'ProdMethod' => [
+        'title' => 'วิธีการผลิต',
+        'icon' => 'ti-list-check',
+        'route_name' => 'prodmethod.index',
+        'permission' => 'prodmethod read',
+    ],
+
     'Employee' => [
         'title' => 'พนักงาน',
         'icon' => 'ti-users',

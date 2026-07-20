@@ -50,4 +50,10 @@ class Planning extends Model
         return $this->sub_headers()->with('planningsRecursive');
     }
 
+    // สถานะวิธีการผลิต (หลายแถวต่อ 1 planning item)
+    public function prodMethods()
+    {
+        return $this->hasMany(PlanningProdMethod::class, 'planning_id')->orderBy('sort');
+    }
+
 }

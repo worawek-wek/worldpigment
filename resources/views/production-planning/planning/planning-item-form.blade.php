@@ -257,6 +257,71 @@
                 </div>
             </div>
         </div>
+
+        {{-- ── การ์ดสีน้ำเงิน: สถานะวิธีการผลิต (บันทึกลง tb_planning_prod_method) ── --}}
+        <div class="row p-3 rounded mt-2" style="background-color: #e5f4ff; border: 1px dashed #3f50e2;">
+            <div class="col-12 d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0 text-primary">
+                    <i class="ti ti-clipboard-list me-1"></i>สถานะวิธีการผลิต
+                </h6>
+                <button type="button" id="btn_add_prod_method" class="btn btn-sm btn-primary">
+                    <i class="ti ti-plus me-1"></i>เพิ่ม
+                </button>
+            </div>
+            <div class="col-12">
+                {{-- หัวคอลัมน์ (แสดงครั้งเดียว) --}}
+                <div class="row g-2 fw-semibold small text-muted mb-1 d-none d-md-flex">
+                    <div class="col-md-3">วิธีการผลิต</div>
+                    <div class="col-md-3">วันที่</div>
+                    <div class="col-md-2">เวลาเริ่ม</div>
+                    <div class="col-md-2">เวลาที่เสร็จ</div>
+                    <div class="col-md-2"></div>
+                </div>
+                @php
+                    // สร้างตัวเลือก <option> ของวิธีการผลิต (ใช้ซ้ำในทุกแถวที่ render ฝั่ง server)
+                    $prodMethodOptions = function ($selected = null) use ($prod_methods) {
+                        $out = '<option value="">เลือกวิธีการผลิต</option>';
+                        foreach ($prod_methods as $pm) {
+                            $sel = ((string) $selected === (string) $pm->id) ? 'selected' : '';
+                            $out .= '<option value="'.$pm->id.'" '.$sel.'>'.e($pm->name).'</option>';
+                        }
+                        return $out;
+                    };
+                @endphp
+                <div id="prod_method_rows">
+                    @forelse($prod_method_rows as $row)
+                        <div class="row g-2 align-items-center mb-2 prod-method-row">
+                            <div class="col-md-3">
+                                <select name="prod_method_id[]" class="form-select form-select-sm">{!! $prodMethodOptions($row->prod_method_id) !!}</select>
+                            </div>
+                            <div class="col-md-3"><input type="date" name="prod_method_date[]" class="form-control form-control-sm" value="{{ $row->work_date ? substr($row->work_date, 0, 10) : '' }}"></div>
+                            <div class="col-md-2"><input type="time" name="prod_method_start[]" class="form-control form-control-sm" value="{{ $row->start_time ? substr($row->start_time, 0, 5) : '' }}"></div>
+                            <div class="col-md-2"><input type="time" name="prod_method_end[]" class="form-control form-control-sm" value="{{ $row->end_time ? substr($row->end_time, 0, 5) : '' }}"></div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-sm btn-outline-danger btn_remove_prod_method" title="ลบ">
+                                    <i class="ti ti-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="row g-2 align-items-center mb-2 prod-method-row">
+                            <div class="col-md-3">
+                                <select name="prod_method_id[]" class="form-select form-select-sm">{!! $prodMethodOptions() !!}</select>
+                            </div>
+                            <div class="col-md-3"><input type="date" name="prod_method_date[]" class="form-control form-control-sm"></div>
+                            <div class="col-md-2"><input type="time" name="prod_method_start[]" class="form-control form-control-sm"></div>
+                            <div class="col-md-2"><input type="time" name="prod_method_end[]" class="form-control form-control-sm"></div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-sm btn-outline-danger btn_remove_prod_method" title="ลบ">
+                                    <i class="ti ti-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+
         <div class="row my-2"><hr /></div>
         <div class="row">
             <div class="col-md-4 mb-3">
@@ -625,6 +690,37 @@
                 $emp.prop('disabled', false);
             }
         });
+    });
+
+    // ── การ์ดสีน้ำเงิน "สถานะวิธีการผลิต": เพิ่ม/ลบแถว (บันทึกลง tb_planning_prod_method) ──
+    var PROD_METHOD_OPTIONS = @json($prod_methods);
+    function prodMethodSelectHtml() {
+        var opts = '<option value="">เลือกวิธีการผลิต</option>';
+        (PROD_METHOD_OPTIONS || []).forEach(function (pm) {
+            opts += '<option value="' + esc(pm.id) + '">' + esc(pm.name) + '</option>';
+        });
+        return '<select name="prod_method_id[]" class="form-select form-select-sm">' + opts + '</select>';
+    }
+    function prodMethodRowHtml() {
+        return '<div class="row g-2 align-items-center mb-2 prod-method-row">'
+            + '<div class="col-md-3">' + prodMethodSelectHtml() + '</div>'
+            + '<div class="col-md-3"><input type="date" name="prod_method_date[]" class="form-control form-control-sm"></div>'
+            + '<div class="col-md-2"><input type="time" name="prod_method_start[]" class="form-control form-control-sm"></div>'
+            + '<div class="col-md-2"><input type="time" name="prod_method_end[]" class="form-control form-control-sm"></div>'
+            + '<div class="col-md-2"><button type="button" class="btn btn-sm btn-outline-danger btn_remove_prod_method" title="ลบ"><i class="ti ti-trash"></i></button></div>'
+            + '</div>';
+    }
+    $('#btn_add_prod_method').on('click', function () {
+        $('#prod_method_rows').append(prodMethodRowHtml());
+    });
+    // ลบแถว; ถ้าเหลือแถวเดียวให้ล้างค่าแทนการลบ (คงไว้อย่างน้อย 1 แถว)
+    $('#prod_method_rows').on('click', '.btn_remove_prod_method', function () {
+        var $rows = $('#prod_method_rows .prod-method-row');
+        if ($rows.length <= 1) {
+            $(this).closest('.prod-method-row').find('input').val('');
+        } else {
+            $(this).closest('.prod-method-row').remove();
+        }
     });
 
     function toast(icon, text) {
