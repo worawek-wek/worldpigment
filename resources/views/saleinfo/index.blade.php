@@ -57,6 +57,181 @@
     color: rgba(255, 255, 255, .65) !important;
     letter-spacing: 0;
 }
+
+/* ─── ตารางประวัติการปรับราคา (ใน modal) — โทนส้ม/ทองให้เข้าธีมกำหนดราคา ─── */
+.saleinfo-history {
+    border: 1px solid #f0dfc0;
+}
+/* คอลัมน์กว้างเท่ากันทั้ง 6 ช่อง */
+.saleinfo-history table {
+    table-layout: fixed;
+}
+.saleinfo-history th,
+.saleinfo-history td {
+    width: 16.66%;
+    word-break: break-word;
+}
+.saleinfo-history .card-header {
+    background-color: #fdf3e3;
+    border-bottom: 2px solid #E08A1E;
+    border-radius: 0.375rem 0.375rem 0 0;
+}
+.saleinfo-history thead th {
+    background-color: #f6ead3;
+    color: #7a4d05;
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.2;
+    border-bottom: 1px solid #ecd9b4;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+.saleinfo-history tbody td {
+    font-size: 0.85rem;
+    border-color: #f1e6d2;
+}
+.saleinfo-history tbody tr:nth-child(even) {
+    background-color: #fffaf1;
+}
+/* แถวล่าสุด (บนสุด) = ราคาปัจจุบัน — เน้นให้เห็นชัด */
+.saleinfo-history tbody tr:first-child {
+    background-color: #fdf3e3;
+}
+.saleinfo-history tbody tr:first-child td {
+    font-weight: 600;
+    color: #7a4d05;
+}
+.saleinfo-history .badge-current {
+    background-color: #E08A1E;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.15rem 0.45rem;
+    border-radius: 0.7rem;
+    margin-left: 0.35rem;
+}
+
+/* ─── ราคาตามขนาดบรรจุ (DB) + ค่าสี — โทนส้ม/ทองให้เข้าธีม ─── */
+.saleinfo-dbprice {
+    border: 1px solid #f0dfc0;
+}
+.saleinfo-dbprice .card-header {
+    background-color: #fdf3e3;
+    border-bottom: 2px solid #E08A1E;
+    border-radius: 0.375rem 0.375rem 0 0;
+}
+/* layout ทั้ง section: 4 คอลัมน์ = ราคา 3 ช่อง/แถว + กล่องค่าสี span 2 แถวขวาสุด
+   ใช้ minmax(0,1fr) ให้คอลัมน์หดได้ (กัน input/ข้อความดันคอลัมน์จนล้นออกนอกกรอบ) */
+.saleinfo-dbprice .dbprice-layout {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(170px, 1fr);
+    gap: 0.75rem;
+    align-items: stretch;
+}
+.saleinfo-dbprice .dbprice-layout > * {
+    min-width: 0;
+}
+.saleinfo-dbprice .dbprice-layout .dbprice-colorbox {
+    grid-column: 4;
+    grid-row: 1 / span 2;
+}
+/* จอแคบ (< lg): เหลือ 2 คอลัมน์ กล่องค่าสีลงเต็มแถวล่าง */
+@media (max-width: 991.98px) {
+    .saleinfo-dbprice .dbprice-layout {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .saleinfo-dbprice .dbprice-layout .dbprice-colorbox {
+        grid-column: 1 / -1;
+        grid-row: auto;
+    }
+}
+/* ชั้นราคาแต่ละขนาดบรรจุ */
+.saleinfo-dbprice .dbprice-tier {
+    border: 1px solid #f0dfc0;
+    border-radius: 0.5rem;
+    padding: 0.75rem 0.85rem;
+    background-color: #fffdf9;
+    height: 100%;
+}
+.saleinfo-dbprice .dbprice-tier-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #7a4d05;
+    margin-bottom: 0.5rem;
+    white-space: nowrap;
+}
+.saleinfo-dbprice .dbprice-tier-size {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 500;
+    color: #b26a09;
+    background-color: #fbeacd;
+    border-radius: 0.6rem;
+    padding: 0.05rem 0.5rem;
+    margin-left: 0.15rem;
+}
+.saleinfo-dbprice .dbprice-value {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px solid #e6d7bb;
+    border-radius: 0.4rem;
+    background-color: #fff;
+    padding: 0 0.6rem;
+}
+.saleinfo-dbprice .dbprice-unit {
+    color: #b26a09;
+    font-weight: 600;
+}
+.saleinfo-dbprice .dbprice-input {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    text-align: right;
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: #55350a;
+    padding: 0.4rem 0;
+    font-variant-numeric: tabular-nums;
+}
+.saleinfo-dbprice .dbprice-input::placeholder {
+    color: #cbb48c;
+    font-weight: 400;
+}
+/* กล่องค่าสี — 2 ช่อง (ค่าสีทั้งสิ้น / % สี) */
+.saleinfo-dbprice .dbprice-colorbox {
+    border: 1px solid #f0dfc0;
+    border-radius: 0.5rem;
+    background-color: #fbf1e0;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    text-align: center;
+}
+.saleinfo-dbprice .dbprice-colorcell {
+    padding: 0.6rem 0.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.saleinfo-dbprice .dbprice-colorcell + .dbprice-colorcell {
+    border-left: 1px dashed #e6d3b0;
+}
+.saleinfo-dbprice .dbprice-colorlabel {
+    font-size: 0.75rem;
+    color: #b26a09;
+    margin-bottom: 0.2rem;
+}
+.saleinfo-dbprice .dbprice-colorval {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: #55350a;
+    font-variant-numeric: tabular-nums;
+}
 </style>
 
 <body>
@@ -133,7 +308,7 @@
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label small fw-medium mb-1">วันที่เริ่มซื้อ</label>
+                    <label class="form-label small fw-medium mb-1">วันที่เริ่มราคาใหม่</label>
                     <div class="d-flex align-items-center gap-2">
                         <span class="small fw-medium">ตั้งแต่</span>
                         <input type="text" name="date_from" class="form-control flatpickr-date p_search"
@@ -281,6 +456,73 @@
         $('#form_saleinfo [name="_pk"]').val('');
         $('#btn_delete_saleinfo').addClass('d-none').removeData('id');
         setCustomerPanel(null);
+        clearSaleinfoHistory();
+    }
+
+    // ────────────────────────────────────────────────────────
+    //  ประวัติการปรับราคา — โชว์เมื่อรหัสลูกค้า + รหัสสินค้า ตรงกับที่เคยบันทึกไว้
+    // ────────────────────────────────────────────────────────
+    let saleinfoHistXhr = null;
+
+    function clearSaleinfoHistory() {
+        if (saleinfoHistXhr) { saleinfoHistXhr.abort(); saleinfoHistXhr = null; }
+        $('#saleinfo_history_card').addClass('d-none');
+        $('#saleinfo_history_body').empty();
+        $('#saleinfo_history_count').text('0 รายการ');
+    }
+
+    function fmtNum(v) {
+        if (v === null || v === '' || v === undefined) return '—';
+        const n = Number(v);
+        return isNaN(n) ? v : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function esc(s) {
+        return $('<div>').text(s ?? '').html();
+    }
+
+    // อ่านรหัสลูกค้า + รหัสสินค้าจากฟอร์ม → ดึงประวัติมาแสดง
+    // (excludeId = id ของแถวที่กำลังแก้ไข จะไม่เอามาโชว์ซ้ำ)
+    function loadSaleinfoHistory(excludeId) {
+        const custno = ($('#form_saleinfo [name="CustNo"]').val() || '').trim();
+        const itemno = ($('#form_saleinfo [name="ITEMNO"]').val() || '').trim();
+
+        if (!custno || !itemno) {
+            clearSaleinfoHistory();
+            return;
+        }
+
+        if (saleinfoHistXhr) saleinfoHistXhr.abort();
+        saleinfoHistXhr = $.ajax({
+            type: "GET",
+            url: "{{ $page_url }}/history",
+            data: { custno: custno, itemno: itemno, exclude_id: excludeId || '' },
+            success: function (res) {
+                const rows = res.rows || [];
+                if (!rows.length) {
+                    clearSaleinfoHistory();
+                    return;
+                }
+
+                const html = rows.map(function (r, i) {
+                    // แถวบนสุด = ปรับล่าสุด = ราคาที่ใช้อยู่ปัจจุบัน
+                    const badge = (i === 0) ? '<span class="badge-current">ปัจจุบัน</span>' : '';
+                    return '<tr>'
+                        + '<td class="text-center">' + esc(r.NotifyDate || '—') + '</td>'
+                        + '<td class="text-center">' + esc(r.DATE || '—') + '</td>'
+                        + '<td>' + esc(r.ITEMNO || '—') + '</td>'
+                        + '<td class="text-end">' + fmtNum(r.MOQ) + '</td>'
+                        + '<td class="text-end">' + fmtNum(r.PRICE) + badge + '</td>'
+                        + '<td class="text-muted">' + esc(r.REM1 || '—') + '</td>'
+                        + '</tr>';
+                }).join('');
+
+                $('#saleinfo_history_body').html(html);
+                $('#saleinfo_history_count').text(rows.length + ' รายการ');
+                $('#saleinfo_history_card').removeClass('d-none');
+            },
+            complete: function () { saleinfoHistXhr = null; }
+        });
     }
 
     // แถบข้อมูลลูกค้า (อ่านอย่างเดียว) ในฟอร์ม
@@ -313,6 +555,12 @@
 
     $('#form_saleinfo [name="CustNo"]').on('change', function () {
         lookupCustomer($(this).val());
+        loadSaleinfoHistory($('#form_saleinfo [name="_pk"]').val());
+    });
+
+    // รหัสสินค้าเปลี่ยน → โหลดประวัติของคู่ลูกค้า/สินค้านี้
+    $('#form_saleinfo [name="ITEMNO"]').on('change', function () {
+        loadSaleinfoHistory($('#form_saleinfo [name="_pk"]').val());
     });
 
     // แก้ไขราคา — ดึงข้อมูลจริงมาเติมฟอร์มแล้วเปิด modal โหมดแก้ไข
@@ -331,7 +579,7 @@
                 $('#form_saleinfo [name="_pk"]').val(id);
 
                 // เติมทุกช่องที่ชื่อตรงกับคอลัมน์ (ยกเว้น checkbox จัดการแยก)
-                ['CustNo', 'st_code', 'ITEMNO', 'DATE', 'PRICE', 'REM1', 'REM2', 'PackRem', 'Label', 'Author']
+                ['CustNo', 'st_code', 'ITEMNO', 'DATE', 'NotifyDate', 'MOQ', 'PRICE', 'REM1', 'PackRem', 'Label', 'Author']
                     .forEach(function (name) {
                         $('#form_saleinfo [name="' + name + '"]').val(d[name] ?? '');
                     });
@@ -340,6 +588,8 @@
 
                 $('#btn_delete_saleinfo').removeClass('d-none').data('id', id);
                 lookupCustomer(d.CustNo);
+                // แก้ไขอยู่ → โชว์ประวัติของคู่นี้ แต่ไม่รวมแถวที่กำลังแก้เอง
+                loadSaleinfoHistory(id);
                 $('#saleinfoModal').modal('show');
             },
             error: function () {

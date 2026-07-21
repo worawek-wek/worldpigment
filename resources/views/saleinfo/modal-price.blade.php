@@ -105,13 +105,21 @@
 
                                 <div class="row g-3 align-items-end">
                                     <div class="col-md-3">
-                                        <label class="form-label small mb-1">วันที่เริ่มซื้อ <span class="text-muted fw-normal">(วว/ดด/ปปปป)</span></label>
+                                        <label class="form-label small mb-1">วันที่แจ้งปรับ <span class="text-muted fw-normal">(วว/ดด/ปปปป)</span></label>
+                                        <input type="text" name="NotifyDate" class="form-control flatpickr-date">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small mb-1">วันที่เริ่มราคาใหม่ <span class="text-muted fw-normal">(วว/ดด/ปปปป)</span></label>
                                         <input type="text" name="DATE" class="form-control flatpickr-date">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small mb-1">MOQ <span class="text-muted fw-normal">(kg)</span></label>
+                                        <input type="number" step="0.01" name="MOQ" class="form-control text-end">
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1 text-danger">
                                             <i class="ti ti-asterisk-simple"></i>
-                                            ราคา (บาท) <span class="text-muted fw-normal">(เช่น 46.72)</span>
+                                            ราคา หรือ ค่าแรง+ค่าสี <span class="text-muted fw-normal">(เช่น 46.72)</span>
                                         </label>
                                         <input type="number" step="0.01" name="PRICE" class="form-control text-end" required>
                                     </div>
@@ -135,6 +143,9 @@
                                         </label>
                                         <input type="text" name="REM1" class="form-control">
                                     </div>
+                                    {{-- ปิดไว้: หมายเหตุเพิ่มเติม / ประวัติการปรับราคา (REM2)
+                                         เลิกใช้เพราะทำตาราง "ประวัติการปรับราคา" ขึ้นมาแทนแล้ว
+                                         (คอลัมน์ REM2 ใน tb_saleinfo ยังอยู่ ค่าเดิมไม่ถูกแตะต้อง)
                                     <div class="col-12">
                                         <label class="form-label small mb-1">
                                             หมายเหตุเพิ่มเติม / ประวัติการปรับราคา
@@ -142,6 +153,7 @@
                                         </label>
                                         <input type="text" name="REM2" class="form-control">
                                     </div>
+                                    --}}
                                 </div>
                             </div>
 
@@ -174,38 +186,97 @@
                         </div>
                     </div>
 
+                    {{-- ─── ประวัติการปรับราคา — แสดงเมื่อรหัสลูกค้า + รหัสสินค้า ตรงกับที่เคยบันทึกไว้ ─── --}}
+                    {{-- โหลดผ่าน AJAX (saleinfo/history) เมื่อกรอกครบ — ดู index.blade.php --}}
+                    <div id="saleinfo_history_card" class="card shadow-sm mb-3 d-none saleinfo-history">
+                        <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between">
+                            <h6 class="mb-0 fw-semibold d-flex align-items-center" style="color: #7a4d05;">
+                                <i class="ti ti-history me-1"></i>
+                                ประวัติการปรับราคา
+                            </h6>
+                            <span class="badge rounded-pill" id="saleinfo_history_count"
+                                style="background-color: #E08A1E; color: #fff;">0 รายการ</span>
+                        </div>
+
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-center">วันที่แจ้งปรับ</th>
+                                            <th class="text-center">วันที่เริ่มราคาใหม่</th>
+                                            <th>รหัสสินค้า</th>
+                                            <th class="text-end">MOQ (kg)</th>
+                                            <th class="text-end">ราคา หรือ<br>ค่าแรง+ค่าสี</th>
+                                            <th>หมายเหตุ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="saleinfo_history_body">
+                                        {{-- เติมด้วย JS --}}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
                     {{-- ─── ราคาตามขนาดบรรจุ (DB) + ค่าสี — ยังไม่รู้ที่มาของสูตร/ตาราง จึงยังไม่คำนวณ ─── --}}
-                    <div class="card shadow-sm mb-0 wip" style="border: 1px solid #e3e5ea;">
-                        <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between"
-                            style="background-color: #f4f5f7; border-bottom: 2px solid #b6b9c2; border-radius: 0.375rem 0.375rem 0 0;">
-                            <h6 class="mb-0 fw-semibold text-body">
+                    <div class="card shadow-sm mb-0 saleinfo-dbprice wip">
+                        <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between">
+                            <h6 class="mb-0 fw-semibold d-flex align-items-center" style="color: #7a4d05;">
                                 <i class="ti ti-calculator me-1"></i>
-                                ราคาตามขนาดบรรจุ (DB) และค่าสี
+                                คำนวนราคา
                             </h6>
                             <span class="badge bg-label-warning">รอสูตรคำนวณจากลูกค้า</span>
                         </div>
 
                         <div class="card-body p-4">
-                            <div class="row g-3 align-items-end">
-                                <div class="col-md-3">
-                                    <label class="form-label small mb-1">ราคา 1 <span class="text-muted fw-normal">(DB 25 Kg. up)</span></label>
-                                    <input type="number" step="0.01" name="db_price_1" class="form-control text-end" readonly>
+                            {{-- ทั้ง section เป็น grid เดียว: ราคา 3 ช่อง/แถว + กล่องค่าสี span 2 แถวทางขวา --}}
+                            <div class="dbprice-layout">
+                                <div class="dbprice-tier">
+                                    <div class="dbprice-tier-label">ราคา 1</div>
+                                    <div class="dbprice-value">
+                                        <span class="dbprice-unit">฿</span>
+                                        <input type="number" step="0.01" name="db_price_1" class="dbprice-input" placeholder="—" readonly>
+                                    </div>
                                 </div>
-                                <div class="col-md-3">
-                                    <label class="form-label small mb-1">ราคา 2 <span class="text-muted fw-normal">(DB 3 - 4 Kg.)</span></label>
-                                    <input type="number" step="0.01" name="db_price_2" class="form-control text-end" readonly>
+                                <div class="dbprice-tier">
+                                    <div class="dbprice-tier-label">ราคา 2</div>
+                                    <div class="dbprice-value">
+                                        <span class="dbprice-unit">฿</span>
+                                        <input type="number" step="0.01" name="db_price_2" class="dbprice-input" placeholder="—" readonly>
+                                    </div>
                                 </div>
-                                <div class="col-md-3">
-                                    <label class="form-label small mb-1">ราคา 3 <span class="text-muted fw-normal">(DB 1 - 2 Kg.)</span></label>
-                                    <input type="number" step="0.01" name="db_price_3" class="form-control text-end" readonly>
+                                <div class="dbprice-tier">
+                                    <div class="dbprice-tier-label">ราคา 3</div>
+                                    <div class="dbprice-value">
+                                        <span class="dbprice-unit">฿</span>
+                                        <input type="number" step="0.01" name="db_price_3" class="dbprice-input" placeholder="—" readonly>
+                                    </div>
+                                </div>
+                                <div class="dbprice-tier">
+                                    <div class="dbprice-tier-label">DB 3 - 4 Kg.</div>
+                                    <div class="dbprice-value">
+                                        <span class="dbprice-unit">฿</span>
+                                        <input type="number" step="0.01" name="db_price_3_4" class="dbprice-input" placeholder="—" readonly>
+                                    </div>
+                                </div>
+                                <div class="dbprice-tier">
+                                    <div class="dbprice-tier-label">DB 1 - 2 Kg.</div>
+                                    <div class="dbprice-value">
+                                        <span class="dbprice-unit">฿</span>
+                                        <input type="number" step="0.01" name="db_price_1_2" class="dbprice-input" placeholder="—" readonly>
+                                    </div>
                                 </div>
 
-                                <div class="col-md-3">
-                                    <div class="p-3 rounded text-center" style="background-color: #f4f5f7; border: 1px solid #e3e5ea;">
-                                        <div class="small text-muted">ค่าสีทั้งสิ้น</div>
-                                        <div class="fs-5 fw-bold text-danger" id="saleinfo_color_cost">—</div>
-                                        <div class="small text-muted mt-1">% สี</div>
-                                        <div class="fw-semibold" id="saleinfo_color_pct">—</div>
+                                {{-- กล่องค่าสี — วางขวา span 2 แถว (คุมด้วย CSS .dbprice-colorbox) --}}
+                                <div class="dbprice-colorbox">
+                                    <div class="dbprice-colorcell">
+                                        <div class="dbprice-colorlabel">ค่าสีทั้งสิ้น</div>
+                                        <div class="dbprice-colorval text-danger" id="saleinfo_color_cost">—</div>
+                                    </div>
+                                    <div class="dbprice-colorcell">
+                                        <div class="dbprice-colorlabel">% สี</div>
+                                        <div class="dbprice-colorval" id="saleinfo_color_pct">—</div>
                                     </div>
                                 </div>
                             </div>

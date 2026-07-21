@@ -14,7 +14,7 @@
                     <br>
                     <small class="text-body-secondary fw-normal">ชื่อสินค้า / รหัสสินค้า</small>
                 </th>
-                <th class="align-middle text-center" style="width: 120px;">วันที่เริ่มซื้อ</th>
+                <th class="align-middle text-center" style="width: 120px;">วันที่เริ่มราคาใหม่</th>
                 <th class="align-middle text-end" style="width: 120px;">ราคา</th>
                 <th class="align-middle">เงื่อนไข / หมายเหตุ</th>
                 <th class="align-middle text-center" style="width: 90px;">จัดการ</th>
