@@ -73,7 +73,7 @@
                     @endif
 
                     {{-- ปิดออเดอร์ (end_order): ติ๊กได้ต่อเมื่อ end_job ของทุกรายการที่เกี่ยวข้องเป็น Y ครบ --}}
-                    <div class="col-md-12 mt-2 pt-2 border-top">
+                    <div class="col-md-12 p-3 rounded" style="background-color: #eaffd9; border: 1px dashed #04ac2e;">
                         <div class="form-check">
                             <input type="checkbox" class="form-check-input" id="planning_end_order"
                                    data-planning_header_id="{{ $planning_header->id }}"

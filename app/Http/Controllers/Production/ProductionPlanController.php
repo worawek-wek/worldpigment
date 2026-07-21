@@ -341,9 +341,13 @@ class ProductionPlanController extends Controller
     {
         $company = $request->get('company');
 
+        // code = ค่าที่บันทึกลง machine_no, label = รหัส + ความเร็วรอบสำหรับแสดงใน dropdown
         $machines = Machine::where('dept', $company)
             ->get()
-            ->pluck('MBX')
+            ->map(fn (Machine $m) => [
+                'code'  => $m->MBX,
+                'label' => $m->displayLabel(),
+            ])
             ->values();
 
         // dept ใน tb_planning_status เก็บเป็น id ของ tb_departments จึง map ชื่อแผนก → id ก่อน

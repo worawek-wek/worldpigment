@@ -90,7 +90,7 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th class="col-1">#</th>
-                                        <th class="col-2">Planning Code</th>
+                                        {{-- <th class="col-2">Planning Code</th> --}}
                                         <th class="col-1">Orderno</th>
                                         <th class="col-1">เลขที่ใบเบิก</th>
                                         <th class="col-1">Company</th>
@@ -191,7 +191,7 @@
             },
             columns: [
                 { 'className': "text-center", data: 'rownum', name: 'rownum', orderable: false },
-                { 'className': "text-left", data: 'planning_code', name: 'planning_code', orderable: false },
+                // { 'className': "text-left", data: 'planning_code', name: 'planning_code', orderable: false },
                 { 'className': "text-center", data: 'orderno', name: 'orderno', orderable: false },
                 { 'className': "text-center", data: 'red_bill_code', name: 'red_bill_code', orderable: false, searchable: false },
                 { 'className': "text-center", data: 'company', name: 'company', orderable: false },

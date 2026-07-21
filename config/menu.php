@@ -91,17 +91,17 @@ return [
         'type'  => 'header',
         'title' => 'Settings',
     ],
-    'Permission' => [
-        'title' => 'สิทธิ์การใช้งาน',
-        'icon' => 'ti-shield-lock',
-        'route_name' => 'permission.index',
-        'permission' => 'permission read',
-    ],
-    'LinkUser' => [
-        'title' => 'User',
-        'icon' => 'ti-id-badge',
-        'url' => 'user', // ใช้ url ตรง เพราะ route name 'user' ซ้ำ (index + user/{id}) → route() ต้องการ id
-    ],
+    // 'Permission' => [
+    //     'title' => 'สิทธิ์การใช้งาน',
+    //     'icon' => 'ti-shield-lock',
+    //     'route_name' => 'permission.index',
+    //     'permission' => 'permission read',
+    // ],
+    // 'LinkUser' => [
+    //     'title' => 'User',
+    //     'icon' => 'ti-id-badge',
+    //     'url' => 'user', // ใช้ url ตรง เพราะ route name 'user' ซ้ำ (index + user/{id}) → route() ต้องการ id
+    // ],
 
     'Department' => [
         'title' => 'แผนก',
