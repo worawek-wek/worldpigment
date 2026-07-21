@@ -368,7 +368,7 @@
                         </div>
                     </div>
 
-                    {{-- ── Section 3: รายการสินค้า ── --}}
+                    {{-- ── Section 3: รายการสินค้า ──  ---}}
                     <div class="qf-sec">
                         <div class="qf-sec-title"><i class="ti ti-list-details"></i>รายการสินค้า</div>
 
