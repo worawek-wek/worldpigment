@@ -20,8 +20,9 @@ class SaleinfoController extends Controller
 {
     /** คอลัมน์ที่รับจากฟอร์มได้ */
     private const COLUMNS = [
-        'CustNo', 'st_code', 'ITEMNO', 'DATE', 'PRICE',
-        'REM1', 'REM2', 'PackRem', 'Label', 'Author',
+        'CustNo', 'st_code', 'ITEMNO', 'DATE', 'NotifyDate', 'MOQ', 'PRICE',
+        'REM1', 'PackRem', 'Label', 'Author',
+        // 'REM2',    // ปิดไว้ — เลิกใช้ช่อง "ประวัติการปรับราคา" แบบข้อความ (มีตารางประวัติแทนแล้ว)
         // 'NoAcp',   // ปิดไว้ก่อน — รอลูกค้ายืนยันความหมาย (ดู extractForm)
     ];
 
@@ -85,9 +86,54 @@ class SaleinfoController extends Controller
 
         // ฟอร์มใช้ flatpickr d/m/Y → แปลงให้ตรงรูปแบบก่อนส่งกลับ
         $data = $row->toArray();
-        $data['DATE'] = $row->DATE ? Carbon::parse($row->DATE)->format('d/m/Y') : '';
+        $data['DATE']       = $row->DATE ? Carbon::parse($row->DATE)->format('d/m/Y') : '';
+        $data['NotifyDate'] = $row->NotifyDate ? Carbon::parse($row->NotifyDate)->format('d/m/Y') : '';
 
         return response()->json(['found' => true, 'data' => $data]);
+    }
+
+    /**
+     * GET — ประวัติการปรับราคาของคู่ลูกค้า/สินค้า (JSON)
+     *
+     * ใช้เติมตาราง "ประวัติการปรับราคา" ในฟอร์ม เมื่อกรอกรหัสลูกค้า + รหัสสินค้า
+     * ตรงกับที่เคยบันทึกไว้ — เรียงจากปรับล่าสุดไปเก่าสุด
+     */
+    public function history(Request $request)
+    {
+        $custno = trim((string) $request->query('custno'));
+        $itemno = trim((string) $request->query('itemno'));
+
+        if ($custno === '' || $itemno === '') {
+            return response()->json(['found' => false, 'rows' => []]);
+        }
+
+        $query = Saleinfo::query()
+            ->whereRaw('TRIM(CustNo) = ?', [$custno])
+            ->whereRaw('TRIM(ITEMNO) = ?', [$itemno]);
+
+        // แก้ไขอยู่ → ไม่ต้องแสดงแถวตัวเองในประวัติ
+        if ($request->filled('exclude_id')) {
+            $query->where('id', '!=', (int) $request->query('exclude_id'));
+        }
+
+        $rows = $query
+            ->orderByRaw('COALESCE(NotifyDate, DATE, AuthDate) DESC')
+            ->orderByDesc('id')
+            ->get();
+
+        $out = $rows->map(function ($r) {
+            return [
+                'id'         => $r->id,
+                'NotifyDate' => $r->NotifyDate ? Carbon::parse($r->NotifyDate)->format('d/m/Y') : '',
+                'DATE'       => $r->DATE ? Carbon::parse($r->DATE)->format('d/m/Y') : '',
+                'ITEMNO'     => $r->ITEMNO,
+                'MOQ'        => $r->MOQ,
+                'PRICE'      => $r->PRICE,
+                'REM1'       => $r->REM1,
+            ];
+        });
+
+        return response()->json(['found' => $out->isNotEmpty(), 'rows' => $out]);
     }
 
     /**
@@ -100,16 +146,8 @@ class SaleinfoController extends Controller
             return response()->json(['error' => $error], 422);
         }
 
-        $custno = trim((string) $request->CustNo);
-        $itemno = trim((string) $request->ITEMNO);
-
-        // 1 ลูกค้า + 1 สินค้า = 1 ราคา (ประวัติการปรับราคาเก็บเป็นข้อความใน REM2)
-        if ($this->priceExists($custno, $itemno)) {
-            return response()->json([
-                'error' => "ลูกค้า {$custno} มีราคาของสินค้า {$itemno} อยู่แล้ว — ให้แก้ไขรายการเดิมแทน",
-            ], 422);
-        }
-
+        // แต่ละครั้งที่กำหนด/ปรับราคา = 1 แถว → เก็บเป็นประวัติการปรับราคา
+        // (ไม่เช็คซ้ำคู่ลูกค้า/สินค้า เพราะต้องการให้มีได้หลายแถวต่อคู่)
         try {
             $row = $this->extractForm($request);
             $row['AuthDate'] = now();   // เวลาที่บันทึกราคานี้
@@ -135,16 +173,6 @@ class SaleinfoController extends Controller
         $error = $this->validateForm($request);
         if ($error) {
             return response()->json(['error' => $error], 422);
-        }
-
-        $custno = trim((string) $request->CustNo);
-        $itemno = trim((string) $request->ITEMNO);
-
-        // ย้ายไปชนคู่ลูกค้า/สินค้าของรายการอื่นไม่ได้
-        if ($this->priceExists($custno, $itemno, $row->id)) {
-            return response()->json([
-                'error' => "ลูกค้า {$custno} มีราคาของสินค้า {$itemno} อยู่แล้วในอีกรายการหนึ่ง",
-            ], 422);
         }
 
         try {
@@ -218,29 +246,16 @@ class SaleinfoController extends Controller
         // รหัสสินค้าไม่ได้กรอก → ใช้ชื่อสินค้าแทน (ในข้อมูลเก่าสองช่องนี้มักตรงกัน)
         $row['ITEMNO']  = trim((string) $row['ITEMNO']) ?: $row['st_code'];
 
-        $row['DATE']  = $this->parseDate($row['DATE']);
-        $row['PRICE'] = $row['PRICE'] !== null && $row['PRICE'] !== '' ? (float) $row['PRICE'] : null;
+        $row['DATE']       = $this->parseDate($row['DATE']);
+        $row['NotifyDate'] = $this->parseDate($row['NotifyDate']);
+        $row['PRICE']      = $row['PRICE'] !== null && $row['PRICE'] !== '' ? (float) $row['PRICE'] : null;
+        $row['MOQ']        = $row['MOQ']   !== null && $row['MOQ']   !== '' ? (float) $row['MOQ']   : null;
 
         // NoAcp ปิดไว้ก่อน — ช่องในฟอร์มถูกคอมเมนต์ไว้ ค่าที่บันทึกจะเป็น default 0 ของตาราง
         // เปิดใช้เมื่อลูกค้ายืนยันความหมายแล้ว (คืน 'NoAcp' เข้า COLUMNS ด้วย):
         // $row['NoAcp'] = $request->boolean('NoAcp') ? 1 : 0;   // checkbox ไม่ติ๊ก = ไม่ส่งค่ามา
 
         return $row;
-    }
-
-    /**
-     * มีราคาของคู่ลูกค้า/สินค้านี้อยู่แล้วไหม ($ignoreId = ข้ามรายการที่กำลังแก้ไข)
-     */
-    private function priceExists(string $custno, string $itemno, ?int $ignoreId = null): bool
-    {
-        $query = Saleinfo::whereRaw('TRIM(CustNo) = ?', [$custno])
-            ->whereRaw('TRIM(ITEMNO) = ?', [$itemno]);
-
-        if ($ignoreId) {
-            $query->where('id', '!=', $ignoreId);
-        }
-
-        return $query->exists();
     }
 
     /**

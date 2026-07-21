@@ -13,6 +13,7 @@ Route::prefix('saleinfo')->group(function () {
 
     // ─── อ่าน ────────────────────────────────────────────────────────
     Route::get('/edit/{id}', [SaleinfoController::class, 'edit'])->name('saleinfo.edit');   // → JSON (เติมฟอร์ม)
+    Route::get('/history',   [SaleinfoController::class, 'history'])->name('saleinfo.history'); // → JSON (ประวัติการปรับราคา)
 
     // ─── เขียน ───────────────────────────────────────────────────────
     Route::post('/insert', [SaleinfoController::class, 'insert'])->name('saleinfo.insert');
