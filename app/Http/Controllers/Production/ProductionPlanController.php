@@ -123,7 +123,19 @@ class ProductionPlanController extends Controller
                         ->orWhere('tb_planning.itemno', 'LIKE', '%'.$search.'%')
                         ->orWhere('tb_planning_header.orderno', 'LIKE', '%'.$search.'%')
                         ->orWhere('tb_planning_header.planning_code', 'LIKE', '%'.$search.'%')
-                        ->orWhere('tb_planning_header.custno', 'LIKE', '%'.$search.'%');
+                        ->orWhere('tb_planning_header.custno', 'LIKE', '%'.$search.'%')
+                        // ค้นหาจากพนักงานผู้รับผิดชอบ: รหัสพนักงาน หรือ ชื่อ/นามสกุล (ตาราง emp อ้างด้วย tb_planning.empno)
+                        ->orWhere('tb_planning.empno', 'LIKE', '%'.$search.'%')
+                        ->orWhereExists(function ($sub) use ($search) {
+                            $sub->select(DB::raw(1))->from('emp')
+                                ->whereColumn('emp.empno', 'tb_planning.empno')
+                                ->where(function ($q) use ($search) {
+                                    $q->where('emp.empname', 'LIKE', '%'.$search.'%')
+                                        ->orWhere('emp.empsur', 'LIKE', '%'.$search.'%')
+                                        // รองรับการพิมพ์ "ชื่อ นามสกุล" ติดกันเป็นข้อความเดียว
+                                        ->orWhereRaw("CONCAT(emp.empname, ' ', emp.empsur) LIKE ?", ['%'.$search.'%']);
+                                });
+                        });
                 });
             })
              ->when(!empty($company), function ($query) use ($company) {

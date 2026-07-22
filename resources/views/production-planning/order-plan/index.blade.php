@@ -32,7 +32,7 @@
                             <div class="col-md-4">
                                 <label class="form-label small mb-1">ค้นหา</label>
                                 <input id="searchInput" type="text" class="form-control"
-                                placeholder="รหัส Order, รหัสลูกค้า, ชื่อลูกค้า">
+                                placeholder="รหัส Order, รหัสลูกค้า, ชื่อลูกค้า, ชื่อพนักงานผู้รับผิดชอบ">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label small mb-1">แผนก</label>

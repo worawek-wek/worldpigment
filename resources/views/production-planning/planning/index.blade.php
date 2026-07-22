@@ -40,7 +40,7 @@
                             <div class="col-md-4">
                                 <label class="form-label mb-1 small text-muted">ค้นหา</label>
                                 <input id="searchInput" type="text" class="form-control"
-                                placeholder="ค้นหาเลขที่ใบสั่งซื้อ, รหัสลูกค้า, ขื่อลูกค้า">
+                                placeholder="ค้นหาเลขที่ใบสั่งซื้อ, รหัสลูกค้า, Item No., ชื่อพนักงานผู้รับผิดชอบ">
                             </div>
                             {{-- สถานะปิดงาน (อ้างอิงคอลัมน์ end_job ของ tb_planning) — ค่าเริ่มต้น: ยังไม่ปิดงาน --}}
                             <div class="col-md-2">

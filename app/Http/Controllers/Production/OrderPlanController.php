@@ -78,6 +78,45 @@ class OrderPlanController extends Controller
         return '(SELECT COUNT(*) FROM tb_planning p WHERE p.planning_header_id = tb_planning_header.id)';
     }
 
+    /**
+     * id ของ Order (header ระดับบนสุด) ที่มีพนักงานผู้รับผิดชอบตรงกับคำค้น
+     *
+     * พนักงานถูกเก็บที่ tb_planning.empno (ระดับรายการ) ไม่ใช่ที่ header — และรายการอาจอยู่ใน
+     * sub-header (semi/pigment) ลึกลงไปหลายชั้น จึงไล่ต้นไม้ด้วย recursive CTE
+     * แล้วส่งกลับเป็น root_id เพื่อนำไปกรอง Order ในตารางหลัก
+     */
+    private function empSearchRootIds(string $search): array
+    {
+        $like = '%'.$search.'%';
+
+        $sql = <<<'SQL'
+WITH RECURSIVE tree AS (
+    SELECT h.id AS root_id, h.id AS header_id, 0 AS depth
+    FROM tb_planning_header h
+    WHERE h.parent_planning_id IS NULL
+    UNION ALL
+    SELECT t.root_id, ch.id, t.depth + 1
+    FROM tree t
+    JOIN tb_planning p ON p.planning_header_id = t.header_id
+    JOIN tb_planning_header ch ON ch.parent_planning_id = p.id
+    WHERE t.depth < 20
+)
+SELECT DISTINCT t.root_id
+FROM tree t
+JOIN tb_planning p ON p.planning_header_id = t.header_id
+JOIN emp e ON e.empno = p.empno
+WHERE p.empno LIKE ?
+   OR e.empname LIKE ?
+   OR e.empsur LIKE ?
+   OR CONCAT(e.empname, ' ', e.empsur) LIKE ?
+SQL;
+
+        return array_map(
+            fn ($r) => $r->root_id,
+            DB::select($sql, [$like, $like, $like, $like])
+        );
+    }
+
     public function dataQuery()
     {
         $search         = request('search');
@@ -108,15 +147,19 @@ class OrderPlanController extends Controller
             ->withMax('plannings', 'inplan')
             ->with('plannings.subHeadersRecursive')
             // ค้นหา: รหัส Order / รหัสลูกค้า / ชื่อลูกค้า (ชื่อลูกค้าอยู่ตาราง morder)
+            //        / พนักงานผู้รับผิดชอบ (อยู่ที่รายการในต้นไม้ของ Order นั้น)
             ->when(!empty($search), function ($query) use ($search) {
-                $query->where(function ($query) use ($search) {
+                $empRootIds = $this->empSearchRootIds($search);
+
+                $query->where(function ($query) use ($search, $empRootIds) {
                     $query->where('tb_planning_header.orderno', 'LIKE', '%'.$search.'%')
                         ->orWhere('tb_planning_header.custno', 'LIKE', '%'.$search.'%')
                         ->orWhereExists(function ($sub) use ($search) {
                             $sub->select(DB::raw(1))->from('morder')
                                 ->whereColumn('morder.Orderno', 'tb_planning_header.orderno')
                                 ->where('morder.Custname', 'LIKE', '%'.$search.'%');
-                        });
+                        })
+                        ->orWhereIn('tb_planning_header.id', $empRootIds);
                 });
             })
             ->when(!empty($company), function ($query) use ($company) {

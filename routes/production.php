@@ -1,5 +1,5 @@
 <?php
-
+ 
 use App\Http\Controllers\Production as Production;
 use App\Http\Controllers\DepartmentController as DepartmentController;
 use App\Http\Controllers\EmpController as EmpController;
