@@ -1,16 +1,17 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+ไฟล์นี้เป็นคู่มือสำหรับ Claude Code (claude.ai/code) ในการทำงานกับ repository นี้
 
-## Project Overview
+<!-- อัพเดทล่าสุด: 22/07/2569 — จัดรูปแบบใหม่และแปลเป็นภาษาไทย -->
 
-ระบบบริหารจัดการสำหรับโรงงานผลิตสีและพิกเมนต์ ครอบคลุมตั้งแต่การเทียบสี การวางแผนการผลิต การออกใบเสนอราคา ไปจนถึงระบบรายงานครบวงจร
+## ภาพรวมโปรเจกต์
 
-## Project
+**World Pigment** (`worldpigment`) — ระบบบริหารจัดการสำหรับโรงงานผลิตสีและพิกเมนต์ ครอบคลุมตั้งแต่การเทียบสี (color matching) การวางแผนการผลิต (production planning) การออกใบเสนอราคา (quotation) คำสั่งซื้อ (order) ข้อมูลลูกค้า (customer) อุปกรณ์ (equipment) ไปจนถึงระบบรายงาน (report) ครบวงจร
 
-World Pigment (`worldpigment`) — a management system for a paint/pigment factory: color matching, production planning, quotations, orders, customers, equipment, and reports. UI text, comments, and domain terms are in **Thai**. Laravel 9 / PHP 8 backend, Blade + Tailwind + Alpine/jQuery frontend on the Left4code "Enigma" admin template.
-
-The repo lives under XAMPP (`C:\xampp\htdocs\worldpigment`); local DB is MySQL via XAMPP.
+- ข้อความบน UI, comment ในโค้ด และคำศัพท์เฉพาะทางธุรกิจ ใช้**ภาษาไทย**
+- Backend: Laravel 9 / PHP 8
+- Frontend: Blade + Tailwind + Alpine.js / jQuery บน admin template ของ Left4code ชื่อ "Enigma"
+- repository อยู่ภายใต้ XAMPP (`C:\xampp\htdocs\worldpigment`) และใช้ MySQL ของ XAMPP เป็น local database
 
 ## Tech Stack
 
@@ -27,7 +28,6 @@ The repo lives under XAMPP (`C:\xampp\htdocs\worldpigment`); local DB is MySQL v
 | Editor | CKEditor 5 |
 | Auth | Laravel Sanctum |
 | Build | Laravel Mix, PostCSS |
-
 
 ## โครงสร้างโปรเจกต์
 
@@ -66,80 +66,95 @@ worldpigment/
 └── public/
 ```
 
-## Codeing Roules
-- หลีกเลี่ยง any ถ้าไม่จำเป็น
-- เขียนโค้ชให้อ่านง่ายมากกว่าสั้นเกินไป
-- ห้ามลบโค๊ดเดิมถ้าไม่เข้าใจหน้าที่ของมัน
+## กฎการเขียนโค้ด (Coding Rules)
+
+- หลีกเลี่ยง `any` ถ้าไม่จำเป็น
+- เขียนโค้ดให้อ่านง่าย ดีกว่าเขียนสั้นเกินไป
+- ห้ามลบโค้ดเดิม ถ้ายังไม่เข้าใจหน้าที่ของมัน
 - อย่าแก้หลายเรื่องพร้อมกันเกินไป
 - ถ้าไม่แน่ใจ ให้ถามก่อน
-- ถ้ามี error ให้ใช้ error message เป็น feedback แล้วแก้ซ้ำ
+- ถ้ามี error ให้ใช้ error message เป็น feedback แล้วแก้ซ้ำจนผ่าน
 - หลังจบงาน ให้สรุปว่าแก้ไขไฟล์อะไรไปบ้าง
-- ถ้ามีความเสี่ยงด้าน security ให้แจ้งผมด้วย
+- ถ้ามีความเสี่ยงด้าน security ให้แจ้งด้วย
 
-## Workflow
-ก่อนแก้ไขโค๊ดให้ทำตามนี้:
-- อ่านโครงสร้างโปรเจก่อน
-- อ่านไฟล์ที่เกี่ยวข้องก่อน
-- สรุปสิ่งที่เข้าใจ
-- อธิบายแผนการแก้แบบสั้นๆ
-- วางแผนการทำงานเป็น task ย่อย
-- ลงมือแก้ที่ละ task
-- แก้ไขเฉพาะไฟล์ที่จำเป็น
-- ตรวจว่าโค๊ดไม่กระทบส่วนอื่น
-- สรุปสิ่งที่แก้หลังทำเสร็จ และบอกวิธีตรวจสอบ 
-- ถ้ามีการแก้ไขโครงสร้างหรือสร้างใหม่ ให้ทำการอัพเดทโครงสร้างใหม่ และให้ใส่คอมเม้นระบุวันที่อัพเดท
+## ขั้นตอนการทำงาน (Workflow)
 
+ก่อนแก้ไขโค้ด ให้ทำตามลำดับนี้:
 
-## Commands
+1. อ่านโครงสร้างโปรเจกต์ก่อน
+2. อ่านไฟล์ที่เกี่ยวข้องก่อน
+3. สรุปสิ่งที่เข้าใจ
+4. อธิบายแผนการแก้แบบสั้น ๆ
+5. วางแผนการทำงานเป็น task ย่อย
+6. ลงมือแก้ทีละ task
+7. แก้ไขเฉพาะไฟล์ที่จำเป็น
+8. ตรวจสอบว่าโค้ดไม่กระทบส่วนอื่น
+9. สรุปสิ่งที่แก้หลังทำเสร็จ และบอกวิธีตรวจสอบ
+10. ถ้ามีการแก้ไขโครงสร้างหรือสร้างของใหม่ ให้อัพเดทโครงสร้างในไฟล์นี้ พร้อมใส่ comment ระบุวันที่อัพเดท
+
+## คำสั่งที่ใช้บ่อย (Commands)
 
 ```bash
-composer install          # PHP deps
-npm install               # JS deps
+composer install          # ติดตั้ง PHP dependencies
+npm install               # ติดตั้ง JS dependencies
 php artisan serve         # dev server -> http://localhost:8000
 
-# Frontend build (two steps — Mix does NOT compile resources/css/app.css)
-npm run dev               # one-off Mix build
-npm run watch             # concurrently runs postcss (app.css) + mix watch
-npm run prod              # production build (postcss app.css + mix --production)
+# Frontend build (มี 2 ขั้นตอน — Mix ไม่ได้ compile resources/css/app.css ให้)
+npm run dev               # build ครั้งเดียวด้วย Mix
+npm run watch             # รัน postcss (app.css) + mix watch พร้อมกันด้วย concurrently
+npm run prod              # build สำหรับ production (postcss app.css + mix --production)
 
 # Tests
-vendor/bin/phpunit                                  # all tests
-vendor/bin/phpunit --testsuite Unit                 # one suite (Unit | Feature)
-vendor/bin/phpunit --filter testMethodName          # single test
+vendor/bin/phpunit                                  # รันทั้งหมด
+vendor/bin/phpunit --testsuite Unit                 # รันเฉพาะ suite (Unit | Feature)
+vendor/bin/phpunit --filter testMethodName          # รันเฉพาะ test เดียว
 
 php artisan migrate --seed
 ```
 
-There is a `GET /clc` route that clears + rebuilds all caches (cache/config/view/route) — use it after editing `config/` or routes when changes don't appear.
+- มี route `GET /clc` สำหรับ clear + rebuild cache ทั้งหมด (cache/config/view/route) — ใช้หลังแก้ไฟล์ใน `config/` หรือ routes แล้วการเปลี่ยนแปลงยังไม่แสดงผล
+- Lint/style ควบคุมโดย **StyleCI** (`.styleci.yml`, Laravel preset, PHP 8, ปิด `no_unused_imports`) — ไม่มีคำสั่ง lint ในเครื่อง
 
-Lint/style is enforced by **StyleCI** (`.styleci.yml`, Laravel preset, PHP 8; `no_unused_imports` disabled) — there is no local lint command.
+## สถาปัตยกรรม Routing
 
-## Routing architecture
-
-`routes/web.php` is the entry point. Most feature routes live in **separate per-feature files** in `routes/` and are pulled in with `@include_once(...)` from *inside* the `Route::middleware('auth')` group in `web.php`:
+`routes/web.php` เป็นจุดเริ่มต้น แต่ route ส่วนใหญ่แยกอยู่ใน**ไฟล์ตาม feature** ในโฟลเดอร์ `routes/` และถูกดึงเข้ามาด้วย `@include_once(...)` จาก*ภายใน* group `Route::middleware('auth')` ใน `web.php`:
 
 - `color-matching.php`, `quotation.php`, `order.php`, `customer.php`, `report.php`, `permission.php`, `production.php`
 
-So a route in those files is implicitly auth-protected by where it's included — don't re-wrap it in `auth`. When adding a new module, create a `routes/<module>.php` and `@include_once` it in the same group. `production.php` is included last in `web.php` and groups everything under the `production-planning` URL prefix with `production.*` route names.
+ดังนั้น route ในไฟล์เหล่านี้จึงถูกป้องกันด้วย `auth` โดยปริยายจากตำแหน่งที่มัน include เข้ามา — **ห้าม** ครอบ `auth` ซ้ำอีก
 
-`GET /` redirects authenticated users to `production.planning.index` (the app's home), guests to `login.index`. Auth is session-based; the custom `loggedin` middleware (`app/Http/Middleware/LoggedIn.php`) bounces already-authenticated users away from login/register.
+เมื่อเพิ่ม module ใหม่ ให้สร้าง `routes/<module>.php` แล้ว `@include_once` ใน group เดียวกัน
 
-## Menu & permission model
+`production.php` ถูก include เป็นไฟล์สุดท้ายใน `web.php` และ group ทุกอย่างไว้ใต้ URL prefix `production-planning` พร้อม route name ขึ้นต้นด้วย `production.*`
 
-The visible navigation is defined declaratively in **`config/menu.php`** as a nested array; each item carries `route_name` and a `permission` string of the form `"<module> read"` (e.g. `color_matching read`, `productionplanning read`). Menus are injected into every view by `ViewServiceProvider` via `View::composer('*', ...)` → `App\Http\View\Composers\MenuComposer`, which pulls from `App\Main\{SideMenu,TopMenu,SimpleMenu}` and computes the active-menu indices by matching the current route name.
+`GET /` จะ redirect ผู้ใช้ที่ login แล้วไปที่ `production.planning.index` (หน้าแรกของระบบ) และ redirect guest ไปที่ `login.index`
 
-Multi-branch authorization is keyed on `session("branch_id")`: see `User::permission_group_has_user_branch()`, `user_has_branch()`, and `branch()`.
+Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middleware/LoggedIn.php`) จะเด้งผู้ใช้ที่ login แล้วออกจากหน้า login/register
 
-## Production planning data model (parent-child)
+## ระบบเมนูและสิทธิ์ (Menu & Permission)
 
-This is the core domain and the part most worth understanding before editing:
+- Navigation ที่แสดงผลถูกกำหนดแบบ declarative ใน **`config/menu.php`** เป็น nested array
+- แต่ละ item มี `route_name` และ `permission` ในรูปแบบ `"<module> read"` (เช่น `color_matching read`, `productionplanning read`)
+- เมนูถูก inject เข้าทุก view โดย `ViewServiceProvider` ผ่าน `View::composer('*', ...)` → `App\Http\View\Composers\MenuComposer` ซึ่งดึงข้อมูลจาก `App\Main\{SideMenu,TopMenu,SimpleMenu}` และคำนวณ index ของเมนูที่ active จากการ match ชื่อ route ปัจจุบัน
+- การกำหนดสิทธิ์แบบหลายสาขา (multi-branch) อ้างอิงจาก `session("branch_id")` ดูได้ที่ `User::permission_group_has_user_branch()`, `user_has_branch()` และ `branch()`
 
-- `PlanningHeader` (`tb_planning_header`) `hasMany` `Planning` (`tb_planning`).
-- `Planning` has a self-referential `parent_planning_id` and exposes `semi_headers()` / `pigment_headers()` — child `PlanningHeader`s with `plan_type` of `semi` / `pigment` that are auto-created from a planning item. `sub_headers()` / `subHeadersRecursive()` / `planningsRecursive()` walk this tree to arbitrary depth.
-- `SemiPigment` (`tb_semi_pigment`) is an approval workflow: `status` ENUM `request` → `approved` / `reject` (constants + Thai labels on the model). On approval, `convertplanning` produces a `result_planning`. The `SemiPigmentController` handles entry CRUD from the Planning-item modal, the pending-approval list, and the approved list.
+## Data Model ของ Production Planning (parent-child)
 
-## Conventions & gotchas
+ส่วนนี้เป็นหัวใจของระบบ และควรทำความเข้าใจก่อนแก้ไขโค้ด:
 
-- Models use `protected $guarded = []` (mass assignment fully open) and explicit `protected $table = 'tb_...'`. The schema is largely **database-first**: only 11 migrations exist and the recent ones only *alter* `tb_planning` / `tb_semi_pigment` / add `tb_planning_status`. Do not assume migrations describe the full schema — inspect the live DB.
-- **Legacy/dead code:** this template was previously a room/rental system. `app/Http/Controllers/Controller.php` (the base controller) still contains large `summary()`/`summary_calculate()` methods referencing models that no longer exist (`Room`, `RentBill`, `Receipt`, `Renter`, `Contract`, …), and `App\Main\SideMenu::menu()` has an early `return` followed by hundreds of lines of unreachable template scaffolding. Some `report.*` routes in `web.php` (rooms, rent bills, invoices) are also leftovers. Don't treat these as live wiring; verify a route/method is actually reachable before relying on it.
-- Controllers commonly expose paired routes: an `index` (Blade page) plus a `datatable` endpoint feeding Yajra DataTables / Tabulator via AJAX, and often `excel`/`pdf` export routes (DomPDF + mPDF, PhpSpreadsheet).
+- `PlanningHeader` (`tb_planning_header`) `hasMany` `Planning` (`tb_planning`)
+- `Planning` มี `parent_planning_id` แบบ self-referential และมี `semi_headers()` / `pigment_headers()` ซึ่งเป็น `PlanningHeader` ลูกที่มี `plan_type` เป็น `semi` / `pigment` และถูกสร้างอัตโนมัติจาก planning item
+- `sub_headers()` / `subHeadersRecursive()` / `planningsRecursive()` ใช้ไล่ tree นี้ได้ทุกระดับความลึก
+- `SemiPigment` (`tb_semi_pigment`) เป็น approval workflow: `status` เป็น ENUM `request` → `approved` / `reject` (มี constants + label ภาษาไทยอยู่ใน model) เมื่อ approve แล้ว `convertplanning` จะสร้าง `result_planning` ขึ้นมา
+- `SemiPigmentController` ดูแล CRUD ของ entry จาก modal ของ Planning item, หน้ารายการรออนุมัติ และหน้ารายการที่อนุมัติแล้ว
+
+## ข้อตกลงและข้อควรระวัง (Conventions & Gotchas)
+
+- Model ใช้ `protected $guarded = []` (เปิด mass assignment ทั้งหมด) และระบุ `protected $table = 'tb_...'` ตรง ๆ
+- Schema เป็นแบบ **database-first**: มี migration แค่ 11 ไฟล์ และไฟล์ล่าสุดเป็นแค่การ *alter* `tb_planning` / `tb_semi_pigment` และเพิ่ม `tb_planning_status` — **อย่าคิดว่า migration อธิบาย schema ได้ครบ** ให้ตรวจสอบจาก database จริง
+- **โค้ดเก่า / dead code:** template นี้เดิมเป็นระบบเช่าห้องพัก
+  - `app/Http/Controllers/Controller.php` (base controller) ยังมี method `summary()` / `summary_calculate()` ขนาดใหญ่ที่อ้างถึง model ที่ไม่มีอยู่แล้ว (`Room`, `RentBill`, `Receipt`, `Renter`, `Contract`, …)
+  - `App\Main\SideMenu::menu()` มี `return` ตั้งแต่ต้น method ตามด้วย template scaffolding อีกหลายร้อยบรรทัดที่ไม่มีวันถูกเรียก
+  - route `report.*` บางตัวใน `web.php` (rooms, rent bills, invoices) ก็เป็นของเหลือจากระบบเดิม
+  - อย่าถือว่าสิ่งเหล่านี้ยังใช้งานอยู่ ให้ตรวจสอบว่า route/method นั้นถูกเรียกใช้จริงก่อนนำไปใช้อ้างอิง
+- Controller มักมี route เป็นคู่: `index` (หน้า Blade) และ endpoint `datatable` ที่ป้อนข้อมูลให้ Yajra DataTables / Tabulator ผ่าน AJAX รวมถึง route `excel` / `pdf` สำหรับ export (DomPDF + mPDF, PhpSpreadsheet)
