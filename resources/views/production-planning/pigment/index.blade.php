@@ -58,9 +58,16 @@
                                 <label class="form-label mb-1 small text-muted">ถึง</label>
                                 <input id="searchDateEnd" type="date" class="form-control">
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-md-1">
                                 <button id="btn_clear_date" type="button" class="btn btn-outline-secondary w-100">
-                                    <i class="ti ti-x me-1"></i>ล้างวันที่
+                                    <i class="ti ti-x me-1"></i>ล้าง
+                                </button>
+                            </div>
+                            {{-- Export ตามเงื่อนไขค้นหาปัจจุบัน (ทุกหน้า ไม่ใช่เฉพาะหน้าที่แสดงอยู่) --}}
+                            <div class="col-md-1">
+                                <button id="btn_export_excel" type="button" class="btn btn-success w-100"
+                                    title="Export Excel ตามเงื่อนไขค้นหาปัจจุบัน (ทุกหน้า)">
+                                    <i class="ti ti-file-spreadsheet me-1"></i>Excel
                                 </button>
                             </div>
                         </div>
@@ -187,6 +194,22 @@
         $('#searchDateStart').val('');
         $('#searchDateEnd').val('');
         oTable.draw();
+    });
+
+    // ---- Export Excel: ส่งเงื่อนไขค้นหาปัจจุบันไปที่ endpoint แล้วให้เบราว์เซอร์ดาวน์โหลด ----
+    // ใช้เงื่อนไขชุดเดียวกับตาราง จึงได้ข้อมูลทุกหน้าตามที่ค้นหาไว้ (ไม่จำกัดเฉพาะหน้าที่แสดงอยู่)
+    $(document).on('click', '#btn_export_excel', function (e) {
+        e.preventDefault();
+
+        var params = $.param({
+            search:     $('#searchInput').val(),
+            status:     $('#searchStatus').val(),
+            date_field: $('#searchDateField').val(),
+            date_start: $('#searchDateStart').val(),
+            date_end:   $('#searchDateEnd').val()
+        });
+
+        window.location.href = '{{ route("production.pigment.export-excel") }}?' + params;
     });
 
     function getEditModal() {

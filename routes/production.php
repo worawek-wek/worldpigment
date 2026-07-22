@@ -50,6 +50,8 @@ Route::prefix('production-planning')->group(function () {
     // Pigment (หน้าอนุมัติ) — แยกจากหน้า Semi & Pigment เดิม
     Route::get('/pigment', [Production\PigmentController::class, 'index'])->name('production.pigment.index');
     Route::get('/pigment/datatable', [Production\PigmentController::class, 'datatable'])->name('production.pigment.datatable');
+    // Export Excel "ใบขอสั่ง PIGMENT" — ใช้เงื่อนไขค้นหาชุดเดียวกับ datatable (ทุกหน้า ไม่แบ่งหน้า)
+    Route::get('/pigment/export-excel', [Production\PigmentController::class, 'exportExcel'])->name('production.pigment.export-excel');
     Route::get('/pigment/edit', [Production\PigmentController::class, 'editForm'])->name('production.pigment.edit');
     Route::get('/pigment/detail', [Production\PigmentController::class, 'detail'])->name('production.pigment.detail');
     Route::post('/pigment/approve', [Production\PigmentController::class, 'approve'])->name('production.pigment.approve');
@@ -59,6 +61,8 @@ Route::prefix('production-planning')->group(function () {
     // Semi & Pigment (รออนุมัติ)
     Route::get('/semi-pigment', [Production\SemiPigmentController::class, 'index'])->name('production.semipigment.index');
     Route::get('/semi-pigment/datatable', [Production\SemiPigmentController::class, 'datatable'])->name('production.semipigment.datatable');
+    // Export Excel "ใบขอสั่งทำ SEMI" — ใช้เงื่อนไขค้นหาชุดเดียวกับ datatable (ทุกหน้า ไม่แบ่งหน้า)
+    Route::get('/semi-pigment/export-excel', [Production\SemiPigmentController::class, 'exportExcel'])->name('production.semipigment.export-excel');
     Route::get('/semi-pigment/edit', [Production\SemiPigmentController::class, 'editForm'])->name('production.semipigment.edit');
     Route::post('/semi-pigment/approve', [Production\SemiPigmentController::class, 'approve'])->name('production.semipigment.approve');
     Route::post('/semi-pigment/reject', [Production\SemiPigmentController::class, 'reject'])->name('production.semipigment.reject');

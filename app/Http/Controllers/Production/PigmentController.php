@@ -11,6 +11,11 @@ use Yajra\DataTables\Facades\DataTables;
 use App\Models\Pigment;
 use App\Models\Planning;
 use App\Models\PlanningHeader;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx as WriterXlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 /**
  * จัดการรายการ Pigment จาก modal ในหน้า Planning Item + หน้าอนุมัติ Pigment
@@ -25,11 +30,22 @@ class PigmentController extends Controller
         return view('production-planning.pigment.index');
     }
 
+    /**
+     * Query ของรายการ Pigment ตามเงื่อนไขค้นหาปัจจุบัน (ข้อความ / สถานะ / ช่วงวันที่)
+     * ใช้ร่วมกันระหว่าง datatable และ export excel เพื่อให้ได้ชุดข้อมูลเดียวกันเสมอ
+     */
+    private function pigmentListQuery()
+    {
+        // กรองตามสถานะที่เลือก (รออนุมัติ / อนุมัติแล้ว / ไม่อนุมัติ) — ค่าว่าง = ทุกสถานะ
+        $status = request('status');
+
+        return $this->baseQuery()
+            ->when(!empty($status), fn ($q) => $q->where('status', $status));
+    }
+
     public function datatable()
     {
-        $status = request('status');
-        $data = $this->baseQuery()
-            ->when(!empty($status), fn ($q) => $q->where('status', $status));
+        $data = $this->pigmentListQuery();
 
         return DataTables::of($data)
             ->addColumn('rownum', fn ($row) => $row->rownum)
@@ -41,6 +57,167 @@ class PigmentController extends Controller
             ->addColumn('action', fn ($row) => $this->actionButtons($row))
             ->rawColumns(['status_badge', 'action'])
             ->make(true);
+    }
+
+    /* ===================== Export Excel ===================== */
+
+    /**
+     * Export รายการ Pigment เป็นไฟล์ Excel — "ใบขอสั่ง PIGMENT"
+     *
+     * ใช้ query ชุดเดียวกับ datatable (pigmentListQuery) จึงได้ข้อมูลตามเงื่อนไขค้นหาที่เลือกอยู่
+     * และดึงมาทุกแถว (ไม่แบ่งหน้า) — ต่างจาก datatable ที่ Yajra ตัดตามหน้าที่แสดง
+     */
+    public function exportExcel()
+    {
+        $rows = $this->pigmentListQuery()->get();
+
+        $headers = [
+            'วันที่ขอ',
+            'Item No.',
+            'วันที่สั่ง',
+            'วันที่ต้องการ',
+            'แผนกที่สั่ง',
+            'ใช้กับ Order',
+            'ยอดคงเหลือ',
+            'ยอดใช้ย้อนหลัง 2 เดือน',
+            'น้ำหนักที่ใช้',
+            'น้ำหนักที่จะสั่ง',
+            'ผลการอนุมัติ',
+        ];
+
+        // ตำแหน่งคอลัมน์ที่ต้องจัดรูปแบบเป็นตัวเลขทศนิยม 2 ตำแหน่ง
+        $numericColumns = ['G', 'H', 'I', 'J'];
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('ใบขอสั่ง PIGMENT');
+
+        $lastCol = 'K'; // 11 คอลัมน์ = A..K
+
+        // แถวที่ 1: หัวเรื่อง
+        $sheet->setCellValue('A1', 'ใบขอสั่ง PIGMENT');
+        $sheet->mergeCells('A1:'.$lastCol.'1');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        // แถวที่ 2: เงื่อนไขที่ใช้ค้นหา + วันเวลาที่ export (ให้ตรวจสอบย้อนหลังได้ว่าไฟล์มาจากเงื่อนไขไหน)
+        $sheet->setCellValue('A2', $this->exportConditionText().' | พิมพ์เมื่อ '.now()->format('d/m/Y H:i'));
+        $sheet->mergeCells('A2:'.$lastCol.'2');
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A2')->getFont()->setSize(10)->getColor()->setARGB('FF666666');
+
+        // แถวที่ 3: หัวตาราง
+        $headerRow = 3;
+        $sheet->fromArray($headers, null, 'A'.$headerRow);
+        $sheet->getStyle('A'.$headerRow.':'.$lastCol.$headerRow)->getFont()->setBold(true);
+        $sheet->getStyle('A'.$headerRow.':'.$lastCol.$headerRow)->getFill()
+            ->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FFD9E1F2');
+        $sheet->getStyle('A'.$headerRow.':'.$lastCol.$headerRow)->getAlignment()
+            ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+            ->setVertical(Alignment::VERTICAL_CENTER)
+            ->setWrapText(true);
+
+        // แถวข้อมูล
+        $rowIndex = $headerRow + 1;
+        foreach ($rows as $row) {
+            $sheet->fromArray([
+                $this->excelDate($row->created_at),
+                $row->itemno,
+                $this->excelDate($row->order_date),
+                $this->excelDate($row->want_date),
+                $row->custno,
+                $row->orderno,
+                $row->balance,
+                $row->retrospective,
+                $row->weight_request,
+                $row->weight_production,
+                $row->statusLabel(),
+            ], null, 'A'.$rowIndex);
+
+            $rowIndex++;
+        }
+
+        $lastRow = $rowIndex - 1;
+
+        // ตีเส้นตาราง + จัดรูปแบบ เฉพาะเมื่อมีข้อมูลอย่างน้อย 1 แถว
+        if ($lastRow >= $headerRow + 1) {
+            $dataRange = 'A'.$headerRow.':'.$lastCol.$lastRow;
+
+            $sheet->getStyle($dataRange)->getBorders()->getAllBorders()
+                ->setBorderStyle(Border::BORDER_THIN);
+
+            // วันที่ + ผลการอนุมัติ จัดกึ่งกลาง
+            foreach (['A', 'C', 'D', 'K'] as $col) {
+                $sheet->getStyle($col.($headerRow + 1).':'.$col.$lastRow)->getAlignment()
+                    ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            }
+
+            // คอลัมน์ตัวเลข แสดงทศนิยม 2 ตำแหน่ง ชิดขวา
+            foreach ($numericColumns as $col) {
+                $range = $col.($headerRow + 1).':'.$col.$lastRow;
+                $sheet->getStyle($range)->getNumberFormat()->setFormatCode('#,##0.00');
+                $sheet->getStyle($range)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            }
+        } else {
+            $sheet->getStyle('A'.$headerRow.':'.$lastCol.$headerRow)->getBorders()->getAllBorders()
+                ->setBorderStyle(Border::BORDER_THIN);
+        }
+
+        // ปรับความกว้างคอลัมน์อัตโนมัติ
+        foreach (range('A', $lastCol) as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $sheet->freezePane('A'.($headerRow + 1));
+
+        $fileName = 'ใบขอสั่ง_PIGMENT_'.now()->format('Ymd_His').'.xlsx';
+
+        // ส่งไฟล์ให้ดาวน์โหลดตรงๆ ไม่เขียนลงดิสก์ (ไม่ทิ้งไฟล์ค้างใน public/)
+        return response()->streamDownload(function () use ($spreadsheet) {
+            (new WriterXlsx($spreadsheet))->save('php://output');
+        }, $fileName, [
+            'Content-Type'  => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0',
+        ]);
+    }
+
+    /**
+     * แปลงค่าวันที่เป็น d/m/Y สำหรับใส่ในไฟล์ Excel (ค่าว่างคืนสตริงว่าง)
+     */
+    private function excelDate($value): string
+    {
+        return $value ? \Carbon\Carbon::parse($value)->format('d/m/Y') : '';
+    }
+
+    /**
+     * ข้อความสรุปเงื่อนไขค้นหาที่ใช้ export (แสดงใต้หัวเรื่องในไฟล์ Excel)
+     */
+    private function exportConditionText(): string
+    {
+        $parts = [];
+
+        if (request()->filled('search')) {
+            $parts[] = 'คำค้นหา: '.request('search');
+        }
+
+        $statusLabels = Pigment::$statusLabels;
+        $parts[] = 'สถานะ: '.($statusLabels[request('status')] ?? 'ทุกสถานะ');
+
+        if (request()->filled('date_start') || request()->filled('date_end')) {
+            $fieldLabels = [
+                'created_at' => 'วันที่ขอ',
+                'order_date' => 'วันที่สั่ง',
+                'want_date'  => 'วันที่ต้องการรับ',
+            ];
+            $field = $fieldLabels[request('date_field')] ?? $fieldLabels['created_at'];
+            $start = request('date_start') ? $this->excelDate(request('date_start')) : '-';
+            $end   = request('date_end') ? $this->excelDate(request('date_end')) : '-';
+
+            $parts[] = $field.': '.$start.' ถึง '.$end;
+        }
+
+        return implode('  |  ', $parts);
     }
 
     /**
