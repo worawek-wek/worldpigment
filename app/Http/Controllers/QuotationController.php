@@ -348,6 +348,7 @@ class QuotationController extends Controller
             'colConfig'   => $colConfig,
             'colRegistry' => $reg,
             'otherNotes'  => $otherNotes,
+            'empName'     => $this->empName($header->EmpID ?? null), // ชื่อผู้เสนอราคา (จากรหัสพนักงาน)
         ]);
     }
 
@@ -530,7 +531,27 @@ class QuotationController extends Controller
             'colConfig'   => $colConfig,                      // คอลัมน์ที่แสดง
             'colRegistry' => $this->colRegistry(),
             'otherNotes'  => $otherNotes,                     // หมายเหตุอื่น (section หมายเหตุ)
+            'empName'     => $this->empName($row->EmpID ?? null), // ชื่อผู้เสนอราคา (จากรหัสพนักงาน)
         ];
+    }
+
+    /**
+     * ชื่อพนักงานผู้เสนอราคา — lookup จากรหัสพนักงาน (qmast.EmpID → emp.empno)
+     * EmpID เก็บเป็น int ส่วน emp.empno เป็น varchar ที่เก็บเลขรหัส (เช่น 9013 = "9013")
+     * ไม่พบ/ว่าง → คืน null (view จะ fallback เป็นคำว่า "ผู้เสนอราคา")
+     */
+    private function empName($empId): ?string
+    {
+        $empId = trim((string) $empId);
+        if ($empId === '') {
+            return null;
+        }
+        $e = DB::table('emp')->where('empno', $empId)->first(['empname', 'empsur']);
+        if (!$e) {
+            return null;
+        }
+        $name = trim(($e->empname ?? '') . ' ' . ($e->empsur ?? ''));
+        return $name !== '' ? $name : null;
     }
 
     /**
@@ -608,13 +629,79 @@ class QuotationController extends Controller
                 $out = [];
                 foreach ($decoded as $c) {
                     if (empty($c['key']) || !isset($reg[$c['key']])) continue;
-                    $out[] = ['key' => $c['key'], 'label' => $c['label'] ?? $reg[$c['key']]['label']];
+                    $label = $c['label'] ?? $reg[$c['key']]['label'];
+                    $out[] = [
+                        'key'      => $c['key'],
+                        'label'    => $label,
+                        'label_en' => $this->labelEn($c['key'], $label),
+                    ];
                 }
                 if ($out) return $out;
             }
         }
         $presets = $this->presets();
-        return $presets[$this->resolveFormat($header)] ?? $presets[''];
+        $cols = $presets[$this->resolveFormat($header)] ?? $presets[''];
+        // แนบ label_en ให้ preset ด้วย (กันกรณีใบเก่าที่ไม่มี col_config)
+        return array_map(fn ($c) => $c + ['label_en' => $this->labelEn($c['key'], $c['label'])], $cols);
+    }
+
+    /**
+     * แปลชื่อหัวคอลัมน์ ไทย → อังกฤษ สำหรับใบเสนอราคาภาษาอังกฤษ (remark_lang = 'en')
+     *
+     * แปลตาม "ข้อความ label ไทย" เป็นหลัก เพราะคีย์เดียวกันสื่อความต่างกันตามรูปแบบตาราง
+     * (เช่น process_fee = "ค่าผลิต" หรือ "ค่าผลิตและค่าแม่สี") — ถ้าไม่พบใน map
+     * จึง fallback เป็นคำแปลตามคีย์ และสุดท้าย fallback เป็น label ไทยเดิม
+     */
+    private function labelEn(string $key, string $thaiLabel): string
+    {
+        // แปลตามข้อความ label ไทย (ครอบคลุมทุก preset)
+        $byLabel = [
+            'รหัสสินค้า'                 => 'Product',
+            'สินค้า'                     => 'Product',
+            'ชื่อสินค้า'                  => 'Description',
+            'รายละเอียด'                 => 'Description',
+            'น้ำหนักส่งครั้งละ (กก)'      => 'Delivery Quantity (kg)',
+            'ราคาเม็ดพลาสติก'            => 'Resin Price',
+            'ค่าผลิตและค่าแม่สี'          => 'Process&Pigment Fee',
+            'ค่าผลิต'                    => 'Process Fee',
+            'ค่าแม่สี'                   => 'Pigment Price',
+            '% สูญเสีย'                  => '% Loss',
+            'ราคา (บาท/กก)'              => 'Price (THB/kg)',
+            'ราคา (บาท/กก) ปัจจุบัน'      => 'Price (THB/kg) Current',
+            'ราคา (บาท/กก) ใหม่'         => 'Price (THB/kg) New',
+            'รวม Vat (บาท/กก)'          => 'Incld VAT (THB/Kg)',
+            'รวม Vat ใหม่'              => 'Incld VAT (THB/Kg) New',
+            'ราคารวมภาษี'                => 'Incld VAT (THB/Kg)',
+            'ค่าผลิตฯ ปัจจุบัน'           => 'Process&Pigment Fee Current',
+            'ค่าผลิตฯ ใหม่'              => 'Process&Pigment Fee New',
+            'ค่าผลิต ปัจจุบัน'            => 'Process Fee Current',
+            'ค่าผลิต ใหม่'               => 'Process Fee New',
+            'ค่าแม่สี ปัจจุบัน'            => 'Pigment Price Current',
+            'ค่าแม่สี ใหม่'               => 'Pigment Price New',
+            'หมายเหตุ'                   => 'Remarks',
+        ];
+
+        // fallback ตามคีย์ (กรณี label ถูกผู้ใช้แก้จนไม่ตรง map ด้านบน)
+        $byKey = [
+            'code'              => 'Product',
+            'name'              => 'Description',
+            'delivery_qty'      => 'Delivery Quantity (kg)',
+            'resin_price'       => 'Resin Price',
+            'process_fee'       => 'Process Fee',
+            'pigment_price'     => 'Pigment Price',
+            'loss_pct'          => '% Loss',
+            'cur_process_fee'   => 'Process Fee Current',
+            'cur_pigment_price' => 'Pigment Price Current',
+            'new_process_fee'   => 'Process Fee New',
+            'new_pigment_price' => 'Pigment Price New',
+            'price_kg'          => 'Price (THB/kg)',
+            'new_price'         => 'Price (THB/kg) New',
+            'price_vat'         => 'Incld VAT (THB/Kg)',
+            'remark'            => 'Remarks',
+        ];
+
+        $t = trim($thaiLabel);
+        return $byLabel[$t] ?? $byKey[$key] ?? $thaiLabel;
     }
 
     /**

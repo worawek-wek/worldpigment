@@ -1,6 +1,11 @@
 @php
-    $qno   = trim($header->Qno);
-    $tname = ($cust && $cust->name) ? $cust->name : $header->CustName;
+    // ── ภาษาเอกสารทั้งใบ (หัวบิล + หัวตาราง) ตามสวิตช์ TH/EN เดิม ──
+    $headEn = ($header->remark_lang ?? 'th') === 'en';
+
+    $qno    = trim($header->Qno);
+    $tname  = ($cust && $cust->name) ? $cust->name : $header->CustName;
+    // ชื่อลูกค้าอังกฤษ (nameEN) — ถ้าไม่มีใช้ชื่อไทยแทน
+    $tnameEn = ($cust && ($cust->nameEN ?? null)) ? $cust->nameEN : $tname;
     $ptname = $pdtype->PDHead1 ?? $header->PDtype;
 
     // $isRevision มาจาก controller (derive จากคอลัมน์ที่ใช้จริง)
@@ -12,11 +17,25 @@
         $c = \Carbon\Carbon::parse($d);
         return $c->day . ' ' . $thaiMonths[$c->month] . ' ' . ($c->year + 543);
     };
+    // วันที่แบบอังกฤษ (UK English Long Date) — เช่น 21 July 2026
+    $enMonths = [1=>'January','February','March','April','May','June',
+                 'July','August','September','October','November','December'];
+    $enDate = function ($d) use ($enMonths) {
+        if (!$d) return '-';
+        $c = \Carbon\Carbon::parse($d);
+        return $c->day . ' ' . $enMonths[$c->month] . ' ' . $c->year;
+    };
 
     $subject  = $isRevision ? 'ขอแจ้งปรับราคา' : 'ขอเสนอราคา';
     $bodyText = $isRevision
         ? 'เนื่องจากขณะนี้ราคาของวัตถุดิบมีการปรับตัวสูงขึ้น บริษัทฯ มีความจำเป็นอย่างยิ่งที่จะต้องขอปรับราคา ' . $ptname . ' ดังต่อไปนี้'
         : 'บริษัทฯ ขอเสนอราคา ' . $ptname . ' ดังรายละเอียดต่อไปนี้';
+
+    // ── ข้อความหัวบิลภาษาอังกฤษ ──
+    $subjectEn  = $isRevision ? 'Price Revision' : 'Quotation';
+    $bodyTextEn = $isRevision
+        ? 'Due to the current rise in raw material prices, we regret to inform you that it is necessary to adjust the price of ' . $ptname . ' as follows:'
+        : 'We are pleased to submit our offer for the following products.';
 @endphp
 <!doctype html>
 <html lang="th">
@@ -54,6 +73,7 @@
         .sign { margin-top: 44px; display: flex; justify-content: flex-end; }
         .sign .box { text-align: center; width: 260px; }
         .sign .line { border-top: 1px dotted #000; margin-top: 42px; padding-top: 4px; }
+        .sign .emp-name { font-weight: bold; }
         .fmt-tag { font-size: .75em; color: #888; }
 
         @media print { .toolbar { display: none; } body { padding: 10px 24px; } }
@@ -67,26 +87,43 @@
         <span class="fmt-tag">{{ $isRevision ? 'แจ้งปรับราคา' : 'เสนอราคา' }}</span>
     </div>
 
-    {{-- หัวเอกสาร --}}
-    <div class="doc-head">
-        <div><span class="field-label">ใบเสนอราคาเลขที่</span> &nbsp;&nbsp; <span class="qno">{{ $qno }}</span></div>
-        <div>วันที่ {{ $thaiDate($header->Qdate) }}</div>
-    </div>
+    {{-- หัวเอกสาร (สลับ TH/EN ตามภาษาที่เลือก) --}}
+    @if ($headEn)
+        <div class="doc-head">
+            <div><span class="field-label">Quotation No.</span> &nbsp;&nbsp; <span class="qno">{{ $qno }}</span></div>
+            <div>Date {{ $enDate($header->Qdate) }}</div>
+        </div>
 
-    <div class="subject"><span class="field-label">เรื่อง</span> &nbsp;&nbsp; {{ $subject }} &nbsp; {{ $ptname }}</div>
-    <div class="subject">
-        <span class="field-label">เรียน</span> &nbsp;&nbsp; ท่านผู้จัดการฝ่ายจัดซื้อ &nbsp;
-        {{ $tname ?: '—' }} @if($header->Custid) ({{ $header->Custid }}) @endif
-    </div>
+        <div class="subject"><span class="field-label">Re:</span> &nbsp;&nbsp; {{ $subjectEn }} &nbsp; {{ $ptname }}</div>
+        <div class="subject">
+            <span class="field-label">ATTN:</span> &nbsp;&nbsp;
+            {{ $tnameEn ?: '—' }} @if($header->Custid) ({{ $header->Custid }}) @endif
+        </div>
+        <div class="subject">Dear Purchasing Manager,</div>
 
-    <div class="body-text">{{ $bodyText }}</div>
+        <div class="body-text">{{ $bodyTextEn }}</div>
+    @else
+        <div class="doc-head">
+            <div><span class="field-label">ใบเสนอราคาเลขที่</span> &nbsp;&nbsp; <span class="qno">{{ $qno }}</span></div>
+            <div>วันที่ {{ $thaiDate($header->Qdate) }}</div>
+        </div>
+
+        <div class="subject"><span class="field-label">เรื่อง</span> &nbsp;&nbsp; {{ $subject }} &nbsp; {{ $ptname }}</div>
+        <div class="subject">
+            <span class="field-label">เรียน</span> &nbsp;&nbsp; ท่านผู้จัดการฝ่ายจัดซื้อ &nbsp;
+            {{ $tname ?: '—' }} @if($header->Custid) ({{ $header->Custid }}) @endif
+        </div>
+
+        <div class="body-text">{{ $bodyText }}</div>
+    @endif
 
     {{-- ตารางรายการ — คอลัมน์ตาม col_config (ผู้ใช้กำหนดเอง) --}}
     <table class="items">
         <thead>
             <tr>
                 @foreach ($colConfig as $c)
-                    <th class="{{ ($colRegistry[$c['key']]['num'] ?? false) ? 'text-end' : '' }}"><u>{{ $c['label'] }}</u></th>
+                    @php $head = $headEn ? ($c['label_en'] ?? $c['label']) : $c['label']; @endphp
+                    <th class="{{ ($colRegistry[$c['key']]['num'] ?? false) ? 'text-end' : '' }}"><u>{{ $head }}</u></th>
                 @endforeach
             </tr>
         </thead>
@@ -148,7 +185,9 @@
     </div>
 
     <div class="sign">
-        <div class="box"><div class="line">ผู้เสนอราคา</div></div>
+        <div class="box">
+            <div class="line"><span class="emp-name">{{ $empName }}</span></div>
+        </div>
     </div>
 
 </body>
