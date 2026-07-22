@@ -24,6 +24,13 @@
             <div class="col-12 mt-4">
                 <div class="card">
                     <div class="card-header">
+                        {{-- แถวบนสุด: ปุ่ม Export ชิดขวา — export ตามเงื่อนไขค้นหาปัจจุบัน (ทุกหน้า ไม่ใช่เฉพาะหน้าที่แสดงอยู่) --}}
+                        <div class="d-flex justify-content-end mb-3">
+                            <button id="btn_export_excel" type="button" class="btn btn-success"
+                                title="Export Excel ตามเงื่อนไขค้นหาปัจจุบัน (ทุกหน้า)">
+                                <i class="ti ti-file-spreadsheet me-1"></i>Export Excel
+                            </button>
+                        </div>
                         <div class="row g-3 align-items-end">
                             <div class="col-md-4">
                                 <label class="form-label mb-1 small text-muted">ค้นหา</label>
@@ -58,16 +65,9 @@
                                 <label class="form-label mb-1 small text-muted">ถึง</label>
                                 <input id="searchDateEnd" type="date" class="form-control">
                             </div>
-                            <div class="col-md-1">
+                            <div class="col-md-2">
                                 <button id="btn_clear_date" type="button" class="btn btn-outline-secondary w-100">
-                                    <i class="ti ti-x me-1"></i>ล้าง
-                                </button>
-                            </div>
-                            {{-- Export ตามเงื่อนไขค้นหาปัจจุบัน (ทุกหน้า ไม่ใช่เฉพาะหน้าที่แสดงอยู่) --}}
-                            <div class="col-md-1">
-                                <button id="btn_export_excel" type="button" class="btn btn-success w-100"
-                                    title="Export Excel ตามเงื่อนไขค้นหาปัจจุบัน (ทุกหน้า)">
-                                    <i class="ti ti-file-spreadsheet me-1"></i>Excel
+                                    <i class="ti ti-x me-1"></i>ล้างวันที่
                                 </button>
                             </div>
                         </div>
