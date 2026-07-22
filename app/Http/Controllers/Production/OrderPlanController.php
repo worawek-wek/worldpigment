@@ -39,7 +39,14 @@ class OrderPlanController extends Controller
                 $statuses = [];
                 $this->collectStatuses($row->plannings, $statuses);
                 $statuses = array_values(array_filter($statuses, fn ($s) => $s !== null && $s !== ''));
-                return empty($statuses) ? '-' : implode(', ', $statuses);
+                $text = empty($statuses) ? '-' : implode(', ', array_map(fn ($s) => e($s), $statuses));
+
+                // บรรทัดที่ 2: สถานะปิดงานของ Order (อ้างอิงคอลัมน์ end_order ของ tb_planning_header)
+                $end_order_badge = ($row->end_order ?? 'N') === 'Y'
+                    ? '<span class="badge bg-label-success">ปิดงาน</span>'
+                    : '<span class="badge bg-label-warning">ยังไม่ปิดงาน</span>';
+
+                return $text.'<br>'.$end_order_badge;
             })
             ->editColumn('custwant', fn ($row) => $row->custwant ? \Carbon\Carbon::parse($row->custwant)->format('d/m/Y') : '-')
             ->addColumn('btnedit', function ($row) {
@@ -51,7 +58,7 @@ class OrderPlanController extends Controller
             ->orderColumn('inplan', $this->maxInplanSql() . ' $1')
             ->orderColumn('custname', $this->custnameSql() . ' $1')
             ->orderColumn('item_count', $this->itemCountSql() . ' $1')
-            ->rawColumns(['btnedit'])
+            ->rawColumns(['status_list', 'btnedit'])
             ->make(true);
     }
 
@@ -79,6 +86,11 @@ class OrderPlanController extends Controller
         $inplanEnd      = request('inplan_end');
         $custwantStart  = request('custwant_start');
         $custwantEnd    = request('custwant_end');
+
+        // สถานะปิดงาน (end_order): 'all' = ทั้งหมด (ไม่กรอง), 'Y' = ปิดงาน, 'N' = ยังไม่ปิดงาน
+        // ค่าอื่น/ไม่ได้ส่งมา = ใช้ค่าเริ่มต้น 'N' (ยังไม่ปิดงาน)
+        $endOrder = request('end_order', 'N');
+        $endOrder = in_array($endOrder, ['all', 'Y', 'N'], true) ? $endOrder : 'N';
 
         $maxInplan = $this->maxInplanSql();
 
@@ -109,6 +121,16 @@ class OrderPlanController extends Controller
             })
             ->when(!empty($company), function ($query) use ($company) {
                 $query->where('tb_planning_header.company', $company);
+            })
+            // กรองด้วยสถานะปิดงาน — 'ยังไม่ปิดงาน' นับรวมค่า NULL/ว่าง ด้วย
+            ->when($endOrder === 'Y', function ($query) {
+                $query->where('tb_planning_header.end_order', 'Y');
+            })
+            ->when($endOrder === 'N', function ($query) {
+                $query->where(function ($query) {
+                    $query->where('tb_planning_header.end_order', '!=', 'Y')
+                        ->orWhereNull('tb_planning_header.end_order');
+                });
             })
             // ค้นหาช่วงวันที่ Inplan (เทียบกับ inplan ล่าสุด/มากสุดของแผน)
             ->when(!empty($inplanStart), fn ($q) => $q->whereRaw("$maxInplan >= ?", [$inplanStart]))

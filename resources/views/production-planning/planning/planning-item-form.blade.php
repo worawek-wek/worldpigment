@@ -436,6 +436,14 @@
                                             title="ดูสถานะแผนการผลิตที่สร้างจาก Semi นี้">
                                         <i class="ti ti-sitemap me-1"></i>{{ $row['plan_status'] ?: 'ดูแผนการผลิต' }}
                                     </button>
+                                    {{-- สถานะปิดงานของแผนที่สร้างจาก Semi นี้ (end_job ของ tb_planning) --}}
+                                    <div class="mt-1">
+                                        @if(($row['plan_end_job'] ?? 'N') === 'Y')
+                                            <span class="badge bg-label-success">ปิดงาน</span>
+                                        @else
+                                            <span class="badge bg-label-warning">ยังไม่ปิดงาน</span>
+                                        @endif
+                                    </div>
                                 @elseif($st === 'approved')
                                     <span class="badge bg-label-secondary" title="อนุมัติแล้ว แต่ยังไม่ได้สร้างแผนการผลิต">
                                         <i class="ti ti-clock me-1"></i>ยังไม่สร้างแผน

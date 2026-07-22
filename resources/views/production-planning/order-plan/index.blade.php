@@ -27,13 +27,14 @@
                 <div class="card">
 
                     <div class="card-header">
+                        {{-- แถวที่ 1: ค้นหาข้อความ + แผนก + สถานะปิดงาน --}}
                         <div class="row g-3">
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <label class="form-label small mb-1">ค้นหา</label>
                                 <input id="searchInput" type="text" class="form-control"
                                 placeholder="รหัส Order, รหัสลูกค้า, ชื่อลูกค้า">
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-md-3">
                                 <label class="form-label small mb-1">แผนก</label>
                                 <select id="searchCompany" class="form-select">
                                     <option value="">ทุกแผนก</option>
@@ -42,21 +43,34 @@
                                     @endforeach
                                 </select>
                             </div>
+                            {{-- สถานะปิดงาน (อ้างอิงคอลัมน์ end_order ของ tb_planning_header) — ค่าเริ่มต้น: ยังไม่ปิดงาน --}}
                             <div class="col-md-3">
+                                <label class="form-label small mb-1">สถานะปิดงาน</label>
+                                <select id="searchEndOrder" class="form-select">
+                                    {{-- ใช้ค่า 'all' (ไม่ใช่ค่าว่าง) เพื่อไม่ให้ backend เข้าใจผิดว่าไม่ได้ส่งค่ามา แล้วตกไปใช้ค่าเริ่มต้น --}}
+                                    <option value="all">ทั้งหมด</option>
+                                    <option value="Y">ปิดงาน</option>
+                                    <option value="N" selected>ยังไม่ปิดงาน</option>
+                                </select>
+                            </div>
+                        </div>
+                        {{-- แถวที่ 2: ช่วงวันที่ Inplan / Custwant + ล้างตัวกรอง --}}
+                        <div class="row g-3 mt-1">
+                            <div class="col-md-4">
                                 <label class="form-label small mb-1">Inplan (วันเริ่ม – สิ้นสุด)</label>
                                 <div class="d-flex gap-1">
                                     <input id="inplanStart" type="date" class="form-control" title="Inplan เริ่ม">
                                     <input id="inplanEnd" type="date" class="form-control" title="Inplan สิ้นสุด">
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <label class="form-label small mb-1">Custwant (วันเริ่ม – สิ้นสุด)</label>
                                 <div class="d-flex gap-1">
                                     <input id="custwantStart" type="date" class="form-control" title="Custwant เริ่ม">
                                     <input id="custwantEnd" type="date" class="form-control" title="Custwant สิ้นสุด">
                                 </div>
                             </div>
-                            <div class="col-md-1 d-flex align-items-end">
+                            <div class="col-md-2 d-flex align-items-end">
                                 <button id="btnClearFilter" type="button" class="btn btn-label-secondary w-100" title="ล้างตัวกรอง">
                                     <i class="ti ti-eraser"></i>
                                 </button>
@@ -116,6 +130,8 @@
                 data: function(d) {
                     d.search = $('#searchInput').val();
                     d.company = $('#searchCompany').val();
+                    // ส่งค่าเสมอ ('all' | 'Y' | 'N') — ถ้าหา element ไม่เจอให้ใช้ค่าเริ่มต้น 'N'
+                    d.end_order = $('#searchEndOrder').val() || 'N';
                     d.inplan_start = $('#inplanStart').val();
                     d.inplan_end = $('#inplanEnd').val();
                     d.custwant_start = $('#custwantStart').val();
@@ -156,6 +172,12 @@
         oTable.draw();
     });
 
+    // เปลี่ยนสถานะปิดงาน (ทั้งหมด / ปิดงาน / ยังไม่ปิดงาน) → ค้นหาใหม่
+    $(document).on('change', '#searchEndOrder', function(e){
+        e.preventDefault();
+        oTable.draw();
+    });
+
     // ค้นหาช่วงวันที่ Inplan / Custwant (ปฏิทินเลือกวันเริ่ม–สิ้นสุด)
     $(document).on('change', '#inplanStart, #inplanEnd, #custwantStart, #custwantEnd', function(){
         oTable.draw();
@@ -165,6 +187,8 @@
     $(document).on('click', '#btnClearFilter', function(){
         $('#searchInput').val('');
         $('#searchCompany').val('');
+        // สถานะปิดงานกลับไปที่ค่าเริ่มต้น (ยังไม่ปิดงาน)
+        $('#searchEndOrder').val('N');
         $('#inplanStart, #inplanEnd, #custwantStart, #custwantEnd').val('');
         oTable.draw();
     });

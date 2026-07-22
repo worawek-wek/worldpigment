@@ -47,6 +47,13 @@
                         @else
                             <span class="text-muted">-</span>
                         @endif
+                        {{-- บรรทัดที่ 2: สถานะปิดงานของแผน (คอลัมน์ end_job ของ tb_planning) --}}
+                        <br>
+                        @if(($plan['end_job'] ?? 'N') === 'Y')
+                            <span class="badge bg-label-success">ปิดงาน</span>
+                        @else
+                            <span class="badge bg-label-warning">ยังไม่ปิดงาน</span>
+                        @endif
                     </td>
                     <td class="text-center">
                         {{ !empty($plan['inplan']) ? \Carbon\Carbon::parse($plan['inplan'])->format('d/m/Y') : '-' }}

@@ -48,6 +48,13 @@
                         @else
                             <span class="badge bg-label-secondary">-</span>
                         @endif
+                        {{-- บรรทัดที่ 2: สถานะปิดงานของ item ย่อย (อ้างอิงคอลัมน์ end_job ของ tb_planning) --}}
+                        <br>
+                        @if(($subItem->end_job ?? 'N') === 'Y')
+                            <span class="badge bg-label-success">ปิดงาน</span>
+                        @else
+                            <span class="badge bg-label-warning">ยังไม่ปิดงาน</span>
+                        @endif
                     </td>
                 </tr>
 

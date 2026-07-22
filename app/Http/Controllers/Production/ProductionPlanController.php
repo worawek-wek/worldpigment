@@ -62,11 +62,16 @@ class ProductionPlanController extends Controller
                     ->unique()
                     ->values();
 
-                if ($statuses->isEmpty()) {
-                    return '-';
-                }
+                $text = $statuses->isEmpty()
+                    ? '-'
+                    : $statuses->map(fn ($s) => e($s))->implode(', ');
 
-                return $statuses->map(fn ($s) => e($s))->implode(', ');
+                // บรรทัดที่ 2: สถานะปิดงานของ item แถวนี้ (อ้างอิงคอลัมน์ end_job) — รูปแบบเดียวกับ badge กะ ใน Inplan
+                $end_job_badge = ($row->end_job ?? 'N') === 'Y'
+                    ? '<span class="badge bg-label-success">ปิดงาน</span>'
+                    : '<span class="badge bg-label-warning">ยังไม่ปิดงาน</span>';
+
+                return $text.'<br>'.$end_job_badge;
             })
             ->addColumn('btnedit', function($row) {
                 $btn_view = '<button class="btn btn-sm btn-icon btn-info me-2 btn_view" data-planning_id="'.$row->id.'" title ="ลบ">
@@ -88,6 +93,11 @@ class ProductionPlanController extends Controller
         $search = request('search');
         $company = request('company');
         $planning_status = request('planning_status');
+
+        // สถานะปิดงาน (end_job): 'all' = ทั้งหมด (ไม่กรอง), 'Y' = ปิดงาน, 'N' = ยังไม่ปิดงาน
+        // ค่าอื่น/ไม่ได้ส่งมา = ใช้ค่าเริ่มต้น 'N' (ยังไม่ปิดงาน)
+        $end_job = request('end_job', 'N');
+        $end_job = in_array($end_job, ['all', 'Y', 'N'], true) ? $end_job : 'N';
 
         // ค้นหาช่วงวันที่: เลือกฟิลด์ได้เฉพาะ inplan / custwant (whitelist กัน SQL injection ที่ชื่อคอลัมน์)
         $date_field = request('date_field');
@@ -123,6 +133,16 @@ class ProductionPlanController extends Controller
             // กรองด้วยสถานะการวางแผน — สถานะผูกกับแผนก (ค่าที่ส่งมาเป็นชื่อสถานะของแผนกที่เลือก)
             ->when(!empty($planning_status), function ($query) use ($planning_status) {
                 $query->where('tb_planning.planning_status', $planning_status);
+            })
+            // กรองด้วยสถานะปิดงาน — 'ยังไม่ปิดงาน' นับรวมค่า NULL/ว่าง ด้วย
+            ->when($end_job === 'Y', function ($query) {
+                $query->where('tb_planning.end_job', 'Y');
+            })
+            ->when($end_job === 'N', function ($query) {
+                $query->where(function ($query) {
+                    $query->where('tb_planning.end_job', '!=', 'Y')
+                        ->orWhereNull('tb_planning.end_job');
+                });
             })
             // กรองช่วงวันที่ตามฟิลด์ที่เลือก (inplan / custwant) — ระบุด้านเดียวหรือทั้งช่วงก็ได้
             ->when(!empty($date_start), function ($query) use ($date_field, $date_start) {
@@ -216,6 +236,8 @@ class ProductionPlanController extends Controller
                         // แผนการผลิตที่สร้างจาก semi นี้ (ถ้าอนุมัติแล้ว) — ใช้แสดงสถานะในคอลัมน์ "จัดการ"
                         'result_planning_id'  => $r->result_planning_id,
                         'plan_status'         => $r->result_planning?->planning_status,
+                        // สถานะปิดงานของแผนที่สร้างจาก semi นี้ (คอลัมน์ end_job ของ tb_planning)
+                        'plan_end_job'        => $r->result_planning?->end_job,
                         'plan_code'           => $r->result_planning?->planning_header?->planning_code,
                     ];
                 };

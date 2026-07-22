@@ -37,10 +37,20 @@
                         </div>
                         {{-- แถวที่ 1: ค้นหาข้อความ + แผนก + สถานะ --}}
                         <div class="row g-3 align-items-end">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label mb-1 small text-muted">ค้นหา</label>
                                 <input id="searchInput" type="text" class="form-control"
                                 placeholder="ค้นหาเลขที่ใบสั่งซื้อ, รหัสลูกค้า, ขื่อลูกค้า">
+                            </div>
+                            {{-- สถานะปิดงาน (อ้างอิงคอลัมน์ end_job ของ tb_planning) — ค่าเริ่มต้น: ยังไม่ปิดงาน --}}
+                            <div class="col-md-2">
+                                <label class="form-label mb-1 small text-muted">สถานะปิดงาน</label>
+                                <select id="searchEndJob" class="form-select">
+                                    {{-- ใช้ค่า 'all' (ไม่ใช่ค่าว่าง) เพื่อไม่ให้ backend เข้าใจผิดว่าไม่ได้ส่งค่ามา แล้วตกไปใช้ค่าเริ่มต้น --}}
+                                    <option value="all">ทั้งหมด</option>
+                                    <option value="Y">ปิดงาน</option>
+                                    <option value="N" selected>ยังไม่ปิดงาน</option>
+                                </select>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label mb-1 small text-muted">แผนก</label>
@@ -181,6 +191,8 @@
                     d.search = $('#searchInput').val();
                     d.company = $('#searchCompany').val();
                     d.planning_status = $('#searchStatus').val();
+                    // ส่งค่าเสมอ ('all' | 'Y' | 'N') — ถ้าหา element ไม่เจอให้ใช้ค่าเริ่มต้น 'N'
+                    d.end_job = $('#searchEndJob').val() || 'N';
                     d.date_field = $('#searchDateField').val();
                     d.date_start = $('#searchDateStart').val();
                     d.date_end   = $('#searchDateEnd').val();
@@ -258,6 +270,12 @@
                 oTable.draw();
             }
         });
+    });
+
+    // เปลี่ยนสถานะปิดงาน (ทั้งหมด / ปิดงาน / ยังไม่ปิดงาน) → ค้นหาใหม่
+    $(document).on('change', '#searchEndJob', function(e){
+        e.preventDefault();
+        oTable.draw();
     });
 
     $(document).on('change', '#searchStatus', function(e){

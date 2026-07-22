@@ -392,6 +392,8 @@ class SemiPigmentController extends Controller
                 'planning_code'   => $planning->planning_header?->planning_code,
                 'orderno'         => $planning->planning_header?->orderno,
                 'planning_status' => $planning->planning_status,
+                // สถานะปิดงานของแผน (คอลัมน์ end_job ของ tb_planning)
+                'end_job'         => $planning->end_job,
                 'inplan'          => $planning->inplan,
             ] : null,
             'child_semis'    => $childSemis,

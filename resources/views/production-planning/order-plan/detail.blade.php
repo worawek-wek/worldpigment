@@ -65,6 +65,17 @@
                         <div class="text-muted small">วันที่ส่ง</div>
                         <div class="fw-semibold">{{ $planning_header->senddate ? \Carbon\Carbon::parse($planning_header->senddate)->format('d/m/Y') : '-' }}</div>
                     </div>
+                    {{-- สถานะปิดงานของ Order (อ้างอิงคอลัมน์ end_order ของ tb_planning_header) --}}
+                    <div class="col-md-3 mb-2">
+                        <div class="text-muted small">สถานะปิดงาน</div>
+                        <div class="fw-semibold">
+                            @if(($planning_header->end_order ?? 'N') === 'Y')
+                                <span class="badge bg-label-success">ปิดงาน</span>
+                            @else
+                                <span class="badge bg-label-warning">ยังไม่ปิดงาน</span>
+                            @endif
+                        </div>
+                    </div>
                     @if($planning_header->remark)
                     <div class="col-md-12 mb-2">
                         <div class="text-muted small">หมายเหตุ</div>
@@ -112,6 +123,13 @@
                                 <span class="badge bg-label-info">{{ $item->planning_status }}</span>
                             @else
                                 <span class="badge bg-label-secondary">-</span>
+                            @endif
+                            {{-- บรรทัดที่ 2: สถานะปิดงานของ item (อ้างอิงคอลัมน์ end_job ของ tb_planning) --}}
+                            <br>
+                            @if(($item->end_job ?? 'N') === 'Y')
+                                <span class="badge bg-label-success">ปิดงาน</span>
+                            @else
+                                <span class="badge bg-label-warning">ยังไม่ปิดงาน</span>
                             @endif
                         </td>
                         <td class="text-center">{{ $item->remark ?? '-' }}</td>

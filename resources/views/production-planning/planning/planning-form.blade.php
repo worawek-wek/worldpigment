@@ -137,6 +137,13 @@
                             @else
                                 <span class="badge bg-label-secondary">-</span>
                             @endif
+                            {{-- บรรทัดที่ 2: สถานะปิดงานของ item (คอลัมน์ end_job ของ tb_planning) --}}
+                            <br>
+                            @if(($item->end_job ?? 'N') === 'Y')
+                                <span class="badge bg-label-success">ปิดงาน</span>
+                            @else
+                                <span class="badge bg-label-warning">ยังไม่ปิดงาน</span>
+                            @endif
                         </td>
                         <td class="text-center">
                             <button type="button"
