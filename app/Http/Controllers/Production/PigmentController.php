@@ -34,6 +34,8 @@ class PigmentController extends Controller
         return DataTables::of($data)
             ->addColumn('rownum', fn ($row) => $row->rownum)
             ->addColumn('status_badge', fn ($row) => $this->statusBadge($row))
+            // วันที่ขอ = วันที่สร้างรายการ (created_at)
+            ->editColumn('created_at', fn ($row) => $row->created_at ? \Carbon\Carbon::parse($row->created_at)->format('d/m/Y') : '-')
             ->editColumn('order_date', fn ($row) => $row->order_date ? \Carbon\Carbon::parse($row->order_date)->format('d/m/Y') : '-')
             ->editColumn('want_date', fn ($row) => $row->want_date ? \Carbon\Carbon::parse($row->want_date)->format('d/m/Y') : '-')
             ->addColumn('action', fn ($row) => $this->actionButtons($row))
@@ -293,6 +295,13 @@ class PigmentController extends Controller
     {
         $search = request('search');
 
+        // ค้นหาช่วงวันที่: เลือกฟิลด์ได้เฉพาะ created_at (วันที่ขอ) / order_date (วันที่สั่ง) / want_date (วันที่ต้องการรับ)
+        // ใช้ whitelist กัน SQL injection ที่ชื่อคอลัมน์ — ค่าเริ่มต้นตรงกับตัวเลือกแรกของ dropdown ในหน้า index
+        $date_field = request('date_field');
+        $date_field = in_array($date_field, ['created_at', 'order_date', 'want_date'], true) ? $date_field : 'created_at';
+        $date_start = request('date_start');
+        $date_end   = request('date_end');
+
         return Pigment::query()
             ->select([
                 'tb_pigment.*',
@@ -304,6 +313,13 @@ class PigmentController extends Controller
                       ->orWhere('custno', 'LIKE', '%'.$search.'%')
                       ->orWhere('orderno', 'LIKE', '%'.$search.'%');
                 });
+            })
+            // กรองช่วงวันที่ตามฟิลด์ที่เลือก — ระบุด้านเดียวหรือทั้งช่วงก็ได้
+            ->when(!empty($date_start), function ($q) use ($date_field, $date_start) {
+                $q->whereDate('tb_pigment.'.$date_field, '>=', $date_start);
+            })
+            ->when(!empty($date_end), function ($q) use ($date_field, $date_end) {
+                $q->whereDate('tb_pigment.'.$date_field, '<=', $date_end);
             })
             ->orderBy('tb_pigment.id', 'desc');
     }

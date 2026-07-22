@@ -24,12 +24,14 @@
             <div class="col-12 mt-4">
                 <div class="card">
                     <div class="card-header">
-                        <div class="row g-3 align-items-center">
+                        <div class="row g-3 align-items-end">
                             <div class="col-md-4">
+                                <label class="form-label mb-1 small text-muted">ค้นหา</label>
                                 <input id="searchInput" type="text" class="form-control"
                                     placeholder="ค้นหา Item No., รหัสลูกค้า, Order No., Company">
                             </div>
                             <div class="col-md-2">
+                                <label class="form-label mb-1 small text-muted">สถานะ</label>
                                 <select id="searchStatus" class="form-select">
                                     <option value="">ทุกสถานะ</option>
                                     <option value="request" selected>รออนุมัติ</option>
@@ -38,16 +40,41 @@
                                 </select>
                             </div>
                         </div>
+                        {{-- แถวที่ 2: ค้นหาช่วงวันที่ — เลือกฟิลด์ (วันที่ขอ/วันที่สั่ง/วันที่ต้องการรับ) แล้วระบุวันที่เริ่ม–ถึง --}}
+                        <div class="row g-3 align-items-end mt-1">
+                            <div class="col-md-4">
+                                <label class="form-label mb-1 small text-muted">ค้นหาตามวันที่</label>
+                                <select id="searchDateField" class="form-select">
+                                    <option value="created_at">วันที่ขอ</option>
+                                    <option value="order_date">วันที่สั่ง</option>
+                                    <option value="want_date">วันที่ต้องการรับ</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label mb-1 small text-muted">วันที่เริ่ม</label>
+                                <input id="searchDateStart" type="date" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label mb-1 small text-muted">ถึง</label>
+                                <input id="searchDateEnd" type="date" class="form-control">
+                            </div>
+                            <div class="col-md-2">
+                                <button id="btn_clear_date" type="button" class="btn btn-outline-secondary w-100">
+                                    <i class="ti ti-x me-1"></i>ล้างวันที่
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="card-header">
                         <div class="table-responsive">
-                            <table id="dataTable" class="table table-striped table-hover">
+                            <table id="dataTable" class="table table-striped table-hover nowrap" style="width:100%">
                                 <thead class="table-light">
                                     <tr>
                                         <th>#</th>
                                         <th>Order No.</th>
                                         <th>Company</th>
+                                        <th>วันที่ขอ</th>
                                         <th>วันที่สั่ง</th>
                                         <th>วันที่ต้องการรับ</th>
                                         <th>รหัสลูกค้า</th>
@@ -114,31 +141,35 @@
             serverSide: true,
             searching: false,
             lengthChange: false,
-            responsive: true,
+            // ปิด responsive (ไม่ยุบคอลัมน์) — ให้ตารางเลื่อนซ้าย-ขวาผ่าน wrapper .table-responsive แทน
+            // เพื่อให้เห็นครบทุกคอลัมน์ รวมถึงคอลัมน์ "จัดการ" ที่มีปุ่มสร้างแผน
+            responsive: false,
             ajax: {
                 url: "{{ route('production.semipigment.datatable') }}",
                 data: function (d) {
                     d.search = $('#searchInput').val();
                     d.status = $('#searchStatus').val();
+                    d.date_field = $('#searchDateField').val();
+                    d.date_start = $('#searchDateStart').val();
+                    d.date_end   = $('#searchDateEnd').val();
                 },
                 error: function (xhr, error, thrown) {
                     console.error('AJAX Error:', error, thrown);
                 }
             },
-            // responsivePriority: เลขน้อย = สำคัญกว่า ถูกซ่อนทีหลังสุดเมื่อจอแคบ
-            // ตรึงคอลัมน์ #, สถานะ, จัดการ ไว้เสมอ (จัดการมีปุ่มสร้างแผน ห้ามหาย) — ถ้าจอแคบให้ยุบคอลัมน์กลางแทน
             columns: [
-                { className: "text-center", data: 'rownum',       name: 'rownum',       orderable: false, responsivePriority: 1 },
+                { className: "text-center", data: 'rownum',       name: 'rownum',       orderable: false },
                 { className: "text-center", data: 'orderno',      name: 'orderno',      orderable: false },
                 { className: "text-center", data: 'company',      name: 'company',      orderable: false },
+                { className: "text-center", data: 'created_at',   name: 'created_at',   orderable: false },
                 { className: "text-center", data: 'order_date',   name: 'order_date',   orderable: false },
                 { className: "text-center", data: 'want_date',    name: 'want_date',    orderable: false },
                 { className: "text-center", data: 'custno',       name: 'custno',       orderable: false },
-                { className: "text-left",   data: 'itemno',         name: 'itemno',         orderable: false, responsivePriority: 5 },
+                { className: "text-left",   data: 'itemno',         name: 'itemno',         orderable: false },
                 { className: "text-center", data: 'weight_request',    name: 'weight_request',    orderable: false, render: fmt2 },
                 { className: "text-center", data: 'weight_production', name: 'weight_production', orderable: false, render: fmt2 },
-                { className: "text-center", data: 'status_badge',      name: 'status_badge',      orderable: false, searchable: false, responsivePriority: 3 },
-                { className: "text-center", data: 'action',       name: 'action',       orderable: false, searchable: false, responsivePriority: 2 },
+                { className: "text-center", data: 'status_badge',      name: 'status_badge',      orderable: false, searchable: false },
+                { className: "text-center", data: 'action',       name: 'action',       orderable: false, searchable: false },
             ],
             order: [[0, 'asc']]
         });
@@ -146,6 +177,19 @@
 
     $(document).on('keyup', '#searchInput', function () { oTable.draw(); });
     $(document).on('change', '#searchStatus', function () { oTable.draw(); });
+
+    // ค้นหาช่วงวันที่ (วันที่สั่ง / วันที่ขอ / วันที่ต้องการรับ) — redraw เมื่อเปลี่ยนฟิลด์หรือวันที่
+    $(document).on('change', '#searchDateField, #searchDateStart, #searchDateEnd', function () {
+        oTable.draw();
+    });
+
+    // ล้างช่วงวันที่แล้วค้นหาใหม่
+    $(document).on('click', '#btn_clear_date', function (e) {
+        e.preventDefault();
+        $('#searchDateStart').val('');
+        $('#searchDateEnd').val('');
+        oTable.draw();
+    });
 
     function getEditModal() {
         return bootstrap.Modal.getOrCreateInstance(document.getElementById('editModal'));
