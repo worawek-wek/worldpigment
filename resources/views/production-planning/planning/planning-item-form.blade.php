@@ -119,7 +119,7 @@
                     </div>
                     @if($end_job_disabled)
                         <div class="form-text text-warning">
-                            <i class="ti ti-alert-triangle me-1"></i>ต้องจบงาน (End Job) ของ Semi ให้ครบก่อน
+                            <i class="ti ti-alert-triangle me-1"></i>ต้องปิดออเดอร์ (End Order) ของแผน Semi ให้ครบทุกใบก่อน
                         </div>
                     @endif
                 </div>
@@ -446,12 +446,12 @@
                                             title="ดูสถานะแผนการผลิตที่สร้างจาก Semi นี้">
                                         <i class="ti ti-sitemap me-1"></i>{{ $row['plan_status'] ?: 'ดูแผนการผลิต' }}
                                     </button>
-                                    {{-- สถานะปิดงานของแผนที่สร้างจาก Semi นี้ (end_job ของ tb_planning) --}}
+                                    {{-- สถานะปิดออเดอร์ของแผน Semi นี้ (end_order ของ tb_planning_header) — เกณฑ์ปิด end_job ใบแม่ --}}
                                     <div class="mt-1">
-                                        @if(($row['plan_end_job'] ?? 'N') === 'Y')
-                                            <span class="badge bg-label-success">ปิดงาน</span>
+                                        @if(($row['plan_end_order'] ?? 'N') === 'Y')
+                                            <span class="badge bg-label-success">ปิดออเดอร์</span>
                                         @else
-                                            <span class="badge bg-label-warning">ยังไม่ปิดงาน</span>
+                                            <span class="badge bg-label-warning">ยังไม่ปิดออเดอร์</span>
                                         @endif
                                     </div>
                                 @elseif($st === 'approved')

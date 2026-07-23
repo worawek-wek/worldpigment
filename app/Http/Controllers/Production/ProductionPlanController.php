@@ -250,6 +250,8 @@ class ProductionPlanController extends Controller
                         'plan_status'         => $r->result_planning?->planning_status,
                         // สถานะปิดงานของแผนที่สร้างจาก semi นี้ (คอลัมน์ end_job ของ tb_planning)
                         'plan_end_job'        => $r->result_planning?->end_job,
+                        // สถานะปิดออเดอร์ของแผน semi (end_order ของ tb_planning_header) — ใช้เป็นเกณฑ์ปิด end_job ใบแม่
+                        'plan_end_order'      => $r->result_planning?->planning_header?->end_order,
                         'plan_code'           => $r->result_planning?->planning_header?->planning_code,
                     ];
                 };
@@ -487,14 +489,14 @@ class ProductionPlanController extends Controller
         $planning_id = $request->planning_id;
         $is_update   = !empty($planning_id);
 
-        // เงื่อนไขปิดงาน (end_job = Y): ถ้า item มีงาน Semi งาน Semi ทั้งหมดต้องจบงาน (end_job = Y) ก่อน
+        // เงื่อนไขปิดงาน (end_job = Y): ถ้า item มีคำขอ Semi แผน Semi ทุกใบต้องถูกปิดออเดอร์ (end_order = Y) ก่อน
         // ตรวจซ้ำฝั่ง server กันการ bypass attribute disabled ฝั่ง client
         if (($request->end_job ?? 'N') === 'Y' && $is_update) {
             $item = Planning::find($planning_id);
             if ($item && !$this->itemSemiJobsDone($item)) {
                 return response()->json([
                     'status'  => 422,
-                    'message' => 'ยังปิดงานไม่ได้ เพราะงาน Semi ยังจบงาน (End Job) ไม่ครบทุกรายการ',
+                    'message' => 'ยังปิดงานไม่ได้ เพราะแผน Semi ยังปิดออเดอร์ (End Order) ไม่ครบทุกใบ',
                 ]);
             }
         }
@@ -617,37 +619,38 @@ class ProductionPlanController extends Controller
      * true เมื่องาน Semi ของ item นี้ "จบงาน" ครบทุกรายการ (ใช้เป็นเงื่อนไขก่อนอนุญาตให้ปิดงาน end_job ของ item)
      * - ถ้า item ไม่มีคำขอ Semi เลย → ไม่มีข้อจำกัด (คืน true)
      *
-     * เงื่อนไข (ตรงกับสถานะที่แสดงในคอลัมน์ "จัดการ" ของตาราง Semi ใน modal):
-     *   1) คำขอ Semi ที่ไม่ถูกปฏิเสธ (status != reject) ทุกใบต้อง "สร้างแผนการผลิตแล้ว"
-     *      (มี result_planning_id) — ถ้ายังรออนุมัติ/อนุมัติแล้วแต่ยังไม่สร้างแผน → ยังปิดงานไม่ได้
-     *   2) แผนการผลิตที่สร้างจาก Semi (ใต้ semi_headers ทั้งต้นไม้) ต้อง end_job = 'Y' ครบทุกแถว
+     * เงื่อนไข (ตรงกับสถานะที่แสดงในคอลัมน์ "จัดการ" ของตาราง Semi ใน modal) — คำขอ Semi ที่ไม่ถูกปฏิเสธ
+     * (status != reject) ทุกใบต้อง:
+     *   1) "สร้างแผนการผลิตแล้ว" (มี result_planning_id) — ถ้ายังรออนุมัติ/อนุมัติแล้วแต่ยังไม่สร้างแผน → ยังปิดงานไม่ได้
+     *   2) แผน Semi ที่สร้าง (tb_planning_header ของ result_planning) ต้อง "ปิดออเดอร์" (end_order = 'Y') แล้ว
+     *
+     * หมายเหตุ: เมื่อสร้างแผนจาก Semi ระบบสร้าง tb_planning_header (plan_type=semi) ให้ 1 ใบ ซึ่งมี end_order
+     * ของตัวเอง — และ end_order = 'Y' ตั้งได้ก็ต่อเมื่อ end_job ของ item ในแผน semi นั้นครบแล้ว (allEndJobsDone)
+     * จึงใช้ end_order เป็นสัญญาณ "แผน semi เสร็จสมบูรณ์" ที่ตรงความหมายกว่าการไล่เช็ค end_job รายตัว
      */
     private function itemSemiJobsDone(Planning $item): bool
     {
-        // (1) มีคำขอ Semi ที่ไม่ถูกปฏิเสธ แต่ยังไม่ได้สร้างแผนการผลิต → ยังปิดงานไม่ได้
-        //     result_planning_id ว่าง = NULL หรือ 0 (ให้ตรงกับ !empty() ที่ใช้แสดงผลใน modal)
-        $has_pending_semi = SemiPigment::where('planning_id', $item->id)
+        $semis = SemiPigment::with('result_planning.planning_header')
+            ->where('planning_id', $item->id)
             ->where('type', 'semi')
             ->where('status', '!=', SemiPigment::STATUS_REJECT)
-            ->where(function ($q) {
-                $q->whereNull('result_planning_id')
-                    ->orWhere('result_planning_id', 0);
-            })
-            ->exists();
+            ->get();
 
-        if ($has_pending_semi) {
-            return false;
+        foreach ($semis as $semi) {
+            // (1) ยังไม่ได้สร้างแผนการผลิต (รออนุมัติ / อนุมัติแล้วแต่ยังไม่สร้าง) → ยังปิดงานไม่ได้
+            //     result_planning_id ว่าง = NULL หรือ 0 (ให้ตรงกับ !empty() ที่ใช้แสดงผลใน modal)
+            if (empty($semi->result_planning_id)) {
+                return false;
+            }
+
+            // (2) สร้างแผนแล้ว แต่แผน Semi นั้นยังไม่ถูกปิดออเดอร์ (end_order != 'Y') → ยังปิดงานไม่ได้
+            $semi_header = $semi->result_planning?->planning_header;
+            if (($semi_header->end_order ?? 'N') !== 'Y') {
+                return false;
+            }
         }
 
-        // (2) แผนการผลิตที่สร้างจาก Semi ต้องจบงาน (end_job = 'Y') ครบทุกแถว
-        $item->loadMissing('semi_headers.planningsRecursive');
-
-        $jobs = [];
-        foreach ($item->semi_headers as $header) {
-            $this->collectEndJobs($header->planningsRecursive, $jobs);
-        }
-
-        return collect($jobs)->every(fn ($j) => $j === 'Y');
+        return true;
     }
 
     /**
