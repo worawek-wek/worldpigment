@@ -67,7 +67,7 @@
                     </div>
                     {{-- สถานะปิดงานของ Order (อ้างอิงคอลัมน์ end_order ของ tb_planning_header) --}}
                     <div class="col-md-3 mb-2">
-                        <div class="text-muted small">สถานะปิดงาน</div>
+                        <div class="text-muted small">สถานะปิดorder</div>
                         <div class="fw-semibold">
                             @if(($planning_header->end_order ?? 'N') === 'Y')
                                 <span class="badge bg-label-success">ปิดงาน</span>

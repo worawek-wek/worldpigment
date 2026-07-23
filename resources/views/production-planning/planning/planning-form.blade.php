@@ -93,13 +93,17 @@
         </div>
 
         <!-- Planning Items Section -->
+        @php $order_closed = ($planning_header->end_order ?? 'N') === 'Y'; @endphp
         <div class="d-flex justify-content-between align-items-center mb-2">
             <h6 class="mb-0 text-primary">
                 <i class="ti ti-list-details me-1"></i>รายการ Planning
             </h6>
+            {{-- ปิดออเดอร์แล้ว → ห้ามเพิ่ม Planning ใหม่ --}}
             <button type="button"
                     class="btn btn-sm btn-primary btn_add_planning_item"
-                    data-planning_header_id="{{ $planning_header->id }}">
+                    data-planning_header_id="{{ $planning_header->id }}"
+                    {{ $order_closed ? 'disabled' : '' }}
+                    @if($order_closed) title="ออเดอร์นี้ถูกปิดแล้ว ไม่สามารถเพิ่ม Planning ได้" @endif>
                 <i class="ti ti-plus me-1"></i>เพิ่ม Planning
             </button>
         </div>

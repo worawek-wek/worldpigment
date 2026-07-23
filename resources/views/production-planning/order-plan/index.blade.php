@@ -45,7 +45,7 @@
                             </div>
                             {{-- สถานะปิดงาน (อ้างอิงคอลัมน์ end_order ของ tb_planning_header) — ค่าเริ่มต้น: ยังไม่ปิดงาน --}}
                             <div class="col-md-3">
-                                <label class="form-label small mb-1">สถานะปิดงาน</label>
+                                <label class="form-label small mb-1">สถานะปิดorder</label>
                                 <select id="searchEndOrder" class="form-select">
                                     {{-- ใช้ค่า 'all' (ไม่ใช่ค่าว่าง) เพื่อไม่ให้ backend เข้าใจผิดว่าไม่ได้ส่งค่ามา แล้วตกไปใช้ค่าเริ่มต้น --}}
                                     <option value="all">ทั้งหมด</option>

@@ -18,6 +18,9 @@
 
     // ประวัติวันที่ส่งสินค้าเดิม (senddate_log) — เก็บคั่นด้วย comma เรียงตามลำดับการเปลี่ยน
     $senddate_logs = array_values(array_filter(array_map('trim', explode(',', $planning_item?->senddate_log ?? ''))));
+
+    // ออเดอร์ (header แม่) ถูกปิดแล้วหรือยัง — ถ้าปิดแล้ว modal นี้จะเป็นโหมดอ่านอย่างเดียว (กดได้แค่ยกเลิก)
+    $order_closed = ($parent_header?->end_order ?? 'N') === 'Y';
 @endphp
 
 <div class="modal-header" style="background-color: #3A8EBA; padding: 1rem 1.5rem;">
@@ -34,6 +37,13 @@
 </div>
 
 <div class="modal-body">
+    @if($order_closed)
+    {{-- ออเดอร์ถูกปิดแล้ว → แจ้งเตือน + ทุกช่อง/ปุ่มจะถูก disable (ดูสคริปต์ท้ายไฟล์) --}}
+    <div class="alert alert-warning d-flex align-items-center mb-3" role="alert">
+        <i class="ti ti-lock me-2"></i>
+        <span>ออเดอร์นี้ถูกปิดแล้ว (End Order) — ไม่สามารถแก้ไขได้ กดได้เฉพาะปุ่ม "ยกเลิก"</span>
+    </div>
+    @endif
     <form id="planning_item_form">
         <input type="hidden" name="planning_id"        value="{{ $planning_item?->id ?? '' }}">
         <input type="hidden" name="planning_header_id" value="{{ $planning_header_id ?? '' }}">
@@ -1436,4 +1446,21 @@
             $treeModal.remove();
         });
 })();
+
+@if($order_closed)
+// ══════════════════════════════════════════════════════════════════════
+//  ออเดอร์ถูกปิดแล้ว (end_order = Y) → โหมดอ่านอย่างเดียว
+//  ปิดการใช้งานทุก input/select/textarea/button ใน modal นี้
+//  ยกเว้นปุ่มปิด (X) และปุ่มยกเลิก (data-bs-dismiss="modal") — โดยเฉพาะปุ่มบันทึกจะกดไม่ได้
+// ══════════════════════════════════════════════════════════════════════
+(function () {
+    var $content = $('#planning_item_form').closest('.modal-content');
+    $content.find('input, select, textarea, button').each(function () {
+        var $el = $(this);
+        // คงปุ่มปิด (X) และปุ่มยกเลิกไว้ให้กดได้
+        if ($el.hasClass('btn-close') || $el.attr('data-bs-dismiss') === 'modal') return;
+        $el.prop('disabled', true);
+    });
+})();
+@endif
 </script>

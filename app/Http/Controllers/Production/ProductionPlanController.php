@@ -463,6 +463,16 @@ class ProductionPlanController extends Controller
             ]);
         }
 
+        // ออเดอร์ถูกปิดแล้ว (end_order = Y) → ห้ามเพิ่ม/แก้ไข Planning Item ของ header นี้
+        // ตรวจซ้ำฝั่ง server กันการ bypass attribute disabled ฝั่ง client (ทั้งเพิ่มใหม่และแก้ไข)
+        $target_header = PlanningHeader::find($request->planning_header_id);
+        if ($target_header && ($target_header->end_order ?? 'N') === 'Y') {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'ออเดอร์นี้ถูกปิดแล้ว (End Order) ไม่สามารถเพิ่มหรือแก้ไข Planning ได้',
+            ]);
+        }
+
         $fields = $request->only([
             'planning_header_id', 'company', 'itemno', 'quantity', 'lot', 'weight',
             'weight_produced', 'red_bill_code', 'end_job', 'empno',
@@ -604,12 +614,32 @@ class ProductionPlanController extends Controller
     }
 
     /**
-     * true เมื่องาน Semi ของ item นี้ (แผนการผลิตใต้ semi_headers ทั้งต้นไม้) มี end_job = 'Y' ครบทุกแถว
-     * - ถ้า item ไม่มีงาน Semi เลย → ไม่มีข้อจำกัด (คืน true)
-     * - ใช้เป็นเงื่อนไขก่อนอนุญาตให้ปิดงาน (end_job) ของ item
+     * true เมื่องาน Semi ของ item นี้ "จบงาน" ครบทุกรายการ (ใช้เป็นเงื่อนไขก่อนอนุญาตให้ปิดงาน end_job ของ item)
+     * - ถ้า item ไม่มีคำขอ Semi เลย → ไม่มีข้อจำกัด (คืน true)
+     *
+     * เงื่อนไข (ตรงกับสถานะที่แสดงในคอลัมน์ "จัดการ" ของตาราง Semi ใน modal):
+     *   1) คำขอ Semi ที่ไม่ถูกปฏิเสธ (status != reject) ทุกใบต้อง "สร้างแผนการผลิตแล้ว"
+     *      (มี result_planning_id) — ถ้ายังรออนุมัติ/อนุมัติแล้วแต่ยังไม่สร้างแผน → ยังปิดงานไม่ได้
+     *   2) แผนการผลิตที่สร้างจาก Semi (ใต้ semi_headers ทั้งต้นไม้) ต้อง end_job = 'Y' ครบทุกแถว
      */
     private function itemSemiJobsDone(Planning $item): bool
     {
+        // (1) มีคำขอ Semi ที่ไม่ถูกปฏิเสธ แต่ยังไม่ได้สร้างแผนการผลิต → ยังปิดงานไม่ได้
+        //     result_planning_id ว่าง = NULL หรือ 0 (ให้ตรงกับ !empty() ที่ใช้แสดงผลใน modal)
+        $has_pending_semi = SemiPigment::where('planning_id', $item->id)
+            ->where('type', 'semi')
+            ->where('status', '!=', SemiPigment::STATUS_REJECT)
+            ->where(function ($q) {
+                $q->whereNull('result_planning_id')
+                    ->orWhere('result_planning_id', 0);
+            })
+            ->exists();
+
+        if ($has_pending_semi) {
+            return false;
+        }
+
+        // (2) แผนการผลิตที่สร้างจาก Semi ต้องจบงาน (end_job = 'Y') ครบทุกแถว
         $item->loadMissing('semi_headers.planningsRecursive');
 
         $jobs = [];
