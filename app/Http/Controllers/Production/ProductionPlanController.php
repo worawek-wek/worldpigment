@@ -413,7 +413,7 @@ class ProductionPlanController extends Controller
     {
         // ช่องตัวเลขในฟอร์มแสดงผลด้วย number_format จึงอาจมีจุลภาคหลักพัน (เช่น "1,250.00")
         // ตัดจุลภาคออกก่อน validate ไม่งั้น rule numeric จะไม่ผ่าน
-        foreach (['quantity', 'weight', 'weight_produced'] as $numeric_field) {
+        foreach (['quantity', 'weight', 'weight_produced', 'weight_packing'] as $numeric_field) {
             if ($request->filled($numeric_field)) {
                 $request->merge([
                     $numeric_field => str_replace(',', '', $request->input($numeric_field)),
@@ -429,6 +429,7 @@ class ProductionPlanController extends Controller
             'lot'                => 'nullable|string|max:255',
             'weight'             => 'nullable|numeric|min:0',
             'weight_produced'    => 'nullable|numeric|min:0',
+            'weight_packing'     => 'nullable|numeric|min:0',
             'red_bill_code'      => 'nullable|string|max:255',
             'end_job'            => 'nullable|in:Y,N',
             'empno'              => 'nullable|string|max:50|exists:emp,empno',
@@ -477,7 +478,7 @@ class ProductionPlanController extends Controller
 
         $fields = $request->only([
             'planning_header_id', 'company', 'itemno', 'quantity', 'lot', 'weight',
-            'weight_produced', 'red_bill_code', 'end_job', 'empno',
+            'weight_produced', 'weight_packing', 'red_bill_code', 'end_job', 'empno',
             'machine_no', 'plan_type', 'planning_status', 'inplan', 'work_shift', 'start_date', 'start_time', 'end_date', 'end_time',
             'qc_date', 'qc_time', 'qc_status', 'packing_datetie', 'pack_remark',
             'mdate', 'custwant', 'senddate', 'remark'

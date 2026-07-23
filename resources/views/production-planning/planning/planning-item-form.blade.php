@@ -100,30 +100,6 @@
                        value="{{ $planning_item ? ($planning_item->red_bill_code ?? '') : ($parent_header?->orderno ?? '') }}"
                        class="form-control" placeholder="เลขที่ใบเบิกออกใบแดง">
             </div>
-            <div class="col-md-4 mb-3 d-flex align-items-end">
-                @php
-                    $item_end_job     = ($planning_item?->end_job ?? 'N') === 'Y';
-                    $semi_jobs_done   = $item_semi_jobs_done ?? true;
-                    // ปิดใช้งานเฉพาะตอน "ยังไม่จบงาน และงาน Semi ยังไม่ครบ" (จบงานอยู่แล้วยังปลดได้เสมอ)
-                    $end_job_disabled = !$item_end_job && !$semi_jobs_done;
-                @endphp
-                <div class="p-2 rounded" style="background-color: #eaffd9; border: 1px dashed #04ac2e;">
-                    <div class="form-check">
-                        {{-- hidden ส่งค่า N เมื่อไม่ติ๊ก (checkbox N มาก่อน, ค่า Y จะ override เมื่อติ๊ก) --}}
-                        <input type="hidden" name="end_job" value="N">
-                        <input type="checkbox" class="form-check-input" id="planning_item_end_job"
-                               name="end_job" value="Y"
-                               {{ $item_end_job ? 'checked' : '' }}
-                               {{ $end_job_disabled ? 'disabled' : '' }}>
-                        <label class="form-check-label" for="planning_item_end_job">จบงาน (End Job)</label>
-                    </div>
-                    @if($end_job_disabled)
-                        <div class="form-text text-warning">
-                            <i class="ti ti-alert-triangle me-1"></i>ต้องปิดออเดอร์ (End Order) ของแผน Semi ให้ครบทุกใบก่อน
-                        </div>
-                    @endif
-                </div>
-            </div>
         </div>
         <div class="row my-2"><hr /></div>
         <div class="row p-3 rounded" style="background-color: #e5f4ff; border: 1px dashed #3f50e2;">
@@ -362,21 +338,61 @@
                 </select>
             </div>
         </div>
+
         <div class="row my-2"><hr /></div>
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label class="form-label">วันเวลาที่บรรจุเสร็จ (Packing Datetime)</label>
-                <input type="datetime-local" name="packing_datetie"
-                       value="{{ $planning_item?->packing_datetie ?? '' }}"
-                       class="form-control" placeholder="วันเวลาจัดแพ็ค">
+
+        <div class="row p-3 rounded" style="background-color: #eaffd9; border: 1px dashed #04ac2e;">
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    @php
+                        $item_end_job     = ($planning_item?->end_job ?? 'N') === 'Y';
+                        $semi_jobs_done   = $item_semi_jobs_done ?? true;
+                        // ปิดใช้งานเฉพาะตอน "ยังไม่จบงาน และงาน Semi ยังไม่ครบ" (จบงานอยู่แล้วยังปลดได้เสมอ)
+                        $end_job_disabled = !$item_end_job && !$semi_jobs_done;
+                    @endphp
+                    <div class="p-2 rounded mt-4" style="background-color: #f8adad; border: 1px dashed #f72020;">
+                        <div class="form-check">
+                            {{-- hidden ส่งค่า N เมื่อไม่ติ๊ก (checkbox N มาก่อน, ค่า Y จะ override เมื่อติ๊ก) --}}
+                            <input type="hidden" name="end_job" value="N">
+                            <input type="checkbox" class="form-check-input" id="planning_item_end_job"
+                                name="end_job" value="Y"
+                                {{ $item_end_job ? 'checked' : '' }}
+                                {{ $end_job_disabled ? 'disabled' : '' }}>
+                            <label class="form-check-label" for="planning_item_end_job">จบงาน (End Job)</label>
+                        </div>
+                        @if($end_job_disabled)
+                            <div class="form-text text-warning">
+                                <i class="ti ti-alert-triangle me-1"></i>ต้องปิดออเดอร์ (End Order) ของแผน Semi ให้ครบทุกใบก่อน
+                            </div>
+                        @endif
+                    </div>
+                </div>
             </div>
-            <div class="col-md-6 mb-3">
-                <label class="form-label">หมายเหตุการบรรจุ (Pack Remark)</label>
-                <input type="text" name="pack_remark"
-                       value="{{ $planning_item?->pack_remark ?? '' }}"
-                       class="form-control" placeholder="หมายเหตุการบรรจุ">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">วันเวลาที่บรรจุเสร็จ (Packing Datetime)</label>
+                    <input type="datetime-local" name="packing_datetie"
+                        value="{{ $planning_item?->packing_datetie ?? '' }}"
+                        class="form-control" placeholder="วันเวลาจัดแพ็ค">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">น้ำหนักบรรจุได้ (Weight Packing)</label>
+                    <input type="text" name="weight_packing"
+                        value="{{ $planning_item && $planning_item->weight_packing !== null ? number_format((float) $planning_item->weight_packing, 2) : '' }}"
+                        class="form-control" placeholder="0.00">
+                </div>
+                <div class="col-md-5 mb-3">
+                    <label class="form-label">หมายเหตุการบรรจุ (Pack Remark)</label>
+                    <input type="text" name="pack_remark"
+                        value="{{ $planning_item?->pack_remark ?? '' }}"
+                        class="form-control" placeholder="หมายเหตุการบรรจุ">
+                </div>
             </div>
+
+
         </div>
+
+        <div class="row my-2"><hr /></div>
 
         <div class="row">
             <div class="col-md-6 mb-3">
@@ -751,6 +767,27 @@
             $(this).closest('.prod-method-row').find('input').val('');
         } else {
             $(this).closest('.prod-method-row').remove();
+        }
+    });
+
+    // ── ติ๊ก "จบงาน (End Job)" → เติมวันเวลาที่บรรจุเสร็จเป็นเวลาปัจจุบัน (เฉพาะเมื่อช่องยังว่าง) ──
+    // format ของ input[type=datetime-local] คือ YYYY-MM-DDTHH:mm
+    function nowForDatetimeLocal() {
+        var d   = new Date();
+        var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+            + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+    $('#planning_item_end_job').on('change', function () {
+        var $packing = $('input[name="packing_datetie"]');
+        if (this.checked) {
+            // ติ๊ก → เติมเวลาปัจจุบัน (เฉพาะเมื่อช่องยังว่าง)
+            if (($packing.val() || '').trim() === '') {
+                $packing.val(nowForDatetimeLocal());
+            }
+        } else {
+            // ปลดติ๊ก → ล้างค่าช่องบรรจุ
+            $packing.val('');
         }
     });
 
