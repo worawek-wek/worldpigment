@@ -76,6 +76,7 @@
                                 <select id="searchDateField" class="form-select">
                                     <option value="inplan">วันที่วางแผนผลิต (Inplan)</option>
                                     <option value="custwant">วันที่ต้องการรับ (Custwant)</option>
+                                    <option value="packing_datetie">วันเวลาที่บรรจุเสร็จ (Packing)</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -106,6 +107,7 @@
                                         <th class="col-1">Company</th>
                                         <th class="col-1">Inplan</th>
                                         <th class="col-1">Custwant</th>
+                                        <th class="col-1">วันเวลาบรรจุเสร็จ</th>
                                         <th class="col-1">Itemno</th>
                                         {{-- <th class="col-1">Quantity</th> --}}
                                         <th class="col-2">MachineNo</th>
@@ -209,6 +211,7 @@
                 { 'className': "text-center", data: 'company', name: 'company', orderable: false },
                 { 'className': "text-center", data: 'inplan', name: 'inplan', orderable: false },
                 { 'className': "text-center", data: 'custwant', name: 'custwant', orderable: false },
+                { 'className': "text-center", data: 'packing_datetie', name: 'packing_datetie', orderable: false, searchable: false },
                 { 'className': "text-left", data: 'itemno', name: 'itemno', orderable: false },
                 // { 'className': "text-left", data: 'quantity', name: 'quantity', orderable: false },
                 { 'className': "text-left", data: 'machine_no', name: 'machine_no', orderable: false },

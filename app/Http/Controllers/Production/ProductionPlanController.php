@@ -51,6 +51,8 @@ class ProductionPlanController extends Controller
                 return $date;
             })
             ->editColumn('custwant', fn ($row) => $row->custwant ? \Carbon\Carbon::parse($row->custwant)->format('d/m/Y') : '-')
+            // วันเวลาที่บรรจุเสร็จ (packing_datetie) — เก็บเป็น datetime แสดง วัน/เดือน/ปี ชั่วโมง:นาที
+            ->editColumn('packing_datetie', fn ($row) => $row->packing_datetie ? \Carbon\Carbon::parse($row->packing_datetie)->format('d/m/Y H:i') : '-')
             // เลขที่ใบเบิก: ดึงจาก red_bill_code (ว่าง = แสดง -)
             ->addColumn('red_bill_code', fn ($row) => $row->red_bill_code ?: '-')
             // สถานะภายใน: รวม planning_status ของ planning item ที่อยู่ใน header (planning_code) เดียวกัน
@@ -99,11 +101,18 @@ class ProductionPlanController extends Controller
         $end_job = request('end_job', 'N');
         $end_job = in_array($end_job, ['all', 'Y', 'N'], true) ? $end_job : 'N';
 
-        // ค้นหาช่วงวันที่: เลือกฟิลด์ได้เฉพาะ inplan / custwant (whitelist กัน SQL injection ที่ชื่อคอลัมน์)
+        // ค้นหาช่วงวันที่: เลือกฟิลด์ได้เฉพาะ inplan / custwant / packing_datetie (whitelist กัน SQL injection ที่ชื่อคอลัมน์)
         $date_field = request('date_field');
-        $date_field = in_array($date_field, ['inplan', 'custwant'], true) ? $date_field : 'inplan';
+        $date_field = in_array($date_field, ['inplan', 'custwant', 'packing_datetie'], true) ? $date_field : 'inplan';
         $date_start = request('date_start');
         $date_end   = request('date_end');
+
+        // เมื่อค้นหาตามวันเวลาที่บรรจุเสร็จ (และมีการระบุช่วงวันที่) → เรียงตามวันเวลาบรรจุเสร็จ จากล่าสุดไปเก่า
+        $sort_by_packing = $date_field === 'packing_datetie' && (!empty($date_start) || !empty($date_end));
+        // ลำดับสำหรับ ROW_NUMBER (#) ให้ตรงกับลำดับที่แสดงผล — ประกอบจากค่าที่ whitelist แล้วเท่านั้น
+        $row_order = $sort_by_packing
+            ? 'tb_planning.packing_datetie DESC, tb_planning.id DESC'
+            : 'tb_planning.id DESC';
 
         $data = Planning::
             leftJoin('tb_planning_header', 'tb_planning_header.id', '=', 'tb_planning.planning_header_id')
@@ -115,7 +124,7 @@ class ProductionPlanController extends Controller
                 'tb_planning_header.orderno as orderno',
                 'tb_planning_header.planning_code as planning_code',
                 'tb_planning_header.mdate as header_mdate',
-                DB::raw('ROW_NUMBER() OVER (ORDER BY tb_planning.id DESC) AS rownum')
+                DB::raw('ROW_NUMBER() OVER (ORDER BY '.$row_order.') AS rownum')
             ])
             ->when(!empty($search), function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
@@ -162,6 +171,10 @@ class ProductionPlanController extends Controller
             })
             ->when(!empty($date_end), function ($query) use ($date_field, $date_end) {
                 $query->whereDate('tb_planning.'.$date_field, '<=', $date_end);
+            })
+            // เรียงผลลัพธ์: ปกติเรียงตาม id ล่าสุด; ถ้าค้นตามวันเวลาบรรจุเสร็จให้เรียงตามวันเวลานั้น จากล่าสุดไปเก่า
+            ->when($sort_by_packing, function ($query) {
+                $query->orderBy('tb_planning.packing_datetie', 'desc');
             })
             ->orderby('tb_planning.id', 'desc');
 
