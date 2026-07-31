@@ -36,7 +36,7 @@ class AccessControl
         return Auth::guard('web')->check();
     }
 
-    /** menu_key ทั้งหมดที่เลือกเป็นสิทธิ์ได้ (ข้าม header) */
+    /** menu_key ทั้งหมดที่เลือกเป็นสิทธิ์ได้ (ข้าม header) — ไล่ sub_menu ทุกระดับ */
     public static function allMenuKeys(): array
     {
         $keys = [];
@@ -45,13 +45,21 @@ class AccessControl
                 continue;
             }
             $keys[] = $key;
-            if (isset($menu['sub_menu'])) {
-                foreach ($menu['sub_menu'] as $subKey => $sub) {
-                    $keys[] = $subKey;
-                }
-            }
+            self::collectSubMenuKeys($menu, $keys);
         }
         return $keys;
+    }
+
+    /** เก็บ key ของ sub_menu แบบ recursive (รองรับเมนูซ้อนหลายชั้น) */
+    private static function collectSubMenuKeys(array $menu, array &$keys): void
+    {
+        if (!isset($menu['sub_menu'])) {
+            return;
+        }
+        foreach ($menu['sub_menu'] as $subKey => $sub) {
+            $keys[] = $subKey;
+            self::collectSubMenuKeys($sub, $keys);
+        }
     }
 
     /** menu_key ที่บัญชีปัจจุบันเข้าถึงได้ */
@@ -94,7 +102,7 @@ class AccessControl
         return $pos === false ? '' : substr($name, 0, $pos);
     }
 
-    /** map: menu_key => route namespace */
+    /** map: menu_key => route namespace — ไล่ sub_menu ทุกระดับ */
     public static function menuNamespaceByKey(): array
     {
         $map = [];
@@ -102,18 +110,22 @@ class AccessControl
             if (isset($menu['type']) && $menu['type'] === 'header') {
                 continue;
             }
-            if (isset($menu['route_name'])) {
-                $map[$key] = self::routeNamespace($menu['route_name']);
-            }
-            if (isset($menu['sub_menu'])) {
-                foreach ($menu['sub_menu'] as $subKey => $sub) {
-                    if (isset($sub['route_name'])) {
-                        $map[$subKey] = self::routeNamespace($sub['route_name']);
-                    }
-                }
-            }
+            self::collectMenuNamespace($key, $menu, $map);
         }
         return $map;
+    }
+
+    /** เก็บ namespace ของ key + sub_menu แบบ recursive */
+    private static function collectMenuNamespace(string $key, array $menu, array &$map): void
+    {
+        if (isset($menu['route_name'])) {
+            $map[$key] = self::routeNamespace($menu['route_name']);
+        }
+        if (isset($menu['sub_menu'])) {
+            foreach ($menu['sub_menu'] as $subKey => $sub) {
+                self::collectMenuNamespace($subKey, $sub, $map);
+            }
+        }
     }
 
     /** namespace ทั้งหมดที่ผูกกับเมนู (route ที่อยู่ในขอบเขตการคุมสิทธิ์) */

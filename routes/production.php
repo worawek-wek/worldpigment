@@ -29,6 +29,14 @@ Route::prefix('production-planning')->group(function () {
     Route::post('/planning/save-item', [Production\ProductionPlanController::class, 'saveItem'])->name('production.planning.save-item');
     Route::post('/planning/save-end-order', [Production\ProductionPlanController::class, 'saveEndOrder'])->name('production.planning.save-end-order');
 
+    // รายงานการผลิต — เพิ่ม 2026-07-31
+    Route::get('/report/machine', [Production\ReportController::class, 'machine'])->name('production.report.machine.index');
+    // ตัวเลือกเครื่องจักรตามแผนก (cascade dropdown ของหน้ารายงานตามเครื่องจักร)
+    Route::get('/report/machine/options', [Production\ReportController::class, 'machineOptions'])->name('production.report.machine.options');
+    // ตารางรายงานผลิตตามเครื่องจักร (คืน HTML จัดกลุ่มตามเครื่องจักร ผ่าน AJAX)
+    Route::get('/report/machine/table', [Production\ReportController::class, 'machineTable'])->name('production.report.machine.table');
+    Route::get('/report/employee', [Production\ReportController::class, 'employee'])->name('production.report.employee.index');
+
     // สถานะ Planning (master data)
     Route::get('/planning-status', [Production\PlanningStatusController::class, 'index'])->name('production.planningstatus.index');
     Route::get('/planning-status/datatable', [Production\PlanningStatusController::class, 'datatable'])->name('production.planningstatus.datatable');

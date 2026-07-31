@@ -73,6 +73,29 @@ return [
                 'route_name' => 'production.planningstatus.index',
                 'permission' => 'productionplanning read',
             ],
+            // กลุ่มย่อย "รายงาน" (ซ้อนอีกชั้นใต้แผนการผลิต) — เพิ่ม 2026-07-31
+            'ProductionReport' => [
+                'title' => 'รายงาน',
+                'icon' => '',
+                'menu_parent' => 'Production',
+                'permission' => 'productionplanning read',
+                'sub_menu' => [
+                    'ProductionReportMachine' => [
+                        'title' => 'รายงานผลิตตามเครื่องจักร',
+                        'icon' => '',
+                        'menu_parent' => 'ProductionReport',
+                        'route_name' => 'production.report.machine.index',
+                        'permission' => 'productionplanning read',
+                    ],
+                    'ProductionReportEmployee' => [
+                        'title' => 'รายงานผลิตตามพนักงาน',
+                        'icon' => '',
+                        'menu_parent' => 'ProductionReport',
+                        'route_name' => 'production.report.employee.index',
+                        'permission' => 'productionplanning read',
+                    ],
+                ],
+            ],
         ],
     ],
     'Customer' => [

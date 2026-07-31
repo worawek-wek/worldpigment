@@ -66,10 +66,25 @@
                                 <input class="form-check-input perm-checkbox" type="checkbox" name="permissions[]"
                                     value="{{ $subKey }}" id="perm_{{ $subKey }}"
                                     {{ in_array($subKey, $selectedKeys) ? 'checked' : '' }}>
-                                <label class="form-check-label" for="perm_{{ $subKey }}">
+                                <label class="form-check-label {{ isset($sub['sub_menu']) ? 'fw-semibold' : '' }}" for="perm_{{ $subKey }}">
                                     {{ $sub['title'] }}
                                 </label>
                             </div>
+                            {{-- เมนูย่อยระดับ 3 --}}
+                            @if(isset($sub['sub_menu']))
+                                <div class="ms-4">
+                                    @foreach($sub['sub_menu'] as $childKey => $child)
+                                        <div class="form-check">
+                                            <input class="form-check-input perm-checkbox" type="checkbox" name="permissions[]"
+                                                value="{{ $childKey }}" id="perm_{{ $childKey }}"
+                                                {{ in_array($childKey, $selectedKeys) ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="perm_{{ $childKey }}">
+                                                {{ $child['title'] }}
+                                            </label>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
                         @endforeach
                     </div>
                 </div>

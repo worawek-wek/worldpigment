@@ -183,7 +183,7 @@ class RoleController extends Controller
         ]);
     }
 
-    // รวบรวม key เมนูทั้งหมด (รวม sub_menu) ที่เลือกเป็นสิทธิ์ได้ — ข้าม header
+    // รวบรวม key เมนูทั้งหมด (รวม sub_menu ทุกระดับ) ที่เลือกเป็นสิทธิ์ได้ — ข้าม header
     private function allMenuKeys(): array
     {
         $keys = [];
@@ -192,12 +192,20 @@ class RoleController extends Controller
                 continue;
             }
             $keys[] = $key;
-            if (isset($menu['sub_menu'])) {
-                foreach ($menu['sub_menu'] as $subKey => $sub) {
-                    $keys[] = $subKey;
-                }
-            }
+            $this->collectSubMenuKeys($menu, $keys);
         }
         return $keys;
+    }
+
+    // เก็บ key ของ sub_menu แบบ recursive (รองรับเมนูซ้อนหลายชั้น)
+    private function collectSubMenuKeys(array $menu, array &$keys): void
+    {
+        if (!isset($menu['sub_menu'])) {
+            return;
+        }
+        foreach ($menu['sub_menu'] as $subKey => $sub) {
+            $keys[] = $subKey;
+            $this->collectSubMenuKeys($sub, $keys);
+        }
     }
 }

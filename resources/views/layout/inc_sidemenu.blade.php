@@ -41,7 +41,19 @@
                 $visibleSubMenu = [];
                 if (isset($menu['sub_menu'])) {
                     foreach ($menu['sub_menu'] as $subMenuKey => $subMenu) {
-                        if (\App\Services\AccessControl::menuVisible($subMenuKey)) {
+                        // กลุ่มย่อยที่มีเมนูย่อยอีกชั้น (ระดับ 3): แสดงถ้ามีลูกที่มองเห็น ≥ 1 หรือ key กลุ่มได้สิทธิ์
+                        if (isset($subMenu['sub_menu'])) {
+                            $hasVisibleChild = false;
+                            foreach ($subMenu['sub_menu'] as $childKey => $child) {
+                                if (\App\Services\AccessControl::menuVisible($childKey)) {
+                                    $hasVisibleChild = true;
+                                    break;
+                                }
+                            }
+                            if (\App\Services\AccessControl::menuVisible($subMenuKey) || $hasVisibleChild) {
+                                $visibleSubMenu[$subMenuKey] = $subMenu;
+                            }
+                        } elseif (\App\Services\AccessControl::menuVisible($subMenuKey)) {
                             $visibleSubMenu[$subMenuKey] = $subMenu;
                         }
                     }
@@ -66,9 +78,17 @@
 
                 if(isset($menu['sub_menu'])){
                     foreach ($visibleSubMenu as $subMenuKey => $subMenu){
-                        if($subMenu['route_name'] == $pageName){
-                            if($subMenu['menu_parent'] == $menuKey){
+                        if(isset($subMenu['route_name']) && $subMenu['route_name'] == $pageName){
+                            if(($subMenu['menu_parent'] ?? null) == $menuKey){
                                 $menu_active = 'open';
+                            }
+                        }
+                        // เมนูย่อยระดับ 3: ถ้าหน้าปัจจุบันตรงกับลูกในกลุ่ม ให้เปิดเมนูแม่ด้วย
+                        if(isset($subMenu['sub_menu'])){
+                            foreach($subMenu['sub_menu'] as $childKey => $child){
+                                if(isset($child['route_name']) && $child['route_name'] == $pageName){
+                                    $menu_active = 'open';
+                                }
                             }
                         }
                     }
@@ -85,16 +105,53 @@
                     @if(isset($menu['sub_menu']))
                         <ul class="menu-sub">
                             @foreach ($visibleSubMenu as $subMenuKey => $subMenu)
-                                @php
-                                    $submenu_name = isset($subMenu['route_name']) ? $subMenu['route_name'] : '';
-                                    $submenu_active = $pageName == $submenu_name ? 'active' : '';
-                                    $menu_toggle = isset($subMenu['sub_menu']) ? 'menu-toggle' : '';
-                                @endphp
-                                <li class="menu-item {{ $submenu_active}}">
-                                    <a href="{{ route($submenu_name) }}" class="menu-link">
-                                        <div>{{ $subMenu['title'] }}</div>
-                                    </a>
-                                </li>
+                                @if(isset($subMenu['sub_menu']))
+                                    {{-- กลุ่มย่อยที่มีเมนูย่อยอีกชั้น (ระดับ 3) --}}
+                                    @php
+                                        $visibleChild = [];
+                                        foreach ($subMenu['sub_menu'] as $childKey => $child) {
+                                            if (\App\Services\AccessControl::menuVisible($childKey)) {
+                                                $visibleChild[$childKey] = $child;
+                                            }
+                                        }
+                                        $group_open = false;
+                                        foreach ($visibleChild as $childKey => $child) {
+                                            if (isset($child['route_name']) && $child['route_name'] == $pageName) {
+                                                $group_open = true;
+                                            }
+                                        }
+                                    @endphp
+                                    @if(count($visibleChild) > 0)
+                                        <li class="menu-item {{ $group_open ? 'open active' : '' }}">
+                                            <a href="javascript:void(0);" class="menu-link menu-toggle">
+                                                <div>{{ $subMenu['title'] }}</div>
+                                            </a>
+                                            <ul class="menu-sub">
+                                                @foreach ($visibleChild as $childKey => $child)
+                                                    @php
+                                                        $child_name = isset($child['route_name']) ? $child['route_name'] : '';
+                                                        $child_active = $pageName == $child_name ? 'active' : '';
+                                                    @endphp
+                                                    <li class="menu-item {{ $child_active }}">
+                                                        <a href="{{ $child_name ? route($child_name) : 'javascript:void(0);' }}" class="menu-link">
+                                                            <div>{{ $child['title'] }}</div>
+                                                        </a>
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        </li>
+                                    @endif
+                                @else
+                                    @php
+                                        $submenu_name = isset($subMenu['route_name']) ? $subMenu['route_name'] : '';
+                                        $submenu_active = $pageName == $submenu_name ? 'active' : '';
+                                    @endphp
+                                    <li class="menu-item {{ $submenu_active}}">
+                                        <a href="{{ $submenu_name ? route($submenu_name) : 'javascript:void(0);' }}" class="menu-link">
+                                            <div>{{ $subMenu['title'] }}</div>
+                                        </a>
+                                    </li>
+                                @endif
                             @endforeach
                         </ul>
                     @endif
@@ -110,16 +167,53 @@
                     @if(isset($menu['sub_menu']))
                         <ul class="menu-sub">
                             @foreach ($visibleSubMenu as $subMenuKey => $subMenu)
-                                @php
-                                    $submenu_name = isset($subMenu['route_name']) ? $subMenu['route_name'] : '';
-                                    $submenu_active = $pageName == $submenu_name ? 'active' : '';
-                                    $menu_toggle = isset($subMenu['sub_menu']) ? 'menu-toggle' : '';
-                                @endphp
-                                <li class="menu-item {{ $submenu_active}}">
-                                    <a href="{{ route($submenu_name) }}" class="menu-link">
-                                        <div>{{ $subMenu['title'] }}</div>
-                                    </a>
-                                </li>
+                                @if(isset($subMenu['sub_menu']))
+                                    {{-- กลุ่มย่อยที่มีเมนูย่อยอีกชั้น (ระดับ 3) --}}
+                                    @php
+                                        $visibleChild = [];
+                                        foreach ($subMenu['sub_menu'] as $childKey => $child) {
+                                            if (\App\Services\AccessControl::menuVisible($childKey)) {
+                                                $visibleChild[$childKey] = $child;
+                                            }
+                                        }
+                                        $group_open = false;
+                                        foreach ($visibleChild as $childKey => $child) {
+                                            if (isset($child['route_name']) && $child['route_name'] == $pageName) {
+                                                $group_open = true;
+                                            }
+                                        }
+                                    @endphp
+                                    @if(count($visibleChild) > 0)
+                                        <li class="menu-item {{ $group_open ? 'open active' : '' }}">
+                                            <a href="javascript:void(0);" class="menu-link menu-toggle">
+                                                <div>{{ $subMenu['title'] }}</div>
+                                            </a>
+                                            <ul class="menu-sub">
+                                                @foreach ($visibleChild as $childKey => $child)
+                                                    @php
+                                                        $child_name = isset($child['route_name']) ? $child['route_name'] : '';
+                                                        $child_active = $pageName == $child_name ? 'active' : '';
+                                                    @endphp
+                                                    <li class="menu-item {{ $child_active }}">
+                                                        <a href="{{ $child_name ? route($child_name) : 'javascript:void(0);' }}" class="menu-link">
+                                                            <div>{{ $child['title'] }}</div>
+                                                        </a>
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        </li>
+                                    @endif
+                                @else
+                                    @php
+                                        $submenu_name = isset($subMenu['route_name']) ? $subMenu['route_name'] : '';
+                                        $submenu_active = $pageName == $submenu_name ? 'active' : '';
+                                    @endphp
+                                    <li class="menu-item {{ $submenu_active}}">
+                                        <a href="{{ $submenu_name ? route($submenu_name) : 'javascript:void(0);' }}" class="menu-link">
+                                            <div>{{ $subMenu['title'] }}</div>
+                                        </a>
+                                    </li>
+                                @endif
                             @endforeach
                         </ul>
                     @endif
