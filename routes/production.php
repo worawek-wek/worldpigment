@@ -28,6 +28,7 @@ Route::prefix('production-planning')->group(function () {
     Route::get('/planning/dept-options', [Production\ProductionPlanController::class, 'deptOptions'])->name('production.planning.dept-options');
     Route::post('/planning/save-item', [Production\ProductionPlanController::class, 'saveItem'])->name('production.planning.save-item');
     Route::post('/planning/save-end-order', [Production\ProductionPlanController::class, 'saveEndOrder'])->name('production.planning.save-end-order');
+    Route::post('/planning/save-end-close', [Production\ProductionPlanController::class, 'saveEndClose'])->name('production.planning.save-end-close');
 
     // รายงานการผลิต — เพิ่ม 2026-07-31
     Route::get('/report/machine', [Production\ReportController::class, 'machine'])->name('production.report.machine.index');

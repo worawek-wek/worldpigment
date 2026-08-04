@@ -100,6 +100,13 @@
                        value="{{ $planning_item ? ($planning_item->red_bill_code ?? '') : ($parent_header?->orderno ?? '') }}"
                        class="form-control" placeholder="เลขที่ใบเบิกออกใบแดง">
             </div>
+            {{-- เพิ่มใหม่: รอบการผลิต (คอลัมน์ cycles ของ tb_planning) --}}
+            <div class="col-md-4 mb-3">
+                <label class="form-label">รอบการผลิต (Cycles)</label>
+                <input type="number" name="cycles" min="0" step="1"
+                       value="{{ $planning_item ? ($planning_item->cycles ?? '') : '' }}"
+                       class="form-control" placeholder="รอบการผลิต">
+            </div>
         </div>
         <div class="row my-2"><hr /></div>
         <div class="row p-3 rounded" style="background-color: #e5f4ff; border: 1px dashed #3f50e2;">

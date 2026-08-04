@@ -79,6 +79,22 @@
     </div>
 
     <div class="mb-3">
+        <label class="form-label" for="employee_signature">ลายเซ็น (Signature)</label>
+        <input type="file" class="form-control" id="employee_signature" name="signature" accept="image/*">
+        <small class="text-muted">รองรับไฟล์รูปภาพ (jpeg, png, jpg, gif, webp) ขนาดไม่เกิน 2MB{{ $isEdit ? ' — เว้นว่างไว้หากไม่ต้องการเปลี่ยนลายเซ็นเดิม' : '' }}</small>
+        <div class="mt-2" id="employee_signature_box" style="{{ $employee?->signature ? '' : 'display:none;' }}">
+            <img id="employee_signature_preview" alt="ลายเซ็น" class="img-thumbnail d-block"
+                style="max-width: 250px;"
+                src="{{ $employee?->signature ? '/upload/employees/' . $employee->signature : '' }}">
+            <button type="button" class="btn btn-sm btn-outline-danger mt-1" id="btn_remove_signature">
+                <i class="ti ti-trash me-1"></i>ลบรูปลายเซ็น
+            </button>
+        </div>
+        {{-- flag สั่งลบลายเซ็นเดิมตอนบันทึก (1 = ลบ) --}}
+        <input type="hidden" name="remove_signature" id="employee_remove_signature" value="0">
+    </div>
+
+    <div class="mb-3">
         <label class="form-label d-block">สถานะการใช้งาน</label>
         <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" role="switch"

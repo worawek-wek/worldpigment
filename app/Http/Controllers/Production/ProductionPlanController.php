@@ -101,14 +101,20 @@ class ProductionPlanController extends Controller
         $end_job = request('end_job', 'N');
         $end_job = in_array($end_job, ['all', 'Y', 'N'], true) ? $end_job : 'N';
 
-        // ค้นหาช่วงวันที่: เลือกฟิลด์ได้เฉพาะ inplan / custwant / packing_datetie (whitelist กัน SQL injection ที่ชื่อคอลัมน์)
+        // ค้นหาช่วงวันที่: เลือกฟิลด์ได้เฉพาะ inplan / custwant (whitelist กัน SQL injection ที่ชื่อคอลัมน์)
         $date_field = request('date_field');
-        $date_field = in_array($date_field, ['inplan', 'custwant', 'packing_datetie'], true) ? $date_field : 'inplan';
+        $date_field = in_array($date_field, ['inplan', 'custwant'], true) ? $date_field : 'inplan';
         $date_start = request('date_start');
         $date_end   = request('date_end');
 
-        // เมื่อค้นหาตามวันเวลาที่บรรจุเสร็จ (และมีการระบุช่วงวันที่) → เรียงตามวันเวลาบรรจุเสร็จ จากล่าสุดไปเก่า
-        $sort_by_packing = $date_field === 'packing_datetie' && (!empty($date_start) || !empty($date_end));
+        // ค้นหาตามวันเวลาบรรจุเสร็จ (แยกเป็นแถวของตัวเอง): ระบุวันที่บรรจุ + ช่วงเวลาเริ่ม–สิ้นสุดในวันนั้น
+        $packing_date       = request('packing_date');
+        $packing_time_start = request('packing_time_start');
+        $packing_time_end   = request('packing_time_end');
+        $has_packing_filter = !empty($packing_date);
+
+        // เมื่อค้นหาตามวันเวลาที่บรรจุเสร็จ → เรียงตามวันเวลาบรรจุเสร็จ จากล่าสุดไปเก่า
+        $sort_by_packing = $has_packing_filter;
         // ลำดับสำหรับ ROW_NUMBER (#) ให้ตรงกับลำดับที่แสดงผล — ประกอบจากค่าที่ whitelist แล้วเท่านั้น
         $row_order = $sort_by_packing
             ? 'tb_planning.packing_datetie DESC, tb_planning.id DESC'
@@ -171,6 +177,16 @@ class ProductionPlanController extends Controller
             })
             ->when(!empty($date_end), function ($query) use ($date_field, $date_end) {
                 $query->whereDate('tb_planning.'.$date_field, '<=', $date_end);
+            })
+            // กรองตามวันเวลาบรรจุเสร็จ: เฉพาะวันที่บรรจุที่เลือก และถ้าระบุช่วงเวลาก็กรองตามเวลาในวันนั้น
+            ->when($has_packing_filter, function ($query) use ($packing_date, $packing_time_start, $packing_time_end) {
+                $query->whereDate('tb_planning.packing_datetie', '=', $packing_date);
+                if (!empty($packing_time_start)) {
+                    $query->whereTime('tb_planning.packing_datetie', '>=', $packing_time_start);
+                }
+                if (!empty($packing_time_end)) {
+                    $query->whereTime('tb_planning.packing_datetie', '<=', $packing_time_end);
+                }
             })
             // เรียงผลลัพธ์: ปกติเรียงตาม id ล่าสุด; ถ้าค้นตามวันเวลาบรรจุเสร็จให้เรียงตามวันเวลานั้น จากล่าสุดไปเก่า
             ->when($sort_by_packing, function ($query) {
@@ -444,6 +460,7 @@ class ProductionPlanController extends Controller
             'weight_produced'    => 'nullable|numeric|min:0',
             'weight_packing'     => 'nullable|numeric|min:0',
             'red_bill_code'      => 'nullable|string|max:255',
+            'cycles'             => 'nullable|integer|min:0',
             'end_job'            => 'nullable|in:Y,N',
             'empno'              => 'nullable|string|max:50|exists:emp,empno',
             'machine_no'         => 'nullable|string|max:255',
@@ -491,7 +508,7 @@ class ProductionPlanController extends Controller
 
         $fields = $request->only([
             'planning_header_id', 'company', 'itemno', 'quantity', 'lot', 'weight',
-            'weight_produced', 'weight_packing', 'red_bill_code', 'end_job', 'empno',
+            'weight_produced', 'weight_packing', 'red_bill_code', 'cycles', 'end_job', 'empno',
             'machine_no', 'plan_type', 'planning_status', 'inplan', 'work_shift', 'start_date', 'start_time', 'end_date', 'end_time',
             'qc_date', 'qc_time', 'qc_status', 'packing_datetie', 'pack_remark',
             'mdate', 'custwant', 'senddate', 'remark'
@@ -702,6 +719,46 @@ class ProductionPlanController extends Controller
         return response()->json([
             'status'             => 200,
             'message'            => $request->end_order === 'Y' ? 'ปิดออเดอร์สำเร็จ' : 'ยกเลิกการปิดออเดอร์แล้ว',
+            'planning_header_id' => $header->id,
+        ]);
+    }
+
+    /**
+     * บันทึกสถานะปิดจบงาน (end_close) + หมายเหตุ (end_close_remark) ของ PlanningHeader
+     * - ปิดจบงานได้เลย ไม่ต้องตรวจ End Job (ตามที่ผู้ใช้กำหนด) ต่างจาก end_order ปกติที่มี gate ของมันเอง
+     * - end_close และ end_order เคลื่อนไหวพร้อมกัน (lockstep): ติ๊ก Y → end_order = Y, ปลด N → end_order = N
+     * - เมื่อ end_close = Y ต้องมีหมายเหตุ (end_close_remark)
+     */
+    public function saveEndClose(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'planning_header_id' => 'required|exists:tb_planning_header,id',
+            'end_close'          => 'required|in:Y,N',
+            'end_close_remark'   => 'required_if:end_close,Y|nullable|string|max:1000',
+        ], [
+            'end_close_remark.required_if' => 'เมื่อปิดจบงาน ต้องระบุหมายเหตุการปิดจบงาน',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status'  => 422,
+                'message' => $validator->errors()->first(),
+                'errors'  => $validator->errors(),
+            ]);
+        }
+
+        $header = PlanningHeader::find($request->planning_header_id);
+
+        // ปิดจบงาน (end_close) บังคับให้ปิดออเดอร์ (end_order) ตามเสมอ / ปลดก็ปลดพร้อมกัน
+        $header->update([
+            'end_close'        => $request->end_close,
+            'end_close_remark' => $request->end_close_remark,
+            'end_order'        => $request->end_close,
+        ]);
+
+        return response()->json([
+            'status'             => 200,
+            'message'            => $request->end_close === 'Y' ? 'ปิดจบงานสำเร็จ' : 'ยกเลิกการปิดจบงานแล้ว',
             'planning_header_id' => $header->id,
         ]);
     }

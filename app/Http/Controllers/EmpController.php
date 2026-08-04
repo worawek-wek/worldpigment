@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\File;
 use Illuminate\Validation\Rule;
 use Yajra\DataTables\Facades\DataTables;
 use App\Models\Emp;
@@ -110,6 +111,13 @@ class EmpController extends Controller
             'dept'          => 'nullable|string|exists:tb_departments,name',
             'role_id'       => 'nullable|integer|exists:roles,id',
             'is_active'     => 'nullable|in:Y,N',
+            'signature'     => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+        ];
+
+        $messages = [
+            'signature.image' => 'ไฟล์ลายเซ็นต้องเป็นรูปภาพเท่านั้น',
+            'signature.mimes' => 'ลายเซ็นต้องเป็นไฟล์ประเภท: jpeg, png, jpg, gif หรือ webp',
+            'signature.max'   => 'ขนาดไฟล์ลายเซ็นต้องไม่เกิน 2MB',
         ];
 
         // เพิ่มใหม่ต้องกรอกรหัสพนักงานและห้ามซ้ำ
@@ -125,7 +133,7 @@ class EmpController extends Controller
             ];
         }
 
-        $validator = Validator::make($request->all(), $rules);
+        $validator = Validator::make($request->all(), $rules, $messages);
 
         if ($validator->fails()) {
             return response()->json([
@@ -150,14 +158,37 @@ class EmpController extends Controller
             $fields['password'] = Hash::make($request->password);
         }
 
+        // โหลดข้อมูลเดิม (กรณีแก้ไข) เพื่ออ้างชื่อไฟล์ลายเซ็นเก่าไว้จัดการต่อ
+        $existing = $is_edit ? Emp::find($request->edit_empno) : null;
+        if ($is_edit && !$existing) {
+            return response()->json([
+                'status'  => 404,
+                'message' => 'ไม่พบพนักงานที่ต้องการแก้ไข',
+            ]);
+        }
+        $oldSignature = $existing?->signature;
+
+        // กดปุ่มลบรูปลายเซ็น: ลบไฟล์เดิมทิ้งและเคลียร์ค่าใน DB
+        if ($request->boolean('remove_signature')) {
+            $this->deleteSignatureFile($oldSignature);
+            $fields['signature'] = null;
+            $oldSignature = null;
+        }
+
+        // อัพโหลดรูปลายเซ็นเฉพาะเมื่อมีไฟล์ส่งมา (แก้ไข: เว้นว่าง = คงไฟล์เดิม)
+        // เก็บเป็นชื่อไฟล์ใน emp.signature และย้ายไฟล์ไปที่ upload/employees/ พร้อมลบไฟล์เดิมทิ้ง
+        if ($request->file('signature')) {
+            $file = $request->file('signature');
+            $extension = $file->getClientOriginalExtension();
+            $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $image_name = $originalName.rand().'.'.$extension;
+            $file->move('upload/employees/', $image_name);
+            $this->deleteSignatureFile($oldSignature);
+            $fields['signature'] = $image_name;
+        }
+
         if ($is_edit) {
-            $employee = Emp::find($request->edit_empno);
-            if (!$employee) {
-                return response()->json([
-                    'status'  => 404,
-                    'message' => 'ไม่พบพนักงานที่ต้องการแก้ไข',
-                ]);
-            }
+            $employee = $existing;
             $employee->update($fields);
         } else {
             $employee = Emp::create(array_merge(['empno' => $request->empno], $fields));
@@ -168,6 +199,18 @@ class EmpController extends Controller
             'message' => $is_edit ? 'แก้ไขข้อมูลพนักงานสำเร็จ' : 'เพิ่มพนักงานสำเร็จ',
             'data'    => $employee,
         ]);
+    }
+
+    // ลบไฟล์รูปลายเซ็นออกจาก upload/employees/ (ถ้ามีไฟล์อยู่จริง)
+    private function deleteSignatureFile(?string $filename): void
+    {
+        if (!$filename) {
+            return;
+        }
+        $path = public_path('upload/employees/'.$filename);
+        if (File::exists($path)) {
+            File::delete($path);
+        }
     }
 
     public function destroy(Request $request)

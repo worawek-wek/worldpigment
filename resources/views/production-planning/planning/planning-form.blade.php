@@ -88,6 +88,36 @@
                             </div>
                         @endunless
                     </div>
+
+                    {{-- ปิดจบงาน (end_close): ติ๊กแล้วบังคับปิดออเดอร์ (end_order) ตามด้วยเสมอ + ต้องกรอกหมายเหตุ --}}
+                    @php $end_closed = ($planning_header->end_close ?? 'N') === 'Y'; @endphp
+                    <div class="col-md-12 mt-3 p-3 rounded" style="background-color: #fff3d9; border: 1px dashed #d98c04;">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="planning_end_close"
+                                   data-planning_header_id="{{ $planning_header->id }}"
+                                   value="Y"
+                                   {{ $end_closed ? 'checked' : '' }}>
+                            <label class="form-check-label fw-semibold" for="planning_end_close">ปิดจบงาน (End Close)</label>
+                        </div>
+                        <div class="form-text text-muted mb-2">
+                            <i class="ti ti-info-circle me-1"></i>เมื่อปิดจบงาน ระบบจะปิดออเดอร์ (End Order) ให้อัตโนมัติ และต้องระบุหมายเหตุ
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small text-muted mb-1" for="planning_end_close_remark">
+                                หมายเหตุการปิดจบงาน
+                                <span class="text-danger" id="end_close_remark_required" style="{{ $end_closed ? '' : 'display:none;' }}">*</span>
+                            </label>
+                            {{-- พิมพ์ได้เสมอ (ไม่ disable) — บังคับกรอกเฉพาะเมื่อติ๊กปิดจบงาน ตรวจทั้งฝั่ง client และ server --}}
+                            <textarea class="form-control" id="planning_end_close_remark" rows="2"
+                                      placeholder="ระบุหมายเหตุ...">{{ $planning_header->end_close_remark }}</textarea>
+                        </div>
+                        <div class="text-end">
+                            <button type="button" class="btn btn-sm btn-warning" id="btn_save_end_close"
+                                    data-planning_header_id="{{ $planning_header->id }}">
+                                <i class="ti ti-device-floppy me-1"></i>บันทึกการปิดจบงาน
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -158,11 +158,35 @@
         });
     });
 
-    // บันทึกพนักงาน (เพิ่ม/แก้ไข)
+    // พรีวิวรูปลายเซ็นเมื่อเลือกไฟล์
+    $(document).on('change', '#employee_signature', function(e) {
+        var input = e.target;
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                $('#employee_signature_preview').attr('src', ev.target.result);
+                $('#employee_signature_box').show();
+            };
+            reader.readAsDataURL(input.files[0]);
+            // เลือกไฟล์ใหม่ = ยกเลิกคำสั่งลบ
+            $('#employee_remove_signature').val('0');
+        }
+    });
+
+    // ลบรูปลายเซ็น — ล้างไฟล์ที่เลือก/ซ่อนพรีวิว และตั้ง flag ให้ลบรูปเดิมตอนบันทึก
+    $(document).on('click', '#btn_remove_signature', function(e) {
+        e.preventDefault();
+        $('#employee_signature').val('');
+        $('#employee_signature_preview').attr('src', '');
+        $('#employee_signature_box').hide();
+        $('#employee_remove_signature').val('1');
+    });
+
+    // บันทึกพนักงาน (เพิ่ม/แก้ไข) — ใช้ FormData เพื่อรองรับการอัพโหลดไฟล์ลายเซ็น
     $(document).on('click', '#btn_employee_save', function(e) {
         e.preventDefault();
         var $btn = $(this);
-        var formData = $('#employee_form').serialize();
+        var formData = new FormData(document.getElementById('employee_form'));
 
         $btn.prop('disabled', true);
         $.ajax({
@@ -170,6 +194,8 @@
             method: "POST",
             dataType: 'json',
             data: formData,
+            processData: false,
+            contentType: false,
             success: function(response) {
                 if (response.status == 200) {
                     $('#employeeModal').modal('hide');

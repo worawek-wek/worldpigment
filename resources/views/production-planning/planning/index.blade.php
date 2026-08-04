@@ -76,7 +76,6 @@
                                 <select id="searchDateField" class="form-select">
                                     <option value="inplan">วันที่วางแผนผลิต (Inplan)</option>
                                     <option value="custwant">วันที่ต้องการรับ (Custwant)</option>
-                                    <option value="packing_datetie">วันเวลาที่บรรจุเสร็จ (Packing)</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -90,6 +89,26 @@
                             <div class="col-md-2">
                                 <button id="btn_clear_date" type="button" class="btn btn-outline-secondary w-100">
                                     <i class="ti ti-x me-1"></i>ล้างวันที่
+                                </button>
+                            </div>
+                        </div>
+                        {{-- แถวที่ 3: ค้นหาตามวันเวลาบรรจุเสร็จ — ระบุวันที่บรรจุ และช่วงเวลาเริ่ม–สิ้นสุด --}}
+                        <div class="row g-3 align-items-end mt-1">
+                            <div class="col-md-4">
+                                <label class="form-label mb-1 small text-muted">วันที่บรรจุ (Packing)</label>
+                                <input id="searchPackingDate" type="date" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label mb-1 small text-muted">เวลาเริ่ม</label>
+                                <input id="searchPackingTimeStart" type="time" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label mb-1 small text-muted">เวลาสิ้นสุด</label>
+                                <input id="searchPackingTimeEnd" type="time" class="form-control">
+                            </div>
+                            <div class="col-md-2">
+                                <button id="btn_clear_packing" type="button" class="btn btn-outline-secondary w-100">
+                                    <i class="ti ti-x me-1"></i>ล้างวันบรรจุ
                                 </button>
                             </div>
                         </div>
@@ -198,6 +217,10 @@
                     d.date_field = $('#searchDateField').val();
                     d.date_start = $('#searchDateStart').val();
                     d.date_end   = $('#searchDateEnd').val();
+                    // ค้นหาตามวันเวลาบรรจุเสร็จ: วันที่บรรจุ + ช่วงเวลาเริ่ม–สิ้นสุด
+                    d.packing_date       = $('#searchPackingDate').val();
+                    d.packing_time_start = $('#searchPackingTimeStart').val();
+                    d.packing_time_end   = $('#searchPackingTimeEnd').val();
                 },
                 error: function(xhr, error, thrown) {
                     console.error('AJAX Error:', error, thrown);
@@ -297,6 +320,21 @@
         e.preventDefault();
         $('#searchDateStart').val('');
         $('#searchDateEnd').val('');
+        oTable.draw();
+    });
+
+    // ค้นหาตามวันเวลาบรรจุเสร็จ — redraw เมื่อเปลี่ยนวันที่บรรจุหรือช่วงเวลา
+    $(document).on('change', '#searchPackingDate, #searchPackingTimeStart, #searchPackingTimeEnd', function(e){
+        e.preventDefault();
+        oTable.draw();
+    });
+
+    // ล้างเงื่อนไขวันเวลาบรรจุแล้วค้นหาใหม่
+    $(document).on('click', '#btn_clear_packing', function(e){
+        e.preventDefault();
+        $('#searchPackingDate').val('');
+        $('#searchPackingTimeStart').val('');
+        $('#searchPackingTimeEnd').val('');
         oTable.draw();
     });
 
@@ -585,6 +623,74 @@
             },
             complete: function () {
                 $cb.prop('disabled', false);
+            }
+        });
+    });
+
+    // ---- ปิดจบงาน (end_close) จากโมดัลแผนการผลิต ----
+    // ติ๊ก end_close → mirror ไปที่ checkbox ปิดออเดอร์ (end_order) + แสดงเครื่องหมายบังคับกรอกหมายเหตุ
+    // ใช้ .prop() จึงไม่ trigger change ของ #planning_end_order (ไม่ auto-save ซ้ำ)
+    $(document).on('change', '#planning_end_close', function () {
+        var checked = $(this).is(':checked');
+        $('#planning_end_order').prop('checked', checked);
+        // แสดง/ซ่อนเครื่องหมาย * (บังคับกรอก) — textarea พิมพ์ได้ตลอดอยู่แล้ว
+        $('#end_close_remark_required').toggle(checked);
+        if (checked) {
+            $('#planning_end_close_remark').trigger('focus');
+        }
+    });
+
+    // ปุ่มบันทึกส่วนปิดจบงาน (end_close + end_close_remark) — end_order จะถูกตั้งตาม end_close ฝั่ง server
+    $(document).on('click', '#btn_save_end_close', function () {
+        var $btn = $(this);
+        var planning_header_id = $btn.data('planning_header_id');
+        var end_close = $('#planning_end_close').is(':checked') ? 'Y' : 'N';
+        var remark = ($('#planning_end_close_remark').val() || '').trim();
+
+        // ปิดจบงานต้องมีหมายเหตุ
+        if (end_close === 'Y' && remark === '') {
+            Swal.fire({ icon: 'warning', title: 'กรุณาระบุหมายเหตุ', text: 'เมื่อปิดจบงาน ต้องกรอกหมายเหตุการปิดจบงาน' });
+            $('#planning_end_close_remark').trigger('focus');
+            return;
+        }
+
+        $btn.prop('disabled', true).html('<i class="ti ti-loader me-1"></i>กำลังบันทึก...');
+
+        $.ajax({
+            type: 'POST',
+            url: '{{ route("production.planning.save-end-close") }}',
+            dataType: 'json',
+            data: {
+                planning_header_id: planning_header_id,
+                end_close: end_close,
+                end_close_remark: remark,
+                _token: '{{ csrf_token() }}'
+            },
+            success: function (res) {
+                if (res.status == 200) {
+                    reloadPlanningHeaderContent(planning_header_id);
+                    oTable.draw();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'สำเร็จ',
+                        text: res.message,
+                        timer: 1600,
+                        showConfirmButton: false
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'ผิดพลาด',
+                        text: res.message
+                    });
+                }
+            },
+            error: function (xhr) {
+                var msg = xhr.responseJSON?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: msg });
+            },
+            complete: function () {
+                $btn.prop('disabled', false).html('<i class="ti ti-device-floppy me-1"></i>บันทึกการปิดจบงาน');
             }
         });
     });
