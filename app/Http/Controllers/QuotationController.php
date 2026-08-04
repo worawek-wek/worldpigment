@@ -609,9 +609,11 @@ class QuotationController extends Controller
             '1.1' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักส่งครั้งละ (กก)'), $c('price_kg','ราคา (บาท/กก)'), $c('price_vat','รวม Vat (บาท/กก)'), $c('remark','หมายเหตุ')],
             '2.1' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักส่งครั้งละ (กก)'), $c('price_kg','ราคา (บาท/กก) ปัจจุบัน'), $c('new_price','ราคา (บาท/กก) ใหม่'), $c('price_vat','รวม Vat ใหม่'), $c('remark','หมายเหตุ')],
             '1.2' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักส่งครั้งละ (กก)'), $c('resin_price','ราคาเม็ดพลาสติก'), $c('process_fee','ค่าผลิตและค่าแม่สี'), $c('price_kg','ราคา (บาท/กก)'), $c('price_vat','รวม Vat (บาท/กก)')],
-            '2.2' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักส่งครั้งละ (กก)'), $c('resin_price','ราคาเม็ดพลาสติก'), $c('cur_process_fee','ค่าผลิตฯ ปัจจุบัน'), $c('new_process_fee','ค่าผลิตฯ ใหม่'), $c('price_kg','ราคา (บาท/กก)'), $c('price_vat','รวม Vat (บาท/กก)')],
+            // 2.2 ตามแบบฟอร์มลูกค้า: มีแค่ ค่าผลิตและค่าสี ปัจจุบัน|ใหม่ — ไม่มีเม็ดพลาสติก/ราคา/VAT
+            '2.2' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักส่งครั้งละ (กก)'), $c('cur_process_fee','ค่าผลิตและค่าสี ปัจจุบัน'), $c('new_process_fee','ค่าผลิตและค่าสี ใหม่')],
             '1.3' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักส่งครั้งละ (กก)'), $c('process_fee','ค่าผลิต'), $c('pigment_price','ค่าแม่สี'), $c('price_kg','ราคา (บาท/กก)'), $c('price_vat','รวม Vat (บาท/กก)')],
-            '2.3' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักส่งครั้งละ (กก)'), $c('cur_process_fee','ค่าผลิต ปัจจุบัน'), $c('cur_pigment_price','ค่าแม่สี ปัจจุบัน'), $c('new_process_fee','ค่าผลิต ใหม่'), $c('new_pigment_price','ค่าแม่สี ใหม่'), $c('price_kg','ราคา (บาท/กก)'), $c('price_vat','รวม Vat (บาท/กก)')],
+            // 2.3 ตามแบบฟอร์มลูกค้า: ปิดท้ายด้วย "รวมราคา" ของฝั่งใหม่ (= ค่าผลิตใหม่ + ค่าแม่สีใหม่) — ไม่มีคอลัมน์ VAT
+            '2.3' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักส่งครั้งละ (กก)'), $c('cur_process_fee','ค่าผลิต ปัจจุบัน'), $c('cur_pigment_price','ค่าแม่สี ปัจจุบัน'), $c('new_process_fee','ค่าผลิต ใหม่'), $c('new_pigment_price','ค่าแม่สี ใหม่'), $c('price_kg','รวมราคา (บาท/กก) ใหม่')],
             '1.4' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักส่งครั้งละ (กก)'), $c('resin_price','ราคาเม็ดพลาสติก'), $c('process_fee','ค่าผลิตและค่าแม่สี'), $c('loss_pct','% สูญเสีย'), $c('price_kg','ราคา (บาท/กก)'), $c('price_vat','รวม Vat (บาท/กก)')],
         ];
     }
@@ -674,6 +676,9 @@ class QuotationController extends Controller
             'ราคารวมภาษี'                => 'Incld VAT (THB/Kg)',
             'ค่าผลิตฯ ปัจจุบัน'           => 'Process&Pigment Fee Current',
             'ค่าผลิตฯ ใหม่'              => 'Process&Pigment Fee New',
+            'ค่าผลิตและค่าสี ปัจจุบัน'      => 'Process&Pigment Fee Current',
+            'ค่าผลิตและค่าสี ใหม่'         => 'Process&Pigment Fee New',
+            'รวมราคา (บาท/กก) ใหม่'       => 'Total Price (THB/kg) New',
             'ค่าผลิต ปัจจุบัน'            => 'Process Fee Current',
             'ค่าผลิต ใหม่'               => 'Process Fee New',
             'ค่าแม่สี ปัจจุบัน'            => 'Pigment Price Current',

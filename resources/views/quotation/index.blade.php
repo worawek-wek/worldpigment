@@ -723,22 +723,32 @@
         var REVISION_COLS = {cur_process_fee:1, cur_pigment_price:1, new_process_fee:1, new_pigment_price:1};
         // คอลัมน์แรกของกลุ่ม "ใหม่" — ใส่เส้นคั่นซ้าย แยกจากกลุ่ม "ปัจจุบัน"
         var GROUP_SEP_COLS = {new_process_fee:1};
-        var REV_START = 'cur_process_fee';   // คอลัมน์แรกของกล่อง (เส้นซ้าย)
-        var REV_END   = 'new_pigment_price'; // คอลัมน์สุดท้ายของกล่อง (เส้นขวา)
         // กล่อง "ราคา" (แยกต่างหาก คนละสี)
         var PRICE_COLS   = {price_kg:1, new_price:1, price_vat:1};
-        var PRICE_START  = 'price_kg';
-        var PRICE_END    = 'price_vat';
+
+        // หาคอลัมน์แรก/สุดท้ายของแต่ละกล่อง "จากคอลัมน์ที่แสดงจริง"
+        // (แต่ละรูปแบบมีคอลัมน์ไม่เท่ากัน เช่น 2.2 ไม่มี new_pigment_price / 2.3 ไม่มี price_vat
+        //  ถ้า fix ชื่อคอลัมน์หัวท้ายไว้ตายตัว กล่องจะขาดเส้นปิดด้านขวา)
+        function groupEdges(cols){
+            var e = {rev: {}, price: {}};
+            cols.forEach(function(c){
+                var g = REVISION_COLS[c.key] ? 'rev' : (PRICE_COLS[c.key] ? 'price' : null);
+                if (!g) return;
+                if (e[g].start === undefined) e[g].start = c.key;
+                e[g].end = c.key;
+            });
+            return e;
+        }
         // รวม class เน้น/กรอบของแต่ละกล่อง
-        function revClasses(key){
+        function revClasses(key, edges){
             var cl = [];
-            if (REVISION_COLS[key])  cl.push('qcol-rev');
-            if (GROUP_SEP_COLS[key])  cl.push('qcol-sep');
-            if (key === REV_START)    cl.push('qcol-rev-start');
-            if (key === REV_END)      cl.push('qcol-rev-end');
-            if (PRICE_COLS[key])      cl.push('qcol-price');
-            if (key === PRICE_START)  cl.push('qcol-price-start');
-            if (key === PRICE_END)    cl.push('qcol-price-end');
+            if (REVISION_COLS[key])       cl.push('qcol-rev');
+            if (GROUP_SEP_COLS[key])      cl.push('qcol-sep');
+            if (key === edges.rev.start)  cl.push('qcol-rev-start');
+            if (key === edges.rev.end)    cl.push('qcol-rev-end');
+            if (PRICE_COLS[key])          cl.push('qcol-price');
+            if (key === edges.price.start) cl.push('qcol-price-start');
+            if (key === edges.price.end)   cl.push('qcol-price-end');
             return cl.join(' ');
         }
         var currentItems = [];               // ข้อมูลรายการ (array ของ object)
@@ -748,9 +758,10 @@
         // ── ตารางกรอกรายการ — คอลัมน์ตามรูปแบบที่เลือก (ไม่เลือก = ทุกคอลัมน์) ──
         function renderItems(){
             var cols = activeCols();
+            var edges = groupEdges(cols);
             var head = '';
             cols.forEach(function(c){
-                var rc = revClasses(c.key);
+                var rc = revClasses(c.key, edges);
                 head += '<th class="text-center'+(rc?' '+rc:'')+'">'+esc(c.label)+'</th>';
             });
             head += '<th width="46" class="text-center">ลบ</th>';
@@ -766,7 +777,7 @@
                         var typ = c.num ? 'number' : 'text';
                         var cls = 'form-control form-control-sm qitem-input qitem-' + c.key + (c.num ? ' text-end' : '');
                         var step = c.num ? ' step="0.01"' : '';
-                        var rc = revClasses(c.key);
+                        var rc = revClasses(c.key, edges);
                         var tdcls = rc ? ' class="'+rc+'"' : '';
                         // ช่องรหัสสินค้า → ค้นชื่อ/ราคา/รายละเอียดมาเติมช่องที่ว่าง (oninput + debounce)
                         var oncode = (c.key === 'code') ? '; lookupItem('+idx+',this.value)' : '';
@@ -803,7 +814,9 @@
         // อัปเดตค่าในช่องของแถวนั้นจาก data model โดยไม่ re-render (คง focus/เคอร์เซอร์ช่องรหัส)
         function refreshRowInputs(idx){
             var $inputs = $('#quotationItems tr').eq(idx).find('input');
-            ALL_COLS.forEach(function(c, i){
+            // ต้องไล่ตามคอลัมน์ที่ "แสดงอยู่จริง" (activeCols) ไม่ใช่ ALL_COLS
+            // ไม่งั้นเวลาเลือกรูปแบบ (เช่น 2.2/2.3) ลำดับช่องจะเลื่อน แล้วค่าที่ค้นมาไปลงผิดช่อง
+            activeCols().forEach(function(c, i){
                 if (c.key === 'code') return;   // อย่าแตะช่องที่กำลังพิมพ์
                 var v = currentItems[idx][c.key];
                 $inputs.eq(i).val(v == null ? '' : v);
