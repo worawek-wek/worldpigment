@@ -98,6 +98,9 @@
                                    value="Y"
                                    {{ $end_closed ? 'checked' : '' }}>
                             <label class="form-check-label fw-semibold" for="planning_end_close">ปิดจบงาน (End Close)</label>
+                            @if($planning_header->end_close_date)
+                                <span class="small fw-normal text-muted">({{ \Carbon\Carbon::parse($planning_header->end_close_date)->format('d/m/Y H:i') }})</span>
+                            @endif
                         </div>
                         <div class="form-text text-muted mb-2">
                             <i class="ti ti-info-circle me-1"></i>เมื่อปิดจบงาน ระบบจะปิดออเดอร์ (End Order) ให้อัตโนมัติ และต้องระบุหมายเหตุ

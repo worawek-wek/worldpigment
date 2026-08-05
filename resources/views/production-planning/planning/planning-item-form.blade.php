@@ -282,10 +282,11 @@
                 {{-- หัวคอลัมน์ (แสดงครั้งเดียว) --}}
                 <div class="row g-2 fw-semibold small text-muted mb-1 d-none d-md-flex">
                     <div class="col-md-3">วิธีการผลิต</div>
-                    <div class="col-md-3">วันที่</div>
+                    <div class="col-md-2">วันที่</div>
                     <div class="col-md-2">เวลาเริ่ม</div>
                     <div class="col-md-2">เวลาที่เสร็จ</div>
-                    <div class="col-md-2"></div>
+                    <div class="col-md-2">Temp</div>
+                    <div class="col-md-1"></div>
                 </div>
                 @php
                     // สร้างตัวเลือก <option> ของวิธีการผลิต (ใช้ซ้ำในทุกแถวที่ render ฝั่ง server)
@@ -297,6 +298,19 @@
                         }
                         return $out;
                     };
+                    // สร้างตัวเลือก <option> ของ Temp (ใช้ซ้ำในทุกแถวที่ render ฝั่ง server)
+                    $tempOptions = function ($selected = null) use ($temps, $inactive_temps) {
+                        $out = '<option value="">เลือก Temp</option>';
+                        // ค่าเดิมที่ถูกปิดใช้งาน (ไม่อยู่ในรายการที่เปิดใช้งาน) ให้แสดงไว้
+                        if ($selected && $inactive_temps->has($selected)) {
+                            $out .= '<option value="'.$selected.'" selected>'.e($inactive_temps[$selected]->Temp1).' (เดิม)</option>';
+                        }
+                        foreach ($temps as $t) {
+                            $sel = ((string) $selected === (string) $t->id) ? 'selected' : '';
+                            $out .= '<option value="'.$t->id.'" '.$sel.'>'.e($t->Temp1).'</option>';
+                        }
+                        return $out;
+                    };
                 @endphp
                 <div id="prod_method_rows">
                     @forelse($prod_method_rows as $row)
@@ -304,10 +318,13 @@
                             <div class="col-md-3">
                                 <select name="prod_method_id[]" class="form-select form-select-sm">{!! $prodMethodOptions($row->prod_method_id) !!}</select>
                             </div>
-                            <div class="col-md-3"><input type="date" name="prod_method_date[]" class="form-control form-control-sm" value="{{ $row->work_date ? substr($row->work_date, 0, 10) : '' }}"></div>
+                            <div class="col-md-2"><input type="date" name="prod_method_date[]" class="form-control form-control-sm" value="{{ $row->work_date ? substr($row->work_date, 0, 10) : '' }}"></div>
                             <div class="col-md-2"><input type="time" name="prod_method_start[]" class="form-control form-control-sm" value="{{ $row->start_time ? substr($row->start_time, 0, 5) : '' }}"></div>
                             <div class="col-md-2"><input type="time" name="prod_method_end[]" class="form-control form-control-sm" value="{{ $row->end_time ? substr($row->end_time, 0, 5) : '' }}"></div>
                             <div class="col-md-2">
+                                <select name="temp_id[]" class="form-select form-select-sm">{!! $tempOptions($row->temp_id) !!}</select>
+                            </div>
+                            <div class="col-md-1">
                                 <button type="button" class="btn btn-sm btn-outline-danger btn_remove_prod_method" title="ลบ">
                                     <i class="ti ti-trash"></i>
                                 </button>
@@ -318,10 +335,13 @@
                             <div class="col-md-3">
                                 <select name="prod_method_id[]" class="form-select form-select-sm">{!! $prodMethodOptions() !!}</select>
                             </div>
-                            <div class="col-md-3"><input type="date" name="prod_method_date[]" class="form-control form-control-sm"></div>
+                            <div class="col-md-2"><input type="date" name="prod_method_date[]" class="form-control form-control-sm"></div>
                             <div class="col-md-2"><input type="time" name="prod_method_start[]" class="form-control form-control-sm"></div>
                             <div class="col-md-2"><input type="time" name="prod_method_end[]" class="form-control form-control-sm"></div>
                             <div class="col-md-2">
+                                <select name="temp_id[]" class="form-select form-select-sm">{!! $tempOptions() !!}</select>
+                            </div>
+                            <div class="col-md-1">
                                 <button type="button" class="btn btn-sm btn-outline-danger btn_remove_prod_method" title="ลบ">
                                     <i class="ti ti-trash"></i>
                                 </button>
@@ -747,6 +767,7 @@
 
     // ── การ์ดสีน้ำเงิน "สถานะวิธีการผลิต": เพิ่ม/ลบแถว (บันทึกลง tb_planning_prod_method) ──
     var PROD_METHOD_OPTIONS = @json($prod_methods);
+    var TEMP_OPTIONS = @json($temps);
     function prodMethodSelectHtml() {
         var opts = '<option value="">เลือกวิธีการผลิต</option>';
         (PROD_METHOD_OPTIONS || []).forEach(function (pm) {
@@ -754,13 +775,21 @@
         });
         return '<select name="prod_method_id[]" class="form-select form-select-sm">' + opts + '</select>';
     }
+    function tempSelectHtml() {
+        var opts = '<option value="">เลือก Temp</option>';
+        (TEMP_OPTIONS || []).forEach(function (t) {
+            opts += '<option value="' + esc(t.id) + '">' + esc(t.Temp1) + '</option>';
+        });
+        return '<select name="temp_id[]" class="form-select form-select-sm">' + opts + '</select>';
+    }
     function prodMethodRowHtml() {
         return '<div class="row g-2 align-items-center mb-2 prod-method-row">'
             + '<div class="col-md-3">' + prodMethodSelectHtml() + '</div>'
-            + '<div class="col-md-3"><input type="date" name="prod_method_date[]" class="form-control form-control-sm"></div>'
+            + '<div class="col-md-2"><input type="date" name="prod_method_date[]" class="form-control form-control-sm"></div>'
             + '<div class="col-md-2"><input type="time" name="prod_method_start[]" class="form-control form-control-sm"></div>'
             + '<div class="col-md-2"><input type="time" name="prod_method_end[]" class="form-control form-control-sm"></div>'
-            + '<div class="col-md-2"><button type="button" class="btn btn-sm btn-outline-danger btn_remove_prod_method" title="ลบ"><i class="ti ti-trash"></i></button></div>'
+            + '<div class="col-md-2">' + tempSelectHtml() + '</div>'
+            + '<div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger btn_remove_prod_method" title="ลบ"><i class="ti ti-trash"></i></button></div>'
             + '</div>';
     }
     $('#btn_add_prod_method').on('click', function () {
