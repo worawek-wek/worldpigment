@@ -347,6 +347,88 @@
 
     </div>
 
+    {{-- ═══════════════════════════════════════════════════════════════ --}}
+    {{-- ข้อมูลจากไฟล์ Access เดิม (formula_2000.mdb) — อ่านอย่างเดียว    --}}
+    {{-- ไว้ให้ตรวจว่าข้อมูลที่ย้ายขึ้น server มาครบ/ตรงกับไฟล์เดิมไหม     --}}
+    {{-- ═══════════════════════════════════════════════════════════════ --}}
+    <div class="card mt-4">
+
+        <div class="card-header border-bottom">
+
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+                <div>
+                    <h5 class="mb-1">
+                        <i class="ti ti-database text-warning"></i>
+                        ข้อมูลจากไฟล์ Access เดิม
+                    </h5>
+                    <p class="text-muted small mb-0">
+                        สำเนาของ <code>formula_2000.mdb</code> ที่ย้ายขึ้นฐานข้อมูลแล้ว — อ่านอย่างเดียว แก้ไขจากหน้านี้ไม่ได้
+                    </p>
+                </div>
+                <span class="badge bg-label-warning align-self-center">
+                    <i class="ti ti-lock me-1"></i>อ่านอย่างเดียว
+                </span>
+            </div>
+
+            {{-- แท็บเลือกตาราง --}}
+            <ul class="nav nav-tabs card-header-tabs mb-3" id="accessTabs">
+                <li class="nav-item">
+                    <a class="nav-link active" href="javascript:void(0)" data-tab="pdprice">
+                        ราคาทุน <small class="text-muted">(PdPrice)</small>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="javascript:void(0)" data-tab="compo">
+                        สูตรส่วนผสม <small class="text-muted">(Compo)</small>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="javascript:void(0)" data-tab="testmai">
+                        หัวใบเทียบสี <small class="text-muted">(TestMai)</small>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="row g-3 align-items-end">
+                <div class="col-md-8">
+                    <label class="form-label small fw-medium mb-1">
+                        ค้นหา <span class="text-muted fw-normal" id="access_search_hint">(รหัสสินค้า)</span>
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="ti ti-search"></i></span>
+                        <input type="text" id="access_search" class="form-control" autocomplete="off">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center justify-content-md-end">
+                        <label class="form-label small fw-medium mb-0 me-2">แสดง</label>
+                        <select id="access_limit" class="form-select form-select-sm" style="width: 90px;">
+                            <option value="15">15</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <span class="ms-2 small fw-medium">รายการ/หน้า</span>
+                    </div>
+                </div>
+            </div>
+
+            {{-- ภาษาไทยจากไฟล์ Access เสียมาตั้งแต่ต้นทาง — บอกไว้กันเข้าใจผิดว่าระบบแสดงผลพัง --}}
+            <div class="small text-muted mt-3 mb-0">
+                <i class="ti ti-info-circle me-1"></i>
+                ข้อความภาษาไทยในไฟล์ Access ถูกบันทึกมาเป็น <code>?</code> ตั้งแต่ต้นทาง (ชื่อลูกค้า / ผู้เทียบสี / รายละเอียดสูตร) กู้คืนจากไฟล์ไม่ได้
+            </div>
+        </div>
+
+        <div id="access-table-data">
+            {{-- ตารางโหลดผ่าน AJAX จาก saleinfo/access-data --}}
+            <div class="text-center py-5 text-muted">
+                <div class="spinner-border spinner-border-sm me-2"></div>
+                กำลังโหลดข้อมูล...
+            </div>
+        </div>
+
+    </div>
+
 </div>
 
                     @include('layout/inc_footer')
@@ -438,6 +520,79 @@
         });
         loadData("{{ $page_url }}/datatable");
     }
+
+    // ────────────────────────────────────────────────────────
+    //  ข้อมูลจากไฟล์ Access เดิม (3 ตาราง) — อ่านอย่างเดียว
+    //  แยก loader ของตัวเองจากตารางหลัก เพราะมี filter/pagination คนละชุด
+    // ────────────────────────────────────────────────────────
+    var accessTab  = 'pdprice';
+    var accessXhr  = null;
+    var accessSeq  = 0;
+    var accessTimer = null;
+
+    // คำใบ้ว่าแท็บนี้ค้นจากคอลัมน์ไหนได้บ้าง (ต้องตรงกับ ACCESS_TABS ฝั่ง controller)
+    var ACCESS_HINT = {
+        pdprice: '(รหัสสินค้า)',
+        compo:   '(รหัสสูตร / รหัสส่วนผสม / เลขที่เทียบสี / เลขที่แก้ไข)',
+        testmai: '(เลขที่เทียบสี / Lot / รายละเอียด / รหัสลูกค้า / ชื่อลูกค้า / เม็ดพลาสติก / ผู้เทียบสี)'
+    };
+
+    // pages = URL เต็ม (ตอนกดเลขหน้า) หรือไม่ส่ง = เริ่มหน้า 1 ใหม่
+    function loadAccessData(pages) {
+        var url = pages || "{{ $page_url }}/access-data";
+
+        var seq = ++accessSeq;
+        if (accessXhr) accessXhr.abort();
+
+        accessXhr = $.ajax({
+            type: "GET",
+            url: url,
+            data: {
+                tab:           accessTab,
+                access_search: $('#access_search').val(),
+                access_limit:  $('#access_limit').val()
+            },
+            success: function (data) {
+                if (seq !== accessSeq) return;
+                $("#access-table-data").html(data);
+            },
+            error: function (xhr) {
+                if (seq !== accessSeq || xhr.statusText === 'abort') return;
+                $("#access-table-data").html(
+                    '<div class="text-center py-5 text-danger">' +
+                    '<i class="ti ti-alert-triangle fs-2 d-block mb-2"></i>' +
+                    'โหลดข้อมูลไม่สำเร็จ — ตรวจว่ารัน migration และนำเข้าข้อมูลตาราง access_* แล้วหรือยัง' +
+                    '</div>'
+                );
+            },
+            complete: function () {
+                if (seq === accessSeq) accessXhr = null;
+            }
+        });
+    }
+
+    $('#accessTabs .nav-link').on('click', function () {
+        var tab = $(this).data('tab');
+        if (tab === accessTab) return;
+
+        accessTab = tab;
+        $('#accessTabs .nav-link').removeClass('active');
+        $(this).addClass('active');
+
+        $('#access_search').val('');                        // เปลี่ยนตาราง = คนละคอลัมน์ ค้นค้างไว้ไม่มีความหมาย
+        $('#access_search_hint').text(ACCESS_HINT[tab]);
+        loadAccessData();
+    });
+
+    // หน่วง 400ms กันยิงรัวตอนพิมพ์
+    $('#access_search').on('input', function () {
+        clearTimeout(accessTimer);
+        accessTimer = setTimeout(function () { loadAccessData(); }, 400);
+    });
+
+    $('#access_limit').on('change', function () { loadAccessData(); });
+
+    loadAccessData();
 
     // ────────────────────────────────────────────────────────
     //  ฟอร์มกำหนดราคา
@@ -679,24 +834,61 @@
     // ────────────────────────────────────────────────────────
     //  ค้นหาราคาสินค้า (modal "New Price") — อ่านอย่างเดียว ไม่มีบันทึก
     //  วางรหัสสินค้า → ราคาขึ้นเอง (ไม่ต้องกดปุ่ม)
-    //  ⚠ ตัวเลขยังไม่ต่อ DB — ยังไม่รู้ที่มา/สูตรของราคาขาย 1/2/3 (รอลูกค้า)
+    //
+    //  ราคาขาย 1 = PdPrice.Price (ไฟล์ Access) × คูณ ÷ หาร + บวก
+    //             ตามตารางเงื่อนไขของลูกค้าใน config/product_price.php (จับคู่ด้วยตัวขึ้นต้น/ลงท้ายของรหัส)
+    //  ราคาขาย 2 = ราคาขาย 1 × 1.14   |   ราคาขาย 3 = ราคาขาย 2 × 1.30
+    //  ⚠ DB 1-2 / 3-4 Kg ยังไม่รู้สูตร — ยังไม่เติมค่า (รอลูกค้า)
     // ────────────────────────────────────────────────────────
     const NP_FIELDS = ['#np_price_1', '#np_price_2', '#np_price_3', '#np_db_3_4', '#np_db_1_2'];
-    let npTimer = null;
+    let npTimer = null, npXhr = null;
+
+    const npMoney = function (v) {
+        return Number(v).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
 
     function clearNewPrice() {
         NP_FIELDS.forEach(function (sel) { $(sel).val(''); });
+        $('#np_base_price, #np_rule, #np_formula').text('—');
+        $('#np_error').addClass('d-none').text('');
     }
 
-    // TODO: ต่อ endpoint จริง (saleinfo/price-lookup?code=...) แล้วเติมราคาลง NP_FIELDS
-    //       ตอนนี้แค่โชว์ว่ายังไม่มีข้อมูล เพื่อไม่ให้เข้าใจผิดว่าราคาเป็น 0
+    // แสดงผลที่ได้จาก endpoint — ไม่ได้ราคาก็บอกเหตุผล ไม่โชว์ 0 ให้เข้าใจผิด
+    function showNewPrice(res) {
+        clearNewPrice();
+
+        $('#np_base_price').text(res.base_price !== null ? npMoney(res.base_price) + ' บาท' : '—');
+        $('#np_rule').text(res.rule ? res.rule.label : '—');
+
+        if (res.rule) {
+            $('#np_formula').text('× ' + res.rule.mul + ' ÷ ' + res.rule.div + ' + ' + res.rule.add);
+        }
+
+        if (res.prices) {
+            $('#np_price_1').val(npMoney(res.prices.price_1));
+            $('#np_price_2').val(npMoney(res.prices.price_2));
+            $('#np_price_3').val(npMoney(res.prices.price_3));
+        } else if (res.reason) {
+            $('#np_error').removeClass('d-none').text(res.reason);
+        }
+    }
+
     function lookupNewPrice(code) {
         code = (code || '').trim();
         if (!code) {
             clearNewPrice();
             return;
         }
-        NP_FIELDS.forEach(function (sel) { $(sel).val('รอต่อข้อมูล'); });
+
+        if (npXhr) npXhr.abort();   // พิมพ์ต่อระหว่างรอผล → ทิ้งคำขอเก่า กันผลเก่ามาทับ
+        npXhr = $.getJSON("{{ $page_url }}/price-lookup", { code: code })
+            .done(showNewPrice)
+            .fail(function (xhr) {
+                if (xhr.statusText === 'abort') return;
+                showNewPrice(xhr.responseJSON || {
+                    base_price: null, rule: null, price: null, reason: 'เรียกข้อมูลราคาไม่สำเร็จ'
+                });
+            });
     }
 
     // หน่วง 400ms กันยิงรัวตอนพิมพ์ (วาง/พิมพ์ทีละตัวก็ทำงานเหมือนกัน)

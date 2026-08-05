@@ -10,6 +10,8 @@ Route::prefix('saleinfo')->group(function () {
 
     // ─── Lookup / helper ────────────────────────────────────────────
     Route::get('/customer/{code}', [SaleinfoController::class, 'customerLookup'])->name('saleinfo.customer_lookup');
+    Route::get('/price-lookup',    [SaleinfoController::class, 'priceLookup'])->name('saleinfo.price_lookup'); // → JSON (ค้นหาราคาสินค้า)
+    Route::get('/access-data',     [SaleinfoController::class, 'accessData'])->name('saleinfo.access_data');   // → HTML partial (ข้อมูลจากไฟล์ Access)
 
     // ─── อ่าน ────────────────────────────────────────────────────────
     Route::get('/edit/{id}', [SaleinfoController::class, 'edit'])->name('saleinfo.edit');   // → JSON (เติมฟอร์ม)

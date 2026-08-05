@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Saleinfo;
+use App\Services\ProductPriceService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -72,6 +73,81 @@ class SaleinfoController extends Controller
             'road'   => $cust->road,
             'term'   => $cust->term,
         ]);
+    }
+
+    /**
+     * ตารางสำเนาจากไฟล์ Access — ชื่อแท็บ → ชื่อตารางบน MySQL + คอลัมน์ที่ใช้ค้นหา
+     *
+     * (ดู migration create_access_mirror_tables — ข้อมูลถูกคัดลอกมาจาก formula_2000.mdb)
+     */
+    private const ACCESS_TABS = [
+        'compo'   => ['table' => 'access_compo',   'search' => ['PdCode', 'PdCodes', 'TestNo', 'ChangeNo']],
+        'pdprice' => ['table' => 'access_pdprice', 'search' => ['PdCode']],
+        'testmai' => ['table' => 'access_testmai', 'search' => ['TestNo', 'Lotno', 'TDecs', 'CCode', 'CName', 'Resin', 'Matcher']],
+    ];
+
+    /**
+     * GET — ข้อมูลดิบของตารางที่ยกมาจากไฟล์ Access (อ่านอย่างเดียว)
+     *
+     * ใช้ให้ลูกค้าตรวจว่าข้อมูลที่ย้ายขึ้น server มาครบ/ตรงกับไฟล์เดิมไหม
+     * คืน HTML partial ให้ AJAX เอาไปแปะ (รูปแบบเดียวกับ datatable ของหน้านี้)
+     */
+    public function accessData(Request $request)
+    {
+        $tab = $request->query('tab', 'pdprice');
+        if (!isset(self::ACCESS_TABS[$tab])) {
+            $tab = 'pdprice';
+        }
+
+        $config = self::ACCESS_TABS[$tab];
+        $query  = DB::table($config['table'])->orderBy('id');   // เรียงตาม id = ลำดับเดิมในไฟล์ Access
+
+        $search = trim((string) $request->query('access_search'));
+        if ($search !== '') {
+            $query->where(function ($q) use ($config, $search) {
+                foreach ($config['search'] as $col) {
+                    $q->orWhere($col, 'LIKE', "%{$search}%");
+                }
+            });
+        }
+
+        $limit = (int) $request->query('access_limit', 15);
+        $limit = in_array($limit, [15, 50, 100], true) ? $limit : 15;
+
+        // ไม่ append query เดิมเข้า URL ของเลขหน้า — ฝั่ง JS ส่ง tab/คำค้น/limit มาให้ทุกครั้งอยู่แล้ว
+        // ถ้า append ด้วยจะได้ query ซ้ำสองชุดใน URL
+        // withPath: ผูก URL ของเลขหน้ากับ path ของ request นี้ตรง ๆ ไม่พึ่ง path resolver ส่วนกลาง
+        $data['tab']       = $tab;
+        $data['list_data'] = $query->paginate($limit)->withPath($request->url());
+
+        return view('saleinfo.access-table', $data);
+    }
+
+    /**
+     * GET — ค้นหาราคาสินค้า (modal "New Price")
+     *
+     * ราคาทุนมาจากตาราง `access_pdprice` (สำเนาของ PdPrice ในไฟล์ Access)
+     * แล้วคิดราคาขายตามตารางเงื่อนไขของลูกค้าใน `config/product_price.php`
+     *   ราคาขาย 1 = Price × คูณ ÷ หาร + บวก → ราคาขาย 2 = 1 × 1.14 → ราคาขาย 3 = 2 × 1.30
+     */
+    public function priceLookup(Request $request, ProductPriceService $prices)
+    {
+        $code = trim((string) $request->query('code'));
+
+        try {
+            return response()->json($prices->lookup($code));
+        } catch (\Throwable $e) {
+            // อ่านตารางราคาทุนไม่ได้ (ยังไม่ได้ migrate / ยังไม่ได้ import ข้อมูล)
+            // — บอกให้รู้ ไม่ใช่โชว์ราคา 0 ให้เข้าใจผิด
+            return response()->json([
+                'found'      => false,
+                'code'       => $code,
+                'base_price' => null,
+                'rule'       => null,
+                'prices'     => null,
+                'reason'     => 'อ่านข้อมูลราคาทุนไม่ได้: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

@@ -2,7 +2,10 @@
 {{-- Modal: ค้นหาราคาสินค้า (จอเก่าชื่อ "New Price")                       --}}
 {{-- Trigger: data-bs-target="#newPriceModal"                             --}}
 {{-- อ่านอย่างเดียว — วางรหัสสินค้า → โชว์ราคา ไม่มีปุ่มบันทึก             --}}
-{{-- ⚠ ตัวเลขยังไม่ต่อ DB — ยังไม่รู้ที่มาของราคาขาย 1/2/3 (รอลูกค้า)      --}}
+{{-- ราคาขาย 1 = PdPrice.Price (Access) × คูณ ÷ หาร + บวก ตามตารางเงื่อนไข   --}}
+{{-- ของลูกค้าใน config/product_price.php                                   --}}
+{{-- ราคาขาย 2 = ราคาขาย 1 × 1.14   |   ราคาขาย 3 = ราคาขาย 2 × 1.30        --}}
+{{-- ⚠ DB 1-2 / 3-4 Kg ยังไม่รู้สูตร (รอลูกค้า)                             --}}
 {{-- ═══════════════════════════════════════════════════════════════════ --}}
 <div class="modal modalHeadDecor fade" id="newPriceModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -34,20 +37,33 @@
                     </div>
                 </div>
 
+                {{-- ─── ที่มาของราคา: ราคาทุนจาก Access + เงื่อนไขที่จับคู่ได้ ─── --}}
+                {{-- โชว์ให้ตรวจย้อนได้ว่าราคาขายมาจากไหน ไม่ใช่เลขลอย ๆ --}}
+                <div class="mb-3 p-3 rounded" style="background-color: #eef2f7; border: 1px solid #d5dce6;">
+                    <div class="row g-2 small">
+                        <div class="col-5 text-muted">ราคาทุน (PdPrice)</div>
+                        <div class="col-7 text-end fw-semibold" id="np_base_price">—</div>
+                        <div class="col-5 text-muted">เงื่อนไขที่เข้า</div>
+                        <div class="col-7 text-end fw-semibold" id="np_rule">—</div>
+                        <div class="col-5 text-muted">สูตรคำนวณ</div>
+                        <div class="col-7 text-end" id="np_formula">—</div>
+                    </div>
+                    <div class="small mt-2 text-danger d-none" id="np_error"></div>
+                </div>
+
                 {{-- ─── ราคาขาย (อ่านอย่างเดียว) ─── --}}
-                {{-- wip: ตัวเลขยังไม่ต่อ DB — ยังไม่รู้ที่มา/สูตรของราคาขาย 1/2/3 --}}
-                <div class="card shadow-sm mb-3 wip" style="border: 1px solid #e3e5ea;">
+                <div class="card shadow-sm mb-3" style="border: 1px solid #e3e5ea;">
                     <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between"
                         style="background-color: #f4f5f7; border-bottom: 2px solid #b6b9c2; border-radius: 0.375rem 0.375rem 0 0;">
                         <h6 class="mb-0 fw-semibold text-body">
                             <i class="ti ti-currency-baht me-1"></i>
                             ราคาขาย
                         </h6>
-                        <span class="badge bg-label-warning">รอที่มาของราคาจากลูกค้า</span>
                     </div>
 
                     <div class="card-body p-3">
 
+                        {{-- ราคาขาย 1 = ราคาฐานที่ได้จากตารางเงื่อนไข (อีก 2 ขั้นคูณต่อจากนี้) --}}
                         <div class="row g-2 align-items-center mb-2">
                             <div class="col-4">
                                 <label class="form-label small mb-0">ราคาขาย 1</label>
@@ -59,6 +75,7 @@
                             <div class="col-3"></div>
                         </div>
 
+                        {{-- ราคาขาย 2 = ราคาขาย 1 × 1.14 --}}
                         <div class="row g-2 align-items-center mb-2">
                             <div class="col-4">
                                 <label class="form-label small mb-0">ราคาขาย 2</label>
@@ -84,7 +101,8 @@
                             </div>
                         </div>
 
-                        <div class="row g-2 align-items-center mb-2">
+                        {{-- wip: โน้ตจอเก่าบอก "New Rate 3-4 +250" แต่ลงวันที่ 2565 — รอลูกค้ายืนยันก่อนเอาไปคำนวณ --}}
+                        <div class="row g-2 align-items-center mb-2 wip">
                             <div class="col-4"></div>
                             <div class="col-5">
                                 <input type="text" id="np_db_3_4" class="form-control text-end fw-semibold"
@@ -95,7 +113,8 @@
                             </div>
                         </div>
 
-                        <div class="row g-2 align-items-center">
+                        {{-- wip: โน้ตจอเก่าบอก "New Rate 1-2 +400" แต่ลงวันที่ 2565 — รอลูกค้ายืนยันก่อนเอาไปคำนวณ --}}
+                        <div class="row g-2 align-items-center wip">
                             <div class="col-4"></div>
                             <div class="col-5">
                                 <input type="text" id="np_db_1_2" class="form-control text-end fw-semibold"
