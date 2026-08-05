@@ -64,6 +64,17 @@ class ReportController extends Controller
     //  - แถว/กลุ่มที่ไม่มี inplan (NULL) จัดไว้ท้ายสุด
     public function machineTable(Request $request)
     {
+        ['groups' => $groups, 'total' => $total] = $this->buildMachineReport($request);
+
+        return view('production-planning.report.partials.machine-table', [
+            'groups' => $groups,
+            'total'  => $total,
+        ]);
+    }
+
+    // สร้างข้อมูลรายงาน (query + จัดกลุ่มตามเครื่องจักร) ใช้ร่วมกันทั้งตารางบนจอ / Excel / PDF
+    private function buildMachineReport(Request $request): array
+    {
         $company    = $request->get('dept');        // ชื่อแผนก (ตรงกับ tb_planning.company)
         $machine_no = $request->get('machine_no');  // code เครื่องจักร
         $date_start = $request->get('date_start');
@@ -81,7 +92,10 @@ class ReportController extends Controller
                 'tb_planning.itemno',
                 'tb_planning.lot',
                 'tb_planning.quantity',
+                'tb_planning.remark',
                 'customer.name as cust_name',
+                // Speed (RPM) ต่อเครื่องจักร: machine.speed_rpm (MBX = machine_no) — subquery กัน row ซ้ำ
+                \Illuminate\Support\Facades\DB::raw('(SELECT m.speed_rpm FROM machine m WHERE m.MBX = tb_planning.machine_no LIMIT 1) AS speed_rpm'),
             ])
             ->when(!empty($company), fn ($q) => $q->where('tb_planning.company', $company))
             ->when(!empty($machine_no), fn ($q) => $q->where('tb_planning.machine_no', $machine_no))
@@ -89,7 +103,46 @@ class ReportController extends Controller
             ->when(!empty($date_end), fn ($q) => $q->whereDate('tb_planning.inplan', '<=', $date_end))
             ->get();
 
-        // เปรียบเทียบวันที่ inplan (รูปแบบ Y-m-d เทียบ string ได้ตรงลำดับเวลา) — NULL/ว่าง ให้ไปท้ายสุด
+        // ── สถานะวิธีการผลิต (tb_planning_prod_method): แนบขั้นตอนของแต่ละรายการผลิต ──
+        // โหลดครั้งเดียวสำหรับทุก planning id แล้ว group ตาม planning_id
+        $planningIds = $rows->pluck('id')->all();
+        $stepsByPlanning = collect();
+        if (!empty($planningIds)) {
+            $stepsByPlanning = \Illuminate\Support\Facades\DB::table('tb_planning_prod_method as pm')
+                ->leftJoin('tb_prod_method as m', 'm.id', '=', 'pm.prod_method_id')
+                ->leftJoin('temp as t', 't.id', '=', 'pm.temp_id')
+                ->whereIn('pm.planning_id', $planningIds)
+                ->orderBy('pm.work_date')
+                ->orderBy('pm.start_time')
+                ->orderBy('pm.sort')
+                ->get([
+                    'pm.planning_id',
+                    'pm.work_date',
+                    'pm.start_time',
+                    'pm.end_time',
+                    'pm.sort',
+                    'm.name as method_name',
+                    't.Temp1 as temp_name',
+                ])
+                ->groupBy('planning_id');
+        }
+
+        // แนบ steps + คำนวณ job_key (เวลาเริ่มขั้นตอนแรก; ถ้าไม่มีขั้นตอน = inplan 00:00) ให้แต่ละรายการ
+        $rows->each(function ($it) use ($stepsByPlanning) {
+            $steps = $stepsByPlanning->get($it->id, collect())->values();
+            $it->steps = $steps;
+
+            if ($steps->isNotEmpty()) {
+                $first = $steps->first(); // เรียง work_date,start_time มาแล้วจาก query
+                $wd = $first->work_date ? substr($first->work_date, 0, 10) : null;
+                $st = $first->start_time ? substr($first->start_time, 0, 8) : '00:00:00';
+                $it->job_key = $wd ? ($wd.' '.$st) : ($it->inplan ? substr($it->inplan, 0, 10).' 00:00:00' : null);
+            } else {
+                $it->job_key = $it->inplan ? substr($it->inplan, 0, 10).' 00:00:00' : null;
+            }
+        });
+
+        // เปรียบเทียบ key เวลา (รูปแบบ Y-m-d H:i:s เทียบ string ได้ตรงลำดับเวลา) — NULL/ว่าง ให้ไปท้ายสุด
         $compareInplan = function ($a, $b) {
             $a = $a ?: null;
             $b = $b ?: null;
@@ -109,18 +162,18 @@ class ReportController extends Controller
         $groups = $rows
             ->groupBy(fn ($r) => ($r->machine_no === null || $r->machine_no === '') ? '' : $r->machine_no)
             ->map(function ($items, $machine) use ($compareInplan) {
-                // เรียงภายในกลุ่ม: inplan เก่าสุดก่อน (แถววันเดียวกันเรียงตาม id)
+                // เรียงภายในกลุ่ม: ตาม job_key (เวลาเริ่มขั้นตอนแรก/ inplan) เก่าสุดก่อน
                 $sorted = $items->sort(function ($x, $y) use ($compareInplan) {
-                    $c = $compareInplan($x->inplan, $y->inplan);
+                    $c = $compareInplan($x->job_key, $y->job_key);
                     return $c !== 0 ? $c : ($x->id <=> $y->id);
                 })->values();
 
-                // inplan เก่าสุดของกลุ่ม (ข้ามค่า NULL/ว่าง)
-                $minInplan = $sorted->pluck('inplan')->filter()->sort()->first();
+                // job_key เก่าสุดของกลุ่ม (ข้ามค่า NULL/ว่าง)
+                $minKey = $sorted->pluck('job_key')->filter()->sort()->first();
 
                 return [
                     'machine' => $machine,
-                    'min'     => $minInplan ?: null,
+                    'min'     => $minKey ?: null,
                     'items'   => $sorted,
                 ];
             })
@@ -131,10 +184,183 @@ class ReportController extends Controller
             })
             ->values();
 
-        return view('production-planning.report.partials.machine-table', [
-            'groups' => $groups,
-            'total'  => $rows->count(),
+        return [
+            'groups'  => $groups,
+            'total'   => $rows->count(),
+            'filters' => [
+                'dept'       => $company,
+                'machine_no' => $machine_no,
+                'date_start' => $date_start,
+                'date_end'   => $date_end,
+            ],
+        ];
+    }
+
+    // Export Excel (.xlsx) — คงรูปแบบจัดกลุ่มตามเครื่องจักรเหมือนบนหน้าจอ
+    public function machineExcel(Request $request)
+    {
+        ['groups' => $groups, 'total' => $total, 'filters' => $filters] = $this->buildMachineReport($request);
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('รายงานผลิตตามเครื่องจักร');
+
+        // คอลัมน์ตามฟอร์ม — คอลัมน์ที่ยังไม่มีข้อมูลใน tb_planning เว้นค่าว่างไว้ก่อน
+        // (Revise, TP, Resin, Temp, CODE, Pack, Batch, สูตรตัวอย่าง)
+        $headers = [
+            '#', 'วันที่ลงแผน', 'Revise', 'Cust Name', 'เลขที่ใบเบิก', 'PRODUCT NO', 'LOT',
+            'น้ำหนักออเดอร์', 'TP', 'Resin', 'Temp', 'CODE', 'Speed (RPM)', 'Pack', 'Batch',
+            'สูตรตัวอย่าง', 'Remark',
+        ];
+        $cols    = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q'];
+        $lastCol = 'Q';
+        $weightCol = 'H'; // คอลัมน์น้ำหนักออเดอร์ (ใช้ทำผลรวมต่อเครื่อง)
+
+        // หัวรายงาน
+        $sheet->setCellValue('A1', 'รายงานผลิตตามเครื่องจักร');
+        $sheet->mergeCells("A1:{$lastCol}1");
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $sheet->setCellValue('A2', $this->filterSummary($filters, $total));
+        $sheet->mergeCells("A2:{$lastCol}2");
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // แถวหัวตาราง
+        $r = 4;
+        foreach ($headers as $i => $h) {
+            $sheet->setCellValue($cols[$i].$r, $h);
+        }
+        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setBold(true);
+        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('E9ECEF');
+        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getAlignment()->setWrapText(true);
+
+        $rownum = 0;
+        $r++;
+        foreach ($groups as $group) {
+            $machineLabel = $group['machine'] !== '' ? $group['machine'] : 'ไม่ระบุเครื่องจักร';
+
+            // หัวกลุ่มเครื่องจักร
+            $sheet->setCellValue("A{$r}", 'เครื่องจักร: '.$machineLabel);
+            $sheet->mergeCells("A{$r}:{$lastCol}{$r}");
+            $sheet->getStyle("A{$r}")->getFont()->setBold(true);
+            $sheet->getStyle("A{$r}")->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setRGB('F1F3F5');
+            $r++;
+
+            $groupSum = 0;
+            foreach ($group['items'] as $it) {
+                // แถวขั้นตอน "สถานะวิธีการผลิต" ก่อนแถวผลิต
+                foreach ($it->steps as $s) {
+                    $sheet->setCellValue("A{$r}", '↳');
+                    $sheet->setCellValue("B{$r}", $s->work_date ? \Carbon\Carbon::parse($s->work_date)->format('d/m/Y') : '');
+                    $desc = 'ขั้นตอน: '.($s->method_name ?: '-')
+                        .' ('.($s->start_time ? substr($s->start_time, 0, 5) : '--').'–'.($s->end_time ? substr($s->end_time, 0, 5) : '--').')'
+                        .($s->temp_name ? '   | Temp: '.$s->temp_name : '');
+                    $sheet->setCellValue("C{$r}", $desc);
+                    $sheet->mergeCells("C{$r}:Q{$r}");
+                    $sheet->getStyle("A{$r}:Q{$r}")->getFill()
+                        ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                        ->getStartColor()->setRGB('F8F9FA');
+                    $sheet->getStyle("A{$r}:Q{$r}")->getFont()->setItalic(true);
+                    $r++;
+                }
+
+                $sheet->setCellValue("A{$r}", ++$rownum);
+                $sheet->setCellValue("B{$r}", $it->inplan ? \Carbon\Carbon::parse($it->inplan)->format('d/m/Y') : '-');
+                $sheet->setCellValue("C{$r}", '');  // Revise (เว้นว่าง)
+                $sheet->setCellValue("D{$r}", $it->cust_name ?: '-');
+                $sheet->setCellValue("E{$r}", $it->red_bill_code ?: '-');
+                $sheet->setCellValueExplicit("F{$r}", $it->itemno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                $sheet->setCellValue("G{$r}", $it->lot ?: '-');
+                $sheet->setCellValue("H{$r}", $it->quantity !== null ? number_format($it->quantity, 2) : '-');
+                $sheet->setCellValue("I{$r}", '');  // TP (เว้นว่าง)
+                $sheet->setCellValue("J{$r}", '');  // Resin (เว้นว่าง)
+                $sheet->setCellValue("K{$r}", '');  // Temp (เว้นว่าง)
+                $sheet->setCellValue("L{$r}", '');  // CODE (เว้นว่าง)
+                $sheet->setCellValue("M{$r}", $it->speed_rpm ?: '');
+                $sheet->setCellValue("N{$r}", '');  // Pack (เว้นว่าง)
+                $sheet->setCellValue("O{$r}", '');  // Batch (เว้นว่าง)
+                $sheet->setCellValue("P{$r}", '');  // สูตรตัวอย่าง (เว้นว่าง)
+                $sheet->setCellValue("Q{$r}", $it->remark ?: '');
+                $groupSum += (float) ($it->quantity ?? 0);
+                $r++;
+            }
+
+            // แถวรวมต่อเครื่องจักร
+            $sheet->setCellValue("A{$r}", 'รวม '.$machineLabel);
+            $sheet->mergeCells("A{$r}:G{$r}");
+            $sheet->setCellValue("{$weightCol}{$r}", number_format($groupSum, 2));
+            $sheet->setCellValue("F{$r}", $group['items']->count().' รายการ');
+            $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setBold(true);
+            $r++;
+        }
+
+        if ($total === 0) {
+            $sheet->setCellValue("A{$r}", 'ไม่พบข้อมูลตามเงื่อนไขที่เลือก');
+            $sheet->mergeCells("A{$r}:{$lastCol}{$r}");
+            $sheet->getStyle("A{$r}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        }
+
+        foreach ($cols as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $fileName = 'report-machine-'.now()->format('Ymd-His').'.xlsx';
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save('php://output');
+        }, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ]);
+    }
+
+    // Export PDF — คงรูปแบบจัดกลุ่มตามเครื่องจักรเหมือนบนหน้าจอ
+    public function machinePdf(Request $request)
+    {
+        ['groups' => $groups, 'total' => $total, 'filters' => $filters] = $this->buildMachineReport($request);
+
+        $html = view('production-planning.report.partials.machine-pdf', [
+            'groups'  => $groups,
+            'total'   => $total,
+            'summary' => $this->filterSummary($filters, $total),
+        ])->render();
+
+        $mpdf = new \Mpdf\Mpdf([
+            'mode'          => 'utf-8',
+            'format'        => 'A4-L', // แนวนอน (คอลัมน์เยอะตามฟอร์ม)
+            'margin_left'   => 6,
+            'margin_right'  => 6,
+            'margin_top'    => 8,
+            'margin_bottom' => 8,
+        ]);
+        $mpdf->autoScriptToLang = true;
+        $mpdf->autoLangToFont   = true;
+        $mpdf->SetFont('sarabun');
+        $mpdf->WriteHTML($html);
+
+        return response($mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="report-machine.pdf"',
+        ]);
+    }
+
+    // ข้อความสรุปเงื่อนไขค้นหา (ใช้บนหัว Excel/PDF)
+    private function filterSummary(array $filters, int $total): string
+    {
+        $parts = [];
+        $parts[] = 'แผนก: '.($filters['dept'] ?: 'ทุกแผนก');
+        $parts[] = 'เครื่องจักร: '.($filters['machine_no'] ?: 'ทุกเครื่องจักร');
+
+        $ds = $filters['date_start'] ? \Carbon\Carbon::parse($filters['date_start'])->format('d/m/Y') : '-';
+        $de = $filters['date_end'] ? \Carbon\Carbon::parse($filters['date_end'])->format('d/m/Y') : '-';
+        $parts[] = 'ช่วงวันที่ Inplan: '.$ds.' - '.$de;
+        $parts[] = 'พบ '.number_format($total).' รายการ';
+
+        return implode('   |   ', $parts);
     }
 
     public function employee()

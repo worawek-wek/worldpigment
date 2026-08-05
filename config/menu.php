@@ -94,6 +94,13 @@ return [
                         'route_name' => 'production.report.employee.index',
                         'permission' => 'productionplanning read',
                     ],
+                    'OrderChangeRequest' => [
+                        'title' => 'ใบขอเปลี่ยนแปลงคำสั่งซื้อภายใน',
+                        'icon' => '',
+                        'menu_parent' => 'ProductionReport',
+                        'route_name' => 'production.orderchange.index',
+                        'permission' => 'productionplanning read',
+                    ],
                 ],
             ],
         ],

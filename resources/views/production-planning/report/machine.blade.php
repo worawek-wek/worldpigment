@@ -83,8 +83,16 @@
         <div class="row">
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header">
+                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <h5 class="mb-0"><i class="ti ti-report me-1"></i>ผลลัพธ์รายงาน</h5>
+                        <div class="d-flex gap-2">
+                            <a id="btn_export_excel" href="#" target="_blank" class="btn btn-success btn-sm">
+                                <i class="ti ti-file-spreadsheet me-1"></i>Export Excel
+                            </a>
+                            <a id="btn_export_pdf" href="#" target="_blank" class="btn btn-danger btn-sm">
+                                <i class="ti ti-file-type-pdf me-1"></i>Export PDF
+                            </a>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div id="reportResult" class="table-responsive">
@@ -105,6 +113,25 @@
 <script>
     var URL_MACHINE_OPTIONS = '{{ route('production.report.machine.options') }}';
     var URL_MACHINE_TABLE   = '{{ route('production.report.machine.table') }}';
+    var URL_MACHINE_EXCEL   = '{{ route('production.report.machine.excel') }}';
+    var URL_MACHINE_PDF     = '{{ route('production.report.machine.pdf') }}';
+
+    // เก็บเงื่อนไขค้นหาปัจจุบันเป็น object เพื่อใช้ทั้งโหลดตารางและลิงก์ export
+    function currentFilters() {
+        return {
+            dept:       $('#searchDept').val(),
+            machine_no: $('#searchMachine').val(),
+            date_start: $('#searchDateStart').val(),
+            date_end:   $('#searchDateEnd').val()
+        };
+    }
+
+    // อัปเดต href ปุ่ม export ให้ตรงกับเงื่อนไขค้นหาล่าสุด
+    function updateExportLinks() {
+        var qs = $.param(currentFilters());
+        $('#btn_export_excel').attr('href', URL_MACHINE_EXCEL + '?' + qs);
+        $('#btn_export_pdf').attr('href', URL_MACHINE_PDF + '?' + qs);
+    }
 
     // แปลงข้อความให้ปลอดภัยก่อนใส่เป็น option
     function escHtml(v) {
@@ -119,15 +146,12 @@
             '<p class="mt-2 mb-0">กำลังโหลดข้อมูล...</p></div>'
         );
 
+        updateExportLinks();
+
         $.ajax({
             type: 'GET',
             url: URL_MACHINE_TABLE,
-            data: {
-                dept:       $('#searchDept').val(),
-                machine_no: $('#searchMachine').val(),
-                date_start: $('#searchDateStart').val(),
-                date_end:   $('#searchDateEnd').val()
-            },
+            data: currentFilters(),
             success: function (html) {
                 $('#reportResult').html(html);
             },

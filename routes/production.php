@@ -37,6 +37,9 @@ Route::prefix('production-planning')->group(function () {
     Route::get('/report/machine/options', [Production\ReportController::class, 'machineOptions'])->name('production.report.machine.options');
     // ตารางรายงานผลิตตามเครื่องจักร (คืน HTML จัดกลุ่มตามเครื่องจักร ผ่าน AJAX)
     Route::get('/report/machine/table', [Production\ReportController::class, 'machineTable'])->name('production.report.machine.table');
+    // Export รายงานผลิตตามเครื่องจักร (ใช้เงื่อนไขค้นหาเดียวกันกับตาราง)
+    Route::get('/report/machine/excel', [Production\ReportController::class, 'machineExcel'])->name('production.report.machine.excel');
+    Route::get('/report/machine/pdf', [Production\ReportController::class, 'machinePdf'])->name('production.report.machine.pdf');
     Route::get('/report/employee', [Production\ReportController::class, 'employee'])->name('production.report.employee.index');
 
     // สถานะ Planning (master data)
@@ -118,6 +121,10 @@ Route::prefix('production-planning')->group(function () {
     Route::get('/prod-method/edit', [ProdMethodController::class, 'edit'])->name('prodmethod.edit');
     Route::post('/prod-method/store', [ProdMethodController::class, 'store'])->name('prodmethod.store');
     Route::post('/prod-method/toggle-status', [ProdMethodController::class, 'toggleStatus'])->name('prodmethod.toggle-status');
+
+    // ใบขอเปลี่ยนแปลงคำสั่งซื้อจากภายใน (ดึง Order ที่ปิดจบงาน end_close = Y แล้วออก PDF)
+    Route::get('/order-change-request', [Production\OrderChangeRequestController::class, 'index'])->name('production.orderchange.index');
+    Route::get('/order-change-request/pdf', [Production\OrderChangeRequestController::class, 'pdf'])->name('production.orderchange.pdf');
 
     // Temp (master)
     Route::get('/temp', [TempController::class, 'index'])->name('temp.index');
