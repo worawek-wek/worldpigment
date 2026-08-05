@@ -6,6 +6,7 @@ use App\Http\Controllers\EmpController as EmpController;
 use App\Http\Controllers\RoleController as RoleController;
 use App\Http\Controllers\MachineController as MachineController;
 use App\Http\Controllers\ProdMethodController as ProdMethodController;
+use App\Http\Controllers\TempController as TempController;
 
 Route::prefix('production-planning')->group(function () {
 
@@ -117,5 +118,13 @@ Route::prefix('production-planning')->group(function () {
     Route::get('/prod-method/edit', [ProdMethodController::class, 'edit'])->name('prodmethod.edit');
     Route::post('/prod-method/store', [ProdMethodController::class, 'store'])->name('prodmethod.store');
     Route::post('/prod-method/toggle-status', [ProdMethodController::class, 'toggleStatus'])->name('prodmethod.toggle-status');
+
+    // Temp (master)
+    Route::get('/temp', [TempController::class, 'index'])->name('temp.index');
+    Route::get('/temp/datatable', [TempController::class, 'datatable'])->name('temp.datatable');
+    Route::get('/temp/edit', [TempController::class, 'edit'])->name('temp.edit');
+    Route::post('/temp/store', [TempController::class, 'store'])->name('temp.store');
+    Route::post('/temp/delete', [TempController::class, 'destroy'])->name('temp.delete');
+    Route::post('/temp/toggle-status', [TempController::class, 'toggleStatus'])->name('temp.toggle-status');
 
 });

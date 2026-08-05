@@ -108,7 +108,46 @@
                        class="form-control" placeholder="รอบการผลิต">
             </div>
         </div>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label class="form-label">วันที่สั่ง (mdate)</label>
+                <input type="date" name="mdate"
+                    value="{{ $planning_item?->mdate ? substr($planning_item->mdate, 0, 10) : '' }}"
+                    class="form-control">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label">วันที่ต้องการรับ (custwant)</label>
+                <input type="date" name="custwant"
+                    value="{{ $planning_item?->custwant ? substr($planning_item->custwant, 0, 10) : '' }}"
+                    class="form-control">
+            </div>
+            <div class="col-md-4 mb-3">
+                <label class="form-label d-flex align-items-center justify-content-between">
+                    <span>วันที่กำหนดทบทวน (senddate)</span>
+                    @if($planning_item && count($senddate_logs))
+                        <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none" id="btn_senddate_log">
+                            <i class="ti ti-history me-1"></i>ประวัติ
+                            <span class="badge bg-label-secondary ms-1">{{ count($senddate_logs) }}</span>
+                        </button>
+                    @endif
+                </label>
+                <input type="date" name="senddate"
+                    value="{{ $planning_item?->senddate ? substr($planning_item->senddate, 0, 10) : '' }}"
+                    class="form-control">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">หมายเหตุ (Remark)</label>
+                <input type="text" name="remark"
+                       value="{{ $planning_item?->remark ?? '' }}"
+                       class="form-control" placeholder="หมายเหตุ">
+            </div>
+        </div>
+
         <div class="row my-2"><hr /></div>
+
+
         <div class="row p-3 rounded" style="background-color: #e5f4ff; border: 1px dashed #3f50e2;">
             @php
                 // แผนกปัจจุบันของ item: ใช้ของ item ก่อน ถ้าว่างจึง fallback ไปที่ header
@@ -160,6 +199,74 @@
         </div>
 
         <div class="row my-2"><hr /></div>
+
+        <div class="row p-3 rounded" style="background-color: #fff1ca; border: 1px dashed #ffc107;">
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">วันที่วางแผนผลิต (Inplan)</label>
+                    <input type="date" name="inplan"
+                        value="{{ $planning_item?->inplan ?? '' }}"
+                        class="form-control">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">กะการผลิต (Work Shift)</label>
+                    @php $current_shift = $planning_item?->work_shift ?? ''; @endphp
+                    <select name="work_shift" class="form-select">
+                        <option value="">เลือกกะ</option>
+                        @foreach(['A', 'B', 'C'] as $shift)
+                            <option value="{{ $shift }}" {{ $current_shift === $shift ? 'selected' : '' }}>{{ $shift }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">พนักงานผู้รับผิดชอบ</label>
+                    @php $current_empno = $planning_item?->empno ?? ''; @endphp
+                    <select name="empno" id="planning_item_empno" class="form-select">
+                        <option value="">เลือกพนักงาน</option>
+                        @foreach($employees as $e)
+                            <option value="{{ $e->empno }}" {{ $current_empno === $e->empno ? 'selected' : '' }}>
+                                {{ trim($e->empname.' '.$e->empsur) }}
+                            </option>
+                        @endforeach
+                        {{-- fallback: พนักงานเดิมไม่อยู่ในลิสต์แผนกปัจจุบัน (ย้ายแผนก/ปิดใช้งาน) --}}
+                        @if($current_empno !== '' && !$employees->contains('empno', $current_empno))
+                            <option value="{{ $current_empno }}" selected>
+                                {{ $selected_emp ? trim($selected_emp->empname.' '.$selected_emp->empsur) : $current_empno }} (เดิม)
+                            </option>
+                        @endif
+                    </select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">วันที่เริ่มผลิต (Start Date)</label>
+                    <input type="date" name="start_date"
+                        value="{{ $planning_item?->start_date ?? '' }}"
+                        class="form-control">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">เวลาที่เริ่มผลิต (Start Time)</label>
+                    <input type="time" name="start_time"
+                        value="{{ $planning_item?->start_time ? substr($planning_item->start_time, 0, 5) : '' }}"
+                        class="form-control">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">วันที่ผลิตเสร็จ (End Date)</label>
+                    <input type="date" name="end_date"
+                        value="{{ $planning_item?->end_date ?? '' }}"
+                        class="form-control">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">เวลาที่ผลิตเสร็จ (End Time)</label>
+                    <input type="time" name="end_time"
+                        value="{{ $planning_item?->end_time ? substr($planning_item->end_time, 0, 5) : '' }}"
+                        class="form-control">
+                </div>
+            </div>
+        </div>
+
+        <div class="row my-2"><hr /></div>
+
 
         {{-- ── การ์ดสีน้ำเงิน: สถานะวิธีการผลิต (บันทึกลง tb_planning_prod_method) ── --}}
         <div class="row p-3 rounded mt-2" style="background-color: rgb(211, 250, 160); border: 1px dashed #33cc05;">
@@ -221,101 +328,6 @@
                             </div>
                         </div>
                     @endforelse
-                </div>
-            </div>
-        </div>
-
-        <div class="row my-2"><hr /></div>
-
-        <div class="row p-3 rounded" style="background-color: #fff1ca; border: 1px dashed #ffc107;">
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">วันที่สั่ง (mdate)</label>
-                    <input type="date" name="mdate"
-                        value="{{ $planning_item?->mdate ? substr($planning_item->mdate, 0, 10) : '' }}"
-                        class="form-control">
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">วันที่ต้องการรับ (custwant)</label>
-                    <input type="date" name="custwant"
-                        value="{{ $planning_item?->custwant ? substr($planning_item->custwant, 0, 10) : '' }}"
-                        class="form-control">
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label class="form-label d-flex align-items-center justify-content-between">
-                        <span>วันที่กำหนดทบทวน (senddate)</span>
-                        @if($planning_item && count($senddate_logs))
-                            <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none" id="btn_senddate_log">
-                                <i class="ti ti-history me-1"></i>ประวัติ
-                                <span class="badge bg-label-secondary ms-1">{{ count($senddate_logs) }}</span>
-                            </button>
-                        @endif
-                    </label>
-                    <input type="date" name="senddate"
-                        value="{{ $planning_item?->senddate ? substr($planning_item->senddate, 0, 10) : '' }}"
-                        class="form-control">
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-3 mb-3">
-                    <label class="form-label">วันที่วางแผนผลิต (Inplan)</label>
-                    <input type="date" name="inplan"
-                        value="{{ $planning_item?->inplan ?? '' }}"
-                        class="form-control">
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label class="form-label">กะการผลิต (Work Shift)</label>
-                    @php $current_shift = $planning_item?->work_shift ?? ''; @endphp
-                    <select name="work_shift" class="form-select">
-                        <option value="">เลือกกะ</option>
-                        @foreach(['A', 'B', 'C'] as $shift)
-                            <option value="{{ $shift }}" {{ $current_shift === $shift ? 'selected' : '' }}>{{ $shift }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label class="form-label">พนักงานผู้รับผิดชอบ</label>
-                    @php $current_empno = $planning_item?->empno ?? ''; @endphp
-                    <select name="empno" id="planning_item_empno" class="form-select">
-                        <option value="">เลือกพนักงาน</option>
-                        @foreach($employees as $e)
-                            <option value="{{ $e->empno }}" {{ $current_empno === $e->empno ? 'selected' : '' }}>
-                                {{ trim($e->empname.' '.$e->empsur) }}
-                            </option>
-                        @endforeach
-                        {{-- fallback: พนักงานเดิมไม่อยู่ในลิสต์แผนกปัจจุบัน (ย้ายแผนก/ปิดใช้งาน) --}}
-                        @if($current_empno !== '' && !$employees->contains('empno', $current_empno))
-                            <option value="{{ $current_empno }}" selected>
-                                {{ $selected_emp ? trim($selected_emp->empname.' '.$selected_emp->empsur) : $current_empno }} (เดิม)
-                            </option>
-                        @endif
-                    </select>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-3 mb-3">
-                    <label class="form-label">วันที่เริ่มผลิต (Start Date)</label>
-                    <input type="date" name="start_date"
-                        value="{{ $planning_item?->start_date ?? '' }}"
-                        class="form-control">
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label class="form-label">เวลาที่เริ่มผลิต (Start Time)</label>
-                    <input type="time" name="start_time"
-                        value="{{ $planning_item?->start_time ? substr($planning_item->start_time, 0, 5) : '' }}"
-                        class="form-control">
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label class="form-label">วันที่ผลิตเสร็จ (End Date)</label>
-                    <input type="date" name="end_date"
-                        value="{{ $planning_item?->end_date ?? '' }}"
-                        class="form-control">
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label class="form-label">เวลาที่ผลิตเสร็จ (End Time)</label>
-                    <input type="time" name="end_time"
-                        value="{{ $planning_item?->end_time ? substr($planning_item->end_time, 0, 5) : '' }}"
-                        class="form-control">
                 </div>
             </div>
         </div>
@@ -395,22 +407,9 @@
                         class="form-control" placeholder="หมายเหตุการบรรจุ">
                 </div>
             </div>
-
-
         </div>
 
-        <div class="row my-2"><hr /></div>
-
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label class="form-label">หมายเหตุ (Remark)</label>
-                <input type="text" name="remark"
-                       value="{{ $planning_item?->remark ?? '' }}"
-                       class="form-control" placeholder="หมายเหตุ">
-            </div>
-        </div>
-
-        <hr class="my-3">
+        <hr class="my-4">
 
         {{-- ── Semi ── --}}
         <div class="d-flex justify-content-between align-items-center mb-2">

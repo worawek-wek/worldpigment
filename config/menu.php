@@ -161,5 +161,12 @@ return [
         'permission' => 'role read',
     ],
 
+    'Temp' => [
+        'title' => 'Temp',
+        'icon' => 'ti-list',
+        'route_name' => 'temp.index',
+        'permission' => 'temp read',
+    ],
+
 
 ];
