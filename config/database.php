@@ -63,6 +63,13 @@ return [
             ]) : [],
         ],
 
+        'access' => [
+            'driver' => 'access',
+            'database' => '',
+            'username' => '',
+            'password' => '',
+        ],
+
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DATABASE_URL'),
