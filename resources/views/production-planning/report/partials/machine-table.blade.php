@@ -28,23 +28,6 @@
                 </td>
             </tr>
             @foreach($group['items'] as $it)
-                {{-- แถวขั้นตอน "สถานะวิธีการผลิต" (แสดงก่อนแถวผลิต เรียงตาม work_date/start_time) --}}
-                @foreach($it->steps as $s)
-                    <tr style="background-color:#f8f9fa;">
-                        <td class="text-center text-muted">↳</td>
-                        <td colspan="7" style="padding-left:1.75rem;">
-                            <span class="text-muted small">ขั้นตอน:</span>
-                            <strong>{{ $s->method_name ?: '-' }}</strong>
-                            <span class="text-muted small ms-1">
-                                [{{ $s->work_date ? \Carbon\Carbon::parse($s->work_date)->format('d/m/Y') : '-' }}
-                                {{ $s->start_time ? substr($s->start_time, 0, 5) : '--' }}–{{ $s->end_time ? substr($s->end_time, 0, 5) : '--' }}]
-                            </span>
-                            @if($s->temp_name)
-                                <span class="badge bg-label-info ms-1">Temp: {{ $s->temp_name }}</span>
-                            @endif
-                        </td>
-                    </tr>
-                @endforeach
                 {{-- แถวผลิตสินค้า --}}
                 <tr>
                     <td class="text-center">{{ ++$rownum }}</td>
@@ -56,6 +39,20 @@
                     <td class="text-center">{{ $it->lot ?: '-' }}</td>
                     <td class="text-end">{{ $it->quantity !== null ? number_format($it->quantity, 2) : '-' }}</td>
                 </tr>
+                {{-- แถวขั้นตอน "สถานะวิธีการผลิต" (แสดงใต้แถวผลิต เรียงตาม work_date/start_time) --}}
+                @foreach($it->steps as $s)
+                    <tr style="background-color:#f8f9fa;">
+                        <td class="text-center text-muted">↳</td>
+                        <td colspan="7" style="padding-left:1.75rem;">
+                            <span class="text-muted small">ขั้นตอน:</span>
+                            <strong>{{ $s->method_name ?: '-' }}</strong>
+                            <span class="text-muted small ms-1">
+                                [{{ $s->work_date ? \Carbon\Carbon::parse($s->work_date)->format('d/m/Y') : '-' }}
+                                {{ $s->start_time ? substr($s->start_time, 0, 5) : '--' }}–{{ $s->end_time ? substr($s->end_time, 0, 5) : '--' }}]
+                            </span>
+                        </td>
+                    </tr>
+                @endforeach
             @endforeach
         @empty
             <tr>

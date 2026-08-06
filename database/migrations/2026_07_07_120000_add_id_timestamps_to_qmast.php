@@ -10,10 +10,13 @@ return new class extends Migration
     {
         // qmast เดิมไม่มี PRIMARY KEY (Qno เป็น varchar ธรรมดา)
         // เพิ่ม id AUTO_INCREMENT เป็น PK + created_at/updated_at
-        DB::statement('ALTER TABLE `qmast`
-            ADD COLUMN `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST,
-            ADD COLUMN `created_at` TIMESTAMP NULL DEFAULT NULL,
-            ADD COLUMN `updated_at` TIMESTAMP NULL DEFAULT NULL');
+        // database-first: เช็คก่อนกัน error ถ้าเพิ่มมือใน DB ไปแล้ว
+        if (!Schema::hasColumn('qmast', 'id')) {
+            DB::statement('ALTER TABLE `qmast`
+                ADD COLUMN `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST,
+                ADD COLUMN `created_at` TIMESTAMP NULL DEFAULT NULL,
+                ADD COLUMN `updated_at` TIMESTAMP NULL DEFAULT NULL');
+        }
     }
 
     public function down()

@@ -29,6 +29,8 @@ return new class extends Migration
     public function up()
     {
         // Compo — ส่วนผสมของสูตร (PdCode = สูตร, PdCodes = ตัวที่ใส่เข้าไป)
+        // database-first: ข้ามแต่ละตารางถ้าถูกสร้างมือใน DB ไปแล้ว
+        if (!Schema::hasTable('access_compo'))
         Schema::create('access_compo', function (Blueprint $table) {
             $table->id();
 
@@ -45,6 +47,7 @@ return new class extends Migration
         });
 
         // PdPrice — ราคาทุนต่อรหัสสินค้า
+        if (!Schema::hasTable('access_pdprice'))
         Schema::create('access_pdprice', function (Blueprint $table) {
             $table->id();
 
@@ -55,6 +58,7 @@ return new class extends Migration
         });
 
         // TestMai — หัวใบเทียบสี
+        if (!Schema::hasTable('access_testmai'))
         Schema::create('access_testmai', function (Blueprint $table) {
             $table->id();
 

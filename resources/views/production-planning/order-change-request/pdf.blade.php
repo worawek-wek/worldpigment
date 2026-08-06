@@ -10,7 +10,7 @@
     };
     $rangeText = '';
     if ($date_from || $date_to) {
-        $rangeText = 'ช่วงวันที่ปิดจบงาน: ' . $fmtDate($date_from) . ' - ' . $fmtDate($date_to);
+        $rangeText = 'ช่วงวันที่ (ปิดจบงาน / เปลี่ยน senddate): ' . $fmtDate($date_from) . ' - ' . $fmtDate($date_to);
     }
 @endphp
 <!DOCTYPE html>
@@ -65,9 +65,9 @@
                     <td class="text-center">{{ $i + 1 }}</td>
                     <td>{{ $row['itemno'] ?: '-' }}</td>
                     <td>{{ $row['custname'] ?: '-' }}</td>
-                    <td class="text-center">{{ $row['orderno'] ?: '-' }}</td>
-                    <td class="text-center">{{ $row['due_original'] }}</td>
-                    <td class="text-center">{{ $row['due_postpone'] }}</td>
+                    <td class="text-center">{{ $row['red_bill_code'] ?: '-' }}</td>
+                    <td class="text-center">{{ $fmtDate($row['due_original']) }}</td>
+                    <td class="text-center">{{ $fmtDate($row['due_postpone']) }}</td>
                     <td class="text-end">{{ $fmtNum($row['weight_from']) }}</td>
                     <td class="text-end">{{ $fmtNum($row['weight_to']) }}</td>
                     <td>{{ $row['reason'] }}</td>

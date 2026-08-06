@@ -19,6 +19,9 @@
     // ประวัติวันที่ส่งสินค้าเดิม (senddate_log) — เก็บคั่นด้วย comma เรียงตามลำดับการเปลี่ยน
     $senddate_logs = array_values(array_filter(array_map('trim', explode(',', $planning_item?->senddate_log ?? ''))));
 
+    // เวลาที่เปลี่ยน senddate ล่าสุด (senddate_changed_at) — ค่าเดียว โชว์รวมด้านบน modal (ไม่ผูกรายบรรทัด)
+    $senddate_changed_at = $planning_item?->senddate_changed_at;
+
     // ออเดอร์ (header แม่) ถูกปิดแล้วหรือยัง — ถ้าปิดแล้ว modal นี้จะเป็นโหมดอ่านอย่างเดียว (กดได้แค่ยกเลิก)
     $order_closed = ($parent_header?->end_order ?? 'N') === 'Y';
 @endphp
@@ -237,6 +240,78 @@
                     </select>
                 </div>
             </div>
+        </div>
+
+        <div class="row my-2"><hr /></div>
+
+
+        {{-- ── การ์ดสีน้ำเงิน: สถานะวิธีการผลิต (บันทึกลง tb_planning_prod_method) ── --}}
+        <div class="row p-3 rounded mt-2" style="background-color: rgb(211, 250, 160); border: 1px dashed #33cc05;">
+            <div class="col-12 d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0 text-primary">
+                    <i class="ti ti-clipboard-list me-1"></i>สถานะวิธีการผลิต
+                </h6>
+                <button type="button" id="btn_add_prod_method" class="btn btn-sm btn-primary">
+                    <i class="ti ti-plus me-1"></i>เพิ่ม
+                </button>
+            </div>
+            <div class="col-12">
+                {{-- หัวคอลัมน์ (แสดงครั้งเดียว) --}}
+                <div class="row g-2 fw-semibold small text-muted mb-1 d-none d-md-flex">
+                    <div class="col-md-4">วิธีการผลิต</div>
+                    <div class="col-md-3">วันที่</div>
+                    <div class="col-md-2">เวลาเริ่ม</div>
+                    <div class="col-md-2">เวลาที่เสร็จ</div>
+                    <div class="col-md-1"></div>
+                </div>
+                @php
+                    // สร้างตัวเลือก <option> ของวิธีการผลิต (ใช้ซ้ำในทุกแถวที่ render ฝั่ง server)
+                    $prodMethodOptions = function ($selected = null) use ($prod_methods) {
+                        $out = '<option value="">เลือกวิธีการผลิต</option>';
+                        foreach ($prod_methods as $pm) {
+                            $sel = ((string) $selected === (string) $pm->id) ? 'selected' : '';
+                            $out .= '<option value="'.$pm->id.'" '.$sel.'>'.e($pm->name).'</option>';
+                        }
+                        return $out;
+                    };
+                @endphp
+                <div id="prod_method_rows">
+                    @forelse($prod_method_rows as $row)
+                        <div class="row g-2 align-items-center mb-2 prod-method-row">
+                            <div class="col-md-4">
+                                <select name="prod_method_id[]" class="form-select form-select-sm">{!! $prodMethodOptions($row->prod_method_id) !!}</select>
+                            </div>
+                            <div class="col-md-3"><input type="date" name="prod_method_date[]" class="form-control form-control-sm" value="{{ $row->work_date ? substr($row->work_date, 0, 10) : '' }}"></div>
+                            <div class="col-md-2"><input type="time" name="prod_method_start[]" class="form-control form-control-sm" value="{{ $row->start_time ? substr($row->start_time, 0, 5) : '' }}"></div>
+                            <div class="col-md-2"><input type="time" name="prod_method_end[]" class="form-control form-control-sm" value="{{ $row->end_time ? substr($row->end_time, 0, 5) : '' }}"></div>
+                            <div class="col-md-1">
+                                <button type="button" class="btn btn-sm btn-outline-danger btn_remove_prod_method" title="ลบ">
+                                    <i class="ti ti-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="row g-2 align-items-center mb-2 prod-method-row">
+                            <div class="col-md-4">
+                                <select name="prod_method_id[]" class="form-select form-select-sm">{!! $prodMethodOptions() !!}</select>
+                            </div>
+                            <div class="col-md-3"><input type="date" name="prod_method_date[]" class="form-control form-control-sm"></div>
+                            <div class="col-md-2"><input type="time" name="prod_method_start[]" class="form-control form-control-sm"></div>
+                            <div class="col-md-2"><input type="time" name="prod_method_end[]" class="form-control form-control-sm"></div>
+                            <div class="col-md-1">
+                                <button type="button" class="btn btn-sm btn-outline-danger btn_remove_prod_method" title="ลบ">
+                                    <i class="ti ti-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+
+        <div class="row my-2"><hr /></div>
+
+        <div class="row p-3 rounded" style="background-color: rgb(241, 211, 250);  border: 1px dashed #9e05bd;">
             <div class="row">
                 <div class="col-md-3 mb-3">
                     <label class="form-label">วันที่เริ่มผลิต (Start Date)</label>
@@ -267,114 +342,29 @@
 
         <div class="row my-2"><hr /></div>
 
-
-        {{-- ── การ์ดสีน้ำเงิน: สถานะวิธีการผลิต (บันทึกลง tb_planning_prod_method) ── --}}
-        <div class="row p-3 rounded mt-2" style="background-color: rgb(211, 250, 160); border: 1px dashed #33cc05;">
-            <div class="col-12 d-flex justify-content-between align-items-center mb-2">
-                <h6 class="mb-0 text-primary">
-                    <i class="ti ti-clipboard-list me-1"></i>สถานะวิธีการผลิต
-                </h6>
-                <button type="button" id="btn_add_prod_method" class="btn btn-sm btn-primary">
-                    <i class="ti ti-plus me-1"></i>เพิ่ม
-                </button>
-            </div>
-            <div class="col-12">
-                {{-- หัวคอลัมน์ (แสดงครั้งเดียว) --}}
-                <div class="row g-2 fw-semibold small text-muted mb-1 d-none d-md-flex">
-                    <div class="col-md-3">วิธีการผลิต</div>
-                    <div class="col-md-2">วันที่</div>
-                    <div class="col-md-2">เวลาเริ่ม</div>
-                    <div class="col-md-2">เวลาที่เสร็จ</div>
-                    <div class="col-md-2">Temp</div>
-                    <div class="col-md-1"></div>
+        <div class="row p-3 rounded" >
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">วันที่ส่ง Qc (QC Date)</label>
+                    <input type="date" name="qc_date"
+                        value="{{ $planning_item?->qc_date ?? '' }}"
+                        class="form-control">
                 </div>
-                @php
-                    // สร้างตัวเลือก <option> ของวิธีการผลิต (ใช้ซ้ำในทุกแถวที่ render ฝั่ง server)
-                    $prodMethodOptions = function ($selected = null) use ($prod_methods) {
-                        $out = '<option value="">เลือกวิธีการผลิต</option>';
-                        foreach ($prod_methods as $pm) {
-                            $sel = ((string) $selected === (string) $pm->id) ? 'selected' : '';
-                            $out .= '<option value="'.$pm->id.'" '.$sel.'>'.e($pm->name).'</option>';
-                        }
-                        return $out;
-                    };
-                    // สร้างตัวเลือก <option> ของ Temp (ใช้ซ้ำในทุกแถวที่ render ฝั่ง server)
-                    $tempOptions = function ($selected = null) use ($temps, $inactive_temps) {
-                        $out = '<option value="">เลือก Temp</option>';
-                        // ค่าเดิมที่ถูกปิดใช้งาน (ไม่อยู่ในรายการที่เปิดใช้งาน) ให้แสดงไว้
-                        if ($selected && $inactive_temps->has($selected)) {
-                            $out .= '<option value="'.$selected.'" selected>'.e($inactive_temps[$selected]->Temp1).' (เดิม)</option>';
-                        }
-                        foreach ($temps as $t) {
-                            $sel = ((string) $selected === (string) $t->id) ? 'selected' : '';
-                            $out .= '<option value="'.$t->id.'" '.$sel.'>'.e($t->Temp1).'</option>';
-                        }
-                        return $out;
-                    };
-                @endphp
-                <div id="prod_method_rows">
-                    @forelse($prod_method_rows as $row)
-                        <div class="row g-2 align-items-center mb-2 prod-method-row">
-                            <div class="col-md-3">
-                                <select name="prod_method_id[]" class="form-select form-select-sm">{!! $prodMethodOptions($row->prod_method_id) !!}</select>
-                            </div>
-                            <div class="col-md-2"><input type="date" name="prod_method_date[]" class="form-control form-control-sm" value="{{ $row->work_date ? substr($row->work_date, 0, 10) : '' }}"></div>
-                            <div class="col-md-2"><input type="time" name="prod_method_start[]" class="form-control form-control-sm" value="{{ $row->start_time ? substr($row->start_time, 0, 5) : '' }}"></div>
-                            <div class="col-md-2"><input type="time" name="prod_method_end[]" class="form-control form-control-sm" value="{{ $row->end_time ? substr($row->end_time, 0, 5) : '' }}"></div>
-                            <div class="col-md-2">
-                                <select name="temp_id[]" class="form-select form-select-sm">{!! $tempOptions($row->temp_id) !!}</select>
-                            </div>
-                            <div class="col-md-1">
-                                <button type="button" class="btn btn-sm btn-outline-danger btn_remove_prod_method" title="ลบ">
-                                    <i class="ti ti-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                    @empty
-                        <div class="row g-2 align-items-center mb-2 prod-method-row">
-                            <div class="col-md-3">
-                                <select name="prod_method_id[]" class="form-select form-select-sm">{!! $prodMethodOptions() !!}</select>
-                            </div>
-                            <div class="col-md-2"><input type="date" name="prod_method_date[]" class="form-control form-control-sm"></div>
-                            <div class="col-md-2"><input type="time" name="prod_method_start[]" class="form-control form-control-sm"></div>
-                            <div class="col-md-2"><input type="time" name="prod_method_end[]" class="form-control form-control-sm"></div>
-                            <div class="col-md-2">
-                                <select name="temp_id[]" class="form-select form-select-sm">{!! $tempOptions() !!}</select>
-                            </div>
-                            <div class="col-md-1">
-                                <button type="button" class="btn btn-sm btn-outline-danger btn_remove_prod_method" title="ลบ">
-                                    <i class="ti ti-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                    @endforelse
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">เวลาที่ส่ง Qc (QC Time)</label>
+                    <input type="time" name="qc_time"
+                        value="{{ $planning_item?->qc_time ?? '' }}"
+                        class="form-control" placeholder="HH:MM">
                 </div>
-            </div>
-        </div>
-
-        <div class="row my-2"><hr /></div>
-
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <label class="form-label">วันที่ส่ง Qc (QC Date)</label>
-                <input type="date" name="qc_date"
-                       value="{{ $planning_item?->qc_date ?? '' }}"
-                       class="form-control">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label class="form-label">เวลาที่ส่ง Qc (QC Time)</label>
-                <input type="time" name="qc_time"
-                       value="{{ $planning_item?->qc_time ?? '' }}"
-                       class="form-control" placeholder="HH:MM">
-            </div>
-            <div class="col-md-4 mb-3">
-            <label class="form-label">สถานะ Qc (QC Status) </label>
-                <select name="qc_status" class="form-select">
-                    <option value="">เลือกสถานะ</option>
-                    <option value="PASSED" @if($planning_item?->qc_status === 'PASSED') selected @endif>ผ่าน</option>
-                    <option value="FAILED" @if($planning_item?->qc_status === 'FAILED') selected @endif>ไม่ผ่าน</option>
-                    <option value="PENDINGREVISION" @if($planning_item?->qc_status === 'PENDINGREVISION') selected @endif>รอสูตรปรับแก้</option>
-                </select>
+                <div class="col-md-4 mb-3">
+                <label class="form-label">สถานะ Qc (QC Status) </label>
+                    <select name="qc_status" class="form-select">
+                        <option value="">เลือกสถานะ</option>
+                        <option value="PASSED" @if($planning_item?->qc_status === 'PASSED') selected @endif>ผ่าน</option>
+                        <option value="FAILED" @if($planning_item?->qc_status === 'FAILED') selected @endif>ไม่ผ่าน</option>
+                        <option value="PENDINGREVISION" @if($planning_item?->qc_status === 'PENDINGREVISION') selected @endif>รอสูตรปรับแก้</option>
+                    </select>
+                </div>
             </div>
         </div>
 
@@ -603,10 +593,16 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="mb-2 small text-muted">
+                <div class="mb-1 small text-muted">
                     วันที่กำหนดทบทวนปัจจุบัน:
                     <strong>{{ $planning_item?->senddate ? \Carbon\Carbon::parse($planning_item->senddate)->format('d/m/Y') : '-' }}</strong>
                 </div>
+                @if($senddate_changed_at)
+                    <div class="mb-2 small text-muted">
+                        <i class="ti ti-clock-edit me-1"></i>แก้ไขล่าสุด:
+                        <strong>{{ \Carbon\Carbon::parse($senddate_changed_at)->format('d/m/Y H:i') }}</strong>
+                    </div>
+                @endif
                 @if(count($senddate_logs))
                     <ul class="list-group list-group-flush">
                         @foreach($senddate_logs as $i => $log_date)
@@ -767,7 +763,6 @@
 
     // ── การ์ดสีน้ำเงิน "สถานะวิธีการผลิต": เพิ่ม/ลบแถว (บันทึกลง tb_planning_prod_method) ──
     var PROD_METHOD_OPTIONS = @json($prod_methods);
-    var TEMP_OPTIONS = @json($temps);
     function prodMethodSelectHtml() {
         var opts = '<option value="">เลือกวิธีการผลิต</option>';
         (PROD_METHOD_OPTIONS || []).forEach(function (pm) {
@@ -775,20 +770,12 @@
         });
         return '<select name="prod_method_id[]" class="form-select form-select-sm">' + opts + '</select>';
     }
-    function tempSelectHtml() {
-        var opts = '<option value="">เลือก Temp</option>';
-        (TEMP_OPTIONS || []).forEach(function (t) {
-            opts += '<option value="' + esc(t.id) + '">' + esc(t.Temp1) + '</option>';
-        });
-        return '<select name="temp_id[]" class="form-select form-select-sm">' + opts + '</select>';
-    }
     function prodMethodRowHtml() {
         return '<div class="row g-2 align-items-center mb-2 prod-method-row">'
-            + '<div class="col-md-3">' + prodMethodSelectHtml() + '</div>'
-            + '<div class="col-md-2"><input type="date" name="prod_method_date[]" class="form-control form-control-sm"></div>'
+            + '<div class="col-md-4">' + prodMethodSelectHtml() + '</div>'
+            + '<div class="col-md-3"><input type="date" name="prod_method_date[]" class="form-control form-control-sm"></div>'
             + '<div class="col-md-2"><input type="time" name="prod_method_start[]" class="form-control form-control-sm"></div>'
             + '<div class="col-md-2"><input type="time" name="prod_method_end[]" class="form-control form-control-sm"></div>'
-            + '<div class="col-md-2">' + tempSelectHtml() + '</div>'
             + '<div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger btn_remove_prod_method" title="ลบ"><i class="ti ti-trash"></i></button></div>'
             + '</div>';
     }

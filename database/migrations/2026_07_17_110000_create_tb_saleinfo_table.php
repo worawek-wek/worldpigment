@@ -16,6 +16,11 @@ return new class extends Migration
 {
     public function up()
     {
+        // database-first: ข้ามถ้าตารางถูกสร้างมือใน DB ไปแล้ว
+        if (Schema::hasTable('tb_saleinfo')) {
+            return;
+        }
+
         Schema::create('tb_saleinfo', function (Blueprint $table) {
             $table->id();
 

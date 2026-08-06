@@ -17,7 +17,6 @@ use App\Models\Department;
 use App\Models\Emp;
 use App\Models\ProdMethod;
 use App\Models\PlanningProdMethod;
-use App\Models\Temp;
 
 class ProductionPlanController extends Controller
 {
@@ -137,6 +136,8 @@ class ProductionPlanController extends Controller
                 $query->where(function ($query) use ($search) {
                     $query->where('tb_planning.machine_no', 'LIKE', '%'.$search.'%')
                         ->orWhere('tb_planning.itemno', 'LIKE', '%'.$search.'%')
+                        // เลขที่ใบเบิกออกใบแดง (Red Bill)
+                        ->orWhere('tb_planning.red_bill_code', 'LIKE', '%'.$search.'%')
                         ->orWhere('tb_planning_header.orderno', 'LIKE', '%'.$search.'%')
                         ->orWhere('tb_planning_header.planning_code', 'LIKE', '%'.$search.'%')
                         ->orWhere('tb_planning_header.custno', 'LIKE', '%'.$search.'%')
@@ -364,18 +365,6 @@ class ProductionPlanController extends Controller
             ->get(['id', 'name']);
         $prod_method_rows = $planning_item ? $planning_item->prodMethods : collect();
 
-        // Temp: master (dropdown) สำหรับแต่ละแถวสถานะวิธีการผลิต
-        $temps = Temp::where('is_active', 'Y')
-            ->orderBy('sort', 'asc')->orderBy('Temp1', 'asc')
-            ->get(['id', 'Temp1']);
-
-        // Temp ที่แถวเดิมอ้างถึงแต่ถูกปิดใช้งาน (ไม่อยู่ใน master ที่เปิดใช้งาน) — เก็บไว้แสดงเป็นค่าเดิม
-        $used_temp_ids     = $prod_method_rows->pluck('temp_id')->filter()->unique()->all();
-        $inactive_temp_ids = array_diff($used_temp_ids, $temps->pluck('id')->all());
-        $inactive_temps    = !empty($inactive_temp_ids)
-            ? Temp::whereIn('id', $inactive_temp_ids)->get(['id', 'Temp1'])->keyBy('id')
-            : collect();
-
         $html = view('production-planning.planning.planning-item-form', [
             'planning_item'      => $planning_item,
             'planning_header_id' => $planning_header_id,
@@ -392,8 +381,6 @@ class ProductionPlanController extends Controller
             'selected_emp' => $selected_emp,
             'prod_methods'     => $prod_methods,
             'prod_method_rows' => $prod_method_rows,
-            'temps'            => $temps,
-            'inactive_temps'   => $inactive_temps,
         ])->render();
 
         return response()->json([
@@ -501,8 +488,6 @@ class ProductionPlanController extends Controller
             'prod_method_date.*' => 'nullable|date',
             'prod_method_start.*'=> 'nullable|date_format:H:i',
             'prod_method_end.*'  => 'nullable|date_format:H:i',
-            'temp_id'            => 'nullable|array',
-            'temp_id.*'          => 'nullable|integer|exists:temp,id',
         ]);
 
         if ($validator->fails()) {
@@ -554,6 +539,8 @@ class ProductionPlanController extends Controller
             // 1) บันทึก / อัปเดต planning หลัก
             if ($is_update) {
                 // ถ้าวันที่ส่งสินค้า (senddate) เปลี่ยนไปจากเดิม → เก็บค่าเดิมไว้ใน senddate_log (สะสมต่อท้าย คั่นด้วย comma)
+                // และบันทึก "เวลาที่เปลี่ยนล่าสุด" ทับลง senddate_changed_at (ค่าเดียว ใช้สำหรับค้นหา)
+                // เก็บเฉพาะตอนที่มีค่าเดิมอยู่แล้ว ($old_send) — ถ้าตอนแรกว่างแล้วเพิ่งใส่ค่าใหม่ จะไม่เก็บ
                 $existing = Planning::find($planning_id);
                 if ($existing) {
                     $old_send = $existing->senddate ? \Carbon\Carbon::parse($existing->senddate)->format('Y-m-d') : null;
@@ -562,6 +549,8 @@ class ProductionPlanController extends Controller
                         $fields['senddate_log'] = $existing->senddate_log
                             ? $existing->senddate_log . ',' . $old_send
                             : $old_send;
+
+                        $fields['senddate_changed_at'] = now()->format('Y-m-d H:i:s');
                     }
 
                     // ถ้าย้ายแผนก (company เปลี่ยน) → เครื่องจักร/สถานะเดิมเป็นของแผนกเก่า ล้างทิ้งเพื่อกันค่าที่ไม่ตรงแผนกใหม่
@@ -612,19 +601,17 @@ class ProductionPlanController extends Controller
         $dates   = $request->input('prod_method_date', []);
         $starts  = $request->input('prod_method_start', []);
         $ends    = $request->input('prod_method_end', []);
-        $temps   = $request->input('temp_id', []);
 
-        $count = max(count($methods), count($dates), count($starts), count($ends), count($temps));
+        $count = max(count($methods), count($dates), count($starts), count($ends));
 
         for ($i = 0; $i < $count; $i++) {
             $method_id = $methods[$i] ?? null;
             $work_date = $dates[$i]   ?? null;
             $start     = $starts[$i]  ?? null;
             $end       = $ends[$i]    ?? null;
-            $temp_id   = $temps[$i]   ?? null;
 
             // ข้ามแถวที่ว่างทั้งหมด
-            if (empty($method_id) && empty($work_date) && empty($start) && empty($end) && empty($temp_id)) {
+            if (empty($method_id) && empty($work_date) && empty($start) && empty($end)) {
                 continue;
             }
 
@@ -634,7 +621,6 @@ class ProductionPlanController extends Controller
                 'work_date'      => $work_date ?: null,
                 'start_time'     => $start ?: null,
                 'end_time'       => $end ?: null,
-                'temp_id'        => $temp_id ?: null,
                 'sort'           => $i,
             ]);
         }

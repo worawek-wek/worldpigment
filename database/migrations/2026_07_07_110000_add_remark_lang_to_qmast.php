@@ -10,9 +10,12 @@ return new class extends Migration
     {
         // ภาษาที่เลือกให้แสดง label ของ section หมายเหตุ ('th' | 'en')
         // สลับแค่ "คำ" (หัวข้อ) — ข้อมูลค่าต่าง ๆ เก็บชุดเดียว
-        Schema::table('qmast', function (Blueprint $table) {
-            $table->string('remark_lang', 2)->default('th')->after('other_notes');
-        });
+        // database-first: เช็คก่อนกัน error "Duplicate column" ถ้าคอลัมน์ถูกเพิ่มมือใน DB ไปแล้ว
+        if (!Schema::hasColumn('qmast', 'remark_lang')) {
+            Schema::table('qmast', function (Blueprint $table) {
+                $table->string('remark_lang', 2)->default('th')->after('other_notes');
+            });
+        }
     }
 
     public function down()

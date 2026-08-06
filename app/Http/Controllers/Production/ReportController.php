@@ -92,6 +92,7 @@ class ReportController extends Controller
                 'tb_planning.itemno',
                 'tb_planning.lot',
                 'tb_planning.quantity',
+                'tb_planning.weight', // น้ำหนัก TP (Weight)
                 'tb_planning.remark',
                 'customer.name as cust_name',
                 // Speed (RPM) ต่อเครื่องจักร: machine.speed_rpm (MBX = machine_no) — subquery กัน row ซ้ำ
@@ -110,7 +111,6 @@ class ReportController extends Controller
         if (!empty($planningIds)) {
             $stepsByPlanning = \Illuminate\Support\Facades\DB::table('tb_planning_prod_method as pm')
                 ->leftJoin('tb_prod_method as m', 'm.id', '=', 'pm.prod_method_id')
-                ->leftJoin('temp as t', 't.id', '=', 'pm.temp_id')
                 ->whereIn('pm.planning_id', $planningIds)
                 ->orderBy('pm.work_date')
                 ->orderBy('pm.start_time')
@@ -122,7 +122,6 @@ class ReportController extends Controller
                     'pm.end_time',
                     'pm.sort',
                     'm.name as method_name',
-                    't.Temp1 as temp_name',
                 ])
                 ->groupBy('planning_id');
         }
@@ -206,14 +205,14 @@ class ReportController extends Controller
         $sheet->setTitle('รายงานผลิตตามเครื่องจักร');
 
         // คอลัมน์ตามฟอร์ม — คอลัมน์ที่ยังไม่มีข้อมูลใน tb_planning เว้นค่าว่างไว้ก่อน
-        // (Revise, TP, Resin, Temp, CODE, Pack, Batch, สูตรตัวอย่าง)
+        // (Revise, TP, Resin, CODE, Pack, Batch, สูตรตัวอย่าง)
         $headers = [
             '#', 'วันที่ลงแผน', 'Revise', 'Cust Name', 'เลขที่ใบเบิก', 'PRODUCT NO', 'LOT',
-            'น้ำหนักออเดอร์', 'TP', 'Resin', 'Temp', 'CODE', 'Speed (RPM)', 'Pack', 'Batch',
+            'น้ำหนักออเดอร์', 'TP', 'Resin', 'CODE', 'Speed (RPM)', 'Pack', 'Batch',
             'สูตรตัวอย่าง', 'Remark',
         ];
-        $cols    = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q'];
-        $lastCol = 'Q';
+        $cols    = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P'];
+        $lastCol = 'P';
         $weightCol = 'H'; // คอลัมน์น้ำหนักออเดอร์ (ใช้ทำผลรวมต่อเครื่อง)
 
         // หัวรายงาน
@@ -253,22 +252,6 @@ class ReportController extends Controller
 
             $groupSum = 0;
             foreach ($group['items'] as $it) {
-                // แถวขั้นตอน "สถานะวิธีการผลิต" ก่อนแถวผลิต
-                foreach ($it->steps as $s) {
-                    $sheet->setCellValue("A{$r}", '↳');
-                    $sheet->setCellValue("B{$r}", $s->work_date ? \Carbon\Carbon::parse($s->work_date)->format('d/m/Y') : '');
-                    $desc = 'ขั้นตอน: '.($s->method_name ?: '-')
-                        .' ('.($s->start_time ? substr($s->start_time, 0, 5) : '--').'–'.($s->end_time ? substr($s->end_time, 0, 5) : '--').')'
-                        .($s->temp_name ? '   | Temp: '.$s->temp_name : '');
-                    $sheet->setCellValue("C{$r}", $desc);
-                    $sheet->mergeCells("C{$r}:Q{$r}");
-                    $sheet->getStyle("A{$r}:Q{$r}")->getFill()
-                        ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-                        ->getStartColor()->setRGB('F8F9FA');
-                    $sheet->getStyle("A{$r}:Q{$r}")->getFont()->setItalic(true);
-                    $r++;
-                }
-
                 $sheet->setCellValue("A{$r}", ++$rownum);
                 $sheet->setCellValue("B{$r}", $it->inplan ? \Carbon\Carbon::parse($it->inplan)->format('d/m/Y') : '-');
                 $sheet->setCellValue("C{$r}", '');  // Revise (เว้นว่าง)
@@ -277,17 +260,31 @@ class ReportController extends Controller
                 $sheet->setCellValueExplicit("F{$r}", $it->itemno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
                 $sheet->setCellValue("G{$r}", $it->lot ?: '-');
                 $sheet->setCellValue("H{$r}", $it->quantity !== null ? number_format($it->quantity, 2) : '-');
-                $sheet->setCellValue("I{$r}", '');  // TP (เว้นว่าง)
+                $sheet->setCellValue("I{$r}", $it->weight !== null ? number_format($it->weight, 2) : '');  // TP = น้ำหนัก TP (Weight)
                 $sheet->setCellValue("J{$r}", '');  // Resin (เว้นว่าง)
-                $sheet->setCellValue("K{$r}", '');  // Temp (เว้นว่าง)
-                $sheet->setCellValue("L{$r}", '');  // CODE (เว้นว่าง)
-                $sheet->setCellValue("M{$r}", $it->speed_rpm ?: '');
-                $sheet->setCellValue("N{$r}", '');  // Pack (เว้นว่าง)
-                $sheet->setCellValue("O{$r}", '');  // Batch (เว้นว่าง)
-                $sheet->setCellValue("P{$r}", '');  // สูตรตัวอย่าง (เว้นว่าง)
-                $sheet->setCellValue("Q{$r}", $it->remark ?: '');
+                $sheet->setCellValue("K{$r}", '');  // CODE (เว้นว่าง)
+                $sheet->setCellValue("L{$r}", $it->speed_rpm ?: '');
+                $sheet->setCellValue("M{$r}", '');  // Pack (เว้นว่าง)
+                $sheet->setCellValue("N{$r}", '');  // Batch (เว้นว่าง)
+                $sheet->setCellValue("O{$r}", '');  // สูตรตัวอย่าง (เว้นว่าง)
+                $sheet->setCellValue("P{$r}", $it->remark ?: '');
                 $groupSum += (float) ($it->quantity ?? 0);
                 $r++;
+
+                // แถวขั้นตอน "สถานะวิธีการผลิต" (แสดงใต้แถวผลิต)
+                foreach ($it->steps as $s) {
+                    $sheet->setCellValue("A{$r}", '↳');
+                    $sheet->setCellValue("B{$r}", $s->work_date ? \Carbon\Carbon::parse($s->work_date)->format('d/m/Y') : '');
+                    $desc = 'ขั้นตอน: '.($s->method_name ?: '-')
+                        .' ('.($s->start_time ? substr($s->start_time, 0, 5) : '--').'–'.($s->end_time ? substr($s->end_time, 0, 5) : '--').')';
+                    $sheet->setCellValue("C{$r}", $desc);
+                    $sheet->mergeCells("C{$r}:{$lastCol}{$r}");
+                    $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()
+                        ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                        ->getStartColor()->setRGB('F8F9FA');
+                    $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setItalic(true);
+                    $r++;
+                }
             }
 
             // แถวรวมต่อเครื่องจักร

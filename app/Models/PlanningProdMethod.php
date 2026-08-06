@@ -18,10 +18,4 @@ class PlanningProdMethod extends Model
     {
         return $this->belongsTo(ProdMethod::class, 'prod_method_id');
     }
-
-    // Temp (master) ที่แถวนี้อ้างถึง
-    public function temp()
-    {
-        return $this->belongsTo(Temp::class, 'temp_id');
-    }
 }

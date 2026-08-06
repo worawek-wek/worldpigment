@@ -9,9 +9,12 @@ return new class extends Migration
     public function up()
     {
         // หัวกระดาษ (หัวเอกสารที่พิมพ์) — WPI / WPC / WH (ตรงกับ prefix ของเลขที่ใบเสนอราคา)
-        Schema::table('qmast', function (Blueprint $table) {
-            $table->string('letterhead', 10)->nullable()->default('WH')->after('PDtype');
-        });
+        // database-first: เช็คก่อนกัน error "Duplicate column" ถ้าเพิ่มมือใน DB ไปแล้ว
+        if (!Schema::hasColumn('qmast', 'letterhead')) {
+            Schema::table('qmast', function (Blueprint $table) {
+                $table->string('letterhead', 10)->nullable()->default('WH')->after('PDtype');
+            });
+        }
     }
 
     public function down()

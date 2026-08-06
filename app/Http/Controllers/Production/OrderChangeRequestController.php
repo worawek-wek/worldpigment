@@ -90,11 +90,25 @@ class OrderChangeRequestController extends Controller
      */
     private function buildRows(?string $from, ?string $to, ?string $keyword = null)
     {
+        // แสดง Order (header บนสุด) ที่เข้าเงื่อนไขข้อใดข้อหนึ่ง (OR) โดยใช้ช่วงวันที่เดียวกัน:
+        //   (ก) ปิดจบงานในช่วง — ต้อง end_close='Y' และ end_close_date อยู่ในช่วง
+        //   (ข) มีรายการที่เปลี่ยน senddate ในช่วง — senddate_changed_at อยู่ในช่วง (ไม่สนสถานะปิดจบงาน)
         $headers = PlanningHeader::query()
             ->whereNull('parent_planning_id')
-            ->where('end_close', 'Y')
-            ->when($from, fn ($q) => $q->whereDate('end_close_date', '>=', $from))
-            ->when($to, fn ($q) => $q->whereDate('end_close_date', '<=', $to))
+            ->where(function ($q) use ($from, $to) {
+                // (ก) ปิดจบงานในช่วง (เฉพาะเงื่อนไขนี้ที่ต้องปิดจบงานแล้ว)
+                $q->where(function ($qq) use ($from, $to) {
+                    $qq->where('end_close', 'Y')
+                       ->when($from, fn ($x) => $x->whereDate('end_close_date', '>=', $from))
+                       ->when($to, fn ($x) => $x->whereDate('end_close_date', '<=', $to));
+                })
+                // (ข) หรือ มีรายการที่เปลี่ยน senddate ในช่วง (ไม่ต้องปิดจบงาน)
+                ->orWhereHas('plannings', function ($qq) use ($from, $to) {
+                    $qq->whereNotNull('senddate_changed_at')
+                       ->when($from, fn ($x) => $x->whereDate('senddate_changed_at', '>=', $from))
+                       ->when($to, fn ($x) => $x->whereDate('senddate_changed_at', '<=', $to));
+                });
+            })
             ->orderBy('end_close_date', 'asc')
             ->orderBy('id', 'asc')
             ->get();
@@ -105,38 +119,70 @@ class OrderChangeRequestController extends Controller
             // ชื่อลูกค้า: ดึงจากตาราง morder ตาม orderno (logic เดียวกับ OrderPlanController)
             $custname = DB::table('morder')->where('Orderno', $h->orderno)->value('Custname');
 
-            // รายการสินค้าตรงของ header (ไม่ไล่ sub-header semi/pigment)
-            // รวมรายการที่ "รหัสสินค้า (itemno) เดียวกัน" ใน order เดียวกันเป็นแถวเดียว
-            // - จาก (weight_from) = netqty ของ header (ค่าเดียว ไม่บวก)
-            // - เป็น (weight_to)  = ผลรวม weight_packing ของ item ที่รหัสเดียวกัน
-            $items = DB::table('tb_planning')
-                ->where('planning_header_id', $h->id)
-                ->groupBy('itemno')
-                ->orderByRaw('MIN(id) ASC')
-                ->get([
-                    'itemno',
-                    DB::raw('SUM(weight_packing) AS weight_to'),
-                ]);
+            // order นี้ "ปิดจบงานในช่วง" หรือไม่ (เข้ามาทางเงื่อนไข ก)
+            // ถ้าใช่ → แสดงทุกรายการเหมือนเดิม; ถ้าไม่ใช่ → แสดงเฉพาะรายการที่เปลี่ยน senddate ในช่วง (เงื่อนไข ข)
+            $closedInRange = false;
+            if ($h->end_close === 'Y' && $h->end_close_date) {
+                $d = \Carbon\Carbon::parse($h->end_close_date)->toDateString();
+                $closedInRange = (!$from || $d >= $from) && (!$to || $d <= $to);
+            }
 
-            foreach ($items as $it) {
+            // รายการสินค้าตรงของ header (ไม่ไล่ sub-header semi/pigment)
+            // ดึงทั้งแถวมา group ในฝั่ง PHP เพื่อเลือก "แถวตัวแทน" ตาม senddate_changed_at ได้ (SQL GROUP BY ทำไม่ได้ตรง ๆ)
+            $plannings = DB::table('tb_planning')
+                ->where('planning_header_id', $h->id)
+                ->orderBy('id', 'asc')
+                ->get(['id', 'itemno', 'red_bill_code', 'weight_packing', 'senddate', 'senddate_log', 'senddate_changed_at']);
+
+            // รวมรายการที่ "รหัสสินค้า (itemno) เดียวกัน" เป็นแถวเดียว (คงลำดับตาม id แรกที่พบ)
+            foreach ($plannings->groupBy('itemno') as $itemno => $group) {
+                // รายการนี้มีการเปลี่ยน senddate ในช่วงที่เลือกหรือไม่
+                $changedInRange = $group->contains(function ($r) use ($from, $to) {
+                    if (!$r->senddate_changed_at) {
+                        return false;
+                    }
+                    $d = \Carbon\Carbon::parse($r->senddate_changed_at)->toDateString();
+                    return (!$from || $d >= $from) && (!$to || $d <= $to);
+                });
+
+                // ถ้า order ไม่ได้ปิดจบในช่วง (เข้ามาทางฝั่ง senddate) → ข้ามรายการที่ไม่ได้เปลี่ยน senddate ในช่วง
+                if (!$closedInRange && !$changedInRange) {
+                    continue;
+                }
+
+                // เป็น (weight_to) = ผลรวม weight_packing ของ item รหัสเดียวกัน
+                $weight_to = $group->sum('weight_packing');
+
+                // เลือกแถวตัวแทน = แถวที่เปลี่ยน senddate ล่าสุด (senddate_changed_at มากสุด)
+                // ถ้าไม่มีแถวไหนเคยเปลี่ยนเลย → ใช้แถวแรก
+                $rep = $group->whereNotNull('senddate_changed_at')
+                             ->sortByDesc('senddate_changed_at')
+                             ->first() ?: $group->first();
+
+                // กำหนดเสร็จเดิม = วันที่ "ล่าสุด" ใน senddate_log ของแถวตัวแทน (ค่าเดิมก่อนเปลี่ยนครั้งล่าสุด)
+                $logDates = array_values(array_filter(array_map('trim', explode(',', $rep->senddate_log ?? ''))));
+                $due_original = count($logDates) ? end($logDates) : null;
+
                 $rows->push([
-                    'itemno'        => $it->itemno,
+                    'itemno'        => $itemno,
                     'custname'      => $custname,
                     'orderno'       => $h->orderno,
-                    'due_original'  => '-', // กำหนดเสร็จเดิม (ยังไม่ใช้)
-                    'due_postpone'  => '-', // ขอเลื่อนเป็นวันที่ (ยังไม่ใช้)
-                    'weight_from'   => $h->netqty,   // จาก: netqty ของ header
-                    'weight_to'     => $it->weight_to, // เป็น: ผลรวม weight_packing ของ item รหัสเดียวกัน
+                    'red_bill_code' => $rep->red_bill_code, // เลขที่ใบทบทวนคำสั่งซื้อ: จาก tb_planning ของแถวตัวแทน
+                    'due_original'  => $due_original,    // กำหนดเสร็จเดิม: วันที่ล่าสุดใน senddate_log (null = ไม่เคยเปลี่ยน)
+                    'due_postpone'  => $rep->senddate,   // ขอเลื่อนเป็นวันที่: senddate ปัจจุบันของแถวตัวแทน
+                    'weight_from'   => $h->netqty,       // จาก: netqty ของ header
+                    'weight_to'     => $weight_to,       // เป็น: ผลรวม weight_packing ของ item รหัสเดียวกัน
                     'reason'        => $h->end_close_remark, // สาเหตุ: หมายเหตุตอนปิดจบงาน
                 ]);
             }
         }
 
-        // ค้นหาแบบคำเดียว: เลขที่ใบทบทวน (orderno) / รหัสสินค้า (itemno) / ชื่อลูกค้า (custname)
+        // ค้นหาแบบคำเดียว: เลขที่ใบทบทวน (red_bill_code) / เลขที่ order (orderno) / รหัสสินค้า (itemno) / ชื่อลูกค้า (custname)
         if ($keyword) {
             $kw = mb_strtolower($keyword);
             $rows = $rows->filter(function ($r) use ($kw) {
-                return mb_strpos(mb_strtolower((string) $r['orderno']), $kw) !== false
+                return mb_strpos(mb_strtolower((string) $r['red_bill_code']), $kw) !== false
+                    || mb_strpos(mb_strtolower((string) $r['orderno']), $kw) !== false
                     || mb_strpos(mb_strtolower((string) $r['itemno']), $kw) !== false
                     || mb_strpos(mb_strtolower((string) $r['custname']), $kw) !== false;
             })->values();

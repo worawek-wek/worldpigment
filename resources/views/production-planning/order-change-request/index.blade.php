@@ -7,6 +7,11 @@
         if ($v === null || $v === '') return '-';
         return rtrim(rtrim(number_format((float) $v, 6, '.', ','), '0'), '.');
     };
+    // แสดงวันที่แบบ d/m/Y (รับค่า Y-m-d หรือ datetime) — ค่าว่าง/parse ไม่ได้ → '-'
+    $fmtDate = function ($d) {
+        if (!$d) return '-';
+        try { return Carbon::parse($d)->format('d/m/Y'); } catch (\Exception $e) { return '-'; }
+    };
 @endphp
 
 @section('content')
@@ -22,7 +27,7 @@
                                 ใบขอเปลี่ยนแปลงคำสั่งซื้อภายใน
                             </h3>
                             <p class="text-muted mb-0">
-                                ดึงข้อมูล Order ที่ปิดจบงาน (End Close) แล้ว ตามช่วงวันที่ปิดจบงาน แล้วออกเป็น PDF
+                                ดึงข้อมูล Order ที่ปิดจบงานในช่วงที่เลือก หรือ มีการเปลี่ยนวันกำหนดทบทวน (senddate) ในช่วงที่เลือก (แม้ยังไม่ปิดจบงาน) แล้วออกเป็น PDF
                             </p>
                         </div>
                     </div>
@@ -90,9 +95,9 @@
                                             <td class="text-center">{{ $i + 1 }}</td>
                                             <td>{{ $row['itemno'] ?: '-' }}</td>
                                             <td>{{ $row['custname'] ?: '-' }}</td>
-                                            <td>{{ $row['orderno'] ?: '-' }}</td>
-                                            <td class="text-center">{{ $row['due_original'] }}</td>
-                                            <td class="text-center">{{ $row['due_postpone'] }}</td>
+                                            <td>{{ $row['red_bill_code'] ?: '-' }}</td>
+                                            <td class="text-center">{{ $fmtDate($row['due_original']) }}</td>
+                                            <td class="text-center">{{ $fmtDate($row['due_postpone']) }}</td>
                                             <td class="text-end">{{ $fmtNum($row['weight_from']) }}</td>
                                             <td class="text-end">{{ $fmtNum($row['weight_to']) }}</td>
                                             <td>{{ $row['reason'] }}</td>
@@ -101,7 +106,7 @@
                                         <tr>
                                             <td colspan="9" class="text-center text-muted py-4">
                                                 @if($searched)
-                                                    ไม่พบข้อมูล Order ที่ปิดจบงานในช่วงวันที่ที่เลือก
+                                                    ไม่พบข้อมูล Order ที่ปิดจบงาน หรือมีการเปลี่ยน senddate ในช่วงวันที่ที่เลือก
                                                 @else
                                                     เลือกช่วงวันที่แล้วกด "ค้นหา" เพื่อแสดงข้อมูล
                                                 @endif

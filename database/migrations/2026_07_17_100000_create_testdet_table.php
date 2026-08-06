@@ -8,6 +8,11 @@ return new class extends Migration
 {
     public function up()
     {
+        // database-first: ข้ามถ้าตารางถูกสร้างมือใน DB ไปแล้ว
+        if (Schema::hasTable('TestDet')) {
+            return;
+        }
+
         Schema::create('TestDet', function (Blueprint $table) {
             $table->string('TestNo', 10)->nullable();
             $table->string('PdCode', 17)->nullable();
