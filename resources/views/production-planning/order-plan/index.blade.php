@@ -90,6 +90,7 @@
                                         <th class="col-1">Custwant</th>
                                         <th class="col-1">Custno</th>
                                         <th class="col-2">ชื่อลูกค้า</th>
+                                        <th class="col-2">Item No</th>
                                         <th class="col-2">สถานะ</th>
                                         <th class="col-1">รายการ</th>
                                         <th class="col-1">Manage</th>
@@ -149,6 +150,7 @@
                 { 'className': "text-center", data: 'custwant', name: 'custwant' },
                 { 'className': "text-left", data: 'custno', name: 'custno' },
                 { 'className': "text-left", data: 'custname', name: 'custname', searchable: false },
+                { 'className': "text-left", data: 'itemno_list', name: 'itemno_list', orderable: false, searchable: false },
                 { 'className': "text-left", data: 'status_list', name: 'status_list', orderable: false, searchable: false },
                 { 'className': "text-center", data: 'item_count', name: 'item_count', searchable: false },
                 { 'className': "text-center", data: 'btnedit', name: 'btnedit', orderable: false, searchable: false },

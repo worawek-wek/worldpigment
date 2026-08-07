@@ -35,6 +35,17 @@ class OrderController extends Controller
                 return $row->rownum;
             })
             ->editColumn('Mdate', fn ($row) => $row->Mdate ? \Carbon\Carbon::parse($row->Mdate)->format('d/m/Y') : '-')
+            // รหัสสินค้า (Itemno) ของ suborder ทั้งหมดในออเดอร์ — ตัดค่าซ้ำ/ว่างทิ้ง แล้วคั่นด้วย ", "
+            ->addColumn('itemno_list', function($row) {
+                $items = $row->suborders
+                    ->pluck('Itemno')
+                    ->map(fn ($v) => trim((string) $v))
+                    ->filter()
+                    ->unique()
+                    ->values();
+
+                return $items->isEmpty() ? '-' : $items->implode(', ');
+            })
             ->addColumn('plan_badge', function($row) {
                 if ($row->has_plan) {
                     return '<span class="badge bg-label-success">สร้างแล้ว</span>';
@@ -76,6 +87,10 @@ class OrderController extends Controller
                       AND tb_planning_header.plan_type = 'ORDER'
                 ) AS has_plan")
             ])
+            // โหลด suborder ล่วงหน้า (เฉพาะคีย์ + Itemno) เพื่อรวมรหัสสินค้าโดยไม่เกิด N+1
+            ->with(['suborders' => function ($query) {
+                $query->select('Orderno', 'Itemno');
+            }])
             ->where('morder.appv', '-1') // เฉพาะ order ที่อนุมัติแล้ว
             // มี suborder อย่างน้อย 1 ตัวที่ EndP เป็นค่าว่าง (ใช้ EXISTS กัน row ซ้ำกรณี suborder มีหลายตัว)
             ->whereHas('suborders', function ($query) {

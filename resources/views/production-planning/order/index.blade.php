@@ -65,7 +65,8 @@
                                         <th class="col-2">Mdate</th>
                                         <th class="col-1">Company</th>
                                         <th class="col-1">Custno</th>
-                                        <th class="col-3">Custname</th>
+                                        <th class="col-2">Custname</th>
+                                        <th class="col-2">Item No</th>
                                         <th class="col-2">แผนการผลิต</th>
                                         <th class="col-2">Manage</th>
                                     </tr>
@@ -132,6 +133,7 @@
                 { 'className': "text-center", data: 'Company', name: 'Company', orderable: false },
                 { 'className': "text-left", data: 'Custno', name: 'Custno', orderable: false },
                 { 'className': "text-left", data: 'Custname', name: 'Custname', orderable: false },
+                { 'className': "text-left", data: 'itemno_list', name: 'itemno_list', orderable: false, searchable: false },
                 { 'className': "text-center", data: 'plan_badge', name: 'plan_badge', orderable: false, searchable: false },
                 { 'className': "text-center", data: 'btnedit', name: 'btnedit', orderable: false, searchable: false },
             ],

@@ -33,6 +33,17 @@ class OrderPlanController extends Controller
             })
             // Inplan = วันที่ inplan ล่าสุด (มากสุด) ในบรรดาแผน (planning) ของ Order นี้
             ->editColumn('custname', fn ($row) => $row->custname ?: '-')
+            // Item No = รหัสสินค้า (itemno) ของรายการ (planning) ในออเดอร์ — ตัดซ้ำ/ว่างทิ้ง แล้วคั่นด้วย ", "
+            ->addColumn('itemno_list', function ($row) {
+                $items = collect($row->plannings)
+                    ->pluck('itemno')
+                    ->map(fn ($v) => trim((string) $v))
+                    ->filter()
+                    ->unique()
+                    ->values();
+
+                return $items->isEmpty() ? '-' : $items->implode(', ');
+            })
             ->addColumn('inplan', fn ($row) => $row->plannings_max_inplan ? \Carbon\Carbon::parse($row->plannings_max_inplan)->format('d/m/Y') : '-')
             // สถานะ = รวมสถานะของทุกรายการ (plan + sub plan ทุกชั้น) คั่นด้วย ","
             ->addColumn('status_list', function ($row) {

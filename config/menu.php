@@ -27,7 +27,7 @@ return [
     ],
 
     'Production' => [
-        'title' => 'P-แผนการผลิต',
+        'title' => 'PL-แผนการผลิต',
         'icon' => 'ti-calendar-stats',
         'permission' => 'production read',
         'sub_menu' => [
@@ -107,19 +107,19 @@ return [
     ],
     // ข้อมูลสินค้า (tb_products) — ต่อจากแผนการผลิต — เพิ่ม 07/08/2569
     'Product' => [
-        'title' => 'ข้อมูลสินค้า',
+        'title' => 'P-ข้อมูลสินค้า',
         'icon' => 'ti-box',
         'route_name' => 'product.index',
         'permission' => 'product read',
     ],
     'Customer' => [
-        'title' => 'ฐานข้อมูลลูกค้า',
+        'title' => 'C-ฐานข้อมูลลูกค้า',
         'icon' => 'ti-address-book',
         'route_name' => 'customer.index',
         'permission' => 'customer read',
     ],
     'Report' => [
-        'title' => 'รายงาน',
+        'title' => 'R-รายงาน',
         'icon' => 'ti-report',
         'route_name' => 'report.index',
         'permission' => 'report read',
