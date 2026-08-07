@@ -45,6 +45,7 @@ worldpigment/
 │   │   ├── PermissionController.php
 │   │   ├── PDFController.php
 │   │   ├── SaleinfoController.php   # กำหนดราคา + ค้นหาราคาสินค้า (04/08/2569)
+│   │   ├── ProductController.php    # ข้อมูลสินค้า tb_products — CRUD (07/08/2569)
 │   │   └── ExportExcelController.php
 │   ├── Models/
 │   └── Services/                # AccessService, ProductPriceService (04/08/2569)
@@ -65,7 +66,8 @@ worldpigment/
 │   ├── order.php
 │   ├── customer.php
 │   ├── report.php
-│   └── permission.php
+│   ├── permission.php
+│   └── product.php              # ข้อมูลสินค้า tb_products (07/08/2569)
 └── public/
 ```
 

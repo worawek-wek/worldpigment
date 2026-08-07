@@ -2,32 +2,32 @@
 
 return [
     'ColorMatching' => [
-        'title' => 'เทียบสี',
+        'title' => 'T-เทียบสี',
         'icon' => 'ti-palette',
         'route_name' => 'color_matching.index',
         'permission' => 'color_matching read',
     ],
     'Quotation' => [
-        'title' => 'ใบเสนอราคา',
+        'title' => 'Q-ใบเสนอราคา',
         'icon' => 'ti-file-invoice',
         'route_name' => 'quotation.index',
         'permission' => 'quotation read',
     ],
     'Saleinfo' => [
-        'title' => 'กำหนดราคา',
+        'title' => 'I-กำหนดราคา',
         'icon' => 'ti-tag',
         'route_name' => 'saleinfo.index',
         'permission' => 'saleinfo read',
     ],
     'Order' => [
-        'title' => 'Order',
+        'title' => 'O-Order',
         'icon' => 'ti-shopping-cart',
         'route_name' => 'order.index',
         'permission' => 'order read',
     ],
 
     'Production' => [
-        'title' => 'แผนการผลิต',
+        'title' => 'P-แผนการผลิต',
         'icon' => 'ti-calendar-stats',
         'permission' => 'production read',
         'sub_menu' => [
@@ -104,6 +104,13 @@ return [
                 ],
             ],
         ],
+    ],
+    // ข้อมูลสินค้า (tb_products) — ต่อจากแผนการผลิต — เพิ่ม 07/08/2569
+    'Product' => [
+        'title' => 'ข้อมูลสินค้า',
+        'icon' => 'ti-box',
+        'route_name' => 'product.index',
+        'permission' => 'product read',
     ],
     'Customer' => [
         'title' => 'ฐานข้อมูลลูกค้า',
