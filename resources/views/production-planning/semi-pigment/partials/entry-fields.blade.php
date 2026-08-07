@@ -43,7 +43,8 @@
         <label class="form-label">ล๊อด (Lot No.)</label>
         <input type="text" class="form-control" id="{{ $prefix }}_lot_no" placeholder="ล็อตที่">
     </div>
-    <div class="col-md-8 mb-3 p-3 rounded" style="background-color: #f8cdcd; border: 1px dashed #e93508;">
+    {{-- <div class="col-md-8 mb-3 p-3 rounded" style="background-color: #f8cdcd; border: 1px dashed #e93508;"> --}}
+    <div class="col-md-8 mb-3 p-3 " >
         <div class="row">
             <div class="col-md-6">
             <label class="form-label">ขาด Semi Code</label>
