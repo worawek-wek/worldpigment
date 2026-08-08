@@ -37,6 +37,8 @@ Route::prefix('production-planning')->group(function () {
     Route::get('/report/machine/options', [Production\ReportController::class, 'machineOptions'])->name('production.report.machine.options');
     // ตารางรายงานผลิตตามเครื่องจักร (คืน HTML จัดกลุ่มตามเครื่องจักร ผ่าน AJAX)
     Route::get('/report/machine/table', [Production\ReportController::class, 'machineTable'])->name('production.report.machine.table');
+    // บันทึกลำดับคิว (drag & drop) ของเครื่องจักร+วันเดียว — 2026-08-08
+    Route::post('/report/machine/queue', [Production\ReportController::class, 'machineQueueReorder'])->name('production.report.machine.queue');
     // Export รายงานผลิตตามเครื่องจักร (ใช้เงื่อนไขค้นหาเดียวกันกับตาราง)
     Route::get('/report/machine/excel', [Production\ReportController::class, 'machineExcel'])->name('production.report.machine.excel');
     Route::get('/report/machine/pdf', [Production\ReportController::class, 'machinePdf'])->name('production.report.machine.pdf');

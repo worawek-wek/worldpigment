@@ -51,6 +51,17 @@
                 </tr>
                 @foreach($group['items'] as $it)
                     @php $groupSum += (float) ($it->quantity ?? 0); @endphp
+                    {{-- แถวขั้นตอน "สถานะวิธีการผลิต / การล้าง" (แสดงก่อนแถวผลิต) --}}
+                    @foreach($it->steps as $s)
+                        <tr class="step-row">
+                            <td class="text-center">↳</td>
+                            <td class="text-center">{{ $s->work_date ? \Carbon\Carbon::parse($s->work_date)->format('d/m/Y') : '-' }}</td>
+                            <td colspan="14">
+                                ขั้นตอน: {{ $s->method_name ?: '-' }}
+                                ({{ $s->start_time ? substr($s->start_time, 0, 5) : '--' }}–{{ $s->end_time ? substr($s->end_time, 0, 5) : '--' }})
+                            </td>
+                        </tr>
+                    @endforeach
                     {{-- แถวผลิตสินค้า --}}
                     <tr>
                         <td class="text-center">{{ ++$rownum }}</td>
@@ -70,17 +81,6 @@
                         <td></td> {{-- สูตรตัวอย่าง --}}
                         <td>{{ $it->remark ?: '' }}</td>
                     </tr>
-                    {{-- แถวขั้นตอน "สถานะวิธีการผลิต" (แสดงใต้แถวผลิต) --}}
-                    @foreach($it->steps as $s)
-                        <tr class="step-row">
-                            <td class="text-center">↳</td>
-                            <td class="text-center">{{ $s->work_date ? \Carbon\Carbon::parse($s->work_date)->format('d/m/Y') : '-' }}</td>
-                            <td colspan="14">
-                                ขั้นตอน: {{ $s->method_name ?: '-' }}
-                                ({{ $s->start_time ? substr($s->start_time, 0, 5) : '--' }}–{{ $s->end_time ? substr($s->end_time, 0, 5) : '--' }})
-                            </td>
-                        </tr>
-                    @endforeach
                 @endforeach
                 <tr class="sum-row">
                     <td colspan="5" class="text-end">รวม {{ $machineLabel }}</td>

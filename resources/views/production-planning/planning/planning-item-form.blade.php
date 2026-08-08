@@ -78,21 +78,22 @@
             <div class="col-md-4 mb-3">
                 <label class="form-label">น้ำหนักสั่งตาม Order (Quantity)</label>
                 {{-- เพิ่มใหม่: ดึง netqty จาก header มาตั้งต้น / แก้ไข: ใช้ค่าเดิมของ item --}}
-                <input type="text" name="quantity"
+                {{-- js-number-format: จัดรูปแบบหลักพันสดขณะพิมพ์ (เก็บค่าดิบ server ตัดจุลภาคเอง) --}}
+                <input type="text" name="quantity" inputmode="decimal"
                        value="{{ $planning_item ? number_format((float) ($planning_item->quantity ?? 0), 2) : number_format((float) ($parent_header?->netqty ?? 0), 2) }}"
-                       class="form-control" placeholder="0.00">
+                       class="form-control js-number-format" placeholder="0.00">
             </div>
             <div class="col-md-4 mb-3">
                 <label class="form-label">น้ำหนัก TP (Weight)</label>
-                <input type="text" name="weight"
+                <input type="text" name="weight" inputmode="decimal"
                        value="{{ number_format((float) ($planning_item?->weight ?? 0), 2) }}"
-                       class="form-control" placeholder="0.00">
+                       class="form-control js-number-format" placeholder="0.00">
             </div>
             <div class="col-md-4 mb-3">
                 <label class="form-label">น้ำหนักที่ผลิตได้ (Weight Produced)</label>
-                <input type="text" name="weight_produced"
+                <input type="text" name="weight_produced" inputmode="decimal"
                        value="{{ $planning_item && $planning_item->weight_produced !== null ? number_format((float) $planning_item->weight_produced, 2) : '' }}"
-                       class="form-control" placeholder="0.00">
+                       class="form-control js-number-format" placeholder="0.00">
             </div>
         </div>
         <div class="row">
@@ -406,9 +407,9 @@
                 </div>
                 <div class="col-md-3 mb-3">
                     <label class="form-label">น้ำหนักบรรจุได้ (Weight Packing)</label>
-                    <input type="text" name="weight_packing"
+                    <input type="text" name="weight_packing" inputmode="decimal"
                         value="{{ $planning_item && $planning_item->weight_packing !== null ? number_format((float) $planning_item->weight_packing, 2) : '' }}"
-                        class="form-control" placeholder="0.00">
+                        class="form-control js-number-format" placeholder="0.00">
                 </div>
                 <div class="col-md-5 mb-3">
                     <label class="form-label">หมายเหตุการบรรจุ (Pack Remark)</label>

@@ -110,11 +110,17 @@
 @endsection
 
 @section('script')
+<script src="{{ asset('assets/vendor/libs/sortablejs/sortable.js') }}"></script>
 <script>
     var URL_MACHINE_OPTIONS = '{{ route('production.report.machine.options') }}';
     var URL_MACHINE_TABLE   = '{{ route('production.report.machine.table') }}';
+    var URL_MACHINE_QUEUE   = '{{ route('production.report.machine.queue') }}';
     var URL_MACHINE_EXCEL   = '{{ route('production.report.machine.excel') }}';
     var URL_MACHINE_PDF     = '{{ route('production.report.machine.pdf') }}';
+    var CSRF_TOKEN          = '{{ csrf_token() }}';
+
+    // เก็บ instance ของ SortableJS ไว้ทำลายก่อนสร้างใหม่ทุกครั้งที่โหลดตาราง
+    var machineSortable = null;
 
     // เก็บเงื่อนไขค้นหาปัจจุบันเป็น object เพื่อใช้ทั้งโหลดตารางและลิงก์ export
     function currentFilters() {
@@ -154,6 +160,7 @@
             data: currentFilters(),
             success: function (html) {
                 $('#reportResult').html(html);
+                initQueueSortable();
             },
             error: function (xhr, error, thrown) {
                 console.error('AJAX Error:', error, thrown);
@@ -162,6 +169,86 @@
                     '<i class="ti ti-alert-circle" style="font-size:2.5rem;"></i>' +
                     '<p class="mt-2 mb-0">โหลดข้อมูลไม่สำเร็จ</p></div>'
                 );
+            }
+        });
+    }
+
+    // ── จัด/แทรกคิว (drag & drop) ─────────────────────────────────────────────
+    // แต่ละงานเป็น <tbody class="qjob"> — ลากได้เฉพาะภายในเครื่องจักร+วันเดียวกัน
+    function initQueueSortable() {
+        var table = document.getElementById('machineReportTable');
+        if (!table || typeof Sortable === 'undefined') {
+            return;
+        }
+
+        if (machineSortable) {
+            machineSortable.destroy();
+            machineSortable = null;
+        }
+
+        machineSortable = Sortable.create(table, {
+            draggable: 'tbody.qjob',
+            handle: '.qhandle',
+            animation: 150,
+            // กันลากข้ามเครื่องจักร/ข้ามวัน และห้ามวางคร่อมหัวกลุ่มเครื่อง
+            onMove: function (evt) {
+                var related = evt.related;
+                if (!related || !related.classList.contains('qjob')) {
+                    return false;
+                }
+                return evt.dragged.dataset.machine === related.dataset.machine
+                    && evt.dragged.dataset.day === related.dataset.day;
+            },
+            onEnd: function (evt) {
+                // ไม่ได้ขยับจริง — เช่น ลากแล้วปล่อยที่เดิม หรือถูกกันข้ามเครื่อง/ข้ามวันแล้วเด้งกลับ
+                // → ไม่บันทึก ไม่รีเฟรช (กัน user เข้าใจผิดว่ามีการบันทึก)
+                if (evt.oldIndex === evt.newIndex) {
+                    return;
+                }
+
+                var moved   = evt.item;
+                var machine = moved.dataset.machine;
+                var day     = moved.dataset.day;
+
+                // รวบรวม id ทุกงานในบล็อกเดียวกัน (เครื่อง+วัน) ตามลำดับปัจจุบันบนจอ
+                var ids = [];
+                table.querySelectorAll('tbody.qjob').forEach(function (tb) {
+                    if (tb.dataset.machine === machine && tb.dataset.day === day) {
+                        ids.push(tb.dataset.planningId);
+                    }
+                });
+
+                // อัปเดตเลข # ทันทีตามลำดับใหม่ (ไม่รีโหลดตาราง) แล้วค่อยบันทึกเบื้องหลัง
+                renumberRows();
+                saveQueueOrder(ids);
+            }
+        });
+    }
+
+    // ไล่เลข # ใหม่ตามลำดับแถวบนจอปัจจุบัน (เรียงต่อเนื่องข้ามทุกกลุ่มเครื่องจักร)
+    function renumberRows() {
+        var n = 0;
+        document.querySelectorAll('#machineReportTable tbody.qjob .qnum').forEach(function (cell) {
+            cell.textContent = ++n;
+        });
+    }
+
+    // บันทึกลำดับคิวใหม่แบบเงียบ ๆ เบื้องหลัง — ไม่ toast/ไม่รีเฟรชเมื่อสำเร็จ
+    // กรณีล้มเหลวเท่านั้นจึงโหลดตารางใหม่เพื่อคืนลำดับที่ถูกต้องจาก server + แจ้งเตือน
+    function saveQueueOrder(ids) {
+        if (!ids || ids.length === 0) {
+            return;
+        }
+
+        $.ajax({
+            type: 'POST',
+            url: URL_MACHINE_QUEUE,
+            data: { _token: CSRF_TOKEN, ids: ids },
+            error: function () {
+                if (typeof toastr !== 'undefined') {
+                    toastr.error('บันทึกลำดับคิวไม่สำเร็จ');
+                }
+                loadReport(); // คืนสภาพเดิมจากข้อมูลจริง
             }
         });
     }

@@ -72,6 +72,27 @@ class ReportController extends Controller
         ]);
     }
 
+    // บันทึกลำดับคิวใหม่ (drag & drop) ของ 1 บล็อก = เครื่องจักรเดียว + วันเดียว — 2026-08-08
+    //  - รับ ids: array ของ tb_planning.id ที่เรียงตามลำดับใหม่แล้ว (จากบนลงล่าง)
+    //  - เขียน queue_sort = 1..N ตามลำดับที่ส่งมา
+    //  - การกันลากข้ามวัน/ข้ามเครื่องทำที่ฝั่ง UI (SortableJS) — ที่นี่เชื่อชุด id ที่ส่งมา
+    public function machineQueueReorder(Request $request)
+    {
+        $ids = $request->input('ids', []);
+
+        if (! is_array($ids) || empty($ids)) {
+            return response()->json(['status' => 422, 'message' => 'ไม่มีรายการให้จัดคิว'], 422);
+        }
+
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+
+        foreach ($ids as $i => $id) {
+            Planning::where('id', $id)->update(['queue_sort' => $i + 1]);
+        }
+
+        return response()->json(['status' => 200, 'message' => 'บันทึกลำดับคิวแล้ว']);
+    }
+
     // สร้างข้อมูลรายงาน (query + จัดกลุ่มตามเครื่องจักร) ใช้ร่วมกันทั้งตารางบนจอ / Excel / PDF
     private function buildMachineReport(Request $request): array
     {
@@ -88,6 +109,7 @@ class ReportController extends Controller
                 'tb_planning.id',
                 'tb_planning.machine_no',
                 'tb_planning.inplan',
+                'tb_planning.queue_sort', // ลำดับคิวที่จัดไว้ (ต่อเครื่อง+ต่อวัน) — NULL = ยังไม่จัดคิว
                 'tb_planning.red_bill_code',
                 'tb_planning.itemno',
                 'tb_planning.lot',
@@ -139,6 +161,10 @@ class ReportController extends Controller
             } else {
                 $it->job_key = $it->inplan ? substr($it->inplan, 0, 10).' 00:00:00' : null;
             }
+
+            // วันของงาน (ใช้จัดกลุ่มคิวต่อวัน + กันลากข้ามวันฝั่ง UI) = วันที่ของ job_key
+            $it->day_key    = $it->job_key ? substr($it->job_key, 0, 10) : null;
+            $it->queue_sort = $it->queue_sort === null ? null : (int) $it->queue_sort;
         });
 
         // เปรียบเทียบ key เวลา (รูปแบบ Y-m-d H:i:s เทียบ string ได้ตรงลำดับเวลา) — NULL/ว่าง ให้ไปท้ายสุด
@@ -161,8 +187,30 @@ class ReportController extends Controller
         $groups = $rows
             ->groupBy(fn ($r) => ($r->machine_no === null || $r->machine_no === '') ? '' : $r->machine_no)
             ->map(function ($items, $machine) use ($compareInplan) {
-                // เรียงภายในกลุ่ม: ตาม job_key (เวลาเริ่มขั้นตอนแรก/ inplan) เก่าสุดก่อน
+                // เรียงภายในกลุ่มเครื่อง:
+                //   1) วันเก่าก่อน (day_key; ไม่มีวัน → ท้ายสุด)
+                //   2) ภายในวันเดียวกัน: ลำดับคิวที่จัดไว้ (queue_sort) มาก่อน — ยังไม่จัดคิว (NULL) ไปท้ายวัน
+                //   3) fallback: เวลาเริ่มขั้นตอน (job_key) แล้วตามด้วย id
                 $sorted = $items->sort(function ($x, $y) use ($compareInplan) {
+                    $c = $compareInplan($x->day_key, $y->day_key);
+                    if ($c !== 0) {
+                        return $c;
+                    }
+
+                    $qx = $x->queue_sort;
+                    $qy = $y->queue_sort;
+                    if ($qx !== null || $qy !== null) {
+                        if ($qx === null) {
+                            return 1;   // ยังไม่จัดคิว → ท้ายวัน
+                        }
+                        if ($qy === null) {
+                            return -1;
+                        }
+                        if ($qx !== $qy) {
+                            return $qx <=> $qy;
+                        }
+                    }
+
                     $c = $compareInplan($x->job_key, $y->job_key);
                     return $c !== 0 ? $c : ($x->id <=> $y->id);
                 })->values();
@@ -252,6 +300,22 @@ class ReportController extends Controller
 
             $groupSum = 0;
             foreach ($group['items'] as $it) {
+                // แถวขั้นตอน "สถานะวิธีการผลิต / การล้าง" (แสดงก่อนแถวผลิต)
+                foreach ($it->steps as $s) {
+                    $sheet->setCellValue("A{$r}", '↳');
+                    $sheet->setCellValue("B{$r}", $s->work_date ? \Carbon\Carbon::parse($s->work_date)->format('d/m/Y') : '');
+                    $desc = 'ขั้นตอน: '.($s->method_name ?: '-')
+                        .' ('.($s->start_time ? substr($s->start_time, 0, 5) : '--').'–'.($s->end_time ? substr($s->end_time, 0, 5) : '--').')';
+                    $sheet->setCellValue("C{$r}", $desc);
+                    $sheet->mergeCells("C{$r}:{$lastCol}{$r}");
+                    $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()
+                        ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                        ->getStartColor()->setRGB('F8F9FA');
+                    $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setItalic(true);
+                    $r++;
+                }
+
+                // แถวผลิตสินค้า
                 $sheet->setCellValue("A{$r}", ++$rownum);
                 $sheet->setCellValue("B{$r}", $it->inplan ? \Carbon\Carbon::parse($it->inplan)->format('d/m/Y') : '-');
                 $sheet->setCellValue("C{$r}", '');  // Revise (เว้นว่าง)
@@ -270,21 +334,6 @@ class ReportController extends Controller
                 $sheet->setCellValue("P{$r}", $it->remark ?: '');
                 $groupSum += (float) ($it->quantity ?? 0);
                 $r++;
-
-                // แถวขั้นตอน "สถานะวิธีการผลิต" (แสดงใต้แถวผลิต)
-                foreach ($it->steps as $s) {
-                    $sheet->setCellValue("A{$r}", '↳');
-                    $sheet->setCellValue("B{$r}", $s->work_date ? \Carbon\Carbon::parse($s->work_date)->format('d/m/Y') : '');
-                    $desc = 'ขั้นตอน: '.($s->method_name ?: '-')
-                        .' ('.($s->start_time ? substr($s->start_time, 0, 5) : '--').'–'.($s->end_time ? substr($s->end_time, 0, 5) : '--').')';
-                    $sheet->setCellValue("C{$r}", $desc);
-                    $sheet->mergeCells("C{$r}:{$lastCol}{$r}");
-                    $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()
-                        ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-                        ->getStartColor()->setRGB('F8F9FA');
-                    $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setItalic(true);
-                    $r++;
-                }
             }
 
             // แถวรวมต่อเครื่องจักร

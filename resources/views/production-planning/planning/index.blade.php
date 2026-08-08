@@ -577,6 +577,47 @@
         });
     });
 
+    // ---- จัดรูปแบบตัวเลขหลักพันสดขณะพิมพ์ (Quantity / Weight / Weight Produced) ----
+    // แสดงผลเป็น 1,000.00 แต่ค่าที่บันทึกยังเป็นเลขดิบ (server ตัดจุลภาคออกใน saveItem)
+    // ผูกแบบ delegation เพราะฟอร์มถูกโหลดผ่าน AJAX เข้ามาใน modal
+
+    // format สดระหว่างพิมพ์: คงจุลภาคหลักพันในส่วนจำนวนเต็ม + ทศนิยมไม่เกิน 2 ตำแหน่ง
+    function formatNumberLive(el) {
+        var cleaned = el.value.replace(/[^\d.]/g, '');       // เหลือเฉพาะตัวเลขและจุด
+        var firstDot = cleaned.indexOf('.');
+        var intRaw, decRaw = null;
+        if (firstDot === -1) {
+            intRaw = cleaned;
+        } else {
+            intRaw = cleaned.slice(0, firstDot);
+            decRaw = cleaned.slice(firstDot + 1).replace(/\./g, '').slice(0, 2); // ตัดจุดที่เกินมา, ทศนิยม 2 ตำแหน่ง
+        }
+
+        intRaw = intRaw.replace(/^0+(?=\d)/, '');             // ตัดเลข 0 นำหน้า
+        var intFmt = intRaw.replace(/\B(?=(\d{3})+(?!\d))/g, ','); // ใส่จุลภาคหลักพัน
+
+        var formatted = intFmt;
+        if (firstDot !== -1) formatted += '.' + (decRaw || '');
+
+        // คืนตำแหน่งเคอร์เซอร์โดยนับจากด้านขวา (กันเคอร์เซอร์กระโดดเวลาแทรกจุลภาค)
+        var caretFromRight = el.value.length - (el.selectionStart || 0);
+        el.value = formatted;
+        var pos = Math.max(0, Math.min(formatted.length, formatted.length - caretFromRight));
+        try { el.setSelectionRange(pos, pos); } catch (e) {}
+    }
+
+    // normalize ตอนออกจากช่อง: เติมทศนิยมให้ครบ 2 ตำแหน่ง (ว่าง = คงว่างไว้)
+    function formatNumberBlur(el) {
+        var cleaned = el.value.replace(/[^\d.]/g, '');
+        if (cleaned === '' || cleaned === '.') { el.value = ''; return; }
+        var num = parseFloat(cleaned);
+        if (isNaN(num)) { el.value = ''; return; }
+        el.value = num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    $(document).on('input', '.js-number-format', function () { formatNumberLive(this); });
+    $(document).on('blur', '.js-number-format', function () { formatNumberBlur(this); });
+
     // ---- ปิดออเดอร์ (end_order) จากโมดัลแผนการผลิต ----
     $(document).on('change', '#planning_end_order', function () {
         var $cb = $(this);
