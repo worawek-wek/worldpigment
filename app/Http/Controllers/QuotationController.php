@@ -280,6 +280,8 @@ class QuotationController extends Controller
         }
 
         $data = $this->loadQuotation($row);
+        // ตอนพิมพ์: โชว์เฉพาะคอลัมน์ที่มีการกรอกจริง (col_config ใน DB ไม่ถูกแตะ)
+        $data['colConfig'] = $this->pruneEmptyCols($data['colConfig'], $data['items']);
         return view('quotation.print', $data);
     }
 
@@ -345,7 +347,8 @@ class QuotationController extends Controller
             'items'       => $itemsForView,
             'pdtype'      => $pdtype,
             'isRevision'  => $isRevision,
-            'colConfig'   => $colConfig,
+            // ตอนพิมพ์: โชว์เฉพาะคอลัมน์ที่มีการกรอกจริง (ให้ตรงกับหน้าพิมพ์จริง)
+            'colConfig'   => $this->pruneEmptyCols($colConfig, $itemsForView),
             'colRegistry' => $reg,
             'otherNotes'  => $otherNotes,
             'empName'     => $this->empName($header->EmpID ?? null), // ชื่อผู้เสนอราคา (จากรหัสพนักงาน)
@@ -645,6 +648,39 @@ class QuotationController extends Controller
         $cols = $presets[$this->resolveFormat($header)] ?? $presets[''];
         // แนบ label_en ให้ preset ด้วย (กันกรณีใบเก่าที่ไม่มี col_config)
         return array_map(fn ($c) => $c + ['label_en' => $this->labelEn($c['key'], $c['label'])], $cols);
+    }
+
+    /**
+     * ตัดคอลัมน์ที่ "ไม่มีการกรอก" ออกจากตารางรายการ — ใช้เฉพาะตอนพิมพ์
+     *
+     * คอลัมน์ไหนที่ทุกแถวว่างหมด (null / ช่องว่าง) → ไม่ต้องพิมพ์ออกมา
+     * แม้ผู้ใช้จะเลือกรูปแบบตาราง (preset 1.1–2.3) ที่มีคอลัมน์นั้นอยู่ก็ตาม
+     *
+     * หมายเหตุ: ไม่แตะ col_config ที่บันทึกใน DB — ฟอร์มแก้ไขยังต้องใช้ชุดคอลัมน์เต็ม
+     * เพื่อเดารูปแบบตารางและให้ผู้ใช้กรอกช่องที่ยังว่างเพิ่มได้
+     *
+     * @param array $colConfig  คอลัมน์ที่ตั้งไว้ของใบนี้
+     * @param iterable $items   รายการสินค้า (แต่ละตัวมี ->cells)
+     */
+    private function pruneEmptyCols(array $colConfig, $items): array
+    {
+        $out = [];
+        foreach ($colConfig as $c) {
+            $k = $c['key'] ?? null;
+            if ($k === null) {
+                continue;
+            }
+            foreach ($items as $it) {
+                $v = $it->cells[$k] ?? null;
+                if ($v !== null && trim((string) $v) !== '') {
+                    $out[] = $c;
+                    continue 2;   // คอลัมน์นี้มีคนกรอกแล้ว → เก็บไว้ ไปดูคอลัมน์ถัดไป
+                }
+            }
+        }
+
+        // ตัดจนไม่เหลือเลย (เช่น ใบที่ยังไม่มีรายการ) → คืนชุดเดิม กันตารางหัวหายทั้งแถว
+        return $out ?: $colConfig;
     }
 
     /**

@@ -98,6 +98,14 @@
 #quotationItemsTable th.qcol-price-end,
 #quotationItemsTable td.qcol-price-end { border-right: 3px solid #3f5f85 !important; }
 
+/* ช่อง "รวม VAT" — คำนวณอัตโนมัติ แก้เองไม่ได้ (readonly) → ทำให้ดูออกว่าพิมพ์ไม่ได้ */
+#quotationItemsTable input.qitem-readonly {
+    background-color: #eef1f4;
+    color: #495057;
+    cursor: not-allowed;
+    font-weight: 600;
+}
+
 /* ─── ช่องวันที่ในฟอร์ม: ให้ label อยู่บนหัวช่องเสมอ (เรียงตรงแถวกับช่องอื่น) ───
    flatpickr(static:true) ห่อ input ด้วย .flatpickr-wrapper ที่เป็น inline-block
    ซึ่ง .form-label ของ Bootstrap ก็ inline-block → label สั้น ๆ อย่าง "Revise Date"
@@ -781,6 +789,13 @@
                         var tdcls = rc ? ' class="'+rc+'"' : '';
                         // ช่องรหัสสินค้า → ค้นชื่อ/ราคา/รายละเอียดมาเติมช่องที่ว่าง (oninput + debounce)
                         var oncode = (c.key === 'code') ? '; lookupItem('+idx+',this.value)' : '';
+                        // ช่อง VAT = คำนวณอัตโนมัติอย่างเดียว → ห้ามแก้เอง (readonly, ไม่รับ oninput)
+                        if (c.key === 'price_vat'){
+                            body += '<td'+tdcls+'><input type="'+typ+'" class="'+cls+' qitem-readonly"'+step
+                                 +  ' value="'+esc(row[c.key])+'" readonly tabindex="-1"'
+                                 +  ' title="คำนวณอัตโนมัติจากราคา (VAT '+(VAT_RATE*100)+'%)"></td>';
+                            return;
+                        }
                         body += '<td'+tdcls+'><input type="'+typ+'" class="'+cls+'"'+step+' value="'+esc(row[c.key])+'" oninput="updateItem('+idx+',\''+c.key+'\',this.value)'+oncode+'"></td>';
                     });
                     body += '<td class="text-center"><button type="button" class="btn btn-sm btn-icon btn-label-danger" title="ลบ" onclick="removeItemRow('+idx+')"><i class="ti ti-trash"></i></button></td>';
@@ -788,6 +803,8 @@
                 });
             }
             $('#quotationItems').html(body);
+            // เปลี่ยนรูปแบบตาราง (คอลัมน์ VAT อาจเพิ่งโผล่มา) → เติม VAT ให้แถวที่ยังว่าง
+            recalcAllVat();
         }
 
         function updateItem(idx, key, val){
@@ -796,6 +813,59 @@
             row[key] = val;
             // ผู้ใช้แก้ช่องนี้เอง → ไม่ถือเป็น auto-fill อีก (กันโดนล้างตอนรหัสไม่เจอ)
             if (row.__auto && row.__auto[key]) delete row.__auto[key];
+
+            // ── VAT อัตโนมัติ — แก้ราคาแล้ว VAT ต้องตามทันที ──
+            if (key === 'price_kg' || key === 'new_price'){
+                recalcVat(idx);
+            }
+        }
+
+        // ────────────────────────────────────────────────────────
+        //  คำนวณ VAT อัตโนมัติ  (รวม VAT = ราคา × (1 + อัตรา))
+        //  ฐานคิด = "ราคาใหม่" ถ้ากรอกไว้ ไม่งั้นใช้ "ราคา (บาท/กก)"
+        //  — ใบขอปรับราคา (2.1) คอลัมน์ VAT คือ "รวม Vat ใหม่" จึงต้องคิดจากราคาใหม่
+        //  ช่อง VAT เป็น readonly — แก้เองไม่ได้ ค่าที่แสดง/บันทึกมาจากสูตรนี้เสมอ
+        // ────────────────────────────────────────────────────────
+        var VAT_RATE = 0.07;   // ภาษีมูลค่าเพิ่ม 7%
+
+        function toNum(v){
+            var s = String(v == null ? '' : v).trim();
+            if (s === '') return null;
+            var n = parseFloat(s);
+            return isNaN(n) ? null : n;
+        }
+        // ราคาที่ใช้เป็นฐานคิด VAT ของแถวนี้ (ไม่มีเลย = null)
+        function vatBase(row){
+            var n = toNum(row.new_price);
+            return (n !== null) ? n : toNum(row.price_kg);
+        }
+        function vatOf(base){ return Math.round(base * (1 + VAT_RATE) * 100) / 100; }
+
+        // คอลัมน์ VAT แสดงอยู่ในรูปแบบตารางที่เลือกไหม (เช่น 2.2 / 2.3 ไม่มีคอลัมน์นี้)
+        // ไม่แสดง = ไม่ต้องคำนวณ กันค่าที่ผู้ใช้ไม่เห็นหลุดลงฐานข้อมูล
+        function vatColShown(){
+            return activeCols().some(function(c){ return c.key === 'price_vat'; });
+        }
+
+        // เขียนค่าลงช่องในตารางโดยไม่ re-render (คง focus/เคอร์เซอร์ช่องที่กำลังพิมพ์)
+        function setCellInput(idx, key, val){
+            var pos = -1;
+            activeCols().forEach(function(c, i){ if (c.key === key) pos = i; });
+            if (pos < 0) return;
+            $('#quotationItems tr').eq(idx).find('input').eq(pos).val(val);
+        }
+
+        function recalcVat(idx){
+            var row = currentItems[idx];
+            if (!row || !vatColShown()) return;
+            var base = vatBase(row);
+            var val  = (base === null) ? '' : vatOf(base).toFixed(2);
+            if (String(row.price_vat == null ? '' : row.price_vat) === val) return;
+            row.price_vat = val;
+            setCellInput(idx, 'price_vat', val);
+        }
+        function recalcAllVat(){
+            currentItems.forEach(function(row, idx){ recalcVat(idx); });
         }
 
         // ── ค้นข้อมูลสินค้าจากรหัส (oninput + debounce) เติมช่องที่ว่าง / ไม่เจอ = เอาที่เติมไว้ออก ──
@@ -826,7 +896,7 @@
             var row = currentItems[idx];
             if (!row) return;
             clearAutoFilled(row);              // ล้างที่เคยเติมไว้ก่อน (เผื่อรหัสเปลี่ยน/ไม่เจอ)
-            if (!code){ refreshRowInputs(idx); return; }
+            if (!code){ recalcVat(idx); refreshRowInputs(idx); return; }
             if (itemLookupXhr) itemLookupXhr.abort();
             itemLookupXhr = $.getJSON("{{ $page_url }}/item-lookup", {code: code}, function(res){
                 if (currentItems[idx] !== row) return;   // แถวเปลี่ยนระหว่างรอผล
@@ -839,6 +909,8 @@
                             row.__auto[k] = true;   // จำว่าเติมอัตโนมัติ
                         }
                     });
+                    // ราคาที่ค้นมาเปลี่ยน → VAT ต้องตามไปด้วย (เว้นแถวที่ผู้ใช้พิมพ์ VAT เอง)
+                    recalcVat(idx);
                 }
                 refreshRowInputs(idx);
             }).fail(function(){ refreshRowInputs(idx); });
@@ -852,7 +924,7 @@
         }
         function setItems(items){
             currentItems = (items && items.length) ? items : [{}, {}];
-            renderItems();
+            renderItems();   // renderItems → recalcAllVat: VAT ของใบเก่าคำนวณใหม่ตามราคาปัจจุบันเสมอ
         }
 
         // ────────────────────────────────────────────────────────
