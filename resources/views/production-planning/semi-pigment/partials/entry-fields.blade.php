@@ -63,7 +63,9 @@
         <input type="text" class="form-control" id="{{ $prefix }}_red_bill_code" placeholder="เลขที่ใบเบิก">
     </div>
 </div>
+
 <hr class="my-2">
+
 <div class="row">
     <div class="col-md-4 mb-3">
         <label class="form-label">ยอดคงเหลือวันนี้ (Balance)</label>
