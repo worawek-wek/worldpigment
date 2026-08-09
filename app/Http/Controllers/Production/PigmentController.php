@@ -12,7 +12,7 @@ use App\Models\Pigment;
 use App\Models\Planning;
 use App\Models\PlanningHeader;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx as WriterXlsx;
+use PhpOffice\PhpSpreadsheet\Writer\Xls as WriterXls;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
@@ -171,13 +171,13 @@ class PigmentController extends Controller
 
         $sheet->freezePane('A'.($headerRow + 1));
 
-        $fileName = 'ใบขอสั่ง_PIGMENT_'.now()->format('Ymd_His').'.xlsx';
+        $fileName = 'ใบขอสั่ง_PIGMENT_'.now()->format('Ymd_His').'.xls';
 
         // ส่งไฟล์ให้ดาวน์โหลดตรงๆ ไม่เขียนลงดิสก์ (ไม่ทิ้งไฟล์ค้างใน public/)
         return response()->streamDownload(function () use ($spreadsheet) {
-            (new WriterXlsx($spreadsheet))->save('php://output');
+            (new WriterXls($spreadsheet))->save('php://output');
         }, $fileName, [
-            'Content-Type'  => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Type'  => 'application/vnd.ms-excel',
             'Cache-Control' => 'max-age=0',
         ]);
     }

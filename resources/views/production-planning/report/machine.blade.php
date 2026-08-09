@@ -1,6 +1,19 @@
 @extends('./layout/main')
 
 @section('content')
+    <style>
+        /* แถวหัวกลุ่มเครื่องจักร: บังคับพื้นหลังน้ำเงินเข้ม + ปิด overlay ลาย striped/hover ของ Bootstrap
+           (Bootstrap 5 ระบายสี striped/hover ด้วย box-shadow ซึ่งทับ background ทำให้ตัวหนังสือขาวมองไม่เห็น) */
+        #machineReportTable tbody.machine-head > tr,
+        #machineReportTable tbody.machine-head > tr > td {
+            background-color: #1e40af !important;
+            color: #fff !important;
+            box-shadow: none !important;
+        }
+        #machineReportTable tbody.machine-head .small {
+            color: #dbeafe !important;
+        }
+    </style>
     <div class="container-xxl flex-grow-1 container-p-y">
 
         {{-- หัวข้อหน้า --}}

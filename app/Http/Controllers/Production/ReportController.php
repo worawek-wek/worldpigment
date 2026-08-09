@@ -355,12 +355,12 @@ class ReportController extends Controller
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
-        $fileName = 'report-machine-'.now()->format('Ymd-His').'.xlsx';
+        $fileName = 'report-machine-'.now()->format('Ymd-His').'.xls';
 
         return response()->streamDownload(function () use ($spreadsheet) {
-            (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save('php://output');
+            (new \PhpOffice\PhpSpreadsheet\Writer\Xls($spreadsheet))->save('php://output');
         }, $fileName, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Type' => 'application/vnd.ms-excel',
         ]);
     }
 

@@ -23,11 +23,11 @@
     @forelse($groups as $group)
         {{-- หัวกลุ่มเครื่องจักร (ไม่ลาก) --}}
         <tbody class="machine-head">
-            <tr class="table-secondary">
-                <td colspan="9">
+            <tr style="background-color:#1e40af;color:#fff;">
+                <td colspan="9" style="background-color:#1e40af;color:#fff;">
                     <i class="ti ti-tools me-1"></i>
                     <strong>เครื่องจักร: {{ $group['machine'] !== '' ? $group['machine'] : 'ไม่ระบุเครื่องจักร' }}</strong>
-                    <span class="text-muted small ms-1">({{ number_format($group['items']->count()) }} รายการ)</span>
+                    <span class="small ms-1" style="color:#dbeafe;">({{ number_format($group['items']->count()) }} รายการ)</span>
                 </td>
             </tr>
         </tbody>
