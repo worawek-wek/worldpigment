@@ -47,11 +47,11 @@
         </div>
         <div class="col-md-4 mb-3">
             <label class="form-label">วันที่สั่ง</label>
-            <input type="date" class="form-control" name="mdate" value="{{ $r_mdate }}" {{ $ro }}>
+            <input type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" name="mdate" value="{{ $r_mdate }}" {{ $ro }}>
         </div>
         <div class="col-md-4 mb-3">
             <label class="form-label">วันที่ต้องการรับ</label>
-            <input type="date" class="form-control" name="custwant" value="{{ $r_custwant }}" {{ $ro }}>
+            <input type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" name="custwant" value="{{ $r_custwant }}" {{ $ro }}>
         </div>
         <div class="col-md-4 mb-3">
             <label class="form-label">ขาด Semi Code</label>
@@ -113,3 +113,22 @@
         </button>
     @endif
 </div>
+
+<script>
+    // flatpickr: แสดง d/m/Y เหมือนกันทุกเครื่อง แต่ค่าจริง (input.value) ยังเป็น Y-m-d
+    // → $('#sp_edit_form').serialize() ส่ง Y-m-d ให้ server เหมือนเดิม ไม่ต้องแก้ฝั่ง PHP
+    // (partial ถูกฉีดด้วย .html() → script นี้รันตอนถูกฉีด)
+    $('#sp_edit_form .flatpickr-date').each(function () {
+        if (this._flatpickr) return;
+        // รายการที่ดำเนินการแล้ว (disabled) → แสดงอย่างเดียว ห้ามเปิดปฏิทิน/แก้ไข
+        var readOnly = this.disabled || this.readOnly;
+        var fp = flatpickr(this, {
+            dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y',
+            allowInput: true, disableMobile: true, clickOpens: !readOnly
+        });
+        if (readOnly && fp.altInput) {
+            fp.altInput.setAttribute('readonly', 'readonly');
+            fp.altInput.classList.add('bg-light');
+        }
+    });
+</script>

@@ -29,11 +29,11 @@
     </div>
     <div class="col-md-4 mb-3">
         <label class="form-label">วันที่สั่ง (Order Date)</label>
-        <input type="date" class="form-control" id="{{ $prefix }}_mdate">
+        <input type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" id="{{ $prefix }}_mdate">
     </div>
     <div class="col-md-4 mb-3">
         <label class="form-label">วันที่ต้องการรับ (Want Date)</label>
-        <input type="date" class="form-control" id="{{ $prefix }}_custwant">
+        <input type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" id="{{ $prefix }}_custwant">
     </div>
     <div class="col-md-4 mb-3">
         <label class="form-label">รหัสสินค้า (Item No.) <span class="text-danger">*</span></label>

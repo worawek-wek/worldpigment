@@ -49,8 +49,9 @@
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <input type="date"
-                                    class="form-control">
+                                {{-- หมายเหตุ: ตัวกรองวันที่นี้ยังเป็น mockup (ยังไม่ผูกกับการค้นหา) — แปลงเป็น flatpickr เพื่อให้แสดง d/m/Y เหมือนหน้าอื่น --}}
+                                <input type="text"
+                                    class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
                             </div>
                         </div>
                     </div>
@@ -110,6 +111,13 @@
 
     var oTable;
     $(document).ready(function () {
+        // flatpickr: บังคับช่องวันที่แสดง d/m/Y เหมือนกันทุกเครื่อง (ค่าจริงเป็น Y-m-d)
+        $('.flatpickr-date').each(function () {
+            if (!this._flatpickr) flatpickr(this, {
+                dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true, disableMobile: true
+            });
+        });
+
         oTable = $('#dataTable').DataTable({
             processing: true,
             serverSide: true,

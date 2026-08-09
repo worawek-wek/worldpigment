@@ -115,15 +115,15 @@
         <div class="row">
             <div class="col-md-4 mb-3">
                 <label class="form-label">วันที่สั่ง (mdate)</label>
-                <input type="date" name="mdate"
+                <input type="text" name="mdate"
                     value="{{ $planning_item?->mdate ? substr($planning_item->mdate, 0, 10) : '' }}"
-                    class="form-control">
+                    class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
             </div>
             <div class="col-md-4 mb-3">
                 <label class="form-label">วันที่ต้องการรับ (custwant)</label>
-                <input type="date" name="custwant"
+                <input type="text" name="custwant"
                     value="{{ $planning_item?->custwant ? substr($planning_item->custwant, 0, 10) : '' }}"
-                    class="form-control">
+                    class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
             </div>
             <div class="col-md-4 mb-3">
                 <label class="form-label d-flex align-items-center justify-content-between">
@@ -135,9 +135,9 @@
                         </button>
                     @endif
                 </label>
-                <input type="date" name="senddate"
+                <input type="text" name="senddate"
                     value="{{ $planning_item?->senddate ? substr($planning_item->senddate, 0, 10) : '' }}"
-                    class="form-control">
+                    class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
             </div>
         </div>
         <div class="row">
@@ -208,9 +208,9 @@
             <div class="row">
                 <div class="col-md-3 mb-3">
                     <label class="form-label">วันที่วางแผนผลิต (Inplan)</label>
-                    <input type="date" name="inplan"
-                        value="{{ $planning_item?->inplan ?? '' }}"
-                        class="form-control">
+                    <input type="text" name="inplan"
+                        value="{{ $planning_item?->inplan ? substr($planning_item->inplan, 0, 10) : '' }}"
+                        class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
                 </div>
                 <div class="col-md-3 mb-3">
                     <label class="form-label">กะการผลิต (Work Shift)</label>
@@ -282,7 +282,7 @@
                             <div class="col-md-4">
                                 <select name="prod_method_id[]" class="form-select form-select-sm">{!! $prodMethodOptions($row->prod_method_id) !!}</select>
                             </div>
-                            <div class="col-md-3"><input type="date" name="prod_method_date[]" class="form-control form-control-sm" value="{{ $row->work_date ? substr($row->work_date, 0, 10) : '' }}"></div>
+                            <div class="col-md-3"><input type="text" name="prod_method_date[]" class="form-control form-control-sm flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" value="{{ $row->work_date ? substr($row->work_date, 0, 10) : '' }}"></div>
                             <div class="col-md-2"><input type="time" name="prod_method_start[]" class="form-control form-control-sm" value="{{ $row->start_time ? substr($row->start_time, 0, 5) : '' }}"></div>
                             <div class="col-md-2"><input type="time" name="prod_method_end[]" class="form-control form-control-sm" value="{{ $row->end_time ? substr($row->end_time, 0, 5) : '' }}"></div>
                             <div class="col-md-1">
@@ -296,7 +296,7 @@
                             <div class="col-md-4">
                                 <select name="prod_method_id[]" class="form-select form-select-sm">{!! $prodMethodOptions() !!}</select>
                             </div>
-                            <div class="col-md-3"><input type="date" name="prod_method_date[]" class="form-control form-control-sm"></div>
+                            <div class="col-md-3"><input type="text" name="prod_method_date[]" class="form-control form-control-sm flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป"></div>
                             <div class="col-md-2"><input type="time" name="prod_method_start[]" class="form-control form-control-sm"></div>
                             <div class="col-md-2"><input type="time" name="prod_method_end[]" class="form-control form-control-sm"></div>
                             <div class="col-md-1">
@@ -316,9 +316,9 @@
             <div class="row">
                 <div class="col-md-3 mb-3">
                     <label class="form-label">วันที่เริ่มผลิต (Start Date)</label>
-                    <input type="date" name="start_date"
-                        value="{{ $planning_item?->start_date ?? '' }}"
-                        class="form-control">
+                    <input type="text" name="start_date"
+                        value="{{ $planning_item?->start_date ? substr($planning_item->start_date, 0, 10) : '' }}"
+                        class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
                 </div>
                 <div class="col-md-3 mb-3">
                     <label class="form-label">เวลาที่เริ่มผลิต (Start Time)</label>
@@ -328,9 +328,9 @@
                 </div>
                 <div class="col-md-3 mb-3">
                     <label class="form-label">วันที่ผลิตเสร็จ (End Date)</label>
-                    <input type="date" name="end_date"
-                        value="{{ $planning_item?->end_date ?? '' }}"
-                        class="form-control">
+                    <input type="text" name="end_date"
+                        value="{{ $planning_item?->end_date ? substr($planning_item->end_date, 0, 10) : '' }}"
+                        class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
                 </div>
                 <div class="col-md-3 mb-3">
                     <label class="form-label">เวลาที่ผลิตเสร็จ (End Time)</label>
@@ -347,9 +347,9 @@
             <div class="row">
                 <div class="col-md-4 mb-3">
                     <label class="form-label">วันที่ส่ง Qc (QC Date)</label>
-                    <input type="date" name="qc_date"
-                        value="{{ $planning_item?->qc_date ?? '' }}"
-                        class="form-control">
+                    <input type="text" name="qc_date"
+                        value="{{ $planning_item?->qc_date ? substr($planning_item->qc_date, 0, 10) : '' }}"
+                        class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
                 </div>
                 <div class="col-md-4 mb-3">
                     <label class="form-label">เวลาที่ส่ง Qc (QC Time)</label>
@@ -702,6 +702,30 @@
 </div>
 
 <script>
+// ── helper กลางสำหรับ flatpickr (ใช้ร่วมทั้ง IIFE ของ Semi และ Pigment) ──
+// altInput: ช่องที่เห็นแสดง d/m/Y เหมือนกันทุกเครื่อง แต่ค่าจริงใน input (ตาม name/id) ยังเป็น Y-m-d
+// → serialize/.val() ส่ง Y-m-d ผ่าน validation 'nullable|date' ของ server เหมือนเดิม ไม่ต้องแก้ PHP
+window.wpFpDateOptions = {
+    dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true, disableMobile: true
+};
+// ผูก flatpickr ให้ทุก .flatpickr-date ภายใน scope (กัน init ซ้ำด้วย _flatpickr)
+window.wpInitDateFields = function (scope) {
+    $(scope).find('.flatpickr-date').addBack('.flatpickr-date').each(function () {
+        if (!this._flatpickr) flatpickr(this, window.wpFpDateOptions);
+    });
+};
+// ตั้งค่าวันที่ (รับ Y-m-d) ให้อัปเดตทั้งช่องที่แสดง (d/m/Y) และค่าจริง — ว่าง = เคลียร์
+window.wpSetDateField = function (sel, val) {
+    var el = $(sel)[0];
+    if (!el) return;
+    if (el._flatpickr) {
+        if (val) el._flatpickr.setDate(String(val).substr(0, 10), false, 'Y-m-d');
+        else el._flatpickr.clear();
+    } else {
+        el.value = val ? String(val).substr(0, 10) : '';
+    }
+};
+
 (function () {
     // ── ค่า default จาก planning_header แม่ ──
     var DEFAULT_MDATE  = '{{ $default_mdate }}';
@@ -714,6 +738,11 @@
     var URL_ENTRY_UPDATE = '{{ route('production.semipigment.entry.update') }}';
     var URL_ENTRY_DELETE = '{{ route('production.semipigment.entry.delete') }}';
     var URL_DEPT_OPTIONS = '{{ route('production.planning.dept-options') }}';
+
+    // ── flatpickr (helper กลางนิยามไว้ก่อน IIFE) — scope เฉพาะฟอร์ม/modal เพื่อไม่ชนกับหน้า index ──
+    var initDateFields = window.wpInitDateFields;
+    var setDateField   = window.wpSetDateField;
+    initDateFields('#planning_item_form'); // ช่องวันที่ในฟอร์มหลัก
 
     // ── เปลี่ยนแผนก (Company) → โหลดเครื่องจักร/สถานะของแผนกใหม่ แล้วล้างค่าที่เลือกไว้ ──
     // (ค่า machine_no/planning_status เดิมเป็นของแผนกเก่า จึงต้องเลือกใหม่)
@@ -774,20 +803,25 @@
     function prodMethodRowHtml() {
         return '<div class="row g-2 align-items-center mb-2 prod-method-row">'
             + '<div class="col-md-4">' + prodMethodSelectHtml() + '</div>'
-            + '<div class="col-md-3"><input type="date" name="prod_method_date[]" class="form-control form-control-sm"></div>'
+            + '<div class="col-md-3"><input type="text" name="prod_method_date[]" class="form-control form-control-sm flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป"></div>'
             + '<div class="col-md-2"><input type="time" name="prod_method_start[]" class="form-control form-control-sm"></div>'
             + '<div class="col-md-2"><input type="time" name="prod_method_end[]" class="form-control form-control-sm"></div>'
             + '<div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger btn_remove_prod_method" title="ลบ"><i class="ti ti-trash"></i></button></div>'
             + '</div>';
     }
     $('#btn_add_prod_method').on('click', function () {
-        $('#prod_method_rows').append(prodMethodRowHtml());
+        var $row = $(prodMethodRowHtml()).appendTo('#prod_method_rows');
+        initDateFields($row); // ผูก flatpickr ให้ช่องวันที่ของแถวใหม่
     });
     // ลบแถว; ถ้าเหลือแถวเดียวให้ล้างค่าแทนการลบ (คงไว้อย่างน้อย 1 แถว)
     $('#prod_method_rows').on('click', '.btn_remove_prod_method', function () {
         var $rows = $('#prod_method_rows .prod-method-row');
         if ($rows.length <= 1) {
-            $(this).closest('.prod-method-row').find('input').val('');
+            // ช่องวันที่เป็น flatpickr → เคลียร์ผ่าน instance เพื่อล้างทั้งช่องที่แสดงและค่าจริง
+            $(this).closest('.prod-method-row').find('input').each(function () {
+                if (this._flatpickr) this._flatpickr.clear();
+                else this.value = '';
+            });
         } else {
             $(this).closest('.prod-method-row').remove();
         }
@@ -900,6 +934,7 @@
     // ย้าย modal ออกไปเป็น sibling ที่ body (กัน stacked modal ซ้อนใน .modal-content แล้วเพี้ยน)
     $('body').children('#sp_entry_modal').remove();
     var $entryModal = $('#sp_entry_modal').appendTo('body');
+    initDateFields($entryModal); // ผูก flatpickr ช่องวันที่ใน modal Semi (ย้ายไป body แล้ว)
 
     // แถวที่กำลังแก้ไขผ่าน modal (null = โหมดเพิ่มใหม่)
     var $editingRow = null;
@@ -944,8 +979,8 @@
     function fillModal(d) {
         $('#sp_company').val(d.company || '');
         $('#sp_custno').val(d.custno || DEFAULT_CUSTNO);
-        $('#sp_mdate').val(d.mdate || '');
-        $('#sp_custwant').val(d.custwant || '');
+        setDateField('#sp_mdate', d.mdate);       // flatpickr: อัปเดตทั้งช่องที่แสดงและค่าจริง
+        setDateField('#sp_custwant', d.custwant);
         $('#sp_itemno').val(d.itemno || '');
         $('#sp_semi_code').val(d.semi_code || '');
         $('#sp_primary_color').val(d.primary_color || '');
@@ -1264,6 +1299,7 @@
     // ย้าย modal ออกไปเป็น sibling ที่ body (กัน stacked modal ซ้อนใน .modal-content แล้วเพี้ยน)
     $('body').children('#pigment_entry_modal').remove();
     var $modal = $('#pigment_entry_modal').appendTo('body');
+    window.wpInitDateFields($modal); // ผูก flatpickr ช่องวันที่ใน modal Pigment
 
     // แถวที่กำลังแก้ไขผ่าน modal (null = โหมดเพิ่มใหม่)
     var $editingRow = null;
@@ -1287,8 +1323,8 @@
 
     function fillModal(d) {
         $('#pg_custno').val(d.custno || DEFAULT_CUSTNO);
-        $('#pg_mdate').val(d.mdate || '');
-        $('#pg_custwant').val(d.custwant || '');
+        window.wpSetDateField('#pg_mdate', d.mdate);       // flatpickr: อัปเดตทั้งช่องที่แสดงและค่าจริง
+        window.wpSetDateField('#pg_custwant', d.custwant);
         $('#pg_itemno').val(d.itemno || '');
         $('#pg_balance').val(d.balance || '');
         $('#pg_retrospective').val(d.retrospective || '');

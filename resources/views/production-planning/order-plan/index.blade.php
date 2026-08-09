@@ -59,15 +59,15 @@
                             <div class="col-md-4">
                                 <label class="form-label small mb-1">Inplan (วันเริ่ม – สิ้นสุด)</label>
                                 <div class="d-flex gap-1">
-                                    <input id="inplanStart" type="date" class="form-control" title="Inplan เริ่ม">
-                                    <input id="inplanEnd" type="date" class="form-control" title="Inplan สิ้นสุด">
+                                    <input id="inplanStart" type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" title="Inplan เริ่ม">
+                                    <input id="inplanEnd" type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" title="Inplan สิ้นสุด">
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label small mb-1">Custwant (วันเริ่ม – สิ้นสุด)</label>
                                 <div class="d-flex gap-1">
-                                    <input id="custwantStart" type="date" class="form-control" title="Custwant เริ่ม">
-                                    <input id="custwantEnd" type="date" class="form-control" title="Custwant สิ้นสุด">
+                                    <input id="custwantStart" type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" title="Custwant เริ่ม">
+                                    <input id="custwantEnd" type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" title="Custwant สิ้นสุด">
                                 </div>
                             </div>
                             <div class="col-md-2 d-flex align-items-end">
@@ -118,7 +118,18 @@
 <script>
 
     var oTable;
+    // ช่องวันที่ทั้งหมด (ใช้ทั้ง init flatpickr และเคลียร์ตอนกดล้าง)
+    var DATE_FILTER_SEL = '#inplanStart, #inplanEnd, #custwantStart, #custwantEnd';
     $(document).ready(function () {
+        // flatpickr: แสดง d/m/Y เหมือนกันทุกเครื่อง แต่ค่าจริง (input.value) ยังเป็น Y-m-d
+        // → ค่าที่ส่งให้ DataTable/server ยังเป็น Y-m-d เหมือนเดิม ไม่ต้องแก้ฝั่ง PHP
+        var fpOptions = {
+            dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true, disableMobile: true
+        };
+        $(DATE_FILTER_SEL).each(function () {
+            if (!this._flatpickr) flatpickr(this, fpOptions);
+        });
+
         oTable = $('#dataTable').DataTable({
             processing: true,
             serverSide: true,
@@ -191,7 +202,10 @@
         $('#searchCompany').val('');
         // สถานะปิดงานกลับไปที่ค่าเริ่มต้น (ยังไม่ปิดงาน)
         $('#searchEndOrder').val('N');
-        $('#inplanStart, #inplanEnd, #custwantStart, #custwantEnd').val('');
+        // ช่องวันที่เป็น flatpickr → เคลียร์ผ่าน instance; clear(false) กัน redraw ซ้ำ แล้ว draw ครั้งเดียว
+        $(DATE_FILTER_SEL).each(function () {
+            if (this._flatpickr) this._flatpickr.clear(false); else this.value = '';
+        });
         oTable.draw();
     });
 

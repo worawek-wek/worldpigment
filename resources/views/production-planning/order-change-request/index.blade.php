@@ -48,13 +48,13 @@
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label" for="date_from">วันที่ปิดจบงาน (จาก)</label>
-                                    <input type="date" class="form-control" id="date_from" name="date_from"
-                                           value="{{ $date_from }}">
+                                    <input type="text" class="form-control flatpickr-date" id="date_from" name="date_from"
+                                           autocomplete="off" placeholder="วว/ดด/ปปปป" value="{{ $date_from }}">
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label" for="date_to">ถึง</label>
-                                    <input type="date" class="form-control" id="date_to" name="date_to"
-                                           value="{{ $date_to }}">
+                                    <input type="text" class="form-control flatpickr-date" id="date_to" name="date_to"
+                                           autocomplete="off" placeholder="วว/ดด/ปปปป" value="{{ $date_to }}">
                                 </div>
                                 <div class="col-md-3 text-end">
                                     <button type="submit" class="btn btn-primary">
@@ -122,4 +122,16 @@
 
         </div>
     </div>
+@endsection
+
+@section('script')
+<script>
+    // flatpickr: บังคับช่องวันที่แสดง d/m/Y เหมือนกันทุกเครื่อง แต่ค่าจริง (input.value) ยังเป็น Y-m-d
+    // → form GET submit และลิงก์ PDF ยังส่ง Y-m-d ให้ server เหมือนเดิม ไม่ต้องแก้ฝั่ง PHP
+    $('.flatpickr-date').each(function () {
+        if (!this._flatpickr) flatpickr(this, {
+            dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true, disableMobile: true
+        });
+    });
+</script>
 @endsection

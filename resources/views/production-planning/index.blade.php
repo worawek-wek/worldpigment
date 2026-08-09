@@ -218,8 +218,8 @@
                 </div>
 
                 <div class="col-md-2">
-                    <input type="date"
-                        class="form-control">
+                    <input type="text"
+                        class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
                 </div>
 
             </div>
@@ -418,8 +418,8 @@
                             วันที่ผลิต
                         </label>
 
-                        <input type="date"
-                            class="form-control">
+                        <input type="text"
+                            class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
                     </div>
 
                     <div class="col-md-3">
@@ -557,6 +557,14 @@
     var page = "{{$page_url}}/datatable";
         var searchData = {};
         loadData(page);
+
+        // flatpickr: บังคับช่องวันที่แสดง d/m/Y เหมือนกันทุกเครื่อง (ค่าจริงเป็น Y-m-d)
+        // หมายเหตุ: ช่องวันที่ในหน้านี้เป็น mockup (ยังไม่ผูกกับการค้นหา) — แปลงเพื่อความสม่ำเสมอของหน้าตา
+        $('.flatpickr-date').each(function () {
+            if (!this._flatpickr) flatpickr(this, {
+                dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true, disableMobile: true
+            });
+        });
         
         function loadData(pages){
             

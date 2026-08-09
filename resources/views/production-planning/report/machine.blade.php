@@ -63,17 +63,19 @@
                                 </select>
                             </div>
 
-                            {{-- วันที่เริ่ม (ค่าเริ่มต้น = วันนี้) --}}
+                            {{-- วันที่เริ่ม (ค่าเริ่มต้น = วันนี้) — flatpickr โชว์ d/m/Y แต่ค่าจริง (value) ยังเป็น Y-m-d --}}
                             <div class="col-md-2">
                                 <label class="form-label mb-1 small text-muted">วันที่เริ่ม</label>
-                                <input id="searchDateStart" type="date" class="form-control"
+                                <input id="searchDateStart" type="text" class="form-control flatpickr-date"
+                                    autocomplete="off" placeholder="วว/ดด/ปปปป"
                                     value="{{ now()->format('Y-m-d') }}">
                             </div>
 
-                            {{-- วันที่ถึง (ค่าเริ่มต้น = วันนี้) --}}
+                            {{-- วันที่ถึง (ค่าเริ่มต้น = วันนี้) — flatpickr โชว์ d/m/Y แต่ค่าจริง (value) ยังเป็น Y-m-d --}}
                             <div class="col-md-2">
                                 <label class="form-label mb-1 small text-muted">วันที่ถึง</label>
-                                <input id="searchDateEnd" type="date" class="form-control"
+                                <input id="searchDateEnd" type="text" class="form-control flatpickr-date"
+                                    autocomplete="off" placeholder="วว/ดด/ปปปป"
                                     value="{{ now()->format('Y-m-d') }}">
                             </div>
 
@@ -266,8 +268,24 @@
         });
     }
 
+    // instance ของ flatpickr สำหรับช่องวันที่ (ใช้ setDate ตอนกดล้าง)
+    var fpStart = null;
+    var fpEnd   = null;
+
     // โหลดครั้งแรกด้วยค่าเริ่มต้น (วันนี้)
     $(document).ready(function () {
+        // flatpickr: แสดง d/m/Y เหมือนกันทุกเครื่อง แต่ค่าจริง (input.value) ยังเป็น Y-m-d
+        // → currentFilters() ส่ง Y-m-d ให้ server เหมือนเดิม ไม่ต้องแก้ฝั่ง PHP
+        var fpOptions = {
+            dateFormat: 'Y-m-d',   // ค่าใน input จริง (ส่งให้ server)
+            altInput:   true,      // สร้างช่องที่มองเห็นแยกต่างหาก
+            altFormat:  'd/m/Y',   // รูปแบบที่แสดงบนจอ
+            allowInput: true,
+            disableMobile: true
+        };
+        fpStart = flatpickr('#searchDateStart', fpOptions);
+        fpEnd   = flatpickr('#searchDateEnd', fpOptions);
+
         loadReport();
     });
 
@@ -319,8 +337,9 @@
         var today = '{{ now()->format('Y-m-d') }}';
         $('#searchDept').val('');
         $('#searchMachine').prop('disabled', true).html('<option value="">-- เลือกแผนกก่อน --</option>');
-        $('#searchDateStart').val(today);
-        $('#searchDateEnd').val(today);
+        // ตั้งค่าผ่าน instance flatpickr เพื่อให้ทั้งช่องที่แสดง (d/m/Y) และค่าจริง (Y-m-d) อัปเดตพร้อมกัน
+        if (fpStart) fpStart.setDate(today, false, 'Y-m-d'); else $('#searchDateStart').val(today);
+        if (fpEnd)   fpEnd.setDate(today, false, 'Y-m-d');   else $('#searchDateEnd').val(today);
         loadReport();
     });
 </script>

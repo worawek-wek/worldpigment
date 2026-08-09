@@ -80,11 +80,13 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label mb-1 small text-muted">วันที่เริ่ม</label>
-                                <input id="searchDateStart" type="date" class="form-control">
+                                <input id="searchDateStart" type="text" class="form-control flatpickr-date"
+                                    autocomplete="off" placeholder="วว/ดด/ปปปป">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label mb-1 small text-muted">วันที่สิ้นสุด</label>
-                                <input id="searchDateEnd" type="date" class="form-control">
+                                <input id="searchDateEnd" type="text" class="form-control flatpickr-date"
+                                    autocomplete="off" placeholder="วว/ดด/ปปปป">
                             </div>
                             <div class="col-md-2">
                                 <button id="btn_clear_date" type="button" class="btn btn-outline-secondary w-100">
@@ -96,7 +98,8 @@
                         <div class="row g-3 align-items-end mt-1">
                             <div class="col-md-4">
                                 <label class="form-label mb-1 small text-muted">วันที่บรรจุ (Packing)</label>
-                                <input id="searchPackingDate" type="date" class="form-control">
+                                <input id="searchPackingDate" type="text" class="form-control flatpickr-date"
+                                    autocomplete="off" placeholder="วว/ดด/ปปปป">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label mb-1 small text-muted">เวลาเริ่ม</label>
@@ -198,7 +201,30 @@
 <script>
 
     var oTable;
+    // instance ของ flatpickr สำหรับช่องวันที่ (ใช้ clear ตอนกดล้าง)
+    var fpDateStart = null;
+    var fpDateEnd   = null;
+    var fpPacking   = null;
     $(document).ready(function () {
+        // flatpickr: แสดง d/m/Y เหมือนกันทุกเครื่อง แต่ค่าจริง (input.value) ยังเป็น Y-m-d
+        // → ค่าที่ส่งให้ DataTable/server ยังเป็น Y-m-d เหมือนเดิม ไม่ต้องแก้ฝั่ง PHP
+        var fpOptions = {
+            dateFormat: 'Y-m-d',   // ค่าใน input จริง (ส่งให้ server)
+            altInput:   true,      // สร้างช่องที่มองเห็นแยกต่างหาก
+            altFormat:  'd/m/Y',   // รูปแบบที่แสดงบนจอ
+            allowInput: true,
+            disableMobile: true
+        };
+        fpDateStart = flatpickr('#searchDateStart', fpOptions);
+        fpDateEnd   = flatpickr('#searchDateEnd', fpOptions);
+        fpPacking   = flatpickr('#searchPackingDate', fpOptions);
+
+        // modal "สร้างแผน" (Semi) — partial entry-fields ใช้ class flatpickr-date เช่นกัน
+        // scope เฉพาะ #createSemiModal + guard _flatpickr เพื่อไม่ชน/ไม่ init ซ้ำกับช่องค้นหาด้านบน
+        $('#createSemiModal .flatpickr-date').each(function () {
+            if (!this._flatpickr) flatpickr(this, fpOptions);
+        });
+
         oTable = $('#dataTable').DataTable({
             processing: true,
             serverSide: true,
@@ -318,8 +344,9 @@
     // ล้างช่วงวันที่แล้วค้นหาใหม่
     $(document).on('click', '#btn_clear_date', function(e){
         e.preventDefault();
-        $('#searchDateStart').val('');
-        $('#searchDateEnd').val('');
+        // clear(false) = ไม่ trigger change → กัน redraw ซ้ำ แล้ว draw ครั้งเดียวด้านล่าง
+        if (fpDateStart) fpDateStart.clear(false); else $('#searchDateStart').val('');
+        if (fpDateEnd)   fpDateEnd.clear(false);   else $('#searchDateEnd').val('');
         oTable.draw();
     });
 
@@ -332,7 +359,7 @@
     // ล้างเงื่อนไขวันเวลาบรรจุแล้วค้นหาใหม่
     $(document).on('click', '#btn_clear_packing', function(e){
         e.preventDefault();
-        $('#searchPackingDate').val('');
+        if (fpPacking) fpPacking.clear(false); else $('#searchPackingDate').val('');
         $('#searchPackingTimeStart').val('');
         $('#searchPackingTimeEnd').val('');
         oTable.draw();
@@ -361,6 +388,10 @@
     $(document).on('click', '#btn_add', function (e) {
         e.preventDefault();
         $('#create_semi_form')[0].reset();
+        // flatpickr ไม่รับรู้ native form.reset() → เคลียร์ช่องวันที่ผ่าน instance
+        $('#createSemiModal .flatpickr-date').each(function () {
+            if (this._flatpickr) this._flatpickr.clear();
+        });
         $('#cs_itemno').removeClass('is-invalid');
         csProdManual = false;
         createSemiModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('createSemiModal'));

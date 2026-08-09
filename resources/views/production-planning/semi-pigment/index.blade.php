@@ -59,11 +59,11 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label mb-1 small text-muted">วันที่เริ่ม</label>
-                                <input id="searchDateStart" type="date" class="form-control">
+                                <input id="searchDateStart" type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label mb-1 small text-muted">ถึง</label>
-                                <input id="searchDateEnd" type="date" class="form-control">
+                                <input id="searchDateEnd" type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
                             </div>
                             <div class="col-md-2">
                                 <button id="btn_clear_date" type="button" class="btn btn-outline-secondary w-100">
@@ -135,6 +135,8 @@
 @section('script')
 <script>
     var oTable;
+    // instance flatpickr ของช่องวันที่ (ใช้ clear ตอนกดล้าง)
+    var fpDateStart = null, fpDateEnd = null;
 
     // แสดงตัวเลขเป็นทศนิยม 2 ตำแหน่ง (มี comma คั่นหลัก) — ว่าง/ไม่ใช่ตัวเลขแสดง '-'
     function fmt2(data) {
@@ -143,6 +145,13 @@
     }
 
     $(document).ready(function () {
+        // flatpickr: แสดง d/m/Y เหมือนกันทุกเครื่อง แต่ค่าจริง (input.value) ยังเป็น Y-m-d → ไม่ต้องแก้ฝั่ง PHP
+        var fpOptions = {
+            dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true, disableMobile: true
+        };
+        fpDateStart = flatpickr('#searchDateStart', fpOptions);
+        fpDateEnd   = flatpickr('#searchDateEnd', fpOptions);
+
         oTable = $('#dataTable').DataTable({
             processing: true,
             serverSide: true,
@@ -193,8 +202,9 @@
     // ล้างช่วงวันที่แล้วค้นหาใหม่
     $(document).on('click', '#btn_clear_date', function (e) {
         e.preventDefault();
-        $('#searchDateStart').val('');
-        $('#searchDateEnd').val('');
+        // clear(false) = ไม่ trigger change → กัน redraw ซ้ำ แล้ว draw ครั้งเดียว
+        if (fpDateStart) fpDateStart.clear(false); else $('#searchDateStart').val('');
+        if (fpDateEnd)   fpDateEnd.clear(false);   else $('#searchDateEnd').val('');
         oTable.draw();
     });
 
