@@ -32,7 +32,8 @@ class RoleController extends Controller
             });
         }
 
-        $roles->orderBy('name', 'asc');
+        // หมายเหตุ: ไม่ hard-code orderBy ที่นี่แล้ว — ให้ Yajra จัดการเรียงตามที่คลิกหัวคอลัมน์
+        // (ลำดับเริ่มต้นตามชื่อ Role ถูกกำหนดเป็นค่า default order ในฝั่ง DataTables ของ role/index)
 
         $rownum = 0;
 

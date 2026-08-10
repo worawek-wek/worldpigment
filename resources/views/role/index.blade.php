@@ -101,14 +101,19 @@
                     console.error('AJAX Error:', error, thrown);
                 }
             },
+            // เปิดให้คลิกหัวคอลัมน์เพื่อ sort ได้ (Yajra จะ ORDER BY ตาม name ของคอลัมน์ให้อัตโนมัติ)
             columns: [
+                // # เป็นเลขลำดับที่นับหลัง query จึง sort ไม่ได้ (จะ renumber ตามผลลัพธ์ที่เรียงแล้ว)
                 { 'className': "text-center", data: 'rownum', name: 'rownum', orderable: false },
-                { 'className': "text-left", data: 'name', name: 'name', orderable: false },
-                { 'className': "text-left", data: 'description', name: 'description', orderable: false },
-                { 'className': "text-center", data: 'employees_count', name: 'employees_count', orderable: false, searchable: false },
-                { 'className': "text-center", data: 'status_badge', name: 'status_badge', orderable: false, searchable: false },
+                { 'className': "text-left", data: 'name', name: 'name', orderable: true },
+                { 'className': "text-left", data: 'description', name: 'description', orderable: true },
+                // sort จำนวนพนักงานตาม alias employees_count (จาก withCount)
+                { 'className': "text-center", data: 'employees_count', name: 'employees_count', orderable: true, searchable: false },
+                // sort สถานะตามคอลัมน์จริง is_active (แม้จะแสดงเป็น badge)
+                { 'className': "text-center", data: 'status_badge', name: 'is_active', orderable: true, searchable: false },
                 { 'className': "text-center", data: 'btnedit', name: 'btnedit', orderable: false, searchable: false },
             ],
+            // เริ่มต้นเรียงตามชื่อ Role เหมือนลำดับเดิมที่เคย hard-code ใน controller
             order: [
                 [1, 'asc']
             ]

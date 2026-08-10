@@ -116,17 +116,22 @@
                     console.error('AJAX Error:', error, thrown);
                 }
             },
+            // เปิดให้คลิกหัวคอลัมน์เพื่อ sort ได้ (Yajra จะ ORDER BY ตาม name ของคอลัมน์ให้อัตโนมัติ)
+            // ใช้ชื่อคอลัมน์แบบ qualify (emp.* / roles.*) เพราะคิวรีมี join ตาราง roles
             columns: [
+                // # เป็นเลขลำดับที่นับหลัง query จึง sort ไม่ได้ (จะ renumber ตามผลลัพธ์ที่เรียงแล้ว)
                 { 'className': "text-center", data: 'rownum', name: 'rownum', orderable: false },
-                { 'className': "text-center", data: 'empno', name: 'empno', orderable: false },
-                { 'className': "text-center", data: 'empname', name: 'empname', orderable: false },
-                { 'className': "text-center", data: 'empsur', name: 'empsur', orderable: false },
-                { 'className': "text-center", data: 'department_name', name: 'department_name', orderable: false, searchable: false },
-                { 'className': "text-center", data: 'role_name', name: 'role_name', orderable: false, searchable: false },
-                { 'className': "text-center", data: 'user', name: 'user', orderable: false },
-                { 'className': "text-center", data: 'status_badge', name: 'status_badge', orderable: false, searchable: false },
+                { 'className': "text-center", data: 'empno', name: 'emp.empno', orderable: true },
+                { 'className': "text-center", data: 'empname', name: 'emp.empname', orderable: true },
+                { 'className': "text-center", data: 'empsur', name: 'emp.empsur', orderable: true },
+                // sort แผนก/สถานะ/role ตามคอลัมน์จริง (แม้จะแสดงผ่าน addColumn)
+                { 'className': "text-center", data: 'department_name', name: 'emp.dept', orderable: true, searchable: false },
+                { 'className': "text-center", data: 'role_name', name: 'roles.name', orderable: true, searchable: false },
+                { 'className': "text-center", data: 'user', name: 'emp.user', orderable: true },
+                { 'className': "text-center", data: 'status_badge', name: 'emp.is_active', orderable: true, searchable: false },
                 { 'className': "text-center", data: 'btnedit', name: 'btnedit', orderable: false, searchable: false },
             ],
+            // เริ่มต้นเรียงตามรหัสพนักงาน (empno) เหมือนลำดับเดิมที่เคย hard-code ใน controller
             order: [
                 [1, 'asc']
             ]

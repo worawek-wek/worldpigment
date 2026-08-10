@@ -47,9 +47,9 @@ class MachineController extends Controller
             })
             ->when(request('dept'), function ($q, $dept) {
                 $q->where('dept', $dept);
-            })
-            ->orderBy('dept', 'asc')
-            ->orderBy('MBX', 'asc');
+            });
+        // หมายเหตุ: ไม่ hard-code orderBy ที่นี่แล้ว — ให้ Yajra จัดการเรียงตามที่คลิกหัวคอลัมน์
+        // (ลำดับเริ่มต้น dept→MBX ถูกกำหนดเป็นค่า default order ในฝั่ง DataTables ของ machine/index)
 
         $rownum = 0;
 

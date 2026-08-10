@@ -29,9 +29,6 @@ class PlanningStatusController extends Controller
 
         return DataTables::of($data)
             ->addIndexColumn()
-            ->addColumn('rownum', function($row) {
-                return $row->rownum;
-            })
             ->addColumn('dept_name', function($row) {
                 return $row->dept_name ?? '-';
             })
@@ -60,16 +57,15 @@ class PlanningStatusController extends Controller
             ->select([
                 'tb_planning_status.*',
                 'tb_departments.name as dept_name',
-                DB::raw('ROW_NUMBER() OVER (ORDER BY tb_planning_status.sort ASC, tb_planning_status.id ASC) AS rownum')
             ])
             ->when(!empty($search), function ($query) use ($search) {
                 $query->where('tb_planning_status.name', 'LIKE', '%'.$search.'%');
             })
             ->when(!empty($dept), function ($query) use ($dept) {
                 $query->where('tb_planning_status.dept', $dept);
-            })
-            ->orderby('tb_planning_status.sort', 'asc')
-            ->orderby('tb_planning_status.id', 'asc');
+            });
+        // หมายเหตุ: ไม่ hard-code orderBy ที่นี่แล้ว — ให้ Yajra จัดการเรียงตามที่คลิกหัวคอลัมน์
+        // (ลำดับเริ่มต้นตามคอลัมน์ "ลำดับ"/sort ถูกกำหนดเป็นค่า default order ในฝั่ง DataTables ของ planning-status/index)
 
         return $data;
     }

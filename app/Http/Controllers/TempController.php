@@ -22,9 +22,9 @@ class TempController extends Controller
             })
             ->when(in_array(request('status'), ['Y', 'N'], true), function ($q) {
                 $q->where('is_active', request('status'));
-            })
-            ->orderBy('sort', 'asc')
-            ->orderBy('id', 'asc');
+            });
+        // หมายเหตุ: ไม่ hard-code orderBy ที่นี่แล้ว — ให้ Yajra จัดการเรียงตามที่คลิกหัวคอลัมน์
+        // (ลำดับเริ่มต้นตามคอลัมน์ sort ถูกกำหนดเป็นค่า default order ในฝั่ง DataTables ของ temp/index)
 
         $rownum = 0;
 

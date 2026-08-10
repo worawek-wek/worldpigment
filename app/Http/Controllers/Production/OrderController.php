@@ -30,10 +30,8 @@ class OrderController extends Controller
         $data = $this->dataQuery();
 
         return DataTables::of($data)
+            // # ใช้ DT_RowIndex จาก addIndexColumn() — เรียงตามลำดับที่แสดงจริง (รองรับ sort + pagination)
             ->addIndexColumn()
-            ->addColumn('rownum', function($row) {
-                return $row->rownum;
-            })
             ->editColumn('Mdate', fn ($row) => $row->Mdate ? \Carbon\Carbon::parse($row->Mdate)->format('d/m/Y') : '-')
             // รหัสสินค้า (Itemno) ของ suborder ทั้งหมดในออเดอร์ — ตัดค่าซ้ำ/ว่างทิ้ง แล้วคั่นด้วย ", "
             ->addColumn('itemno_list', function($row) {
@@ -80,7 +78,6 @@ class OrderController extends Controller
 
         $data = Morder::select([
                 'morder.*',
-                DB::raw('ROW_NUMBER() OVER (ORDER BY morder.Mdate DESC) AS rownum'),
                 DB::raw("EXISTS(
                     SELECT 1 FROM tb_planning_header
                     WHERE tb_planning_header.orderno = morder.Orderno
@@ -106,8 +103,9 @@ class OrderController extends Controller
             })
             ->when(!empty($company), function ($query) use ($company) {
                 $query->where('morder.Company', 'LIKE', '%'.$company.'%');
-            })
-            ->orderby('morder.Mdate', 'desc');
+            });
+        // หมายเหตุ: ไม่ hard-code orderBy ที่นี่แล้ว — ให้ Yajra จัดการเรียงตามที่คลิกหัวคอลัมน์
+        // (ลำดับเริ่มต้น Mdate จากมากไปน้อย ถูกกำหนดเป็นค่า default order ในฝั่ง DataTables ของ order/index)
 
         return $data;
     }

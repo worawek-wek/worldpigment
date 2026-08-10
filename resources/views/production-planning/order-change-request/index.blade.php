@@ -12,6 +12,11 @@
         if (!$d) return '-';
         try { return Carbon::parse($d)->format('d/m/Y'); } catch (\Exception $e) { return '-'; }
     };
+    // คีย์สำหรับ sort วันที่ (Y-m-d) ใส่ใน data-order เพื่อให้ DataTables เรียงตามค่าจริง ไม่ใช่ข้อความ d/m/Y
+    $sortDate = function ($d) {
+        if (!$d) return '';
+        try { return Carbon::parse($d)->format('Y-m-d'); } catch (\Exception $e) { return ''; }
+    };
 @endphp
 
 @section('content')
@@ -72,7 +77,7 @@
 
                     <div class="card-body">
                         <div class="table-responsive">
-                            <table class="table table-bordered table-striped align-middle">
+                            <table id="ocrTable" class="table table-bordered table-striped align-middle">
                                 <thead class="table-light text-center">
                                     <tr>
                                         <th rowspan="2" class="align-middle">#</th>
@@ -96,10 +101,11 @@
                                             <td>{{ $row['itemno'] ?: '-' }}</td>
                                             <td>{{ $row['custname'] ?: '-' }}</td>
                                             <td>{{ $row['red_bill_code'] ?: '-' }}</td>
-                                            <td class="text-center">{{ $fmtDate($row['due_original']) }}</td>
-                                            <td class="text-center">{{ $fmtDate($row['due_postpone']) }}</td>
-                                            <td class="text-end">{{ $fmtNum($row['weight_from']) }}</td>
-                                            <td class="text-end">{{ $fmtNum($row['weight_to']) }}</td>
+                                            {{-- data-order = ค่า Y-m-d / ตัวเลขดิบ เพื่อให้ DataTables เรียงตามค่าจริง --}}
+                                            <td class="text-center" data-order="{{ $sortDate($row['due_original']) }}">{{ $fmtDate($row['due_original']) }}</td>
+                                            <td class="text-center" data-order="{{ $sortDate($row['due_postpone']) }}">{{ $fmtDate($row['due_postpone']) }}</td>
+                                            <td class="text-end" data-order="{{ (float) ($row['weight_from'] ?? 0) }}">{{ $fmtNum($row['weight_from']) }}</td>
+                                            <td class="text-end" data-order="{{ (float) ($row['weight_to'] ?? 0) }}">{{ $fmtNum($row['weight_to']) }}</td>
                                             <td>{{ $row['reason'] }}</td>
                                         </tr>
                                     @empty
@@ -133,5 +139,28 @@
             dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true, disableMobile: true
         });
     });
+
+@if($rows->isNotEmpty())
+    // ตารางนี้ render ทุกแถวจากฝั่ง server (ไม่ใช่ serverSide) จึงใช้ DataTables ฝั่ง client เพื่อคลิก sort หัวคอลัมน์
+    // - ปิด paging/searching/info เพื่อคงพฤติกรรมเดิม (แสดงทุกแถว + ใช้ช่องค้นหา/ช่วงวันที่ของฟอร์มด้านบน)
+    // - order: [] = คงลำดับเริ่มต้นจาก server (end_close_date, id); คอลัมน์ # ปิด sort แล้ว renumber ตามผลลัพธ์ที่เรียง
+    var ocrTable = $('#ocrTable').DataTable({
+        paging: false,
+        info: false,
+        searching: false,
+        lengthChange: false,
+        autoWidth: false,
+        order: [],
+        columnDefs: [
+            { targets: 0, orderable: false } // คอลัมน์ # (เลขลำดับ)
+        ]
+    });
+    // renumber คอลัมน์ # ให้ 1..N ตามลำดับที่แสดงจริงหลังคลิก sort
+    ocrTable.on('order.dt', function () {
+        ocrTable.column(0, { order: 'applied' }).nodes().each(function (cell, i) {
+            cell.innerHTML = i + 1;
+        });
+    });
+@endif
 </script>
 @endsection

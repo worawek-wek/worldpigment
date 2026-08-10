@@ -28,9 +28,9 @@ class ProdMethodController extends Controller
             })
             ->when(request('dept'), function ($q, $dept) {
                 $q->where('dept', $dept);
-            })
-            ->orderBy('sort', 'asc')
-            ->orderBy('id', 'asc');
+            });
+        // หมายเหตุ: ไม่ hard-code orderBy ที่นี่แล้ว — ให้ Yajra จัดการเรียงตามที่คลิกหัวคอลัมน์
+        // (ลำดับเริ่มต้นตามคอลัมน์ sort ถูกกำหนดเป็นค่า default order ในฝั่ง DataTables ของ prod-method/index)
 
         $rownum = 0;
 

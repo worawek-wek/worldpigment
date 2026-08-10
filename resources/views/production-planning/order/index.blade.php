@@ -134,19 +134,24 @@
                     console.error('AJAX Error:', error, thrown);
                 }
             },
+            // เปิดให้คลิกหัวคอลัมน์เพื่อ sort ได้ (Yajra จะ ORDER BY ตาม name ของคอลัมน์ให้อัตโนมัติ)
             columns: [
-                { 'className': "text-center", data: 'rownum', name: 'rownum', orderable: false },
-                { 'className': "text-center", data: 'Orderno', name: 'Orderno', orderable: false },
-                { 'className': "text-center", data: 'Mdate', name: 'Mdate', orderable: false },
-                { 'className': "text-center", data: 'Company', name: 'Company', orderable: false },
-                { 'className': "text-left", data: 'Custno', name: 'Custno', orderable: false },
-                { 'className': "text-left", data: 'Custname', name: 'Custname', orderable: false },
+                // # ใช้ DT_RowIndex (จาก addIndexColumn) เรียงตามลำดับที่แสดงจริง จึง sort เองไม่ได้
+                { 'className': "text-center", data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+                { 'className': "text-center", data: 'Orderno', name: 'Orderno', orderable: true },
+                { 'className': "text-center", data: 'Mdate', name: 'Mdate', orderable: true },
+                { 'className': "text-center", data: 'Company', name: 'Company', orderable: true },
+                { 'className': "text-left", data: 'Custno', name: 'Custno', orderable: true },
+                { 'className': "text-left", data: 'Custname', name: 'Custname', orderable: true },
+                // Item No รวมจาก suborder (คำนวณฝั่ง PHP) จึง sort ที่ระดับ SQL ไม่ได้
                 { 'className': "text-left", data: 'itemno_list', name: 'itemno_list', orderable: false, searchable: false },
-                { 'className': "text-center", data: 'plan_badge', name: 'plan_badge', orderable: false, searchable: false },
+                // sort สถานะแผนตาม alias has_plan (EXISTS ว่ามีการสร้างแผน ORDER แล้วหรือยัง)
+                { 'className': "text-center", data: 'plan_badge', name: 'has_plan', orderable: true, searchable: false },
                 { 'className': "text-center", data: 'btnedit', name: 'btnedit', orderable: false, searchable: false },
             ],
+            // เริ่มต้นเรียงตามวันที่ (Mdate) จากใหม่ไปเก่า เหมือนลำดับเดิมที่เคย hard-code ใน controller
             order: [
-                [0, 'asc']
+                [2, 'desc']
             ],
             rowCallback: function(row, data, index) {
 

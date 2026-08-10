@@ -48,7 +48,8 @@ class PigmentController extends Controller
         $data = $this->pigmentListQuery();
 
         return DataTables::of($data)
-            ->addColumn('rownum', fn ($row) => $row->rownum)
+            // # ใช้ DT_RowIndex จาก addIndexColumn() — เรียงตามลำดับที่แสดงจริง (รองรับ sort + pagination)
+            ->addIndexColumn()
             ->addColumn('status_badge', fn ($row) => $this->statusBadge($row))
             // วันที่ขอ = วันที่สร้างรายการ (created_at)
             ->editColumn('created_at', fn ($row) => $row->created_at ? \Carbon\Carbon::parse($row->created_at)->format('d/m/Y') : '-')
@@ -69,7 +70,8 @@ class PigmentController extends Controller
      */
     public function exportExcel()
     {
-        $rows = $this->pigmentListQuery()->get();
+        // export เรียงใหม่→เก่าตาม id เสมอ (baseQuery ไม่ได้ orderBy แล้ว จึงระบุที่นี่)
+        $rows = $this->pigmentListQuery()->orderBy('tb_pigment.id', 'desc')->get();
 
         $headers = [
             'วันที่ขอ',
@@ -480,10 +482,7 @@ class PigmentController extends Controller
         $date_end   = request('date_end');
 
         return Pigment::query()
-            ->select([
-                'tb_pigment.*',
-                DB::raw('ROW_NUMBER() OVER (ORDER BY tb_pigment.id DESC) AS rownum')
-            ])
+            ->select(['tb_pigment.*'])
             ->when(!empty($search), function ($q) use ($search) {
                 $q->where(function ($q) use ($search) {
                     $q->where('itemno', 'LIKE', '%'.$search.'%')
@@ -497,8 +496,9 @@ class PigmentController extends Controller
             })
             ->when(!empty($date_end), function ($q) use ($date_field, $date_end) {
                 $q->whereDate('tb_pigment.'.$date_field, '<=', $date_end);
-            })
-            ->orderBy('tb_pigment.id', 'desc');
+            });
+        // หมายเหตุ: ไม่ hard-code orderBy ที่นี่แล้ว — ให้ Yajra จัดการเรียงตามที่คลิกหัวคอลัมน์ในหน้า datatable
+        // (ลำดับเริ่มต้นกำหนดเป็น default order ใน DataTables; ส่วน export Excel ใส่ orderBy id desc เองใน exportExcel())
     }
 
     private function statusBadge(Pigment $row): string

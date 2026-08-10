@@ -36,10 +36,8 @@ class ProductionPlanController extends Controller
         $data = $this->dataQuery();
 
         return DataTables::of($data)
+            // # ใช้ DT_RowIndex จาก addIndexColumn() — เรียงตามลำดับที่แสดงจริง (รองรับ sort + pagination)
             ->addIndexColumn()
-            ->addColumn('rownum', function($row) {
-                return $row->rownum;
-            })
             // แผนกจริงของ item: ใช้ของ item ก่อน ถ้าว่างจึง fallback ไปที่ header
             ->editColumn('company', fn ($row) => $row->company ?: $row->header_company)
             // Inplan: แสดงวันที่ แล้วขึ้นบรรทัดใหม่แสดงกะการผลิต (work_shift) ถ้ามี — เช่น "กะ A"
@@ -86,6 +84,8 @@ class ProductionPlanController extends Controller
                 // return $btn_view.$btn_edit;
                 return $btn_edit;
             })
+            // sort คอลัมน์แผนก = ตามแผนกจริงของ item (COALESCE item→header) ให้ตรงกับที่แสดง
+            ->orderColumn('company', 'COALESCE(tb_planning.company, tb_planning_header.company) $1')
             ->rawColumns(['inplan', 'inner_status', 'btnedit']) // 👈 บอกให้ column นี้ render HTML
             ->make(true);
     }
@@ -113,13 +113,6 @@ class ProductionPlanController extends Controller
         $packing_time_end   = request('packing_time_end');
         $has_packing_filter = !empty($packing_date);
 
-        // เมื่อค้นหาตามวันเวลาที่บรรจุเสร็จ → เรียงตามวันเวลาบรรจุเสร็จ จากล่าสุดไปเก่า
-        $sort_by_packing = $has_packing_filter;
-        // ลำดับสำหรับ ROW_NUMBER (#) ให้ตรงกับลำดับที่แสดงผล — ประกอบจากค่าที่ whitelist แล้วเท่านั้น
-        $row_order = $sort_by_packing
-            ? 'tb_planning.packing_datetie DESC, tb_planning.id DESC'
-            : 'tb_planning.id DESC';
-
         $data = Planning::
             leftJoin('tb_planning_header', 'tb_planning_header.id', '=', 'tb_planning.planning_header_id')
             ->select([
@@ -130,7 +123,6 @@ class ProductionPlanController extends Controller
                 'tb_planning_header.orderno as orderno',
                 'tb_planning_header.planning_code as planning_code',
                 'tb_planning_header.mdate as header_mdate',
-                DB::raw('ROW_NUMBER() OVER (ORDER BY '.$row_order.') AS rownum')
             ])
             ->when(!empty($search), function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
@@ -190,11 +182,15 @@ class ProductionPlanController extends Controller
                     $query->whereTime('tb_planning.packing_datetie', '<=', $packing_time_end);
                 }
             })
-            // เรียงผลลัพธ์: ปกติเรียงตาม id ล่าสุด; ถ้าค้นตามวันเวลาบรรจุเสร็จให้เรียงตามวันเวลานั้น จากล่าสุดไปเก่า
-            ->when($sort_by_packing, function ($query) {
-                $query->orderBy('tb_planning.packing_datetie', 'desc');
-            })
-            ->orderby('tb_planning.id', 'desc');
+            // ลำดับเริ่มต้น (เฉพาะเมื่อผู้ใช้ยังไม่คลิก sort หัวคอลัมน์ = ไม่มี order[] จาก DataTables):
+            //   ปกติเรียงตาม id ล่าสุด; ถ้าค้นตามวันเวลาบรรจุเสร็จให้เรียงตามวันเวลานั้นก่อน แล้วตามด้วย id
+            // เมื่อผู้ใช้คลิก sort (มี order[]) → ปล่อยให้ Yajra จัดการ ไม่ใส่ default ทับ (ไม่งั้น sort ไม่มีผล)
+            ->when(empty(request('order')), function ($query) use ($has_packing_filter) {
+                if ($has_packing_filter) {
+                    $query->orderBy('tb_planning.packing_datetie', 'desc');
+                }
+                $query->orderBy('tb_planning.id', 'desc');
+            });
 
         // $data = $data->get();
         // foreach($data as $value){

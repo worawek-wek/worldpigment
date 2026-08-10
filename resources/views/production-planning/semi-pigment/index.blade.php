@@ -173,21 +173,25 @@
                     console.error('AJAX Error:', error, thrown);
                 }
             },
+            // เปิดให้คลิกหัวคอลัมน์เพื่อ sort ได้ (Yajra จะ ORDER BY ตาม name ของคอลัมน์ให้อัตโนมัติ)
             columns: [
-                { className: "text-center", data: 'rownum',       name: 'rownum',       orderable: false },
-                { className: "text-center", data: 'orderno',      name: 'orderno',      orderable: false },
-                { className: "text-center", data: 'company',      name: 'company',      orderable: false },
-                { className: "text-center", data: 'created_at',   name: 'created_at',   orderable: false },
-                { className: "text-center", data: 'order_date',   name: 'order_date',   orderable: false },
-                { className: "text-center", data: 'want_date',    name: 'want_date',    orderable: false },
-                { className: "text-center", data: 'custno',       name: 'custno',       orderable: false },
-                { className: "text-left",   data: 'itemno',         name: 'itemno',         orderable: false },
-                { className: "text-center", data: 'weight_request',    name: 'weight_request',    orderable: false, render: fmt2 },
-                { className: "text-center", data: 'weight_production', name: 'weight_production', orderable: false, render: fmt2 },
-                { className: "text-center", data: 'status_badge',      name: 'status_badge',      orderable: false, searchable: false },
+                // # ใช้ DT_RowIndex (จาก addIndexColumn) เรียงตามลำดับที่แสดงจริง จึง sort เองไม่ได้
+                { className: "text-center", data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+                { className: "text-center", data: 'orderno',      name: 'orderno',      orderable: true },
+                { className: "text-center", data: 'company',      name: 'company',      orderable: true },
+                { className: "text-center", data: 'created_at',   name: 'created_at',   orderable: true },
+                { className: "text-center", data: 'order_date',   name: 'order_date',   orderable: true },
+                { className: "text-center", data: 'want_date',    name: 'want_date',    orderable: true },
+                { className: "text-center", data: 'custno',       name: 'custno',       orderable: true },
+                { className: "text-left",   data: 'itemno',         name: 'itemno',         orderable: true },
+                { className: "text-center", data: 'weight_request',    name: 'weight_request',    orderable: true, render: fmt2 },
+                { className: "text-center", data: 'weight_production', name: 'weight_production', orderable: true, render: fmt2 },
+                // sort สถานะตามคอลัมน์จริง status (แม้จะแสดงเป็น badge)
+                { className: "text-center", data: 'status_badge',      name: 'status',      orderable: true, searchable: false },
                 { className: "text-center", data: 'action',       name: 'action',       orderable: false, searchable: false },
             ],
-            order: [[0, 'asc']]
+            // เริ่มต้นเรียงตามวันที่ขอ (created_at) ใหม่→เก่า ให้ใกล้เคียงลำดับเดิม (id desc)
+            order: [[3, 'desc']]
         });
     });
 

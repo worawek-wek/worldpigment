@@ -103,16 +103,21 @@
                     console.error('AJAX Error:', error, thrown);
                 }
             },
+            // เปิดให้คลิกหัวคอลัมน์เพื่อ sort ได้ (Yajra จะ ORDER BY ตาม name ของคอลัมน์ให้อัตโนมัติ)
+            // ใช้ชื่อคอลัมน์แบบ qualify (tb_planning_status.* / tb_departments.*) เพราะคิวรี join 2 ตาราง
+            // (name / sort / is_active มีทั้งสองตาราง จึงต้องระบุตารางกัน ambiguous column)
             columns: [
-                // { 'className': "text-center", data: 'rownum', name: 'rownum', orderable: false },
-                { 'className': "text-left", data: 'dept_name', name: 'dept_name', orderable: false, searchable: false },
-                { 'className': "text-left", data: 'name', name: 'name', orderable: false },
-                { 'className': "text-center", data: 'sort', name: 'sort', orderable: false },
-                { 'className': "text-center", data: 'is_active_label', name: 'is_active_label', orderable: false, searchable: false },
+                // แผนก: sort ตามชื่อแผนกที่ join มา (tb_departments.name)
+                { 'className': "text-left", data: 'dept_name', name: 'tb_departments.name', orderable: true, searchable: false },
+                { 'className': "text-left", data: 'name', name: 'tb_planning_status.name', orderable: true },
+                { 'className': "text-center", data: 'sort', name: 'tb_planning_status.sort', orderable: true },
+                // สถานะ: sort ตามคอลัมน์จริง is_active (แม้จะแสดงเป็น badge)
+                { 'className': "text-center", data: 'is_active_label', name: 'tb_planning_status.is_active', orderable: true, searchable: false },
                 { 'className': "text-center", data: 'btnedit', name: 'btnedit', orderable: false, searchable: false },
             ],
+            // เริ่มต้นเรียงตามคอลัมน์ "ลำดับ" (sort) เหมือนลำดับเดิมที่เคย hard-code ใน controller
             order: [
-                [0, 'asc']
+                [2, 'asc']
             ]
         });
     });

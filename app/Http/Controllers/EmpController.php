@@ -52,7 +52,8 @@ class EmpController extends Controller
             $employees->where('emp.dept', $request->dept);
         }
 
-        $employees->orderBy('emp.empno', 'asc');
+        // หมายเหตุ: ไม่ hard-code orderBy ที่นี่แล้ว — ให้ Yajra จัดการเรียงตามที่คลิกหัวคอลัมน์
+        // (ลำดับเริ่มต้นตาม empno ถูกกำหนดเป็นค่า default order ในฝั่ง DataTables ของ employee/index)
 
         $rownum = 0;
 

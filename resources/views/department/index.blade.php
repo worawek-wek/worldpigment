@@ -104,15 +104,19 @@
                     console.error('AJAX Error:', error, thrown);
                 }
             },
+            // เปิดให้คลิกหัวคอลัมน์เพื่อ sort ได้ (Yajra จะ ORDER BY ตาม name ของคอลัมน์ให้อัตโนมัติ)
             columns: [
+                // # เป็นเลขลำดับที่นับหลัง query จึง sort ไม่ได้ (จะ renumber ตามผลลัพธ์ที่เรียงแล้ว)
                 { 'className': "text-center", data: 'rownum', name: 'rownum', orderable: false },
-                { 'className': "text-center", data: 'name', name: 'name', orderable: false },
-                { 'className': "text-center", data: 'description', name: 'description', orderable: false },
-                { 'className': "text-center", data: 'status_switch', name: 'status_switch', orderable: false, searchable: false },
+                { 'className': "text-center", data: 'name', name: 'name', orderable: true },
+                { 'className': "text-center", data: 'description', name: 'description', orderable: true },
+                // sort สถานะตามคอลัมน์จริง is_active (แม้จะแสดงเป็น switch)
+                { 'className': "text-center", data: 'status_switch', name: 'is_active', orderable: true, searchable: false },
                 { 'className': "text-center", data: 'btnedit', name: 'btnedit', orderable: false, searchable: false },
             ],
+            // เริ่มต้นเรียงตามชื่อแผนก (คอลัมน์ Name)
             order: [
-                [0, 'asc']
+                [1, 'asc']
             ],
             rowCallback: function(row, data, index) {
 

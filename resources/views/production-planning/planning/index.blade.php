@@ -252,24 +252,28 @@
                     console.error('AJAX Error:', error, thrown);
                 }
             },
+            // เปิดให้คลิกหัวคอลัมน์เพื่อ sort ได้ (Yajra จะ ORDER BY ตาม name ของคอลัมน์ให้อัตโนมัติ)
+            // ใช้ชื่อคอลัมน์แบบ qualify (tb_planning.* / tb_planning_header.*) เพราะคิวรี join 2 ตาราง
             columns: [
-                { 'className': "text-center", data: 'rownum', name: 'rownum', orderable: false },
+                // # ใช้ DT_RowIndex (จาก addIndexColumn) เรียงตามลำดับที่แสดงจริง จึง sort เองไม่ได้
+                { 'className': "text-center", data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
                 // { 'className': "text-left", data: 'planning_code', name: 'planning_code', orderable: false },
-                { 'className': "text-center", data: 'orderno', name: 'orderno', orderable: false },
-                { 'className': "text-center", data: 'red_bill_code', name: 'red_bill_code', orderable: false, searchable: false },
-                { 'className': "text-center", data: 'company', name: 'company', orderable: false },
-                { 'className': "text-center", data: 'inplan', name: 'inplan', orderable: false },
-                { 'className': "text-center", data: 'custwant', name: 'custwant', orderable: false },
-                { 'className': "text-center", data: 'packing_datetie', name: 'packing_datetie', orderable: false, searchable: false },
-                { 'className': "text-left", data: 'itemno', name: 'itemno', orderable: false },
+                { 'className': "text-center", data: 'orderno', name: 'tb_planning_header.orderno', orderable: true },
+                { 'className': "text-center", data: 'red_bill_code', name: 'tb_planning.red_bill_code', orderable: true, searchable: false },
+                // แผนก: sort ตามแผนกจริง COALESCE(item, header) — map ไว้ด้วย ->orderColumn('company', ...) ใน controller
+                { 'className': "text-center", data: 'company', name: 'company', orderable: true },
+                { 'className': "text-center", data: 'inplan', name: 'tb_planning.inplan', orderable: true },
+                { 'className': "text-center", data: 'custwant', name: 'tb_planning.custwant', orderable: true },
+                { 'className': "text-center", data: 'packing_datetie', name: 'tb_planning.packing_datetie', orderable: true, searchable: false },
+                { 'className': "text-left", data: 'itemno', name: 'tb_planning.itemno', orderable: true },
                 // { 'className': "text-left", data: 'quantity', name: 'quantity', orderable: false },
-                { 'className': "text-left", data: 'machine_no', name: 'machine_no', orderable: false },
+                { 'className': "text-left", data: 'machine_no', name: 'tb_planning.machine_no', orderable: true },
+                // สถานะภายในรวมจาก planning หลายแถว (คำนวณฝั่ง PHP) → sort ที่ SQL ไม่ได้
                 { 'className': "text-center", data: 'inner_status', name: 'inner_status', orderable: false, searchable: false },
                 { 'className': "text-center", data: 'btnedit', name: 'btnedit', orderable: false, searchable: false },
             ],
-            order: [
-                [0, 'asc']
-            ],
+            // order: [] = ไม่ส่ง order เริ่มต้น → controller ใช้ default (id ล่าสุด / packing เมื่อกรอง) ให้เอง
+            order: [],
             rowCallback: function(row, data, index) {
 
             },

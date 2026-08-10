@@ -47,7 +47,8 @@ class SemiPigmentController extends Controller
         $data = $this->semiListQuery();
 
         return DataTables::of($data)
-            ->addColumn('rownum', fn ($row) => $row->rownum)
+            // # ใช้ DT_RowIndex จาก addIndexColumn() — เรียงตามลำดับที่แสดงจริง (รองรับ sort + pagination)
+            ->addIndexColumn()
             ->addColumn('type_badge', fn ($row) => $this->typeBadge($row))
             ->addColumn('status_badge', fn ($row) => $this->statusBadge($row))
             ->editColumn('order_date', fn ($row) => $row->order_date ? \Carbon\Carbon::parse($row->order_date)->format('d/m/Y') : '-')
@@ -69,7 +70,8 @@ class SemiPigmentController extends Controller
      */
     public function exportExcel()
     {
-        $rows = $this->semiListQuery()->get();
+        // export เรียงใหม่→เก่าตาม id เสมอ (baseQuery ไม่ได้ orderBy แล้ว จึงระบุที่นี่)
+        $rows = $this->semiListQuery()->orderBy('tb_semi_pigment.id', 'desc')->get();
 
         // หัวคอลัมน์ + ชื่อฟิลด์ที่ใช้ดึงค่า (เรียงตามลำดับคอลัมน์ในไฟล์)
         $headers = [
@@ -650,10 +652,7 @@ class SemiPigmentController extends Controller
         $date_end   = request('date_end');
 
         return SemiPigment::query()
-            ->select([
-                'tb_semi_pigment.*',
-                DB::raw('ROW_NUMBER() OVER (ORDER BY tb_semi_pigment.id DESC) AS rownum')
-            ])
+            ->select(['tb_semi_pigment.*'])
             ->when(!empty($search), function ($q) use ($search) {
                 $q->where(function ($q) use ($search) {
                     $q->where('itemno', 'LIKE', '%'.$search.'%')
@@ -669,8 +668,9 @@ class SemiPigmentController extends Controller
             })
             ->when(!empty($date_end), function ($q) use ($date_field, $date_end) {
                 $q->whereDate('tb_semi_pigment.'.$date_field, '<=', $date_end);
-            })
-            ->orderBy('tb_semi_pigment.id', 'desc');
+            });
+        // หมายเหตุ: ไม่ hard-code orderBy ที่นี่แล้ว — ให้ Yajra จัดการเรียงตามที่คลิกหัวคอลัมน์ในหน้า datatable
+        // (ลำดับเริ่มต้นกำหนดเป็น default order ใน DataTables; ส่วน export Excel ใส่ orderBy id desc เองใน exportExcel())
     }
 
     private function typeBadge(SemiPigment $row): string
