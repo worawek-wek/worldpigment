@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\PriceRule;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -13,12 +14,16 @@ use Illuminate\Support\Facades\DB;
  *
  * ตัวคูณ/หาร/บวก มาจากตารางเงื่อนไขของลูกค้าใน `config/product_price.php`
  * ซึ่งจับคู่ด้วย "ตัวขึ้นต้น" (และบางแถวมี "ตัวลงท้าย") ของ PdCode
+ * — ถ้าผู้ใช้แก้ตัวเลข 3 ช่องนั้นจากหน้าจอ ค่าใน `tb_price_rule` จะทับค่าใน config (ดู rules())
  * ส่วนตัวคูณระหว่างขั้นราคาอยู่ที่ `product_price.tier` ในไฟล์เดียวกัน
  */
 class ProductPriceService
 {
     /** ตารางราคาทุนบน MySQL (สำเนาของ PdPrice ในไฟล์ Access) */
     private const TABLE_PDPRICE = 'access_pdprice';
+
+    /** ค่า mul/div/add ที่ผู้ใช้แก้ไว้ (rule_key => row) — null = ยังไม่ได้อ่าน */
+    private ?array $overrides = null;
 
     /**
      * ค้นราคาทุน + คำนวณราคาขายจากรหัสสินค้า
@@ -112,7 +117,63 @@ class ProductPriceService
     }
 
     /**
-     * จับคู่ PdCode กับเงื่อนไขใน config — เข้าได้หลายแถวก็เอาแถวที่เจาะจงที่สุด
+     * ตารางเงื่อนไขที่ใช้จริง = โครงจาก config + ตัวเลข mul/div/add ที่ผู้ใช้แก้ไว้ทับ (10/08/2569)
+     *
+     * ค่าที่ผู้ใช้แก้อยู่ในตาราง `tb_price_rule` ผูกด้วย rule_key
+     * แถวไหนยังไม่เคยถูกแก้ = ใช้ค่าตั้งต้นจาก config ตามเดิม
+     *
+     * แต่ละแถวจะมี key เพิ่มมาให้ตรวจย้อนได้:
+     *   is_custom  = แถวนี้ถูกแก้จากหน้าจอแล้วหรือยัง
+     *   default    = ค่าตั้งต้นใน config (ไว้ให้ปุ่ม "คืนค่าตั้งต้น" และไว้เทียบ)
+     */
+    public function rules(): array
+    {
+        $overrides = $this->overrides();
+
+        return array_map(function ($rule) use ($overrides) {
+            $key = $rule['key'] ?? null;
+
+            $rule['default']   = ['mul' => $rule['mul'], 'div' => $rule['div'], 'add' => $rule['add']];
+            $rule['is_custom'] = false;
+
+            if ($key !== null && isset($overrides[$key])) {
+                $row = $overrides[$key];
+
+                $rule['mul']        = (float) $row->mul;
+                $rule['div']        = (float) $row->div;
+                $rule['add']        = (float) $row->add;
+                $rule['is_custom']  = true;
+                $rule['updated_by'] = $row->updated_by;
+                $rule['updated_at'] = $row->updated_at;
+            }
+
+            return $rule;
+        }, config('product_price.rules', []));
+    }
+
+    /**
+     * ค่าที่ผู้ใช้แก้ไว้ (rule_key => row) — อ่านครั้งเดียวต่อ request
+     *
+     * ถ้าอ่านตารางไม่ได้ (ยังไม่ได้ migrate) ให้ถือว่าไม่มีใครแก้ แล้วใช้ค่าตั้งต้นต่อ
+     * — สำคัญกว่าการโยน error ทิ้ง เพราะหน้าค้นหาราคาต้องใช้งานได้เสมอ
+     */
+    private function overrides(): array
+    {
+        if ($this->overrides !== null) {
+            return $this->overrides;
+        }
+
+        try {
+            $this->overrides = PriceRule::all()->keyBy('rule_key')->all();
+        } catch (\Throwable $e) {
+            $this->overrides = [];
+        }
+
+        return $this->overrides;
+    }
+
+    /**
+     * จับคู่ PdCode กับเงื่อนไขใน config — เข้าได้แถวไหนก็เอาแถวที่เจาะจงที่สุด
      *
      * แถวที่มี suffix_pos = ตัวลงท้ายต้องเริ่มที่ตัวที่ N พอดี (ดู matchesSuffixAt)
      *
@@ -126,7 +187,7 @@ class ProductPriceService
         $best = null;
         $bestScore = -1;
 
-        foreach (config('product_price.rules', []) as $rule) {
+        foreach ($this->rules() as $rule) {
             $prefix = $this->matchedPrefix($code, $rule['prefix'] ?? []);
             if ($prefix === null) {
                 continue;

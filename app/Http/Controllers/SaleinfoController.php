@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PriceRule;
 use App\Models\Saleinfo;
 use App\Services\ProductPriceService;
 use Carbon\Carbon;
@@ -148,6 +149,134 @@ class SaleinfoController extends Controller
                 'reason'     => 'อ่านข้อมูลราคาทุนไม่ได้: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * GET — ตารางเงื่อนไขราคา (JSON) สำหรับ modal "ตั้งค่าเงื่อนไขราคา" (10/08/2569)
+     *
+     * โครงเงื่อนไข (ชื่อ/ตัวขึ้นต้น/ตัวลงท้าย) มาจาก config อ่านอย่างเดียว
+     * ส่วน คูณ/หาร/บวก คือค่าที่แก้ได้ — ถ้าเคยแก้แล้วจะเป็นค่าจาก tb_price_rule
+     */
+    public function priceRules(ProductPriceService $prices)
+    {
+        $rows = array_map(function ($rule) {
+            return [
+                'key'        => $rule['key'] ?? null,
+                'label'      => $rule['label'] ?? '',
+                'prefix'     => implode(', ', $rule['prefix'] ?? []),
+                'suffix'     => implode(', ', $rule['suffix'] ?? []),
+                'suffix_pos' => $rule['suffix_pos'] ?? null,
+                'mul'        => (float) $rule['mul'],
+                'div'        => (float) $rule['div'],
+                'add'        => (float) $rule['add'],
+                'default'    => $rule['default'],
+                'is_custom'  => $rule['is_custom'],
+            ];
+        }, $prices->rules());
+
+        // แถวที่ไม่มี key ตั้งค่าจากหน้าจอไม่ได้ (ผูกกับ tb_price_rule ไม่ได้) — กันไว้ให้เห็นชัด
+        $rows = array_values(array_filter($rows, fn ($r) => $r['key'] !== null));
+
+        return response()->json(['rows' => $rows]);
+    }
+
+    /**
+     * POST — บันทึกค่า คูณ/หาร/บวก ที่ผู้ใช้แก้ (10/08/2569)
+     *
+     * รับมาทีละหลายแถว: rules[<key>][mul|div|add]
+     * แถวไหนค่าตรงกับค่าตั้งต้นใน config → ลบ override ทิ้ง ให้กลับไปใช้ค่าตั้งต้น
+     */
+    public function priceRulesUpdate(Request $request, ProductPriceService $prices)
+    {
+        $input = $request->input('rules', []);
+
+        if (!is_array($input) || $input === []) {
+            return response()->json(['error' => 'ไม่มีข้อมูลที่จะบันทึก'], 422);
+        }
+
+        // เทียบกับ config เสมอ — กันไม่ให้ยัด key แปลกปลอมเข้าตาราง
+        $defaults = [];
+        foreach (config('product_price.rules', []) as $rule) {
+            if (isset($rule['key'])) {
+                $defaults[$rule['key']] = $rule;
+            }
+        }
+
+        $errors = [];
+        $clean  = [];
+
+        foreach ($input as $key => $values) {
+            if (!isset($defaults[$key])) {
+                continue;   // key ที่ไม่มีใน config — ข้ามไปเงียบ ๆ
+            }
+
+            $label = $defaults[$key]['label'];
+            $mul   = $this->numberOrNull($values['mul'] ?? null);
+            $div   = $this->numberOrNull($values['div'] ?? null);
+            $add   = $this->numberOrNull($values['add'] ?? null);
+
+            if ($mul === null || $div === null || $add === null) {
+                $errors[] = "\"{$label}\" — ต้องกรอกตัวเลขให้ครบทั้ง คูณ / หาร / บวก";
+                continue;
+            }
+
+            // แถว 0/0/0 คือแถวที่ตั้งใจปิดไว้ (Pigment/เคมี) — ยอมให้เป็น 0 ทั้งชุดได้
+            // แต่ห้ามหารด้วย 0 ทั้งที่ตัวคูณไม่เป็น 0 เพราะจะพังตอนคำนวณ
+            if ((float) $div == 0.0 && ((float) $mul != 0.0 || (float) $add != 0.0)) {
+                $errors[] = "\"{$label}\" — ช่องหารเป็น 0 ไม่ได้";
+                continue;
+            }
+
+            $clean[$key] = ['mul' => $mul, 'div' => $div, 'add' => $add];
+        }
+
+        if ($errors) {
+            return response()->json(['error' => implode("\n", $errors)], 422);
+        }
+
+        $user    = auth()->user()?->name ?: auth()->user()?->username;
+        $changed = 0;
+
+        DB::transaction(function () use ($clean, $defaults, $user, &$changed) {
+            foreach ($clean as $key => $values) {
+                $default = $defaults[$key];
+
+                $isDefault = (float) $values['mul'] == (float) $default['mul']
+                    && (float) $values['div'] == (float) $default['div']
+                    && (float) $values['add'] == (float) $default['add'];
+
+                if ($isDefault) {
+                    $changed += PriceRule::where('rule_key', $key)->delete();
+                    continue;
+                }
+
+                $row = PriceRule::firstOrNew(['rule_key' => $key]);
+
+                if ((float) $row->mul == (float) $values['mul']
+                    && (float) $row->div == (float) $values['div']
+                    && (float) $row->add == (float) $values['add']
+                    && $row->exists) {
+                    continue;   // ไม่มีอะไรเปลี่ยน
+                }
+
+                $row->fill($values);
+                $row->updated_by = $user ?: null;
+                $row->save();
+                $changed++;
+            }
+        });
+
+        return response()->json(['saved' => true, 'changed' => $changed]);
+    }
+
+    /** แปลงค่าที่กรอกเป็นตัวเลข — ว่าง/ไม่ใช่ตัวเลข = null ให้ผู้เรียกไปแจ้ง error เอง */
+    private function numberOrNull($value): ?float
+    {
+        if ($value === null || $value === '' || !is_numeric($value)) {
+            return null;
+        }
+
+        return (float) $value;
     }
 
     /**
