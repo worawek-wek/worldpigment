@@ -279,6 +279,12 @@
                             <i class="ti ti-search me-1"></i>
                             ค้นหาราคาสินค้า
                         </button>
+                        <button class="btn btn-label-secondary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#priceRuleModal">
+                            <i class="ti ti-adjustments-alt me-1"></i>
+                            ตั้งค่าเงื่อนไขราคา
+                        </button>
                         <button class="btn btn-theme-saleinfo"
                             data-bs-toggle="modal"
                             data-bs-target="#saleinfoModal">
@@ -447,6 +453,7 @@
     @include('saleinfo.modal-price')
     @include('saleinfo.modal-newprice')
     @include('saleinfo.modal-testprice')
+    @include('saleinfo.modal-pricerule')
 
     @include('layout/inc_js')
 
@@ -984,6 +991,109 @@
     });
     $('#testPriceModal').on('shown.bs.modal', function () {
         $('#tp_customer').focus();
+    });
+
+    // ────────────────────────────────────────────────────────
+    //  ตั้งค่าเงื่อนไขราคา (modal "ตั้งค่าเงื่อนไขราคา") — 10/08/2569
+    //  แก้ได้เฉพาะ ×คูณ ÷หาร บวก+ ของแต่ละเงื่อนไข
+    //  ค่าที่แก้เก็บลง tb_price_rule (แถวที่ตรงกับค่าตั้งต้นจะถูกลบ = กลับไปใช้ค่า config)
+    // ────────────────────────────────────────────────────────
+    function prNum(v) {
+        // ตัดศูนย์ท้ายทศนิยมทิ้งเพื่อให้อ่านง่าย (110.0000 → 110)
+        return String(parseFloat(v));
+    }
+
+    function prRenderRows(rows) {
+        const $tbody = $('#pr_tbody').empty();
+
+        if (!rows.length) {
+            $tbody.append('<tr><td colspan="4" class="text-center text-muted py-4">ไม่มีเงื่อนไข</td></tr>');
+            return;
+        }
+
+        rows.forEach(function (r) {
+            // บรรทัดที่สองบอกวิธีจับคู่ ให้ผู้ใช้รู้ว่าแถวนี้ใช้กับรหัสแบบไหน (อ่านอย่างเดียว)
+            let cond = 'ขึ้นต้น ' + r.prefix;
+            if (r.suffix) {
+                cond += r.suffix_pos
+                    ? ' · ตัวที่ ' + r.suffix_pos + ' เป็นต้นไป = ' + r.suffix
+                    : ' · ลงท้าย ' + r.suffix;
+            }
+
+            const badge = r.is_custom
+                ? ' <span class="badge bg-label-warning">แก้แล้ว</span>'
+                : '';
+
+            const $tr = $(
+                '<tr data-key="' + r.key + '">' +
+                    '<td>' +
+                        '<div class="fw-semibold small">' + $('<div>').text(r.label).html() + badge + '</div>' +
+                        '<div class="text-muted" style="font-size: 0.75rem;">' + $('<div>').text(cond).html() + '</div>' +
+                    '</td>' +
+                    '<td><input type="number" step="any" class="form-control form-control-sm text-end pr_mul"></td>' +
+                    '<td><input type="number" step="any" class="form-control form-control-sm text-end pr_div"></td>' +
+                    '<td><input type="number" step="any" class="form-control form-control-sm text-end pr_add"></td>' +
+                '</tr>'
+            );
+
+            $tr.find('.pr_mul').val(prNum(r.mul));
+            $tr.find('.pr_div').val(prNum(r.div));
+            $tr.find('.pr_add').val(prNum(r.add));
+
+            $tbody.append($tr);
+        });
+    }
+
+    function prLoad() {
+        $('#pr_error').addClass('d-none').text('');
+        $('#pr_tbody').html('<tr><td colspan="4" class="text-center text-muted py-4">กำลังโหลด…</td></tr>');
+
+        $.getJSON("{{ $page_url }}/price-rules")
+            .done(function (res) { prRenderRows(res.rows || []); })
+            .fail(function () {
+                $('#pr_tbody').html('<tr><td colspan="4" class="text-center text-danger py-4">โหลดเงื่อนไขไม่สำเร็จ</td></tr>');
+            });
+    }
+
+    $('#priceRuleModal').on('show.bs.modal', prLoad);
+
+    $('#pr_save').on('click', function () {
+        const payload = { _token: "{{ csrf_token() }}" };
+
+        $('#pr_tbody tr[data-key]').each(function () {
+            const $tr = $(this);
+            const key = $tr.data('key');
+
+            payload['rules[' + key + '][mul]'] = $tr.find('.pr_mul').val();
+            payload['rules[' + key + '][div]'] = $tr.find('.pr_div').val();
+            payload['rules[' + key + '][add]'] = $tr.find('.pr_add').val();
+        });
+
+        const $btn = $(this).prop('disabled', true);
+        $('#pr_error').addClass('d-none').text('');
+
+        $.ajax({
+            type: "POST",
+            url: "{{ $page_url }}/price-rules/update",
+            data: payload,
+            success: function () {
+                $('#priceRuleModal').modal('hide');
+                Swal.fire({
+                    title: 'บันทึกเงื่อนไขราคาแล้ว',
+                    icon: 'success',
+                    timer: 1400,
+                    showConfirmButton: false,
+                    heightAuto: false
+                });
+            },
+            error: function (xhr) {
+                // 422 = กรอกผิด (เช่น ช่องหารเป็น 0) — โชว์ในกล่องแดงใต้ตารางให้แก้ต่อได้เลย
+                $('#pr_error')
+                    .text(xhr.responseJSON?.error ?? 'บันทึกไม่สำเร็จ')
+                    .removeClass('d-none');
+            },
+            complete: function () { $btn.prop('disabled', false); }
+        });
     });
 </script>
 
