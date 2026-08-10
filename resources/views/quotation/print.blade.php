@@ -45,7 +45,8 @@
     <style>
         * { box-sizing: border-box; }
         body {
-            font-family: 'TH Sarabun New', 'Sarabun', 'Angsana New', 'Cordia New', 'Tahoma', sans-serif;
+            /* Arial Narrow ไม่มี glyph ภาษาไทย — ตัวไทยจะ fallback ไป Tahoma ให้อัตโนมัติ */
+            font-family: 'Arial Narrow', 'Tahoma', sans-serif;
             font-size: 17px; color: #000; margin: 0; padding: 28px 40px; line-height: 1.5;
         }
         .toolbar { text-align: center; margin-bottom: 18px; }

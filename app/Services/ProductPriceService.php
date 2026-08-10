@@ -114,6 +114,8 @@ class ProductPriceService
     /**
      * จับคู่ PdCode กับเงื่อนไขใน config — เข้าได้หลายแถวก็เอาแถวที่เจาะจงที่สุด
      *
+     * แถวที่มี suffix_pos = ตัวลงท้ายต้องเริ่มที่ตัวที่ N พอดี (ดู matchesSuffixAt)
+     *
      * ความเจาะจง: มี suffix (+100) > prefix ยาว (+ความยาว)
      * เช่น 219E649TR เข้าทั้ง "21" และ "2 ลงท้าย TR" → ใช้แบบหลัง
      *      1500102   เข้าทั้ง "1" และ "15"          → ใช้ "15"
@@ -131,8 +133,16 @@ class ProductPriceService
             }
 
             $suffixes = $rule['suffix'] ?? [];
-            if ($suffixes && !$this->matchesSuffix($code, $suffixes)) {
-                continue;
+            $suffixPos = $rule['suffix_pos'] ?? null;
+
+            if ($suffixes) {
+                $ok = $suffixPos
+                    ? $this->matchesSuffixAt($code, $suffixes, (int) $suffixPos)
+                    : $this->matchesSuffix($code, $suffixes);
+
+                if (!$ok) {
+                    continue;
+                }
             }
 
             $score = strlen($prefix) + ($suffixes ? 100 : 0);
@@ -163,7 +173,7 @@ class ProductPriceService
      * รหัสลงท้ายด้วยตัวใดตัวหนึ่งในรายการไหม
      *
      * รหัสที่มีขีด (-) ให้เทียบกับ "ท่อนหลังขีดสุดท้าย" ทั้งก้อนเท่านั้น
-     * ไม่งั้น MB09113A-BLK จะไปเข้าเงื่อนไข "MB ลงท้าย K" เพราะบังเอิญจบด้วยตัว K
+     * ไม่งั้นรหัสอย่าง XX09113A-BLK จะไปเข้าเงื่อนไข "ลงท้าย K" เพราะบังเอิญจบด้วยตัว K
      */
     private function matchesSuffix(string $code, array $suffixes): bool
     {
@@ -173,6 +183,31 @@ class ProductPriceService
         foreach ($suffixes as $s) {
             $s = strtoupper($s);
             if ($hasDash ? $tail === $s : str_ends_with($tail, $s)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * ตัวลงท้ายต้องเริ่มที่ "ตัวที่ N" ของรหัสพอดี (นับจาก 1) — ใช้กับ suffix_pos ใน config
+     *
+     * เงื่อนไข "MB ตัวที่ 8 ลงท้ายด้วย P, PC, K, J" (10/08/2569)
+     *   MB1B040K   ตัวที่ 8 เป็นต้นไป = "K"   → เข้า
+     *   MB1B190AP  ตัวที่ 8 เป็นต้นไป = "AP"  → ไม่เข้า (P อยู่หลักที่ 9)
+     *   MB1B192EYP ตัวที่ 8 เป็นต้นไป = "EYP" → ไม่เข้า
+     */
+    private function matchesSuffixAt(string $code, array $suffixes, int $pos): bool
+    {
+        $tail = substr($code, $pos - 1);
+
+        if ($tail === '' || $tail === false) {
+            return false;
+        }
+
+        foreach ($suffixes as $s) {
+            if ($tail === strtoupper($s)) {
                 return true;
             }
         }
