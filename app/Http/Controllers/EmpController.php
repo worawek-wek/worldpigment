@@ -16,7 +16,14 @@ class EmpController extends Controller
 {
     public function index()
     {
-        return view('employee.index');
+        // แผนกสำหรับ dropdown ค้นหา (เฉพาะที่เปิดใช้งาน)
+        $departments = Department::where('is_active', 'Y')
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name']);
+
+        return view('employee.index', [
+            'departments' => $departments,
+        ]);
     }
 
     public function datatable(Request $request)
@@ -38,6 +45,11 @@ class EmpController extends Controller
                     ->orWhere('emp.supno', 'LIKE', '%'.$search.'%')
                     ->orWhere('emp.user', 'LIKE', '%'.$search.'%');
             });
+        }
+
+        // กรองตามแผนก (emp.dept เก็บเป็นชื่อแผนก — ตรงกับ value ของ dropdown)
+        if ($request->filled('dept')) {
+            $employees->where('emp.dept', $request->dept);
         }
 
         $employees->orderBy('emp.empno', 'asc');

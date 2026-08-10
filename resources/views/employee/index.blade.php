@@ -33,6 +33,14 @@
                                 <input id="searchInput" type="text" class="form-control"
                                 placeholder="ค้นหา รหัส / ชื่อ / นามสกุล...">
                             </div>
+                            <div class="col-md-3">
+                                <select id="searchDept" class="form-select">
+                                    <option value="">ทุกแผนก</option>
+                                    @foreach($departments as $department)
+                                        <option value="{{ $department->name }}">{{ $department->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
                             <div class="col-md-3 ms-auto text-end">
                                 <button type="button" class="btn btn-primary" id="btn_add"
                                     data-bs-target="#employeeModal">
@@ -102,6 +110,7 @@
                 url: "{{ route('employee.datatable') }}",
                 data: function(d) {
                     d.search = $('#searchInput').val();
+                    d.dept = $('#searchDept').val();
                 },
                 error: function(xhr, error, thrown) {
                     console.error('AJAX Error:', error, thrown);
@@ -125,6 +134,12 @@
     });
 
     $(document).on('keyup', '#searchInput', function(e){
+        e.preventDefault();
+        oTable.draw();
+    });
+
+    // เปลี่ยนแผนกใน dropdown → ค้นหาใหม่
+    $(document).on('change', '#searchDept', function(e){
         e.preventDefault();
         oTable.draw();
     });

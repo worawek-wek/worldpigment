@@ -148,6 +148,13 @@ class OrderController extends Controller
             ->filter(fn ($date) => !empty($date))
             ->values();
 
+        // หมายเหตุ header: รวม Remark ของ suborder ทุกตัว (ตัดค่าว่าง แต่เก็บทุกหมายเหตุแม้ซ้ำกัน) คั่นด้วย ", " เมื่อมีมากกว่า 1 รายการ
+        $header_remark = $order->suborders
+            ->pluck('Remark')
+            ->map(fn ($r) => trim((string) $r))
+            ->filter()
+            ->implode(', ');
+
         $data_planning_header = [
             'planning_code' => $order->Orderno,
             'mdate' => $order->Mdate,
@@ -157,6 +164,7 @@ class OrderController extends Controller
             'saleno' => $order->supno,
             'netqty' => $order->netqty,
             'custwant' => $custwants->max() ?: null, // วันที่หลังสุดจาก suborder.custwant
+            'remark' => $header_remark ?: null,       // หมายเหตุจาก suborder (คั่นด้วย , ถ้ามีหลายรายการ)
             'plan_type' => 'ORDER',
         ];
 

@@ -146,6 +146,7 @@
                 <thead class="table-light">
                     <tr>
                         <th class="text-center" style="width:40px">#</th>
+                        <th>เลขที่ใบเบิก</th>
                         <th>Item No.</th>
                         {{-- <th class="text-center">Quantity</th> --}}
                         {{-- <th class="text-center">Lot</th> --}}
@@ -161,6 +162,8 @@
                     @forelse($planning_header->plannings as $item)
                     <tr>
                         <td class="text-center">{{ $loop->iteration }}</td>
+                        {{-- เลขที่ใบเบิก: ดึงจากเลขที่ใบแดง (red_bill_code) ของแต่ละ planning (10/08/2569) --}}
+                        <td>{{ $item->red_bill_code ?? '-' }}</td>
                         <td>{{ $item->itemno ?? '-' }}</td>
                         {{-- <td class="text-center">{{ $item->quantity ?? '-' }}</td> --}}
                         {{-- <td class="text-center">{{ $item->lot ?? '-' }}</td> --}}
@@ -194,7 +197,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="8" class="text-center text-muted py-4">
+                        <td colspan="9" class="text-center text-muted py-4">
                             <i class="ti ti-inbox ti-lg d-block mb-1 opacity-50"></i>
                             ยังไม่มีรายการ Planning
                         </td>
