@@ -37,7 +37,7 @@ worldpigment/
 │   ├── Http/Controllers/
 │   │   ├── Production/          # วางแผนการผลิต
 │   │   ├── ColorMatchingController.php
-│   │   ├── OrderController.php
+│   │   ├── OrderController.php      # เมนู O-Order — ฟอร์มบันทึกใบสั่งซื้อ morder/suborder (12/08/2569)
 │   │   ├── QuotationController.php
 │   │   ├── CustomerController.php
 │   │   ├── ReportController.php
@@ -65,7 +65,7 @@ worldpigment/
 │   ├── production.php
 │   ├── color-matching.php
 │   ├── quotation.php
-│   ├── order.php
+│   ├── order.php                # ใบสั่งซื้อ morder/suborder (12/08/2569)
 │   ├── customer.php
 │   ├── report.php
 │   ├── permission.php
@@ -162,6 +162,39 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 - **Modal "แผนการผลิต"** (`production-planning/planning/planning-form.blade.php`): ตาราง "รายการ Planning" มีคอลัมน์ **เลขที่ใบเบิก** (`red_bill_code` ของแต่ละ planning) อยู่ก่อน Item No. (10/08/2569)
 - **หน้าพนักงาน** (`EmpController`, `employee/index.blade.php`): มี dropdown กรองแผนก (`#searchDept` → param `dept`, กรอง `emp.dept` แบบ exact — `emp.dept` เก็บเป็นชื่อแผนก) คู่กับช่องค้นหาข้อความ (10/08/2569)
 - **รายงานผลิตตามพนักงาน (time-grid รายวัน)** (`Production\ReportController::employee/employeeTable/employeeExcel/employeePdf`, route `production.report.employee.*`, 11/08/2569): ฟอร์ม "แผนและการผลิตจริง" — **1 แถวกลุ่ม = 1 พนักงาน** (`tb_planning.empno` → `emp.empname/empsur`), **คอลัมน์ = ช่วงเวลา 9 ช่อง** นิยามคงที่ใน `timeSlots()` (8-9…16-17, OT; **ข้ามพักเที่ยง 12-13** จึงไม่มีคอลัมน์นั้น). แต่ละงาน (`tb_planning`) วางลงกริดจากเวลาใน `tb_planning_prod_method` (`start_time`/`end_time` เทียบ overlap ทีละช่อง) → แสดง รหัสสี(`itemno`)/รหัสเครื่อง(`machine_no`)/วิธีการผลิต(`tb_prod_method.name`) ในทุกช่องที่ครอบครอง, **จำนวน(`quantity`) โชว์เฉพาะช่องแรกสุด**. Fallback: ถ้า step ไม่มีเวลา ใช้ `tb_planning.start_time/end_time`; ถ้ายังไม่มี → แยกไปแถว "ไม่ระบุเวลา". งานที่ `empno` ว่าง → กลุ่ม "ไม่ระบุพนักงาน" ท้ายสุด. กรองด้วย แผนก(`dept`)+พนักงาน(`empno`, cascade จาก `employeeOptions`)+วันที่(`date`, เดี่ยว ค่าเริ่มต้นวันนี้). มี export PDF (mPDF, A4-L) + Excel คู่กัน — 2 แถวล่าง (ผู้ทวนสอบ/เวลา, ผู้ผลิต) เว้นว่างให้เซ็นมือตามฟอร์มกระดาษ
+
+## ใบสั่งซื้อ (เมนู O-Order, `/order`) — 12/08/2569
+
+หน้านี้แปลงผังมาจากฟอร์ม Access **"บันทึกคำสั่งซื้อ"** โดยตรง (`OrderController` + `routes/order.php` + `resources/views/order/{index,table,form}.blade.php`) — **อย่าสับสนกับเมนู Production → Sale Order** (`Production\OrderController`, `/production-planning/order`) ที่เป็นคนละหน้า คนละ controller
+
+**สถานะ:** UI + อ่านข้อมูลจริงครบทั้งฟอร์ม — **การบันทึกยังไม่เปิดใช้งาน** (ปุ่ม "บันทึกการรับคำสั่งซื้อ" ขึ้น Swal แจ้งเตือน) รอยืนยันกติกาการเดินเลขที่ใบสั่ง + คอลัมน์ที่แก้ได้
+
+**ประเภทใบสั่ง = 2 ตัวอักษรหน้า `morder.Orderno`** (radio 12 ปุ่มบนหัวฟอร์ม) — `OrderController::ORDER_TYPES` map ประเภท → คอลัมน์เลขรันในตาราง `orderrun` (1 แถว หลายคอลัมน์): `CM/CI→c`, `HM/HI→h`, `WM/WI→w`, `CE→ce`, `HE→he`, `WE→we`, `CR→CR`, `HR→HR`, `WR→WR`
+
+**Field mapping จากฟอร์ม Access → DB** (ยืนยันกับข้อมูลจริงของใบ `WM23946` แล้ว):
+
+| ช่องบนฟอร์ม | คอลัมน์ |
+|---|---|
+| เลขที่ใบสั่ง / วันที่ | `morder.Orderno` / `Mdate` |
+| ผลิตที่ / P.O. No. | `morder.Company` (CP/DB/MB/SPP) / `PO` |
+| รหัสลูกค้า / ชื่อลูกค้า | `morder.Custno` / `Custname` (โชว์ `customer.name` แทน) |
+| สถานที่ส่ง | `morder.DVpoint` — ตัวเลือกจาก `naddress` (Custno + DVpoint) |
+| ผู้บันทึก / รหัสผู้ขาย | `morder.Emp` / `supno` |
+| itype | `customer.type` → `c_type.t_namee` |
+| เลขที่ใบจอง | `morder.RsvNo` |
+| ส่งก่อนได้ / RP / SPEC / CER / MSDS | `morder.Send` / `RP` / `Spec` / `Cer` / `MSDS` |
+| กรณีสั่งทำสต๊อก: กำหนดส่งครบ / ส่งลูกค้าภายใน (เดือน) / นน.คงเหลือ / ส่งมอบเดือนละ | `morder.sendend` / `SendCust` / `HMStore` / `sendmth` |
+| น้ำหนักรวม / ราคาขาย | `morder.netqty` / `price` |
+| ตารางรายการ: สต๊อก / ผลิต | `suborder.Stock` / `Production` (ยอดรวมท้ายตาราง = SUM(Production)) |
+| กำหนดที่ลูกค้าต้องการ / กำหนดส่งทบทวน | `suborder.custwant` / `senddate` |
+| วันที่ผลิตเสร็จ / วันที่ลูกค้าได้รับ / เลขที่ใบส่ง | `suborder.EndP` / `DVDate` / `outno` |
+| หมายเหตุ (มี dropdown) | `suborder.Remark` — ตัวเลือกสำเร็จรูปจากตาราง `ordrem` |
+
+**กล่องราคา** (อ่านอย่างเดียว, `OrderController::priceData`): ราคาที่กำหนดไว้ = `uprice.PRICE` (คู่ CustNo+ITEMNO) · ราคาช่อง 1/2/3 + ราคาอนุมัติ = `appvreq.price1/2/3` + `price` (ใบขออนุมัติล่าสุดของคู่ custno+itemno) · ยืนราคาถึง = `zcustprice.enddate` · ราคาทุน = `pdprice.Price`
+
+**ยังไม่ยืนยัน 3 จุด** (ทำ UI ไว้แล้วแต่ยังไม่ผูกข้อมูล/ผูกแบบอนุมาน): "ราคาต้องไม่ต่ำกว่า" (ตอนนี้ผูกกับราคาช่อง 2 ตามที่เห็นบนฟอร์มต้นฉบับ), "กลุ่มราคา", "ขั้นต่ำ"
+
+**checkbox แบบ Access:** เก็บ `-1` = ติ๊ก, `0`/`NULL` = ไม่ติ๊ก → แปลงด้วย `OrderController::checked()` ก่อนส่งให้ฟอร์ม อย่าเทียบ `== 1`
 
 ## ข้อตกลงและข้อควรระวัง (Conventions & Gotchas)
 

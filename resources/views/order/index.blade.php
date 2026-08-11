@@ -5,7 +5,7 @@
 
 <head>
     @include('layout/inc_header')
-    <title>Dashboard - CRM | Vuexy - Bootstrap Admin Template</title>
+    <title>ใบสั่งซื้อ - World Pigment</title>
 
 </head>
 <style>
@@ -30,6 +30,76 @@
     border-top: 65px solid #54BAB9;
     border-right: 65px solid transparent;
 }
+
+/* ── เรียงตาม — คลิกหัวตาราง + เน้นคอลัมน์ที่กำลังเรียง (เหมือนหน้าใบเสนอราคา) ── */
+#table-data th.th-sort { cursor: pointer; user-select: none; }
+#table-data th.th-sort:hover { background-color: #e9ecef; }
+.th-sort-icon { font-size: .9rem; opacity: .35; vertical-align: middle; }
+.th-sort-icon.active { opacity: 1; color: #ffd43b; font-size: 1.05rem; font-weight: 700; margin-left: .15rem; }
+#table-data thead th.col-sorted { background-color: #696cff; color: #fff; box-shadow: inset 0 -3px 0 #ffd43b; }
+#table-data thead th.col-sorted:hover { background-color: #5a5ef0; }
+#table-data thead th.col-sorted small { color: rgba(255,255,255,.8) !important; }
+#table-data tbody td.col-sorted { box-shadow: inset 2px 0 0 #696cff, inset -2px 0 0 #696cff; }
+
+/* ══ ฟอร์มบันทึกใบสั่งซื้อ — คงผังและโทนสีของฟอร์ม Access เดิมไว้ ══ */
+
+/* แถบประเภทใบสั่ง (ม่วง เหมือนหัวฟอร์มเดิม) */
+.of-typebar {
+    background: #e8e4f5;
+    border: 1px solid #c9c0e6;
+    border-radius: .6rem;
+    padding: .85rem 1rem;
+}
+.of-typebar-title {
+    font-weight: 700;
+    color: #4b3f8f;
+    margin-bottom: .5rem;
+}
+.of-typegrid { display: flex; flex-direction: column; gap: .25rem; }
+.of-typerow { display: flex; flex-wrap: wrap; gap: 1.4rem; }
+.of-typerow .form-check-label { font-weight: 600; letter-spacing: .3px; }
+
+/* กล่อง section ในฟอร์ม */
+.of-sec {
+    border: 1px solid #e2e7ea;
+    border-radius: .6rem;
+    padding: 1rem 1.15rem 1.15rem;
+    background: #fff;
+}
+.of-sec-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #2f7a78;
+    margin-bottom: .9rem;
+    padding-bottom: .5rem;
+    border-bottom: 2px solid #d9e6e6;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+.of-sec .form-label { margin-bottom: .25rem; font-size: .85rem; font-weight: 600; }
+
+/* กล่อง "กรณีสั่งทำสต๊อก" + "ราคา" — แยกโทนตามฟอร์มเดิม */
+.of-sec-stock { background: #f7fbff; border-color: #cfe2f3; }
+.of-sec-stock .of-sec-title { color: #2c6ea4; border-bottom-color: #cfe2f3; }
+.of-sec-price { background: #fdfaf4; border-color: #ecdfc4; }
+.of-sec-price .of-sec-title { color: #a3781f; border-bottom-color: #ecdfc4; }
+.of-sec-item  { background: #f8fbf7; border-color: #d6e7cf; }
+.of-sec-item .of-sec-title { color: #4c7c3b; border-bottom-color: #d6e7cf; }
+
+/* ช่องเน้นสีตามฟอร์ม Access */
+.of-hl-yellow { background-color: #fffbcc !important; }
+.of-hl-green  { background-color: #dff3d8 !important; }
+.of-warn      { background-color: #fbdcc4 !important; font-weight: 600; }
+.of-sell      { background-color: #e8e8e8 !important; }
+
+/* แถว checkbox ท้ายกล่องซ้าย */
+.of-checkrow { display: flex; flex-wrap: wrap; gap: 1.25rem; padding-top: .35rem; }
+
+/* ตารางรายการในใบสั่งซื้อ */
+#orderItemsTable th { white-space: nowrap; font-size: .82rem; vertical-align: middle; }
+#orderItemsTable td { font-size: .85rem; }
+#orderItemsTable input.form-control-sm { min-width: 90px; }
 </style>
 
 <body>
@@ -52,110 +122,34 @@
                 <div class="content-wrapper">
                     <!-- Content -->
 
-{{-- ฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝ --}}
-<div class="container-xxl flex-grow-1 container-p-y">
+                    <div class="container-xxl flex-grow-1 container-p-y">
 
     <!-- Header -->
     <div class="row mb-4">
         <div class="col-12">
-
             <div class="card">
                 <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
 
                     <div>
                         <h3 class="mb-1">
                             <i class="ti ti-shopping-cart text-primary"></i>
-                            Sale Order
+                            ใบสั่งซื้อ
                         </h3>
-
                         <p class="text-muted mb-0">
-                            จัดการคำสั่งขายและใบสั่งผลิต
+                            บันทึกคำสั่งซื้อจากลูกค้า (morder / suborder)
                         </p>
                     </div>
 
-                    <div class="wip">
-                        <button class="btn btn-primary"
-                            data-bs-toggle="modal"
-                            data-bs-target="#saleOrderModal">
-
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-primary" onclick="orderNew()">
                             <i class="ti ti-plus me-1"></i>
-                            สร้าง Sale Order
+                            เพิ่มใบสั่งซื้อใหม่
                         </button>
                     </div>
 
                 </div>
             </div>
-
         </div>
-    </div>
-
-    <!-- Summary -->
-    <div class="row mb-4">
-
-        <div class="col-md-3 wip">
-            <div class="card">
-                <div class="card-body">
-
-                    <span class="text-muted fw-semibold">
-                        Order ทั้งหมด
-                    </span>
-
-                    <h3 class="mt-2 mb-0">
-                        120
-                    </h3>
-
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3 wip">
-            <div class="card">
-                <div class="card-body">
-
-                    <span class="text-warning fw-semibold">
-                        รออนุมัติ
-                    </span>
-
-                    <h3 class="mt-2 mb-0">
-                        18
-                    </h3>
-
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3 wip">
-            <div class="card">
-                <div class="card-body">
-
-                    <span class="text-info fw-semibold">
-                        กำลังผลิต
-                    </span>
-
-                    <h3 class="mt-2 mb-0">
-                        56
-                    </h3>
-
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3 wip">
-            <div class="card">
-                <div class="card-body">
-
-                    <span class="text-success fw-semibold">
-                        เสร็จสิ้น
-                    </span>
-
-                    <h3 class="mt-2 mb-0">
-                        46
-                    </h3>
-
-                </div>
-            </div>
-        </div>
-
     </div>
 
     <!-- Table -->
@@ -163,172 +157,98 @@
 
         <div class="card-header border-bottom">
 
-            <div class="row g-3 align-items-center">
-
-                <div class="col-md-3 wip">
-                    <input type="text"
-                        class="form-control"
-                        placeholder="ค้นหา Sale Order">
+            {{-- แถวตัวกรอง 1: ค้นหา + ช่วงวันที่ --}}
+            <div class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label class="form-label small fw-medium mb-1">
+                        ค้นหา
+                        <span class="text-muted fw-normal">(เลขที่ใบสั่ง / P.O. / รหัสลูกค้า / ชื่อลูกค้า / รหัสสินค้า)</span>
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="ti ti-search"></i></span>
+                        <input type="text" name="search" class="form-control p_search" oninput="loadData(page)">
+                    </div>
                 </div>
-
-                <div class="col-md-2 wip">
-                    <select class="form-select">
-                        <option>ทุกสถานะ</option>
-                        <option>Draft</option>
-                        <option>Pending</option>
-                        <option>Production</option>
-                        <option>Completed</option>
-                    </select>
+                <div class="col-md-6">
+                    <label class="form-label small fw-medium mb-1">วันที่สั่ง</label>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="small fw-medium">ตั้งแต่</span>
+                        <input type="text" name="date_from" class="form-control flatpickr-date p_search" autocomplete="off" placeholder="วว/ดด/ปปปป">
+                        <span class="small fw-medium">ถึง</span>
+                        <input type="text" name="date_to" class="form-control flatpickr-date p_search" autocomplete="off" placeholder="วว/ดด/ปปปป">
+                    </div>
                 </div>
-
-                <div class="col-md-2 wip">
-                    <select class="form-select">
-                        <option>ทุกประเภท</option>
-                        <option>Stock</option>
-                        <option>Sale</option>
-                        <option>รับมาแก้</option>
-                        <option>Semi Product</option>
-                    </select>
-                </div>
-
-                <div class="col-md-2 wip">
-                    <input type="date"
-                        class="form-control">
-                </div>
-
             </div>
 
+            {{-- แถวตัวกรอง 2: ประเภทใบสั่ง + ผลิตที่ --}}
+            <div class="row g-3 align-items-end mt-1">
+                <div class="col-md-4">
+                    <label class="form-label small fw-medium mb-1">ประเภทใบสั่ง</label>
+                    <select name="order_type" class="form-select p_search" onchange="loadData(page)">
+                        <option value="">ทั้งหมด</option>
+                        @foreach ($type_rows as $types)
+                            @foreach ($types as $t)
+                                <option value="{{ $t }}">{{ $t }}</option>
+                            @endforeach
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-medium mb-1">ผลิตที่</label>
+                    <select name="company" class="form-select p_search" onchange="loadData(page)">
+                        <option value="">ทั้งหมด</option>
+                        @foreach ($companies as $c)
+                            <option value="{{ $c }}">{{ $c }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-end my-3">
+                <button type="button" id="btnResetFilters" class="btn btn-label-secondary" onclick="resetFilters()">
+                    <i class="ti ti-x me-1"></i>ล้างตัวกรอง<span class="filter-count ms-1"></span>
+                </button>
+            </div>
+
+            {{-- state การเรียง — เก็บนอก #table-data เพื่อคงค่าเมื่อตารางโหลดใหม่ (default = วันที่สั่งล่าสุด) --}}
+            <input type="hidden" name="sort_col" value="Mdate" class="p_search">
+            <input type="hidden" name="sort_dir" value="desc" class="p_search">
+
+            <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                <div class="d-flex align-items-center">
+                    <label class="form-label small fw-medium mb-0 me-2">เรียงตามวันที่สั่ง</label>
+                    <select name="sort" class="form-select form-select-sm" style="width: 210px;"
+                        onchange="onSortDropdown(this.value)">
+                        <option value="desc">ล่าสุด</option>
+                        <option value="asc">เก่าสุด</option>
+                        <option value="" hidden>เรียงตามคอลัมน์ (คลิกหัวตาราง)</option>
+                    </select>
+                </div>
+                <div class="d-flex align-items-center">
+                    <label class="form-label small fw-medium mb-0 me-2">แสดง</label>
+                    <select name="limit" class="form-select form-select-sm p_search" style="width: 90px;"
+                        onchange='loadData("{{ $page_url }}/datatable")'>
+                        <option value="15">15</option>
+                        <option value="50">50</option>
+                        <option value="75">75</option>
+                        <option value="100">100</option>
+                    </select>
+                    <span class="ms-2 small fw-medium">รายการ/หน้า</span>
+                </div>
+            </div>
         </div>
 
-        <div class="table-responsive text-nowrap wip">
-
-            <table class="table table-hover">
-
-                <thead class="table-light">
-
-                    <tr>
-
-                        <th>Sale Order No.</th>
-                        <th>ลูกค้า</th>
-                        <th>ประเภท</th>
-                        <th>Quotation</th>
-                        <th>จำนวน</th>
-                        <th>สถานะ</th>
-                        <th>วันที่</th>
-                        <th width="120">จัดการ</th>
-
-                    </tr>
-
-                </thead>
-
-                <tbody>
-
-                    <tr>
-
-                        <td>
-                            <strong>SO-2026-0001</strong>
-                        </td>
-
-                        <td>
-                            Customer A
-                        </td>
-
-                        <td>
-                            <span class="badge bg-label-primary">
-                                Sale
-                            </span>
-                        </td>
-
-                        <td>
-                            QT-2026-0001
-                        </td>
-
-                        <td>
-                            5,000 KG
-                        </td>
-
-                        <td>
-                            <span class="badge bg-label-info">
-                                กำลังผลิต
-                            </span>
-                        </td>
-
-                        <td>
-                            07/05/2026
-                        </td>
-
-                        <td>
-
-                            <button class="btn btn-sm btn-icon btn-label-primary">
-                                <i class="ti ti-eye"></i>
-                            </button>
-
-                            <button class="btn btn-sm btn-icon btn-label-warning">
-                                <i class="ti ti-edit"></i>
-                            </button>
-
-                        </td>
-
-                    </tr>
-
-                    <tr>
-
-                        <td>
-                            <strong>SO-2026-0002</strong>
-                        </td>
-
-                        <td>
-                            Customer B
-                        </td>
-
-                        <td>
-                            <span class="badge bg-label-dark">
-                                Semi Product
-                            </span>
-                        </td>
-
-                        <td>
-                            QT-2026-0002
-                        </td>
-
-                        <td>
-                            2,000 KG
-                        </td>
-
-                        <td>
-                            <span class="badge bg-label-success">
-                                Completed
-                            </span>
-                        </td>
-
-                        <td>
-                            07/05/2026
-                        </td>
-
-                        <td>
-
-                            <button class="btn btn-sm btn-icon btn-label-primary">
-                                <i class="ti ti-eye"></i>
-                            </button>
-
-                            <button class="btn btn-sm btn-icon btn-label-warning">
-                                <i class="ti ti-edit"></i>
-                            </button>
-
-                        </td>
-
-                    </tr>
-
-                </tbody>
-
-            </table>
-
+        <div id="table-data">
+            {{-- Table โหลดผ่าน AJAX จาก order/datatable --}}
+            <div class="text-center py-5 text-muted">
+                <div class="spinner-border spinner-border-sm me-2"></div>
+                กำลังโหลดข้อมูล...
+            </div>
         </div>
 
     </div>
 
 </div>
-{{-- ฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝ --}}
                     <!-- / Content -->
 
                     <!-- Footer -->
@@ -348,441 +268,341 @@
         <!-- Drag Target Area To SlideIn Menu On Small Screens -->
         <div class="drag-target"></div>
     </div>
-    <!--add  Modal -->
-<!-- Quotation Modal -->
 
-
-{{-- ฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝ --}}
-<!-- Modal -->
-<!-- Sale Order Modal -->
-<div class="modal fade" id="saleOrderModal" tabindex="-1" aria-hidden="true">
-
-    <div class="modal-dialog modal-xl">
-
-        <div class="modal-content wip">
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- Modal: ฟอร์มบันทึกใบสั่งซื้อ (ผังตามฟอร์ม Access เดิม)             -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="modal modalHeadDecor fade" id="orderModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
 
             <div class="modal-header">
-
-                <h5 class="modal-title">
-                    สร้าง Sale Order
-                </h5>
-
-                <button type="button"
-                    class="btn-close"
-                    data-bs-dismiss="modal"></button>
-
+                <h5 class="modal-title" id="orderModalTitle">บันทึกคำสั่งซื้อ</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
-            <div class="modal-body">
-
-                <div class="row g-3">
-
-                    <div class="col-md-3">
-                        <label class="form-label">
-                            Sale Order No.
-                        </label>
-
-                        <input type="text"
-                            class="form-control"
-                            value="SO-2026-0003">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">
-                            วันที่
-                        </label>
-
-                        <input type="date"
-                            class="form-control">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">
-                            ประเภท
-                        </label>
-
-                        <select class="form-select">
-                            <option>Sale</option>
-                            <option>Stock</option>
-                            <option>รับมาแก้</option>
-                            <option>Semi Product</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">
-                            สถานะ
-                        </label>
-
-                        <select class="form-select">
-                            <option>Draft</option>
-                            <option>Pending</option>
-                            <option>Production</option>
-                            <option>Completed</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label">
-                            ลูกค้า
-                        </label>
-
-                        <select class="form-select">
-                            <option>Customer A</option>
-                            <option>Customer B</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label">
-                            อ้างอิงใบเสนอราคา
-                        </label>
-
-                        <select class="form-select">
-                            <option>QT-2026-0001</option>
-                            <option>QT-2026-0002</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">
-                            รหัสสินค้า
-                        </label>
-
-                        <input type="text"
-                            class="form-control">
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">
-                            ชื่อสินค้า
-                        </label>
-
-                        <input type="text"
-                            class="form-control">
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">
-                            จำนวน
-                        </label>
-
-                        <input type="number"
-                            class="form-control">
-                    </div>
-
-                    <div class="col-md-12">
-                        <label class="form-label">
-                            หมายเหตุ
-                        </label>
-
-                        <textarea class="form-control"
-                            rows="4"></textarea>
-                    </div>
-
-                </div>
-
-            </div>
+            @include('order.form')
 
             <div class="modal-footer">
-
-                <button class="btn btn-label-secondary"
-                    data-bs-dismiss="modal">
-
-                    ยกเลิก
-
-                </button>
-
-                <button class="btn btn-primary">
-
-                    บันทึกข้อมูล
-
-                </button>
-
+                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ปิด</button>
             </div>
 
         </div>
-
     </div>
-
 </div>
-{{-- ฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝฝ --}}
 
-    <!--edit  Modal -->
-    <div class="modal fade modalHeadDecor" id="editModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
-            <form id="insert_category" enctype="multipart/form-data">
-                @csrf
-                <div class="modal-content rounded-0">
-                    <div class="modal-header rounded-0">
-                        <h5 class="modal-title" id="exampleModalLabel1">เพิ่มข้อมูลหมวดหมู่</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    @include('category/form')
-                </div>
-            </form>
-        </div>
-    </div>
     <!-- / Layout wrapper -->
     @include('layout/inc_js')
 <script>
-    var page = "{{$page_url}}/datatable";
-        var searchData = {};
+    var page = "{{ $page_url }}/datatable";
+    var searchData = {};
+    // ต้องประกาศก่อน loadData ครั้งแรก — เลี่ยง hoisting ทำให้ dtSeq เป็น NaN (spinner ค้าง)
+    var dtXhr = null, dtSeq = 0;
+    loadData(page);
+
+    $(function () {
+        flatpickr('.flatpickr-date', {
+            dateFormat: 'd/m/Y',
+            allowInput: true,
+            static: true,
+            disableMobile: true,
+            onChange: function (_, __, instance) {
+                if (instance.input.classList.contains('p_search')) loadData(page);
+            }
+        });
+        syncSortDropdown();
+    });
+
+    // ────────────────────────────────────────────────────────
+    //  เรียงลำดับ — state เดียว (sort_col/sort_dir) ใช้ร่วม dropdown + คลิกหัวตาราง
+    // ────────────────────────────────────────────────────────
+    function setSort(col, dir) {
+        $('input[name="sort_col"]').val(col);
+        $('input[name="sort_dir"]').val(dir);
+        syncSortDropdown();
         loadData(page);
+    }
+    function syncSortDropdown() {
+        var col = $('input[name="sort_col"]').val();
+        var dir = $('input[name="sort_dir"]').val();
+        $('select[name="sort"]').val(col === 'Mdate' ? dir : '');
+    }
+    function onSortDropdown(val) {
+        if (val === '') return;
+        setSort('Mdate', val);
+    }
+    // delegated เพราะ thead อยู่ใน #table-data ที่โหลดใหม่ทุกครั้ง
+    $(document).on('click', '#table-data th[data-sort]', function () {
+        var col    = String($(this).data('sort'));
+        var curCol = $('input[name="sort_col"]').val();
+        var curDir = $('input[name="sort_dir"]').val();
+        var dir    = (curCol === col) ? (curDir === 'asc' ? 'desc' : 'asc') : 'asc';
+        setSort(col, dir);
+    });
 
-        function loadData(pages){
-            $('.p_search').each(function() {
-                var inputName = $(this).attr('name'); // ดึงชื่อ attribute 'name' ของ input
-                var inputValue = $(this).val(); // ดึงค่า value ของ input
+    // ────────────────────────────────────────────────────────
+    //  ตัวช่วยจัดรูปแบบค่า
+    // ────────────────────────────────────────────────────────
+    function esc(v){ return String(v == null ? '' : v).replace(/"/g, '&quot;'); }
 
-                searchData[inputName] = inputValue; // เก็บข้อมูลลงในออบเจ็กต์ searchData
-            });
-
-            // alert(page);
-            page = pages;
-            $.ajax({
-                type: "GET",
-                url: pages,
-                data: searchData,
-                success: function(data) {
-                    $("#table-data").html(data);
-                }
-            });
-            // alert(page);
+    // 'YYYY-MM-DD hh:mm:ss' → 'DD/MM/YY' (ว่าง = '')
+    function fmtDate(v, withYear4){
+        if (!v) return '';
+        var s = String(v).substring(0, 10).split('-');
+        if (s.length !== 3) return String(v);
+        var yy = withYear4 ? s[0] : s[0].substring(2);
+        return s[2] + '/' + s[1] + '/' + yy;
+    }
+    // + เวลา (ช่อง "วันที่" บนหัวฟอร์มเดิมโชว์เวลาด้วย)
+    function fmtDateTime(v){
+        if (!v) return '';
+        var t = String(v).substring(11, 16);
+        return fmtDate(v) + (t ? ' ' + t : '');
+    }
+    function fmtNum(v, digits){
+        if (v === null || v === undefined || v === '') return '';
+        var n = parseFloat(v);
+        if (isNaN(n)) return '';
+        return n.toLocaleString('en-US', {minimumFractionDigits: digits, maximumFractionDigits: digits});
+    }
+    // ตั้งค่าให้ flatpickr (รับ Y-m-d / datetime); ว่าง = เคลียร์
+    function setFp(id, val){
+        var el = document.getElementById(id);
+        if (!el) return;
+        if (el._flatpickr) {
+            if (val) el._flatpickr.setDate(String(val).substring(0, 10), false, 'Y-m-d');
+            else     el._flatpickr.clear();
+        } else {
+            $(el).val(val ? String(val).substring(0, 10) : '');
         }
-        var update_id = 999999999999;
-        function view(id){
-            update_id = id;
-            $.ajax({
-                type: "GET",
-                url: "{{ $page_url }}/"+id,
-                success: function(data) {
-                    $("#view").html(data);
-                    $('#exampleFormControlSelect'+id).select2({
-                        placeholder: 'เลือกผู้เช่า',
-                        allowClear: true,
-                        dropdownParent: $('#editModal'), // 💥 สำคัญมาก ถ้าอยู่ใน modal
-                        width: '100%'
-                    });
-                    // update_id = id;
-                }
-            });
-        }
+    }
 
-        var import_id = 999999999999;
-        function getImportForm(id){
-            import_id = id;
-            $.ajax({
-                type: "GET",
-                url: "{{ $page_url }}/import/"+id,
-                success: function(data) {
-                    $("#importStock").html(data);
-                }
-            });
-        }
+    // ────────────────────────────────────────────────────────
+    //  ฟอร์มบันทึกใบสั่งซื้อ
+    // ────────────────────────────────────────────────────────
 
-        function getHistory(id){
-            $.ajax({
-                type: "GET",
-                url: "{{ $page_url }}/history/"+id,
-                success: function(data) {
-                    $("#history-table").html(data);
-                }
-            });
-        }
-
-        $('#insert_category').on('submit', function(event) {
-            event.preventDefault(); // ป้องกันการส่งฟอร์มปกติ
-            if(!this.checkValidity()) {
-                // ถ้าฟอร์มไม่ถูกต้อง
-                this.reportValidity();
-                return console.log('ฟอร์มไม่ถูกต้อง');
+    // เปิดใบที่มีอยู่แล้ว — โหลดหัวใบ + รายการ + ข้อมูลราคา แล้วเติมลงฟอร์ม
+    function orderOpen(orderno){
+        $.getJSON("{{ $page_url }}/form", {orderno: orderno}, function(res){
+            if (!res.found){
+                Swal.fire('ไม่พบใบสั่งซื้อ', 'เลขที่ ' + orderno + ' ไม่มีอยู่ในระบบ', 'warning');
+                return;
             }
-            // return alert(123);
-            Swal.fire({
-                title: 'ยืนยันการดำเนินการ?',
-                text: 'คุณต้องการเพิ่มหมวดหมู่หรือไม่?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'ตกลง',
-                cancelButtonText: 'ยกเลิก',
-                showDenyButton: false,
-                didOpen: () => {
-                    // โฟกัสที่ปุ่ม confirm
-                    Swal.getConfirmButton().focus();
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    let form = document.getElementById('insert_category');
-                    let formData = new FormData(form);
-                    formData.append('_token', '{{ csrf_token() }}'); // สำหรับ Laravel CSRF
-
-                    $.ajax({
-                        url: '{{$page_url}}/insert', // เปลี่ยน URL เป็นจุดหมายที่ต้องการ
-                        type: 'POST',
-                        data: formData,
-                        contentType: false, // ต้องมีเพื่อให้ส่ง multipart/form-data ได้
-                        processData: false,
-                        success: function(response) {
-                            if(response == true){
-                                $('#insert_category')[0].reset();
-                                Swal.fire('เพิ่มหมวดหมู่เรียบร้อยแล้ว', '', 'success');
-                                $('#addModal').modal('hide');
-                                loadData(page);
-                            }
-                        },
-                        error: function(error) {
-                            Swal.fire('เกิดข้อผิดพลาด', '', 'error');
-                            console.error('เกิดข้อผิดพลาด:', error);
-                        }
-                    });
-                } else if (result.isDismissed) {
-                    // Swal.fire('ยกเลิกการดำเนินการ', '', 'info');
-                }
-            });
+            fillOrderForm(res);
+            $('#orderModal').modal('show');
+        }).fail(function(){
+            Swal.fire('โหลดข้อมูลไม่สำเร็จ', 'ลองใหม่อีกครั้ง', 'error');
         });
-        $('#update_category').on('submit', function(event) {
-            event.preventDefault(); // ป้องกันการส่งฟอร์มปกติ
-            if(!this.checkValidity()) {
-                // ถ้าฟอร์มไม่ถูกต้อง
-                this.reportValidity();
-                return console.log('ฟอร์มไม่ถูกต้อง');
-            }
-            // return alert(123);
-            Swal.fire({
-                title: 'ยืนยันการดำเนินการ?',
-                text: 'คุณต้องการแก้ไขหมวดหมู่หรือไม่?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'ตกลง',
-                cancelButtonText: 'ยกเลิก',
-                showDenyButton: false,
-                didOpen: () => {
-                    // โฟกัสที่ปุ่ม confirm
-                    Swal.getConfirmButton().focus();
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
+    }
 
-                    // ใช้ FormData แทน serialize เพื่อส่งไฟล์ได้
-                    let form = document.getElementById('update_category');
-                    let formData = new FormData(form);
-                    formData.append('_token', '{{ csrf_token() }}'); // สำหรับ Laravel CSRF
+    // ใบใหม่ — ล้างฟอร์ม แล้วรอผู้ใช้เลือกประเภทเพื่อดึงเลขที่ถัดไป
+    function orderNew(){
+        clearOrderForm();
+        $('#orderModalTitle').text('บันทึกคำสั่งซื้อ — ใบใหม่');
+        $('#orderModal').modal('show');
+    }
 
-                    $.ajax({
-                        url: '{{$page_url}}/update/'+update_id, // เปลี่ยน URL เป็นจุดหมายที่ต้องการ
-                        type: 'POST',
-                        data: formData,
-                        contentType: false, // ต้องมีเพื่อให้ส่ง multipart/form-data ได้
-                        processData: false,
-                        success: function(response) {
-                            if(response == true){
-                                Swal.fire('แก้ไขหมวดหมู่เรียบร้อยแล้ว', '', 'success');
-                                $('#editModal').modal('hide');
-                                loadData(page);
-                            }
-                        },
-                        error: function(error) {
-                            Swal.fire('เกิดข้อผิดพลาด', '', 'error');
-                            console.error('เกิดข้อผิดพลาด:', error);
-                        }
-                    });
-                } else if (result.isDismissed) {
-                    // Swal.fire('ยกเลิกการดำเนินการ', '', 'info');
-                }
-            });
+    // เปลี่ยนประเภทใบสั่ง → ดึงเลขรันถัดไปของประเภทนั้นมาโชว์ (ยังไม่เดินเลขจริง)
+    function onOrderTypeChange(type){
+        if ($('#o_Orderno').data('existing')) return;   // ใบเดิม — ห้ามเปลี่ยนเลขที่
+        $.getJSON("{{ $page_url }}/next-orderno", {type: type}, function(res){
+            if (res.found && res.orderno) $('#o_Orderno').val(res.orderno);
         });
-        $('#update_equipment_stocks').on('submit', function(event) {
-            event.preventDefault(); // ป้องกันการส่งฟอร์มปกติ
-            if(!this.checkValidity()) {
-                // ถ้าฟอร์มไม่ถูกต้อง
-                this.reportValidity();
-                return console.log('ฟอร์มไม่ถูกต้อง');
-            }
-            // return alert(123);
-            Swal.fire({
-                title: 'ยืนยันการดำเนินการ?',
-                text: 'คุณต้องการนำเข้าหมวดหมู่หรือไม่?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'ตกลง',
-                cancelButtonText: 'ยกเลิก',
-                showDenyButton: false,
-                didOpen: () => {
-                    // โฟกัสที่ปุ่ม confirm
-                    Swal.getConfirmButton().focus();
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
+    }
 
-                    // ใช้ FormData แทน serialize เพื่อส่งไฟล์ได้
-                    let form = document.getElementById('update_equipment_stocks');
-                    let formData = new FormData(form);
-                    formData.append('_token', '{{ csrf_token() }}'); // สำหรับ Laravel CSRF
+    function clearOrderForm(){
+        $('#orderModal input[type="text"], #orderModal input[type="number"]').val('');
+        $('#orderModal input[type="checkbox"]').prop('checked', false);
+        $('#orderModal input[name="order_type_form"]').prop('checked', false);
+        $('#o_Company').val('');
+        $('#o_DVpoint').html('<option value="">— ไม่ระบุ —</option>');
+        $('#o_Orderno').removeData('existing');
+        setFp('o_sendend', '');
+        renderOrderItems([]);
+    }
 
-                    $.ajax({
-                        url: '{{$page_url}}/update_stock/'+import_id, // เปลี่ยน URL เป็นจุดหมายที่ต้องการ
-                        type: 'POST',
-                        data: formData,
-                        contentType: false, // ต้องมีเพื่อให้ส่ง multipart/form-data ได้
-                        processData: false,
-                        success: function(response) {
-                            if(response == true){
-                                Swal.fire('นำเข้าหมวดหมู่เรียบร้อยแล้ว', '', 'success');
-                                $('#addStock').modal('hide');
-                                loadData(page);
-                            }
-                        },
-                        error: function(error) {
-                            Swal.fire('เกิดข้อผิดพลาด', '', 'error');
-                            console.error('เกิดข้อผิดพลาด:', error);
-                        }
-                    });
-                } else if (result.isDismissed) {
-                    // Swal.fire('ยกเลิกการดำเนินการ', '', 'info');
-                }
-            });
+    function fillOrderForm(res){
+        clearOrderForm();
+
+        var o = res.order || {};
+        $('#orderModalTitle').text('บันทึกคำสั่งซื้อ — ' + (o.Orderno || ''));
+
+        // ประเภท (radio) + เลขที่ใบสั่ง
+        if (o.type) $('#o_type_' + o.type).prop('checked', true);
+        $('#o_Orderno').val(o.Orderno || '').data('existing', true);
+        $('#o_Mdate').val(fmtDateTime(o.Mdate));
+
+        $('#o_Company').val(o.Company || '');
+        $('#o_PO').val(o.PO || '');
+        $('#o_Custno').val(o.Custno || '');
+        $('#o_Custname').val((res.customer && res.customer.name) || o.Custname || '');
+        $('#o_Emp').val(o.Emp || '');
+        $('#o_supno').val(o.supno || '');
+        $('#o_RsvNo').val(o.RsvNo || '');
+        $('#o_netqty').val(o.netqty != null ? o.netqty : '');
+
+        // ประเภทอุตสาหกรรมของลูกค้า (ปุ่ม itype เดิม)
+        $('#o_itype').val(res.customer && res.customer.type
+            ? res.customer.type + ' — ' + (res.customer.type_name || '')
+            : '');
+
+        // สถานที่ส่ง — รายการของลูกค้ารายนี้
+        fillDvpoints(res.dvpoints, o.DVpoint);
+
+        // กรณีสั่งทำสต๊อก
+        setFp('o_sendend', o.sendend);
+        $('#o_SendCust').val(o.SendCust != null ? o.SendCust : '');
+        $('#o_HMStore').val(o.HMStore != null ? o.HMStore : '');
+        $('#o_sendmth').val(o.sendmth != null ? o.sendmth : '');
+
+        // checkbox (แปลงจาก -1 ของ Access มาแล้วฝั่ง server)
+        $('#o_Send').prop('checked', !!o.Send);
+        $('#o_RP').prop('checked', !!o.RP);
+        $('#o_Spec').prop('checked', !!o.Spec);
+        $('#o_Cer').prop('checked', !!o.Cer);
+        $('#o_MSDS').prop('checked', !!o.MSDS);
+
+        // สินค้า + ราคา
+        $('#o_itemno').val(res.itemno || '');
+        $('#o_price').val(fmtNum(o.price, 2));
+        fillPriceBox(res.price);
+
+        renderOrderItems(res.items || []);
+    }
+
+    function fillDvpoints(list, selected){
+        var html = '<option value="">— ไม่ระบุ —</option>';
+        (list || []).forEach(function(p){
+            html += '<option value="' + esc(p) + '">' + esc(p) + '</option>';
         });
-
-        function Delete(id){
-                Swal.fire({
-                    title: 'ยืนยันการดำเนินการ?',
-                    text: 'คุณต้องการลบหมวดหมู่หรือไม่?',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'ตกลง',
-                    cancelButtonText: 'ยกเลิก',
-                    showDenyButton: false,
-                    didOpen: () => {
-                        // โฟกัสที่ปุ่ม confirm
-                        Swal.getConfirmButton().focus();
-                    }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            url: '{{$page_url}}/'+id, // เปลี่ยน URL เป็นจุดหมายที่ต้องการ
-                            type: 'DELETE',
-                            data: {
-                                _token : "{{ csrf_token() }}"
-                            },
-                            success: function(response) {
-                                if(response == true){
-                                    loadData(page);
-                                    Swal.fire('ลบหมวดหมู่เรียบร้อยแล้ว', '', 'success');
-                                }else{
-                                    Swal.fire('ไม่สามารถลบบัญชีได้', '', 'error');
-                                }
-                            },
-                            error: function(error) {
-                                Swal.fire('เกิดข้อผิดพลาด', '', 'error');
-                                console.error('เกิดข้อผิดพลาด:', error);
-                            }
-                        });
-                    } else if (result.isDismissed) {
-                        // Swal.fire('ยกเลิกการดำเนินการ', '', 'info');
-                    }
-                });
+        // ค่าที่บันทึกไว้ไม่อยู่ในรายการของลูกค้า (ข้อมูลเก่า) → เพิ่มเข้าไปเพื่อไม่ให้ค่าหาย
+        if (selected && (list || []).indexOf(selected) === -1){
+            html += '<option value="' + esc(selected) + '">' + esc(selected) + ' (ไม่อยู่ในรายการ)</option>';
         }
+        $('#o_DVpoint').html(html).val(selected || '');
+    }
+
+    function fillPriceBox(p){
+        p = p || {};
+        $('#o_fixed_price').val(fmtNum(p.fixed_price, 2));
+        $('#o_price2').val(fmtNum(p.price2, 2));
+        $('#o_min_price').val(fmtNum(p.price2, 2));   // ฟอร์มเดิมโชว์เท่ากับราคาช่อง 2
+        $('#o_appv_price').val(fmtNum(p.appv_price, 2));
+        $('#o_valid_to').val(fmtDate(p.valid_to));
+    }
+
+    // ── ตารางรายการ (suborder) — เฟสนี้แสดงอย่างเดียว ──
+    function renderOrderItems(items){
+        var body = '', total = 0;
+
+        if (!items.length){
+            body = '<tr><td colspan="9" class="text-center py-3 text-muted">ยังไม่มีรายการ</td></tr>';
+        } else {
+            items.forEach(function(r, i){
+                total += parseFloat(r.Production || 0);
+                body += '<tr>'
+                     +  '<td class="text-center text-muted">' + (i + 1) + '</td>'
+                     +  '<td class="text-end">' + (fmtNum(r.Stock, 2) || '-') + '</td>'
+                     +  '<td class="text-end fw-semibold">' + (fmtNum(r.Production, 2) || '-') + '</td>'
+                     +  '<td class="text-center">' + (fmtDate(r.custwant) || '-') + '</td>'
+                     +  '<td class="text-center">' + (fmtDate(r.senddate) || '-') + '</td>'
+                     +  '<td class="text-center text-primary">' + (fmtDate(r.EndP) || '-') + '</td>'
+                     +  '<td class="text-center">' + (fmtDate(r.DVDate) || '-') + '</td>'
+                     +  '<td>' + esc(r.outno || '-') + '</td>'
+                     +  '<td>' + esc(r.Remark || '') + '</td>'
+                     +  '</tr>';
+            });
+        }
+
+        $('#orderItems').html(body);
+        $('#o_total_prod').text(fmtNum(total, 2) || '0.00');
+    }
+
+    // ── ค้นลูกค้าจากรหัส (เติมชื่อ + สถานที่ส่ง + ค่าตั้งต้น RP/CER) ──
+    var custLookupTimer = null, custLookupXhr = null;
+    function lookupOrderCustomer(code){
+        code = (code || '').trim();
+        clearTimeout(custLookupTimer);
+        if (!code){ $('#o_Custname').val(''); $('#o_itype').val(''); fillDvpoints([], ''); return; }
+        custLookupTimer = setTimeout(function(){
+            if (custLookupXhr) custLookupXhr.abort();
+            custLookupXhr = $.getJSON("{{ $page_url }}/customer/" + encodeURIComponent(code), function(res){
+                if ($('#o_Custno').val().trim() !== code) return;   // กันผลเก่ามาทับ
+                if (!res.found){
+                    $('#o_Custname').val('');
+                    $('#o_itype').val('');
+                    fillDvpoints([], '');
+                    return;
+                }
+                var c = res.customer;
+                $('#o_Custname').val(c.name || '');
+                $('#o_itype').val(c.type ? c.type + ' — ' + (c.type_name || '') : '');
+                fillDvpoints(res.dvpoints, '');
+                // ค่าตั้งต้นจากข้อมูลลูกค้า — เฉพาะใบใหม่ (ใบเดิมใช้ค่าที่บันทึกไว้)
+                if (!$('#o_Orderno').data('existing')){
+                    $('#o_RP').prop('checked', !!c.RP);
+                    $('#o_Cer').prop('checked', !!c.CER);
+                    $('#o_MSDS').prop('checked', !!c.MSDS);
+                }
+            });
+        }, 350);
+    }
+
+    // การบันทึกยังไม่เปิดใช้งาน — รอยืนยันกติกาการเดินเลขที่ใบสั่ง + คอลัมน์ที่แก้ได้
+    function saveOrder(){
+        Swal.fire({
+            icon: 'info',
+            title: 'ยังไม่เปิดใช้งานการบันทึก',
+            html: 'หน้านี้เป็น UI + อ่านข้อมูลจริงเท่านั้น<br>' +
+                  'การบันทึกจะเปิดใช้หลังยืนยันกติกาการเดินเลขที่ใบสั่ง (ตาราง <code>orderrun</code>) และคอลัมน์ที่แก้ได้'
+        });
+    }
+
+    // ────────────────────────────────────────────────────────
+    //  DataTable filter machinery
+    // ────────────────────────────────────────────────────────
+    function collectSearchData(){
+        var data = {};
+        $('.p_search').each(function(){
+            var v = $(this).val();
+            if (v !== '' && v !== null) data[$(this).attr('name')] = v;
+        });
+        return data;
+    }
+
+    function updateFilterButtonState(){
+        var count = 0;
+        $('.p_search:not([name="limit"]):not([name="sort_col"]):not([name="sort_dir"])').each(function(){
+            var v = $(this).val();
+            if (v !== '' && v !== null) count++;
+        });
+        var $btn = $('#btnResetFilters');
+        if (count > 0) { $btn.removeClass('btn-label-secondary').addClass('btn-danger'); $btn.find('.filter-count').text('(' + count + ')'); }
+        else           { $btn.removeClass('btn-danger').addClass('btn-label-secondary'); $btn.find('.filter-count').text(''); }
+    }
+
+    // กัน AJAX race: รับเฉพาะผลของ request ล่าสุด
+    function loadData(pages){
+        updateFilterButtonState();
+        searchData = collectSearchData();
+        page = pages;
+        var seq = ++dtSeq;
+        if (dtXhr) dtXhr.abort();
+        dtXhr = $.ajax({
+            type: "GET", url: pages, data: searchData,
+            success: function(data){ if (seq === dtSeq) $("#table-data").html(data); },
+            complete: function(){ if (seq === dtSeq) dtXhr = null; }
+        });
+    }
+
+    function resetFilters(){
+        // ไม่ล้าง limit + sort_col/sort_dir (เป็นการตั้งค่าแสดงผล ไม่ใช่ตัวกรอง)
+        $('.p_search:not([name="limit"]):not([name="sort_col"]):not([name="sort_dir"])').each(function(){
+            if (this._flatpickr) this._flatpickr.clear();
+            else $(this).val('');
+        });
+        loadData("{{ $page_url }}/datatable");
+    }
 </script>
 </body>
 
