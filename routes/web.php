@@ -106,6 +106,7 @@ Route::middleware(['auth', 'access'])->group(function() {
     @include_once('report.php');
     @include_once('permission.php');
     @include_once('product.php');   // ข้อมูลสินค้า (tb_products) — 07/08/2569
+    @include_once('worker.php');     // หน้าพนักงานหน้างาน (Worker) — อัพเดทสถานะงานตัวเอง (11/08/2569)
 
     // ─── Category CRUD (ยังคงไว้สำหรับ AJAX ใน views ที่ใช้ $page_url='category') ──
     Route::controller(CategoryController::class)->group(function() {

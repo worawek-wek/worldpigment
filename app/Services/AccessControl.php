@@ -36,6 +36,14 @@ class AccessControl
         return Auth::guard('web')->check();
     }
 
+    /** เป็นพนักงานหน้างาน (Worker) หรือไม่ */
+    public static function isWorker(): bool
+    {
+        $account = self::currentAccount();
+
+        return $account instanceof Emp && $account->isWorker();
+    }
+
     /** menu_key ทั้งหมดที่เลือกเป็นสิทธิ์ได้ (ข้าม header) — ไล่ sub_menu ทุกระดับ */
     public static function allMenuKeys(): array
     {
@@ -175,6 +183,11 @@ class AccessControl
     {
         if (self::isAdmin()) {
             return route('production.planning.index');
+        }
+
+        // พนักงานหน้างาน (Worker) → หน้าอัพเดทสถานะงานของตัวเอง (ไม่มีเมนู)
+        if (self::isWorker()) {
+            return route('worker.planning.index');
         }
 
         foreach (config('menu') as $key => $menu) {

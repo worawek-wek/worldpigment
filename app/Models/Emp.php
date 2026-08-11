@@ -19,8 +19,19 @@ class Emp extends Authenticatable
 
     protected $guarded = [];
 
+    // ชื่อ Role ที่ถือว่าเป็น "พนักงานหน้างาน" (Worker) — เก็บที่เดียวกันสะกดเพี้ยน (11/08/2569)
+    public const WORKER_ROLE_NAME = 'Worker';
+
     // ไม่ส่งรหัสผ่าน (hash) ออกไปกับ response JSON
     protected $hidden = ['password', 'pwd'];
+
+    // เป็นพนักงานหน้างาน (Worker) หรือไม่ — ดูจากชื่อ role
+    public function isWorker(): bool
+    {
+        return $this->role_id
+            && $this->role
+            && $this->role->name === self::WORKER_ROLE_NAME;
+    }
 
     // ตาราง emp ไม่มีคอลัมน์ remember_token → ปิดการใช้ remember token
     public function getRememberTokenName()
