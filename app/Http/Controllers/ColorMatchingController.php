@@ -287,6 +287,49 @@ class ColorMatchingController extends Controller
     }
 
     /**
+     * POST — บันทึกผลการทดสอบตัวอย่างสี ของใบส่ง ต.ย. 1 ใบ (10/08/2569)
+     *
+     * แตะเฉพาะ 3 คอลัมน์: TyResp (ตัวเลือก) / Resp (ข้อความระบุ) / Respdate (วันที่ทราบผล)
+     * ไม่ใช้ update() ปกติ เพราะ extractPayload() ตัดค่าว่างทิ้ง (ล้างผลไม่ได้)
+     * และบังคับเซ็ต cancel = 0 ทุกครั้ง ซึ่งจะไปล้างสถานะยกเลิกของใบนั้น
+     */
+    public function saveResult(Request $request, $id)
+    {
+        try {
+            DB::beginTransaction();
+
+            $row = Testmain::find($id);
+            if (!$row) {
+                return response()->json(['error' => 'not_found'], 404);
+            }
+
+            // ตัวเลือกที่ยอมรับ = key ใน config เท่านั้น (0, 9, A–H) + ค่าว่าง = ยังไม่ระบุ
+            //
+            // ⚠ ต้องใช้ array_key_exists ไม่ใช่ in_array(..., strict) เพราะ PHP แปลง key
+            // ที่เป็น "ตัวเลขในรูป string" ให้เป็น int อัตโนมัติ — '0'/'9' ใน config
+            // จะกลายเป็น int 0/9 ทำให้เทียบแบบ strict กับ '9' ที่ส่งมาจากฟอร์มไม่ผ่าน
+            $allowed = config('color_matching.test_result_options', []);
+            $tyResp  = trim((string) $request->input('TyResp', ''));
+            if ($tyResp !== '' && !array_key_exists($tyResp, $allowed)) {
+                return response()->json(['error' => 'ผลการทดสอบไม่ถูกต้อง'], 422);
+            }
+
+            $row->TyResp = $tyResp;
+            // Resp เป็น varchar(30) — ตัดความยาวกันเกิน (นับเป็นตัวอักษร ไม่ใช่ byte)
+            $row->Resp     = mb_substr(trim((string) $request->input('Resp', '')), 0, 30);
+            $row->Respdate = $this->parseDate($request->input('Respdate'));
+
+            $row->save();
+
+            DB::commit();
+            return response()->json(['ok' => true]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * POST — ลบ testmain row (ระบุด้วย id auto-increment)
      * ลบเฉพาะแถวที่ระบุ (1 row) — ไม่ลบ SD/CM ที่ใช้ SendNo เดียวกันตามไปด้วย
      */

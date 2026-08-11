@@ -15,7 +15,9 @@
     $v = fn ($val) => trim((string) $val) === '' ? '—' : e($val);
     $d = fn ($val) => $val ? \Carbon\Carbon::parse($val)->format('d/m/Y') : '—';
 
-    $typeMap = ['1' => '1 : CP', '2' => '2 : สีผง', '3' => '3 : สีเม็ด', '4' => '4 : Pigment'];
+    // ── ผลการทดสอบตัวอย่างสี (เฉพาะใบส่ง ต.ย.) — testmain.TyResp (10/08/2569) ──
+    $tr      = $row->testResult();
+    $trBadge = '<span class="badge ' . $tr['class'] . '">' . e($tr['label']) . '</span>';
 
     // กลุ่มข้อมูล: title / icon / items[label => value]
     if ($isSD) {
@@ -45,6 +47,11 @@
             ['เอกสารปิดงาน', 'ti-receipt', [
                 'เลขที่ใบส่ง ต.ย.' => $v($row->Testno),
                 'วันที่เบิก'       => $d($row->TestDate),
+            ]],
+            ['ผลการทดสอบตัวอย่างสี', 'ti-clipboard-check', [
+                'ผลการทดสอบ'    => [$trBadge, 'col-md-4'],
+                'วันที่ทราบผล'   => [$d($row->Respdate), 'col-md-4'],
+                'ระบุเพิ่มเติม'  => [$v($row->Resp), 'col-md-4'],
             ]],
         ];
     } else {
@@ -76,7 +83,7 @@
             ]],
             ['รายละเอียดผลิตภัณฑ์', 'ti-flask', [
                 'รายละเอียด'     => $v($row->TestDesc),
-                'ประเภท'         => $v($typeMap[(string) $row->TestType] ?? $row->TestType),
+                'ประเภท'         => $v($row->testTypeLabel()),
                 'Standard'       => $v($row->STD),
                 'Resin (Match)'  => $v($row->ResinMatch),
                 'PHR'            => $v($row->PHR),

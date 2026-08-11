@@ -148,10 +148,10 @@
                                         <label class="form-label small mb-1">ประเภท</label>
                                         <select name="TestType" class="form-select">
                                             <option value="">-- เลือก --</option>
-                                            <option value="1">1 : CP</option>
-                                            <option value="2">2 : สีผง</option>
-                                            <option value="3">3 : สีเม็ด</option>
-                                            <option value="4">4 : Pigment</option>
+                                            {{-- ประเภทตัวอย่าง 1–4 (ค่าเดิมจาก Access) — นิยามที่ config/color_matching.php --}}
+                                            @foreach (config('color_matching.test_type_options') as $code => $label)
+                                                <option value="{{ $code }}">{{ $code }} : {{ $label }}</option>
+                                            @endforeach
                                         </select>
                                     </div>
                                     <div class="col-md-2">
