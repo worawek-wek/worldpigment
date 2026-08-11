@@ -3,16 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Models\Category;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
 {
     public function index(Request $request)
     {
-        $data['page_url'] = 'category';
-        $data['category'] = Category::get();
-
-        return view('customer/index', $data);
+        // หน้าอยู่ระหว่างการพัฒนา (11/08/2569) — ยังไม่มีข้อมูลลูกค้า
+        return view('customer/index');
     }
 }

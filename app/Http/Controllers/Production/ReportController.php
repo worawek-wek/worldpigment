@@ -409,8 +409,416 @@ class ReportController extends Controller
         return implode('   |   ', $parts);
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    //  รายงานผลิตตามพนักงาน (time-grid รายวัน) — 2026-08-11
+    //
+    //  รูปแบบตามฟอร์มกระดาษ "แผนและการผลิตจริง": 1 แถวกลุ่ม = 1 พนักงาน,
+    //  คอลัมน์ = ช่วงเวลา 9 ช่อง (8-9 … 16-17, OT — ข้ามพักเที่ยง 12-13)
+    //  ในแต่ละช่องมี รหัสสี / จำนวน / รหัสเครื่อง / วิธีการผลิต
+    //
+    //  แหล่งข้อมูล:
+    //   - พนักงาน  → tb_planning.empno (→ emp.empname/empsur)
+    //   - รหัสสี    → tb_planning.itemno   | จำนวน → tb_planning.quantity
+    //   - เครื่อง   → tb_planning.machine_no
+    //   - วิธี+เวลา → tb_planning_prod_method (method_name + start_time/end_time)
+    //  งานที่ไม่ระบุพนักงาน (empno ว่าง) → รวมกลุ่ม "ไม่ระบุพนักงาน" ต่อท้ายสุด
+    // ─────────────────────────────────────────────────────────────────────────
     public function employee()
     {
-        return view('production-planning.report.employee');
+        return view('production-planning.report.employee', [
+            'departments' => $this->activeDepartments(),
+        ]);
+    }
+
+    // ตัวเลือกพนักงานของแผนกที่เลือก (dept = ชื่อแผนกตรงกับ emp.dept)
+    public function employeeOptions(Request $request)
+    {
+        $dept = $request->get('dept');
+
+        $employees = \App\Models\Emp::when(!empty($dept), fn ($q) => $q->where('dept', $dept))
+            ->orderBy('empname', 'asc')
+            ->get(['empno', 'empname', 'empsur'])
+            ->map(fn ($e) => [
+                'empno' => $e->empno,
+                'label' => trim(($e->empname ?? '').' '.($e->empsur ?? '')) ?: $e->empno,
+            ])
+            ->values();
+
+        return response()->json([
+            'status'    => 200,
+            'employees' => $employees,
+        ]);
+    }
+
+    // ตาราง time-grid (AJAX)
+    public function employeeTable(Request $request)
+    {
+        ['groups' => $groups, 'slots' => $slots, 'total' => $total] = $this->buildEmployeeReport($request);
+
+        return view('production-planning.report.partials.employee-table', [
+            'groups' => $groups,
+            'slots'  => $slots,
+            'total'  => $total,
+        ]);
+    }
+
+    // นิยามช่วงเวลา (หน่วยเป็นนาทีจากเที่ยงคืน) — ข้ามพักเที่ยง 12:00-13:00
+    private function timeSlots(): array
+    {
+        return [
+            ['label' => '8:00-9:00',   'start' => 480,  'end' => 540],
+            ['label' => '9:00-10:00',  'start' => 540,  'end' => 600],
+            ['label' => '10:00-11:00', 'start' => 600,  'end' => 660],
+            ['label' => '11:00-12:00', 'start' => 660,  'end' => 720],
+            ['label' => '13:00-14:00', 'start' => 780,  'end' => 840],
+            ['label' => '14:00-15:00', 'start' => 840,  'end' => 900],
+            ['label' => '15:00-16:00', 'start' => 900,  'end' => 960],
+            ['label' => '16:00-17:00', 'start' => 960,  'end' => 1020],
+            ['label' => 'OT',          'start' => 1020, 'end' => 1440],
+        ];
+    }
+
+    // แปลง "HH:MM[:SS]" → นาทีจากเที่ยงคืน (null ถ้าว่าง/รูปแบบผิด)
+    private function timeToMin(?string $t): ?int
+    {
+        if (empty($t) || !preg_match('/^(\d{1,2}):(\d{2})/', $t, $m)) {
+            return null;
+        }
+
+        return ((int) $m[1]) * 60 + (int) $m[2];
+    }
+
+    // รวมค่าซ้ำ/ค่าว่างออก คืนเป็น array ของ string (ให้ view จัดรูปแบบเอง)
+    private function uniqueValues(array $arr): array
+    {
+        return array_values(array_unique(array_filter(
+            array_map(fn ($v) => trim((string) $v), $arr),
+            fn ($v) => $v !== ''
+        )));
+    }
+
+    // สร้างข้อมูลรายงาน (query + จัดกลุ่มตามพนักงาน + วางลงกริดเวลา) ใช้ร่วมทั้งจอ/Excel/PDF
+    private function buildEmployeeReport(Request $request): array
+    {
+        $company = $request->get('dept');   // ชื่อแผนก (ตรงกับ tb_planning.company)
+        $empno   = $request->get('empno');
+        $date    = $request->get('date') ?: now()->format('Y-m-d');
+
+        // งานของวันนั้น: มีขั้นตอนผลิต work_date = วันนั้น หรือ inplan = วันนั้น
+        $rows = Planning::query()
+            ->leftJoin('emp', 'emp.empno', '=', 'tb_planning.empno')
+            ->select([
+                'tb_planning.id',
+                'tb_planning.empno',
+                'tb_planning.machine_no',
+                'tb_planning.itemno',
+                'tb_planning.quantity',
+                'tb_planning.inplan',
+                'tb_planning.company',
+                'tb_planning.start_time as p_start',
+                'tb_planning.end_time as p_end',
+                'emp.empname',
+                'emp.empsur',
+            ])
+            ->when(!empty($company), fn ($q) => $q->where('tb_planning.company', $company))
+            ->when(!empty($empno), fn ($q) => $q->where('tb_planning.empno', $empno))
+            ->where(function ($q) use ($date) {
+                $q->whereDate('tb_planning.inplan', $date)
+                  ->orWhereExists(function ($sub) use ($date) {
+                      $sub->select(\Illuminate\Support\Facades\DB::raw(1))
+                          ->from('tb_planning_prod_method as pm2')
+                          ->whereColumn('pm2.planning_id', 'tb_planning.id')
+                          ->whereDate('pm2.work_date', $date);
+                  });
+            })
+            ->get();
+
+        // ขั้นตอนผลิตของวันนั้น (หรือ work_date ว่าง) สำหรับทุก planning id
+        $ids = $rows->pluck('id')->all();
+        $stepsByPlanning = collect();
+        if (!empty($ids)) {
+            $stepsByPlanning = \Illuminate\Support\Facades\DB::table('tb_planning_prod_method as pm')
+                ->leftJoin('tb_prod_method as m', 'm.id', '=', 'pm.prod_method_id')
+                ->whereIn('pm.planning_id', $ids)
+                ->where(function ($q) use ($date) {
+                    $q->whereDate('pm.work_date', $date)->orWhereNull('pm.work_date');
+                })
+                ->orderBy('pm.start_time')
+                ->orderBy('pm.sort')
+                ->get([
+                    'pm.planning_id',
+                    'pm.start_time',
+                    'pm.end_time',
+                    'pm.sort',
+                    'm.name as method_name',
+                ])
+                ->groupBy('planning_id');
+        }
+
+        $slots = $this->timeSlots();
+
+        $groups = $rows
+            ->groupBy(fn ($r) => ($r->empno === null || $r->empno === '') ? '' : $r->empno)
+            ->map(function ($items, $empno) use ($stepsByPlanning, $slots) {
+                $first = $items->first();
+                $name  = trim(($first->empname ?? '').' '.($first->empsur ?? ''));
+                $label = $empno === '' ? 'ไม่ระบุพนักงาน' : ($name ?: $empno);
+
+                // เตรียมเซลล์ว่างทั้ง 9 ช่อง
+                $cells = [];
+                foreach ($slots as $i => $s) {
+                    $cells[$i] = ['color' => [], 'qty' => null, 'machine' => [], 'method' => []];
+                }
+                $unscheduled = [];
+
+                foreach ($items as $job) {
+                    $steps      = $stepsByPlanning->get($job->id, collect());
+                    $placedCols = [];
+
+                    // 1) วางตามเวลาในแต่ละขั้นตอนผลิต
+                    foreach ($steps as $st) {
+                        $a = $this->timeToMin($st->start_time);
+                        $b = $this->timeToMin($st->end_time);
+                        if ($a === null || $b === null || $b <= $a) {
+                            continue;
+                        }
+                        foreach ($slots as $i => $slot) {
+                            if ($a < $slot['end'] && $b > $slot['start']) {
+                                $cells[$i]['method'][]  = $st->method_name ?: '';
+                                $cells[$i]['machine'][] = $job->machine_no ?: '';
+                                $cells[$i]['color'][]   = $job->itemno ?: '';
+                                $placedCols[]           = $i;
+                            }
+                        }
+                    }
+
+                    // 2) fallback: ใช้เวลาระดับงาน (planning.start_time/end_time)
+                    if (empty($placedCols)) {
+                        $a = $this->timeToMin($job->p_start);
+                        $b = $this->timeToMin($job->p_end);
+                        if ($a !== null && $b !== null && $b > $a) {
+                            $methodNames = $this->uniqueValues($steps->pluck('method_name')->all());
+                            foreach ($slots as $i => $slot) {
+                                if ($a < $slot['end'] && $b > $slot['start']) {
+                                    foreach ($methodNames as $mn) {
+                                        $cells[$i]['method'][] = $mn;
+                                    }
+                                    $cells[$i]['machine'][] = $job->machine_no ?: '';
+                                    $cells[$i]['color'][]   = $job->itemno ?: '';
+                                    $placedCols[]           = $i;
+                                }
+                            }
+                        }
+                    }
+
+                    // 3) จำนวน: ใส่ในช่องแรกสุดที่งานนี้ครอบครอง
+                    if (!empty($placedCols)) {
+                        $fc = min($placedCols);
+                        if ($cells[$fc]['qty'] === null && $job->quantity !== null) {
+                            $cells[$fc]['qty'] = $job->quantity;
+                        }
+                    } else {
+                        // ไม่มีเวลาเลย → แยกไปแสดงเป็น "รายการไม่ระบุเวลา"
+                        $unscheduled[] = [
+                            'color'   => $job->itemno,
+                            'qty'     => $job->quantity,
+                            'machine' => $job->machine_no,
+                            'method'  => implode(', ', $this->uniqueValues($steps->pluck('method_name')->all())),
+                        ];
+                    }
+                }
+
+                // แปลง array ในเซลล์ให้เหลือค่าไม่ซ้ำ (view จัด <br> / \n เอง)
+                foreach ($cells as $i => $c) {
+                    $cells[$i]['color']   = $this->uniqueValues($c['color']);
+                    $cells[$i]['machine'] = $this->uniqueValues($c['machine']);
+                    $cells[$i]['method']  = $this->uniqueValues($c['method']);
+                }
+
+                return [
+                    'empno'       => $empno,
+                    'label'       => $label,
+                    'cells'       => $cells,
+                    'unscheduled' => $unscheduled,
+                    'job_count'   => $items->count(),
+                ];
+            })
+            // เรียงตามชื่อพนักงาน กลุ่ม "ไม่ระบุ" ไปท้ายสุด
+            ->sortBy(fn ($g) => $g['empno'] === '' ? 'zzzz' : mb_strtolower($g['label']))
+            ->values();
+
+        return [
+            'groups'  => $groups,
+            'slots'   => $slots,
+            'total'   => $rows->count(),
+            'filters' => [
+                'dept'  => $company,
+                'empno' => $empno,
+                'date'  => $date,
+            ],
+        ];
+    }
+
+    // ข้อความสรุปเงื่อนไขค้นหา (ใช้บนหัว Excel/PDF ของรายงานตามพนักงาน)
+    private function employeeFilterSummary(array $filters, int $total): string
+    {
+        $parts = [];
+        $parts[] = 'แผนก: '.($filters['dept'] ?: 'ทุกแผนก');
+
+        if (!empty($filters['empno'])) {
+            $parts[] = 'พนักงาน: '.$filters['empno'];
+        }
+
+        $d = $filters['date'] ? \Carbon\Carbon::parse($filters['date'])->format('d/m/Y') : '-';
+        $parts[] = 'วันที่: '.$d;
+        $parts[] = 'พบ '.number_format($total).' รายการ';
+
+        return implode('   |   ', $parts);
+    }
+
+    // Export PDF — ฟอร์ม time-grid เหมือนกระดาษ (A4 แนวนอน)
+    public function employeePdf(Request $request)
+    {
+        ['groups' => $groups, 'slots' => $slots, 'total' => $total, 'filters' => $filters] = $this->buildEmployeeReport($request);
+
+        $html = view('production-planning.report.partials.employee-pdf', [
+            'groups'  => $groups,
+            'slots'   => $slots,
+            'total'   => $total,
+            'dept'    => $filters['dept'] ?: '',
+            'date'    => $filters['date'],
+            'summary' => $this->employeeFilterSummary($filters, $total),
+        ])->render();
+
+        $mpdf = new \Mpdf\Mpdf([
+            'mode'          => 'utf-8',
+            'format'        => 'A4-L',
+            'margin_left'   => 6,
+            'margin_right'  => 6,
+            'margin_top'    => 8,
+            'margin_bottom' => 8,
+        ]);
+        $mpdf->autoScriptToLang = true;
+        $mpdf->autoLangToFont   = true;
+        $mpdf->SetFont('sarabun');
+        $mpdf->WriteHTML($html);
+
+        return response($mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="report-employee.pdf"',
+        ]);
+    }
+
+    // Export Excel (.xls) — คงรูปแบบ time-grid เหมือนบนหน้าจอ
+    public function employeeExcel(Request $request)
+    {
+        ['groups' => $groups, 'slots' => $slots, 'total' => $total, 'filters' => $filters] = $this->buildEmployeeReport($request);
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('รายงานผลิตตามพนักงาน');
+
+        // คอลัมน์: A = ป้ายกำกับแถว, B..J = ช่วงเวลา 9 ช่อง
+        $cols    = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+        $lastCol = 'J';
+
+        $sheet->setCellValue('A1', 'รายงานผลิตตามพนักงาน');
+        $sheet->mergeCells("A1:{$lastCol}1");
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $sheet->setCellValue('A2', $this->employeeFilterSummary($filters, $total));
+        $sheet->mergeCells("A2:{$lastCol}2");
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // หัวตาราง (ช่วงเวลา)
+        $r = 4;
+        $sheet->setCellValue("A{$r}", '');
+        foreach ($slots as $k => $slot) {
+            $sheet->setCellValue($cols[$k + 1].$r, $slot['label']);
+        }
+        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setBold(true);
+        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('E9ECEF');
+        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getAlignment()
+            ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $r++;
+
+        $rowLabels = [
+            'color'   => 'รหัสสี',
+            'qty'     => 'จำนวน',
+            'machine' => 'รหัสเครื่อง',
+            'method'  => 'วิธีการผลิต',
+        ];
+
+        foreach ($groups as $group) {
+            // หัวกลุ่มพนักงาน
+            $sheet->setCellValue("A{$r}", 'พนักงาน: '.$group['label'].'  ('.$group['job_count'].' รายการ)');
+            $sheet->mergeCells("A{$r}:{$lastCol}{$r}");
+            $sheet->getStyle("A{$r}")->getFont()->setBold(true);
+            $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setRGB('DCE7F7');
+            $r++;
+
+            foreach ($rowLabels as $key => $label) {
+                $sheet->setCellValue("A{$r}", $label);
+                foreach ($slots as $k => $slot) {
+                    $c = $group['cells'][$k];
+                    if ($key === 'qty') {
+                        $val = $c['qty'] !== null ? number_format($c['qty'], 2).' KG' : '';
+                    } else {
+                        $val = implode("\n", $c[$key]);
+                    }
+                    $sheet->setCellValueExplicit($cols[$k + 1].$r, $val, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                }
+                $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getAlignment()->setWrapText(true)->setVertical(
+                    \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP
+                );
+                $r++;
+            }
+
+            // 2 แถวเว้นว่างสำหรับเซ็นมือ
+            foreach (['ผู้ทวนสอบ/เวลา', 'ผู้ผลิต'] as $label) {
+                $sheet->setCellValue("A{$r}", $label);
+                $r++;
+            }
+
+            // รายการไม่ระบุเวลา (ถ้ามี)
+            if (!empty($group['unscheduled'])) {
+                foreach ($group['unscheduled'] as $u) {
+                    $txt = 'ไม่ระบุเวลา: รหัสสี '.($u['color'] ?: '-')
+                        .' | จำนวน '.($u['qty'] !== null ? number_format($u['qty'], 2).' KG' : '-')
+                        .' | เครื่อง '.($u['machine'] ?: '-')
+                        .' | วิธี '.($u['method'] ?: '-');
+                    $sheet->setCellValue("A{$r}", $txt);
+                    $sheet->mergeCells("A{$r}:{$lastCol}{$r}");
+                    $sheet->getStyle("A{$r}")->getFont()->setItalic(true);
+                    $r++;
+                }
+            }
+
+            $r++; // เว้น 1 แถวระหว่างพนักงาน
+        }
+
+        if ($total === 0) {
+            $sheet->setCellValue("A{$r}", 'ไม่พบข้อมูลตามเงื่อนไขที่เลือก');
+            $sheet->mergeCells("A{$r}:{$lastCol}{$r}");
+            $sheet->getStyle("A{$r}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        }
+
+        $sheet->getColumnDimension('A')->setWidth(16);
+        foreach (array_slice($cols, 1) as $col) {
+            $sheet->getColumnDimension($col)->setWidth(14);
+        }
+
+        $fileName = 'report-employee-'.now()->format('Ymd-His').'.xls';
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            (new \PhpOffice\PhpSpreadsheet\Writer\Xls($spreadsheet))->save('php://output');
+        }, $fileName, [
+            'Content-Type' => 'application/vnd.ms-excel',
+        ]);
     }
 }

@@ -43,6 +43,13 @@ Route::prefix('production-planning')->group(function () {
     Route::get('/report/machine/excel', [Production\ReportController::class, 'machineExcel'])->name('production.report.machine.excel');
     Route::get('/report/machine/pdf', [Production\ReportController::class, 'machinePdf'])->name('production.report.machine.pdf');
     Route::get('/report/employee', [Production\ReportController::class, 'employee'])->name('production.report.employee.index');
+    // ตัวเลือกพนักงานตามแผนก (cascade dropdown ของหน้ารายงานตามพนักงาน) — 2026-08-11
+    Route::get('/report/employee/options', [Production\ReportController::class, 'employeeOptions'])->name('production.report.employee.options');
+    // ตาราง time-grid รายวัน (คืน HTML จัดกลุ่มตามพนักงาน) ผ่าน AJAX — 2026-08-11
+    Route::get('/report/employee/table', [Production\ReportController::class, 'employeeTable'])->name('production.report.employee.table');
+    // Export รายงานผลิตตามพนักงาน (ใช้เงื่อนไขค้นหาเดียวกันกับตาราง) — 2026-08-11
+    Route::get('/report/employee/excel', [Production\ReportController::class, 'employeeExcel'])->name('production.report.employee.excel');
+    Route::get('/report/employee/pdf', [Production\ReportController::class, 'employeePdf'])->name('production.report.employee.pdf');
 
     // สถานะ Planning (master data)
     Route::get('/planning-status', [Production\PlanningStatusController::class, 'index'])->name('production.planningstatus.index');
