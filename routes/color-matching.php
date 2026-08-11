@@ -23,6 +23,8 @@ Route::prefix('color-matching')->group(function () {
     Route::post('/insert',             [ColorMatchingController::class, 'insert'])->name('color_matching.insert');
     Route::post('/update/{id}',        [ColorMatchingController::class, 'update'])->whereNumber('id')->name('color_matching.update');
     Route::post('/delete/{id}',        [ColorMatchingController::class, 'destroy'])->whereNumber('id')->name('color_matching.delete');
+    // ผลการทดสอบตัวอย่างสี ของใบส่ง ต.ย. (10/08/2569) — แตะเฉพาะ TyResp/Resp/Respdate
+    Route::post('/result/{id}',        [ColorMatchingController::class, 'saveResult'])->whereNumber('id')->name('color_matching.result');
     Route::get('/{id}',                [ColorMatchingController::class, 'edit'])->whereNumber('id')->name('color_matching.edit');
 
 });

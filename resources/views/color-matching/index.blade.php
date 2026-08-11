@@ -64,6 +64,19 @@
     border-color: #5a4bd1;
     color: #fff;
 }
+/* ปุ่มผลการทดสอบตัวอย่างสี — โทนชมพู (10/08/2569) */
+.btn-theme-result {
+    background-color: #d6336c;
+    border-color: #d6336c;
+    color: #fff;
+}
+.btn-theme-result:hover,
+.btn-theme-result:focus,
+.btn-theme-result:active {
+    background-color: #b82a5b;
+    border-color: #b82a5b;
+    color: #fff;
+}
 
 /* ─── ตาราง: badge/ปุ่ม ใช้ theme เดียวกับฟอร์ม (CM=teal #54BAB9, SD=ม่วง #6c5ce7) ─── */
 /* badge ชนิดเอกสาร — โทนอ่อน (soft) เหมือน bg-label-* แต่เป็นสี theme */
@@ -406,6 +419,7 @@
 
     @include('color-matching.modal-cm')
     @include('color-matching.modal-sd')
+    @include('color-matching.modal-result')
     @include('color-matching.modal-detail')
 
 
@@ -814,6 +828,136 @@
                 }
             });
         }
+
+        // ────────────────────────────────────────────────────────
+        //  ผลการทดสอบตัวอย่างสี (ของใบส่ง ต.ย. แต่ละใบ) — 10/08/2569
+        //  บันทึกลง testmain: TyResp (ตัวเลือก) / Resp (ระบุ) / Respdate (วันที่ทราบผล)
+        // ────────────────────────────────────────────────────────
+
+        // ตัวเลือกจาก config/color_matching.php — ใช้แสดงข้อความบอกใบ้ใต้ช่อง "ระบุ"
+        const TR_OPTIONS = @json(config('color_matching.test_result_options', []));
+
+        // แสดงวันที่แบบ d/m/Y จากค่า 'Y-m-d H:i:s' ที่ได้จาก JSON
+        function trShowDate(val) {
+            if (!val) return '—';
+            const p = String(val).substring(0, 10).split('-');
+            return p.length === 3 ? (p[2] + '/' + p[1] + '/' + p[0]) : String(val);
+        }
+
+        function trShowText(val) {
+            const s = (val === null || val === undefined) ? '' : String(val).trim();
+            return s === '' ? '—' : s;
+        }
+
+        // เปิดฟอร์มผลการทดสอบของใบส่ง ต.ย. (by id) — โหลด record มาเติมแล้วเปิด modal
+        function viewTestResult(id) {
+            $.ajax({
+                type: "GET",
+                url: "{{$page_url}}/" + encodeURIComponent(id),
+                success: function(row) {
+                    const $f = $('#form_test_result');
+                    $f[0].reset();
+                    $f.find('[name="_pk"]').val(row.id);
+
+                    // ── ส่วนอ่านอย่างเดียว (ข้อมูลใบส่ง ต.ย.) ──
+                    $('#tr_Testno').text(trShowText(row.Testno));
+                    $('#tr_SendNo').text(trShowText(row.SendNo));
+                    $('#tr_TestDate').text(trShowDate(row.TestDate));
+                    $('#tr_custno').text(trShowText(row.custno));
+                    $('#tr_custname').text(trShowText(row.custname));
+                    $('#tr_sale').text(trShowText(row.sale));
+                    $('#tr_TestDesc').text(trShowText(row.TestDesc));
+                    $('#tr_Wage').text(trShowText(row.Wage));
+
+                    // ── ส่วนกรอก (ผลการทดสอบ) ──
+                    // TyResp ว่าง/ไม่รู้จัก → default เป็น '0' (ยังไม่ตอบ) เหมือนฟอร์ม Access เดิม
+                    let ty = (row.TyResp === null || row.TyResp === undefined) ? '' : String(row.TyResp).trim();
+                    if (!TR_OPTIONS.hasOwnProperty(ty)) ty = '0';
+                    $f.find('[name="TyResp"][value="' + ty + '"]').prop('checked', true);
+
+                    $f.find('[name="Resp"]').val(row.Resp ?? '');
+
+                    // วันที่ทราบผล — flatpickr ต้องระบุ format ของ string ที่ส่งไป
+                    const $dt = $f.find('[name="Respdate"]');
+                    const fp  = $dt[0]._flatpickr;
+                    if (row.Respdate) {
+                        if (fp) fp.setDate(String(row.Respdate).substring(0, 10), false, 'Y-m-d');
+                        else    $dt.val(String(row.Respdate).substring(0, 10));
+                    } else {
+                        if (fp) fp.clear();
+                        else    $dt.val('');
+                    }
+
+                    trUpdateHint();
+                    $('#testResultModal').modal('show');
+                },
+                error: function() {
+                    Swal.fire('ไม่พบข้อมูล', '', 'error');
+                }
+            });
+        }
+
+        // ข้อความบอกใบ้ใต้ช่อง "ระบุ" — เปลี่ยนตามตัวเลือกที่เลือกอยู่
+        function trUpdateHint() {
+            const code = $('#form_test_result [name="TyResp"]:checked').val();
+            const opt  = code ? TR_OPTIONS[code] : null;
+
+            // บอกใบ้ใต้ช่องเท่านั้น — ไม่ใส่ placeholder ในช่องกรอก
+            if (opt && opt.specify) {
+                $('#tr_resp_hint').text(opt.hint || 'ระบุรายละเอียดเพิ่มเติม').addClass('text-danger');
+            } else {
+                $('#tr_resp_hint').text('ตัวเลือกนี้ไม่ต้องระบุเพิ่ม (กรอกได้ถ้าต้องการบันทึกหมายเหตุ)').removeClass('text-danger');
+            }
+        }
+
+        // เลือกผลการทดสอบ → อัปเดตข้อความบอกใบ้ + ถ้ายังไม่เคยลงวันที่ทราบผล ให้ใส่วันนี้ให้
+        // (ยกเว้น "ยังไม่ตอบ" ซึ่งยังไม่ถือว่าทราบผล)
+        $('#form_test_result').on('change', '[name="TyResp"]', function () {
+            trUpdateHint();
+
+            const $dt = $('#form_test_result [name="Respdate"]');
+            if ($(this).val() !== '0' && !$dt.val()) {
+                const fp = $dt[0]._flatpickr;
+                if (fp) fp.setDate(new Date(), false);
+                else    $dt.val('');
+            }
+        });
+
+        // บันทึกผลการทดสอบ → POST /result/{id} (แตะเฉพาะ TyResp/Resp/Respdate)
+        $('#form_test_result').on('submit', function(event) {
+            event.preventDefault();
+
+            const pk = $(this).find('[name="_pk"]').val();
+            if (!pk) { Swal.fire('ไม่พบใบส่ง ต.ย.', '', 'error'); return; }
+
+            const fd = new FormData(this);
+            fd.append('_token', CSRF);
+
+            $.ajax({
+                url: '{{$page_url}}/result/' + encodeURIComponent(pk),
+                type: 'POST', data: fd,
+                contentType: false, processData: false,
+                success: function(resp) {
+                    if (resp && resp.ok) {
+                        Swal.fire({ title: 'บันทึกผลการทดสอบเรียบร้อย', icon: 'success', heightAuto: false });
+                        $('#testResultModal').modal('hide');
+                        loadData(page);
+                    } else {
+                        Swal.fire({ title: 'เกิดข้อผิดพลาด', text: resp.error ?? '', icon: 'error', heightAuto: false });
+                    }
+                },
+                error: function(xhr) {
+                    Swal.fire({ title: 'เกิดข้อผิดพลาด', text: xhr.responseJSON?.error ?? '', icon: 'error', heightAuto: false });
+                }
+            });
+        });
+
+        // กด Enter ในช่อง "ระบุ" ไม่ให้ submit ทันที (ให้กดปุ่มตกลงเอง)
+        $('#form_test_result').on('keydown', function(e) {
+            if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+            }
+        });
 
         // ── ลบ record testmain (CM/SD) — ยืนยันก่อน แล้ว POST ไป /delete/{id} ──
         // เรียกจากปุ่มลบใน footer ของ form (โหมดแก้ไข) — modalSel = modal ที่ต้องปิดเมื่อลบสำเร็จ

@@ -72,8 +72,15 @@
         .footer-info { margin-top: 20px; }
         .footer-info .row { margin: 2px 0; }
         .sign { margin-top: 44px; display: flex; justify-content: flex-end; }
-        .sign .box { text-align: center; width: 260px; }
-        .sign .line { border-top: 1px dotted #000; margin-top: 42px; padding-top: 4px; }
+        /* กล่องเซ็นชื่อกว้างขึ้นให้รับกับรูปลายเซ็นขนาดใหญ่ (เส้นเซ็นชื่อยาวขึ้นตาม) */
+        .sign .box { text-align: center; width: 420px; }
+        /* ช่องว่างเหนือเส้นเซ็นชื่อ — ใส่รูปลายเซ็นของพนักงานคนที่เสนอราคา (ถ้ามี)
+           สูง 84px = 2 เท่าของระยะเว้นเดิม (42px) เพื่อให้ลายเซ็นเห็นชัด */
+        .sign .sign-space { height: 84px; display: flex; align-items: flex-end; justify-content: center; }
+        .sign .sign-space img { max-height: 84px; max-width: 420px; object-fit: contain; }
+        /* เส้นประเซ็นชื่อ — สั้นครึ่งหนึ่งของกล่อง (210px) จัดกึ่งกลางใต้รูปลายเซ็น
+           แยกความกว้างออกจากกล่อง เพื่อให้รูปลายเซ็นยังใหญ่เต็ม 420px ได้ */
+        .sign .line { border-top: 1px dotted #000; padding-top: 4px; width: 210px; margin: 0 auto; white-space: nowrap; }
         .sign .emp-name { font-weight: bold; }
         .fmt-tag { font-size: .75em; color: #888; }
 
@@ -187,6 +194,12 @@
 
     <div class="sign">
         <div class="box">
+            {{-- รูปลายเซ็นของพนักงานผู้เสนอราคา (emp.signature) — ไม่มีก็เว้นช่องไว้ให้เซ็นมือ --}}
+            <div class="sign-space">
+                @if (!empty($empSign))
+                    <img src="{{ $empSign }}" alt="ลายเซ็น {{ $empName }}">
+                @endif
+            </div>
             <div class="line"><span class="emp-name">{{ $empName }}</span></div>
         </div>
     </div>

@@ -341,6 +341,8 @@ class QuotationController extends Controller
             }
         }
 
+        $emp = $this->empInfo($header->EmpID ?? null);   // ชื่อ + รูปลายเซ็นผู้เสนอราคา
+
         return view('quotation.print', [
             'header'      => $header,
             'cust'        => $cust,
@@ -351,7 +353,8 @@ class QuotationController extends Controller
             'colConfig'   => $this->pruneEmptyCols($colConfig, $itemsForView),
             'colRegistry' => $reg,
             'otherNotes'  => $otherNotes,
-            'empName'     => $this->empName($header->EmpID ?? null), // ชื่อผู้เสนอราคา (จากรหัสพนักงาน)
+            'empName'     => $emp['name'],
+            'empSign'     => $emp['sign'],                    // URL รูปลายเซ็น (ไม่มี = null)
         ]);
     }
 
@@ -525,6 +528,8 @@ class QuotationController extends Controller
             }
         }
 
+        $emp = $this->empInfo($row->EmpID ?? null);   // ชื่อ + รูปลายเซ็นผู้เสนอราคา
+
         return [
             'header'      => $row,
             'cust'        => $cust,
@@ -534,27 +539,55 @@ class QuotationController extends Controller
             'colConfig'   => $colConfig,                      // คอลัมน์ที่แสดง
             'colRegistry' => $this->colRegistry(),
             'otherNotes'  => $otherNotes,                     // หมายเหตุอื่น (section หมายเหตุ)
-            'empName'     => $this->empName($row->EmpID ?? null), // ชื่อผู้เสนอราคา (จากรหัสพนักงาน)
+            'empName'     => $emp['name'],
+            'empSign'     => $emp['sign'],                    // URL รูปลายเซ็น (ไม่มี = null)
         ];
     }
 
     /**
-     * ชื่อพนักงานผู้เสนอราคา — lookup จากรหัสพนักงาน (qmast.EmpID → emp.empno)
+     * ข้อมูลผู้เสนอราคา (ชื่อ + รูปลายเซ็น) — lookup จากรหัสพนักงาน (qmast.EmpID → emp.empno)
      * EmpID เก็บเป็น int ส่วน emp.empno เป็น varchar ที่เก็บเลขรหัส (เช่น 9013 = "9013")
-     * ไม่พบ/ว่าง → คืน null (view จะ fallback เป็นคำว่า "ผู้เสนอราคา")
+     * ไม่พบ/ว่าง → คืน null ทั้งคู่ (view จะเว้นช่องเซ็นชื่อไว้เปล่า ๆ)
+     *
+     * @return array{name: ?string, sign: ?string}  sign = URL รูปลายเซ็น (ไม่มี = null)
      */
-    private function empName($empId): ?string
+    private function empInfo($empId): array
     {
+        $none = ['name' => null, 'sign' => null];
+
         $empId = trim((string) $empId);
         if ($empId === '') {
-            return null;
+            return $none;
         }
-        $e = DB::table('emp')->where('empno', $empId)->first(['empname', 'empsur']);
+        $e = DB::table('emp')->where('empno', $empId)->first(['empname', 'empsur', 'signature']);
         if (!$e) {
-            return null;
+            return $none;
         }
         $name = trim(($e->empname ?? '') . ' ' . ($e->empsur ?? ''));
-        return $name !== '' ? $name : null;
+
+        return [
+            'name' => $name !== '' ? $name : null,
+            'sign' => $this->signatureUrl($e->signature ?? null),
+        ];
+    }
+
+    /**
+     * URL รูปลายเซ็นพนักงาน — emp.signature เก็บแค่ "ชื่อไฟล์"
+     * ไฟล์จริงอยู่ public/upload/employees/ (อัปโหลดจากหน้าข้อมูลพนักงาน — EmpController)
+     * ไม่มีไฟล์อยู่จริง → null เพื่อไม่ให้ใบเสนอราคาโชว์รูปแตก
+     */
+    private function signatureUrl(?string $file): ?string
+    {
+        $file = trim((string) $file);
+        if ($file === '') {
+            return null;
+        }
+        // ใช้เฉพาะชื่อไฟล์ — กันค่าที่มี path ปนมาเล็ดลอดออกนอกโฟลเดอร์ (path traversal)
+        $file = basename($file);
+
+        return is_file(public_path('upload/employees/' . $file))
+            ? asset('upload/employees/' . rawurlencode($file))
+            : null;
     }
 
     /**
@@ -705,20 +738,21 @@ class QuotationController extends Controller
             'ค่าแม่สี'                   => 'Pigment Price',
             '% สูญเสีย'                  => '% Loss',
             'ราคา (บาท/กก)'              => 'Price (THB/kg)',
-            'ราคา (บาท/กก) ปัจจุบัน'      => 'Price (THB/kg) Current',
-            'ราคา (บาท/กก) ใหม่'         => 'Price (THB/kg) New',
+            // ── คู่ ปัจจุบัน/ใหม่ — ภาษาอังกฤษวาง Current / New ไว้ "ข้างหน้า" ──
+            'ราคา (บาท/กก) ปัจจุบัน'      => 'Current Price (THB/kg)',
+            'ราคา (บาท/กก) ใหม่'         => 'New Price (THB/kg)',
             'รวม Vat (บาท/กก)'          => 'Incld VAT (THB/Kg)',
-            'รวม Vat ใหม่'              => 'Incld VAT (THB/Kg) New',
+            'รวม Vat ใหม่'              => 'New Incld VAT (THB/Kg)',
             'ราคารวมภาษี'                => 'Incld VAT (THB/Kg)',
-            'ค่าผลิตฯ ปัจจุบัน'           => 'Process&Pigment Fee Current',
-            'ค่าผลิตฯ ใหม่'              => 'Process&Pigment Fee New',
-            'ค่าผลิตและค่าสี ปัจจุบัน'      => 'Process&Pigment Fee Current',
-            'ค่าผลิตและค่าสี ใหม่'         => 'Process&Pigment Fee New',
-            'รวมราคา (บาท/กก) ใหม่'       => 'Total Price (THB/kg) New',
-            'ค่าผลิต ปัจจุบัน'            => 'Process Fee Current',
-            'ค่าผลิต ใหม่'               => 'Process Fee New',
-            'ค่าแม่สี ปัจจุบัน'            => 'Pigment Price Current',
-            'ค่าแม่สี ใหม่'               => 'Pigment Price New',
+            'ค่าผลิตฯ ปัจจุบัน'           => 'Current Process&Pigment Fee',
+            'ค่าผลิตฯ ใหม่'              => 'New Process&Pigment Fee',
+            'ค่าผลิตและค่าสี ปัจจุบัน'      => 'Current Process&Pigment Fee',
+            'ค่าผลิตและค่าสี ใหม่'         => 'New Process&Pigment Fee',
+            'รวมราคา (บาท/กก) ใหม่'       => 'New Total Price (THB/kg)',
+            'ค่าผลิต ปัจจุบัน'            => 'Current Process Fee',
+            'ค่าผลิต ใหม่'               => 'New Process Fee',
+            'ค่าแม่สี ปัจจุบัน'            => 'Current Pigment Price',
+            'ค่าแม่สี ใหม่'               => 'New Pigment Price',
             'หมายเหตุ'                   => 'Remarks',
         ];
 
@@ -731,12 +765,12 @@ class QuotationController extends Controller
             'process_fee'       => 'Process Fee',
             'pigment_price'     => 'Pigment Price',
             'loss_pct'          => '% Loss',
-            'cur_process_fee'   => 'Process Fee Current',
-            'cur_pigment_price' => 'Pigment Price Current',
-            'new_process_fee'   => 'Process Fee New',
-            'new_pigment_price' => 'Pigment Price New',
+            'cur_process_fee'   => 'Current Process Fee',
+            'cur_pigment_price' => 'Current Pigment Price',
+            'new_process_fee'   => 'New Process Fee',
+            'new_pigment_price' => 'New Pigment Price',
             'price_kg'          => 'Price (THB/kg)',
-            'new_price'         => 'Price (THB/kg) New',
+            'new_price'         => 'New Price (THB/kg)',
             'price_vat'         => 'Incld VAT (THB/Kg)',
             'remark'            => 'Remarks',
         ];

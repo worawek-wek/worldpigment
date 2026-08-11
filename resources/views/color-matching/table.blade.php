@@ -31,7 +31,7 @@
                 <th class="align-middle th-sort{{ $sortActive('STD') }}" data-sort="STD">Standard {!! $sortIcon('STD') !!}</th>
                 <th class="align-middle th-sort{{ $sortActive('lotno') }}" data-sort="lotno">Lot No. {!! $sortIcon('lotno') !!}</th>
                 <th class="align-middle text-center th-sort{{ $sortActive('status') }}" data-sort="status">สถานะ {!! $sortIcon('status') !!}</th>
-                <th class="align-middle text-center" width="120">จัดการ</th>
+                <th class="align-middle text-center" width="160">จัดการ</th>
             </tr>
         </thead>
 
@@ -59,6 +59,9 @@
                         $statusIcon  = 'ti-package-export';
                         $statusText  = 'ส่ง ต.ย. แล้ว';
                     }
+
+                    // ── ผลการทดสอบตัวอย่างสี (เฉพาะใบส่ง ต.ย.) — testmain.TyResp (10/08/2569) ──
+                    $tr = $row->testResult();
                 @endphp
 
                 <tr class="{{ $isSD ? 'tr-sd' : 'tr-cm' }}">
@@ -120,6 +123,14 @@
                             <i class="ti {{ $statusIcon }} me-1"></i>
                             {{ $statusText }}
                         </span>
+
+                        {{-- ผลการทดสอบตัวอย่างสี — แสดงเฉพาะใบส่ง ต.ย. (10/08/2569) --}}
+                        @if ($isSD)
+                            <br>
+                            <span class="badge {{ $tr['class'] }} mt-1 fw-normal" title="ผลการทดสอบตัวอย่างสี">
+                                <i class="ti ti-clipboard-check me-1"></i>{{ $tr['label'] }}
+                            </span>
+                        @endif
                     </td>
 
                     <td class="text-center td-action">
@@ -136,6 +147,13 @@
                                     title="แก้ไขใบส่ง ต.ย."
                                     onclick="viewSampleDelivery('{{ $row->id }}')">
                                     <i class="ti ti-edit"></i>
+                                </button>
+
+                                {{-- บันทึกผลการทดสอบตัวอย่างสี (10/08/2569) --}}
+                                <button class="btn btn-sm btn-icon btn-theme-result"
+                                    title="ผลการทดสอบตัวอย่างสี"
+                                    onclick="viewTestResult('{{ $row->id }}')">
+                                    <i class="ti ti-clipboard-check"></i>
                                 </button>
                             @else
                                 <button class="btn btn-sm btn-icon btn-theme-cm"
