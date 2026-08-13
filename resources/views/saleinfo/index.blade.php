@@ -854,6 +854,12 @@
         return Number(v).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     };
 
+    // ราคาขายที่คำนวณแล้ว โชว์เป็นจำนวนเต็ม (ปัดเศษ .5 ขึ้น) — 12/08/2569
+    // ปัดตอนแสดงผลอย่างเดียว ค่าที่ endpoint ส่งมายังเป็นทศนิยมตามจริง
+    const npMoneyInt = function (v) {
+        return Number(v).toLocaleString('th-TH', { maximumFractionDigits: 0 });
+    };
+
     function clearNewPrice() {
         NP_FIELDS.forEach(function (sel) { $(sel).val(''); });
         $('#np_base_price, #np_rule, #np_formula').text('—');
@@ -872,9 +878,9 @@
         }
 
         if (res.prices) {
-            $('#np_price_1').val(npMoney(res.prices.price_1));
-            $('#np_price_2').val(npMoney(res.prices.price_2));
-            $('#np_price_3').val(npMoney(res.prices.price_3));
+            $('#np_price_1').val(npMoneyInt(res.prices.price_1));
+            $('#np_price_2').val(npMoneyInt(res.prices.price_2));
+            $('#np_price_3').val(npMoneyInt(res.prices.price_3));
         } else if (res.reason) {
             $('#np_error').removeClass('d-none').text(res.reason);
         }
