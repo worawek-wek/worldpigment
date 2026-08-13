@@ -373,7 +373,7 @@
 
         <div class="row p-3 rounded" style="background-color: #eaffd9; border: 1px dashed #04ac2e;">
             <div class="row">
-                <div class="col-md-3 mb-3">
+                <div class="col-md-6 mb-3">
                     @php
                         $item_end_job     = ($planning_item?->end_job ?? 'N') === 'Y';
                         $semi_jobs_done   = $item_semi_jobs_done ?? true;
@@ -391,7 +391,7 @@
                             <label class="form-check-label" for="planning_item_end_job">จบงาน (End Job)</label>
                         </div>
                         @if($end_job_disabled)
-                            <div class="form-text text-warning">
+                            <div class="form-text fw-bold mt-1" style="color: #7a0000;">
                                 <i class="ti ti-alert-triangle me-1"></i>ต้องปิดออเดอร์ (End Order) ของแผน Semi ให้ครบทุกใบก่อน
                             </div>
                         @endif
