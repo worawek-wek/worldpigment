@@ -101,6 +101,14 @@ return [
                         'route_name' => 'production.orderchange.index',
                         'permission' => 'productionplanning read',
                     ],
+                    // รายงานการขาดวัตถุดิบ — งานใน tb_planning ที่ยังไม่ปิดงาน (end_job != 'Y') — เพิ่ม 13/08/2569
+                    'ProductionReportMaterialShortage' => [
+                        'title' => 'รายงานการขาดวัตถุดิบ',
+                        'icon' => '',
+                        'menu_parent' => 'ProductionReport',
+                        'route_name' => 'production.report.material-shortage.index',
+                        'permission' => 'productionplanning read',
+                    ],
                 ],
             ],
         ],

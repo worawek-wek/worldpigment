@@ -37,13 +37,19 @@
         </div>
 
         <div class="col-md-6 mb-3">
-            <label class="form-label" for="product_pack">Pack (ขนาดบรรจุ)</label>
+            <label class="form-label" for="product_pack">ขนาดบรรจุ (Packaging)</label>
             <input type="text" class="form-control" id="product_pack" name="pack"
                 value="{{ $product?->pack }}" placeholder="กรอกขนาดบรรจุ">
         </div>
 
         <div class="col-md-6 mb-3">
-            <label class="form-label" for="product_sampling">Sampling (การชักตัวอย่าง)</label>
+            <label class="form-label" for="product_batch">นน ต่อชุด (Batch)</label>
+            <input type="text" class="form-control" id="product_batch" name="batch"
+                value="{{ $product?->batch }}" placeholder="กรอก Batch">
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label class="form-label" for="product_sampling">การชักตัวอย่าง (Sampling)</label>
             <input type="text" class="form-control" id="product_sampling" name="sampling"
                 value="{{ $product?->sampling }}" placeholder="กรอกการชักตัวอย่าง">
         </div>

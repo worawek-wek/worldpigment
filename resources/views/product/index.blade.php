@@ -29,7 +29,7 @@
                         <div class="row g-3 align-items-center">
                             <div class="col-md-4">
                                 <input id="searchInput" type="text" class="form-control"
-                                placeholder="ค้นหา รหัสสินค้า / เรซิน / code / pack / sampling ...">
+                                placeholder="ค้นหา รหัสสินค้า / เรซิน / code / pack / batch / sampling ...">
                             </div>
                             <div class="col-md-3 ms-auto text-end">
                                 <button type="button" class="btn btn-primary" id="btn_add"
@@ -50,7 +50,8 @@
                                         <th>เรซิน</th>
                                         <th>Temp</th>
                                         <th>Code</th>
-                                        <th>Pack</th>
+                                        <th>Packaging</th>
+                                        <th>Batch</th>
                                         <th>Sampling</th>
                                         <th class="col-1">จัดการ</th>
                                     </tr>
@@ -111,6 +112,7 @@
                 { 'className': "text-left", data: 'temp_name', name: 'temp_name', orderable: false },
                 { 'className': "text-left", data: 'code', name: 'code', orderable: false },
                 { 'className': "text-left", data: 'pack', name: 'pack', orderable: false },
+                { 'className': "text-left", data: 'batch', name: 'batch', orderable: false },
                 { 'className': "text-left", data: 'sampling', name: 'sampling', orderable: false },
                 { 'className': "text-center", data: 'btnaction', name: 'btnaction', orderable: false, searchable: false },
             ],

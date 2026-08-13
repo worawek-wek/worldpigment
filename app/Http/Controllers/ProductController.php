@@ -31,6 +31,7 @@ class ProductController extends Controller
                         ->orWhere('resin', 'like', "%{$search}%")
                         ->orWhere('code', 'like', "%{$search}%")
                         ->orWhere('pack', 'like', "%{$search}%")
+                        ->orWhere('batch', 'like', "%{$search}%")
                         ->orWhere('sampling', 'like', "%{$search}%");
                 });
             })
@@ -56,6 +57,9 @@ class ProductController extends Controller
             })
             ->addColumn('pack', function ($product) {
                 return $product->pack ?: '-';
+            })
+            ->addColumn('batch', function ($product) {
+                return $product->batch ?: '-';
             })
             ->addColumn('sampling', function ($product) {
                 return $product->sampling ?: '-';
@@ -106,6 +110,7 @@ class ProductController extends Controller
             'temp_id'      => 'nullable|integer|exists:temp,id',
             'code'         => 'nullable|string|max:255',
             'pack'         => 'nullable|string|max:255',
+            'batch'        => 'nullable|string|max:255',
             'sampling'     => 'nullable|string|max:255',
         ], [
             'product_code.required' => 'กรุณากรอกรหัสสินค้า',
@@ -127,6 +132,7 @@ class ProductController extends Controller
             'temp_id'      => $request->temp_id ?: null,
             'code'         => $request->code,
             'pack'         => $request->pack,
+            'batch'        => $request->batch,
             'sampling'     => $request->sampling,
             'updated_by'   => $userId,
         ];

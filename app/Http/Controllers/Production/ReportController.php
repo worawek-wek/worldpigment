@@ -124,6 +124,7 @@ class ReportController extends Controller
                 'tb_products.resin as product_resin',
                 'tb_products.code as product_code_val',
                 'tb_products.pack as product_pack',
+                'tb_products.batch as product_batch',
                 'tb_products.sampling as product_sampling',
                 // Speed (RPM) ต่อเครื่องจักร: machine.speed_rpm (MBX = machine_no) — subquery กัน row ซ้ำ
                 \Illuminate\Support\Facades\DB::raw('(SELECT m.speed_rpm FROM machine m WHERE m.MBX = tb_planning.machine_no LIMIT 1) AS speed_rpm'),
@@ -227,9 +228,11 @@ class ReportController extends Controller
                 $minKey = $sorted->pluck('job_key')->filter()->sort()->first();
 
                 return [
-                    'machine' => $machine,
-                    'min'     => $minKey ?: null,
-                    'items'   => $sorted,
+                    'machine'   => $machine,
+                    'min'       => $minKey ?: null,
+                    // Speed (RPM) ต่อเครื่องจักร — ทุก item ในกลุ่มเดียวกันมีค่าเท่ากัน จึงหยิบจากตัวแรก
+                    'speed_rpm' => $sorted->first()->speed_rpm ?? null,
+                    'items'     => $sorted,
                 ];
             })
             // เรียงลำดับกลุ่มตาม inplan เก่าสุดในกลุ่ม (กลุ่มที่ไม่มีวันที่ไปท้ายสุด)
@@ -261,14 +264,15 @@ class ReportController extends Controller
         $sheet->setTitle('รายงานผลิตตามเครื่องจักร');
 
         // คอลัมน์ตามฟอร์ม — คอลัมน์ที่ยังไม่มีข้อมูลใน tb_planning เว้นค่าว่างไว้ก่อน
-        // (Revise, TP, Resin, CODE, Pack, Batch, สูตรตัวอย่าง)
+        // (Revise, TP, Resin, CODE, Packaging, Batch, สูตรตัวอย่าง)
+        // Speed (RPM) ย้ายไปแสดงต่อท้ายหัวกลุ่มเครื่องจักรแทน (2026-08-13)
         $headers = [
             '#', 'วันที่ลงแผน', 'Revise', 'Cust Name', 'เลขที่ใบเบิก', 'PRODUCT NO', 'LOT',
-            'น้ำหนักออเดอร์', 'TP', 'Resin', 'CODE', 'Speed (RPM)', 'Pack', 'Batch',
+            'น้ำหนักออเดอร์', 'TP', 'Resin', 'CODE', 'Packaging', 'Batch',
             'สูตรตัวอย่าง', 'Remark',
         ];
-        $cols    = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P'];
-        $lastCol = 'P';
+        $cols    = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O'];
+        $lastCol = 'O';
         $weightCol = 'H'; // คอลัมน์น้ำหนักออเดอร์ (ใช้ทำผลรวมต่อเครื่อง)
 
         // หัวรายงาน
@@ -297,8 +301,12 @@ class ReportController extends Controller
         foreach ($groups as $group) {
             $machineLabel = $group['machine'] !== '' ? $group['machine'] : 'ไม่ระบุเครื่องจักร';
 
-            // หัวกลุ่มเครื่องจักร
-            $sheet->setCellValue("A{$r}", 'เครื่องจักร: '.$machineLabel);
+            // หัวกลุ่มเครื่องจักร — ต่อท้ายด้วย Speed (RPM) ในวงเล็บ (ถ้ามีค่า)
+            $machineHeader = 'เครื่องจักร: '.$machineLabel;
+            if (!empty($group['speed_rpm'])) {
+                $machineHeader .= ' (Speed RPM: '.$group['speed_rpm'].')';
+            }
+            $sheet->setCellValue("A{$r}", $machineHeader);
             $sheet->mergeCells("A{$r}:{$lastCol}{$r}");
             $sheet->getStyle("A{$r}")->getFont()->setBold(true);
             $sheet->getStyle("A{$r}")->getFill()
@@ -335,11 +343,10 @@ class ReportController extends Controller
                 $sheet->setCellValue("I{$r}", $it->weight !== null ? number_format($it->weight, 2) : '');  // TP = น้ำหนัก TP (Weight)
                 $sheet->setCellValueExplicit("J{$r}", $it->product_resin ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);   // Resin (tb_products.resin)
                 $sheet->setCellValueExplicit("K{$r}", $it->product_code_val ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING); // CODE (tb_products.code)
-                $sheet->setCellValue("L{$r}", $it->speed_rpm ?: '');
-                $sheet->setCellValueExplicit("M{$r}", $it->product_pack ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);   // Pack (tb_products.pack)
-                $sheet->setCellValue("N{$r}", '');  // Batch (เว้นว่าง)
-                $sheet->setCellValueExplicit("O{$r}", $it->product_sampling ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING); // สูตรตัวอย่าง (tb_products.sampling)
-                $sheet->setCellValue("P{$r}", $it->remark ?: '');
+                $sheet->setCellValueExplicit("L{$r}", $it->product_pack ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);   // Packaging (tb_products.pack)
+                $sheet->setCellValueExplicit("M{$r}", $it->product_batch ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);  // Batch (tb_products.batch)
+                $sheet->setCellValueExplicit("N{$r}", $it->product_sampling ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING); // สูตรตัวอย่าง (tb_products.sampling)
+                $sheet->setCellValue("O{$r}", $it->remark ?: '');
                 $groupSum += (float) ($it->quantity ?? 0);
                 $r++;
             }
@@ -415,6 +422,234 @@ class ReportController extends Controller
         $parts[] = 'พบ '.number_format($total).' รายการ';
 
         return implode('   |   ', $parts);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  รายงานการขาดวัตถุดิบ — 2026-08-13
+    //
+    //  รายการงานผลิต (tb_planning) ที่ "ยังไม่ปิดงาน" (end_job != 'Y' รวม NULL)
+    //  กรองด้วยแผนก (company) — ตารางแบนราบ ไม่จัดกลุ่ม + export Excel/PDF
+    //
+    //  หมายเหตุ: ตอนนี้ยังไม่มีตารางสต๊อกวัตถุดิบผูกกับ planning ใน DB จึงยังไม่เช็ค
+    //  ปริมาณวัตถุดิบจริง — รายงานนี้คือ "งานที่ยังค้าง (ยังไม่ปิดงาน)" ตามที่ผู้ใช้ระบุ
+    //  หากต้องเสริมเงื่อนไข "ขาดวัตถุดิบ" จริงในภายหลัง ให้เพิ่มใน buildMaterialShortageReport()
+    // ─────────────────────────────────────────────────────────────────────────
+    public function materialShortage()
+    {
+        return view('production-planning.report.material-shortage', [
+            'departments' => $this->activeDepartments(),
+        ]);
+    }
+
+    // ตารางรายงาน (AJAX)
+    public function materialShortageTable(Request $request)
+    {
+        ['rows' => $rows, 'total' => $total] = $this->buildMaterialShortageReport($request);
+
+        return view('production-planning.report.partials.material-shortage-table', [
+            'rows'  => $rows,
+            'total' => $total,
+        ]);
+    }
+
+    // สร้างข้อมูลรายงาน (query กลาง) ใช้ร่วมทั้งจอ/Excel/PDF
+    //  - แผนก → COALESCE(tb_planning.company, tb_planning_header.company) ให้ตรงกับที่หน้าอื่นใช้
+    //  - เงื่อนไขแกน: end_job != 'Y' (นับ NULL เป็น "ยังไม่ปิดงาน" ด้วย)
+    //  - เรียงตาม inplan เก่า→ใหม่ (ไม่มีวันที่ → ท้ายสุด)
+    private function buildMaterialShortageReport(Request $request): array
+    {
+        $dept = $request->get('dept'); // ชื่อแผนก (ตรงกับ company)
+
+        $rows = Planning::query()
+            ->leftJoin('tb_planning_header', 'tb_planning_header.id', '=', 'tb_planning.planning_header_id')
+            // ชื่อลูกค้า: customer.code = header.custno
+            ->leftJoin('customer', 'customer.code', '=', 'tb_planning_header.custno')
+            ->select([
+                'tb_planning.id',
+                'tb_planning.machine_no',
+                'tb_planning.inplan',
+                'tb_planning.itemno',
+                'tb_planning.lot',
+                'tb_planning.quantity',   // หนัก (น้ำหนักออเดอร์)
+                'tb_planning.weight',     // น้ำหนัก TP
+                'tb_planning.planning_status',
+                'tb_planning.company as item_company',
+                'tb_planning_header.company as header_company',
+                'tb_planning_header.orderno',
+                'tb_planning_header.custno',
+                'tb_planning_header.saleno',              // SaleNo
+                'tb_planning_header.mdate as order_date', // Order Date
+                'customer.name as cust_name',
+                // Cust Due: กำหนดที่ลูกค้าต้องการ — ใช้ของ item ก่อน ถ้าว่าง fallback header
+                'tb_planning.custwant as item_custwant',
+                'tb_planning_header.custwant as header_custwant',
+                'tb_planning.start_date', // เริ่มผลิต
+                'tb_planning.qc_date',    // วันที่ส่ง QC
+                'tb_planning.qc_time',    // เวลาที่ส่ง QC
+                'tb_planning.qc_status',  // สถานะ QC
+                'tb_planning.red_bill_code', // เลขที่ใบแดง
+            ])
+            // แกนของรายงาน: เฉพาะงานที่ยังไม่ปิดงาน (นับ NULL ด้วย)
+            ->where(function ($q) {
+                $q->where('tb_planning.end_job', '!=', 'Y')
+                    ->orWhereNull('tb_planning.end_job');
+            })
+            // กรองแผนก: ใช้แผนกจริงของ item ก่อน ถ้าว่าง fallback ไป header
+            ->when(!empty($dept), function ($q) use ($dept) {
+                $q->whereRaw('COALESCE(tb_planning.company, tb_planning_header.company) = ?', [$dept]);
+            })
+            // เรียงลำดับ:
+            //  1) สถานะปัจจุบัน (planning_status) ตามชื่อ — ค่าว่าง/NULL อยู่หน้าสุด
+            //  2) เครื่องจักร (machine_no) ตามชื่อ — ค่าว่าง/NULL อยู่หน้าสุด
+            //  3) inplan เก่า→ใหม่ (ไม่มีวันที่ท้ายสุด) แล้ว id
+            ->orderByRaw("CASE WHEN tb_planning.planning_status IS NULL OR tb_planning.planning_status = '' THEN 0 ELSE 1 END ASC")
+            ->orderBy('tb_planning.planning_status', 'asc')
+            ->orderByRaw("CASE WHEN tb_planning.machine_no IS NULL OR tb_planning.machine_no = '' THEN 0 ELSE 1 END ASC")
+            ->orderBy('tb_planning.machine_no', 'asc')
+            ->orderByRaw('tb_planning.inplan IS NULL, tb_planning.inplan ASC')
+            ->orderBy('tb_planning.id', 'asc')
+            ->get();
+
+        return [
+            'rows'    => $rows,
+            'total'   => $rows->count(),
+            'filters' => [
+                'dept' => $dept,
+            ],
+        ];
+    }
+
+    // ข้อความสรุปเงื่อนไข (หัว Excel/PDF) ของรายงานการขาดวัตถุดิบ
+    private function materialShortageSummary(array $filters, int $total): string
+    {
+        return implode('   |   ', [
+            'แผนก: '.($filters['dept'] ?: 'ทุกแผนก'),
+            'สถานะ: ยังไม่ปิดงาน',
+            'พบ '.number_format($total).' รายการ',
+        ]);
+    }
+
+    // Export Excel (.xls) — ตารางแบนราบ
+    public function materialShortageExcel(Request $request)
+    {
+        ['rows' => $rows, 'total' => $total, 'filters' => $filters] = $this->buildMaterialShortageReport($request);
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('รายงานการขาดวัตถุดิบ');
+
+        // คอลัมน์ตามผังฟอร์ม Access เดิม (Revise / น้ำ / ส่งชั่งสี ยังไม่มีฟิลด์ใน DB → เว้นว่าง)
+        $headers = [
+            '#', 'แผนก', 'เลขที่ใบแดง', 'MACHINE No.', 'IN PLAN', 'Revise', 'สถานะปัจจุบัน', 'Cust Due',
+            'Cust no', 'Cust Name', 'SaleNo', 'Order Date', 'Order No', 'PRODUCT NO',
+            'LOT', 'น้ำ', 'หนัก', 'ส่งชั่งสี', 'เริ่มผลิต', 'วันที่ส่ง QC', 'เวลาที่ส่ง QC', 'สถานะ QC',
+        ];
+        $cols = [
+            'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
+            'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
+            'U', 'V',
+        ];
+        $lastCol = 'V';
+
+        // หัวรายงาน
+        $sheet->setCellValue('A1', 'รายงานการขาดวัตถุดิบ');
+        $sheet->mergeCells("A1:{$lastCol}1");
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $sheet->setCellValue('A2', $this->materialShortageSummary($filters, $total));
+        $sheet->mergeCells("A2:{$lastCol}2");
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // แถวหัวตาราง
+        $r = 4;
+        foreach ($headers as $i => $h) {
+            $sheet->setCellValue($cols[$i].$r, $h);
+        }
+        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setBold(true);
+        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('E9ECEF');
+        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getAlignment()->setWrapText(true);
+
+        $rownum = 0;
+        $r++;
+        foreach ($rows as $it) {
+            $custDue = $it->item_custwant ?: $it->header_custwant;
+            $dept    = $it->item_company ?: $it->header_company;
+
+            $sheet->setCellValue("A{$r}", ++$rownum);
+            $sheet->setCellValue("B{$r}", $dept ?: '-');
+            $sheet->setCellValueExplicit("C{$r}", $it->red_bill_code ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit("D{$r}", $it->machine_no ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue("E{$r}", $it->inplan ? \Carbon\Carbon::parse($it->inplan)->format('d/m/Y') : '-');
+            $sheet->setCellValue("F{$r}", '');  // Revise (ยังไม่มีฟิลด์)
+            $sheet->setCellValue("G{$r}", $it->planning_status ?: '-');
+            $sheet->setCellValue("H{$r}", $custDue ? \Carbon\Carbon::parse($custDue)->format('d/m/Y') : '-');
+            $sheet->setCellValueExplicit("I{$r}", $it->custno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue("J{$r}", $it->cust_name ?: '-');
+            $sheet->setCellValueExplicit("K{$r}", $it->saleno ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue("L{$r}", $it->order_date ? \Carbon\Carbon::parse($it->order_date)->format('d/m/Y') : '-');
+            $sheet->setCellValueExplicit("M{$r}", $it->orderno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit("N{$r}", $it->itemno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue("O{$r}", $it->lot ?: '-');
+            $sheet->setCellValue("P{$r}", '');  // น้ำ (ยังไม่มีฟิลด์)
+            $sheet->setCellValue("Q{$r}", $it->quantity !== null ? number_format($it->quantity, 2) : '-');
+            $sheet->setCellValue("R{$r}", '');  // ส่งชั่งสี (ยังไม่มีฟิลด์)
+            $sheet->setCellValue("S{$r}", $it->start_date ? \Carbon\Carbon::parse($it->start_date)->format('d/m/Y') : '');
+            $sheet->setCellValue("T{$r}", $it->qc_date ? \Carbon\Carbon::parse($it->qc_date)->format('d/m/Y') : '');
+            $sheet->setCellValue("U{$r}", $it->qc_time ? substr($it->qc_time, 0, 5) : '');
+            $sheet->setCellValue("V{$r}", $it->qc_status ?: '');
+            $r++;
+        }
+
+        if ($total === 0) {
+            $sheet->setCellValue("A{$r}", 'ไม่พบข้อมูลตามเงื่อนไขที่เลือก');
+            $sheet->mergeCells("A{$r}:{$lastCol}{$r}");
+            $sheet->getStyle("A{$r}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        }
+
+        foreach ($cols as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $fileName = 'report-material-shortage-'.now()->format('Ymd-His').'.xls';
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            (new \PhpOffice\PhpSpreadsheet\Writer\Xls($spreadsheet))->save('php://output');
+        }, $fileName, [
+            'Content-Type' => 'application/vnd.ms-excel',
+        ]);
+    }
+
+    // Export PDF — ตารางแบนราบ (A4-L)
+    public function materialShortagePdf(Request $request)
+    {
+        ['rows' => $rows, 'total' => $total, 'filters' => $filters] = $this->buildMaterialShortageReport($request);
+
+        $html = view('production-planning.report.partials.material-shortage-pdf', [
+            'rows'    => $rows,
+            'total'   => $total,
+            'summary' => $this->materialShortageSummary($filters, $total),
+        ])->render();
+
+        $mpdf = new \Mpdf\Mpdf([
+            'mode'          => 'utf-8',
+            'format'        => 'A4-L',
+            'margin_left'   => 6,
+            'margin_right'  => 6,
+            'margin_top'    => 8,
+            'margin_bottom' => 8,
+        ]);
+        $mpdf->autoScriptToLang = true;
+        $mpdf->autoLangToFont   = true;
+        $mpdf->SetFont('sarabun');
+        $mpdf->WriteHTML($html);
+
+        return response($mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="report-material-shortage.pdf"',
+        ]);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

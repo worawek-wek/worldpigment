@@ -51,6 +51,14 @@ Route::prefix('production-planning')->group(function () {
     Route::get('/report/employee/excel', [Production\ReportController::class, 'employeeExcel'])->name('production.report.employee.excel');
     Route::get('/report/employee/pdf', [Production\ReportController::class, 'employeePdf'])->name('production.report.employee.pdf');
 
+    // รายงานการขาดวัตถุดิบ — tb_planning ที่ยังไม่ปิดงาน (end_job != 'Y') กรองด้วยแผนก — 2026-08-13
+    Route::get('/report/material-shortage', [Production\ReportController::class, 'materialShortage'])->name('production.report.material-shortage.index');
+    // ตารางรายงาน (คืน HTML ผ่าน AJAX)
+    Route::get('/report/material-shortage/table', [Production\ReportController::class, 'materialShortageTable'])->name('production.report.material-shortage.table');
+    // Export (ใช้เงื่อนไขค้นหาชุดเดียวกับตาราง)
+    Route::get('/report/material-shortage/excel', [Production\ReportController::class, 'materialShortageExcel'])->name('production.report.material-shortage.excel');
+    Route::get('/report/material-shortage/pdf', [Production\ReportController::class, 'materialShortagePdf'])->name('production.report.material-shortage.pdf');
+
     // สถานะ Planning (master data)
     Route::get('/planning-status', [Production\PlanningStatusController::class, 'index'])->name('production.planningstatus.index');
     Route::get('/planning-status/datatable', [Production\PlanningStatusController::class, 'datatable'])->name('production.planningstatus.datatable');
