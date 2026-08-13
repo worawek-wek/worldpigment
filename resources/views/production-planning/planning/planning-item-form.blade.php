@@ -401,9 +401,10 @@
             <div class="row">
                 <div class="col-md-4 mb-3">
                     <label class="form-label">วันเวลาที่บรรจุเสร็จ (Packing Datetime)</label>
-                    <input type="datetime-local" name="packing_datetie"
-                        value="{{ $planning_item?->packing_datetie ?? '' }}"
-                        class="form-control" placeholder="วันเวลาจัดแพ็ค">
+                    {{-- flatpickr แบบมีเวลา: ช่องที่เห็นแสดง d/m/Y H:i (dd/mm/yyyy + เวลา) แต่ค่าจริงส่ง Y-m-d H:i --}}
+                    <input type="text" name="packing_datetie"
+                        value="{{ $planning_item?->packing_datetie ? \Carbon\Carbon::parse($planning_item->packing_datetie)->format('Y-m-d H:i') : '' }}"
+                        class="form-control flatpickr-datetime" autocomplete="off" placeholder="วว/ดด/ปปปป ชช:นน">
                 </div>
                 <div class="col-md-3 mb-3">
                     <label class="form-label">น้ำหนักบรรจุได้ (Weight Packing)</label>
@@ -708,6 +709,15 @@
 window.wpFpDateOptions = {
     dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true, disableMobile: true
 };
+// ── option สำหรับช่องวันที่ "แบบมีเวลา" (เช่น วันเวลาที่บรรจุเสร็จ) ──
+// ช่องที่เห็นแสดง d/m/Y H:i แต่ค่าจริงเป็น Y-m-d H:i (Carbon ฝั่ง server parse ได้เหมือนเดิม)
+// static: true → ฝังปฏิทินไว้ติด input ในฟอร์ม (ไม่ append ไป <body>)
+//   กันอาการหน้าจอ/modal เลื่อนขึ้นเวลาปรับเวลา (flatpickr re-position/re-focus ชนกับ Bootstrap modal)
+window.wpFpDateTimeOptions = {
+    enableTime: true, time_24hr: true,
+    dateFormat: 'Y-m-d H:i', altInput: true, altFormat: 'd/m/Y H:i',
+    allowInput: true, disableMobile: true, static: true
+};
 // ผูก flatpickr ให้ทุก .flatpickr-date ภายใน scope (กัน init ซ้ำด้วย _flatpickr)
 window.wpInitDateFields = function (scope) {
     $(scope).find('.flatpickr-date').addBack('.flatpickr-date').each(function () {
@@ -743,6 +753,10 @@ window.wpSetDateField = function (sel, val) {
     var initDateFields = window.wpInitDateFields;
     var setDateField   = window.wpSetDateField;
     initDateFields('#planning_item_form'); // ช่องวันที่ในฟอร์มหลัก
+    // ช่องวันที่แบบมีเวลา (packing_datetie) — ผูก flatpickr พร้อมเวลา
+    $('#planning_item_form').find('.flatpickr-datetime').each(function () {
+        if (!this._flatpickr) flatpickr(this, window.wpFpDateTimeOptions);
+    });
 
     // ── เปลี่ยนแผนก (Company) → โหลดเครื่องจักร/สถานะของแผนกใหม่ แล้วล้างค่าที่เลือกไว้ ──
     // (ค่า machine_no/planning_status เดิมเป็นของแผนกเก่า จึงต้องเลือกใหม่)
@@ -828,23 +842,22 @@ window.wpSetDateField = function (sel, val) {
     });
 
     // ── ติ๊ก "จบงาน (End Job)" → เติมวันเวลาที่บรรจุเสร็จเป็นเวลาปัจจุบัน (เฉพาะเมื่อช่องยังว่าง) ──
-    // format ของ input[type=datetime-local] คือ YYYY-MM-DDTHH:mm
-    function nowForDatetimeLocal() {
-        var d   = new Date();
-        var pad = function (n) { return (n < 10 ? '0' : '') + n; };
-        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
-            + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-    }
+    // ช่อง packing_datetie เป็น flatpickr (altInput) → ต้องตั้ง/ล้างผ่าน instance เพื่ออัปเดตทั้งช่องที่แสดงและค่าจริง
     $('#planning_item_end_job').on('change', function () {
-        var $packing = $('input[name="packing_datetie"]');
+        var packingEl = $('input[name="packing_datetie"]')[0];
+        if (!packingEl) return;
+        var fp = packingEl._flatpickr;
         if (this.checked) {
             // ติ๊ก → เติมเวลาปัจจุบัน (เฉพาะเมื่อช่องยังว่าง)
-            if (($packing.val() || '').trim() === '') {
-                $packing.val(nowForDatetimeLocal());
+            var current = (fp ? fp.input.value : packingEl.value) || '';
+            if (current.trim() === '') {
+                if (fp) fp.setDate(new Date(), true); // true = trigger change ให้ altInput อัปเดต
+                else packingEl.value = '';
             }
         } else {
             // ปลดติ๊ก → ล้างค่าช่องบรรจุ
-            $packing.val('');
+            if (fp) fp.clear();
+            else packingEl.value = '';
         }
     });
 

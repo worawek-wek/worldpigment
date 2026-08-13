@@ -73,12 +73,12 @@
                         <td class="text-center">{{ $it->lot ?: '-' }}</td>
                         <td class="text-end">{{ $it->quantity !== null ? number_format($it->quantity, 2) : '-' }}</td>
                         <td class="text-end">{{ $it->weight !== null ? number_format($it->weight, 2) : '' }}</td> {{-- TP = น้ำหนัก TP (Weight) --}}
-                        <td></td> {{-- Resin --}}
-                        <td></td> {{-- CODE --}}
+                        <td>{{ $it->product_resin ?: '' }}</td> {{-- Resin (tb_products.resin) --}}
+                        <td>{{ $it->product_code_val ?: '' }}</td> {{-- CODE (tb_products.code) --}}
                         <td class="text-center">{{ $it->speed_rpm ?: '' }}</td>
-                        <td></td> {{-- Pack --}}
+                        <td class="text-center">{{ $it->product_pack ?: '' }}</td> {{-- Pack (tb_products.pack) --}}
                         <td></td> {{-- Batch --}}
-                        <td></td> {{-- สูตรตัวอย่าง --}}
+                        <td>{{ $it->product_sampling ?: '' }}</td> {{-- สูตรตัวอย่าง (tb_products.sampling) --}}
                         <td>{{ $it->remark ?: '' }}</td>
                     </tr>
                 @endforeach

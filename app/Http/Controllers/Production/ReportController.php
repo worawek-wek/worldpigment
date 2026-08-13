@@ -105,6 +105,9 @@ class ReportController extends Controller
             ->leftJoin('tb_planning_header', 'tb_planning_header.id', '=', 'tb_planning.planning_header_id')
             // ชื่อลูกค้า: customer.code = header.custno
             ->leftJoin('customer', 'customer.code', '=', 'tb_planning_header.custno')
+            // ข้อมูลสินค้า (master): tb_products.product_code = tb_planning.itemno
+            // → เติมคอลัมน์ Resin / CODE / Pack / สูตรตัวอย่าง (2026-08-13)
+            ->leftJoin('tb_products', 'tb_products.product_code', '=', 'tb_planning.itemno')
             ->select([
                 'tb_planning.id',
                 'tb_planning.machine_no',
@@ -117,6 +120,11 @@ class ReportController extends Controller
                 'tb_planning.weight', // น้ำหนัก TP (Weight)
                 'tb_planning.remark',
                 'customer.name as cust_name',
+                // ข้อมูลสินค้าจาก tb_products (2026-08-13)
+                'tb_products.resin as product_resin',
+                'tb_products.code as product_code_val',
+                'tb_products.pack as product_pack',
+                'tb_products.sampling as product_sampling',
                 // Speed (RPM) ต่อเครื่องจักร: machine.speed_rpm (MBX = machine_no) — subquery กัน row ซ้ำ
                 \Illuminate\Support\Facades\DB::raw('(SELECT m.speed_rpm FROM machine m WHERE m.MBX = tb_planning.machine_no LIMIT 1) AS speed_rpm'),
             ])
@@ -325,12 +333,12 @@ class ReportController extends Controller
                 $sheet->setCellValue("G{$r}", $it->lot ?: '-');
                 $sheet->setCellValue("H{$r}", $it->quantity !== null ? number_format($it->quantity, 2) : '-');
                 $sheet->setCellValue("I{$r}", $it->weight !== null ? number_format($it->weight, 2) : '');  // TP = น้ำหนัก TP (Weight)
-                $sheet->setCellValue("J{$r}", '');  // Resin (เว้นว่าง)
-                $sheet->setCellValue("K{$r}", '');  // CODE (เว้นว่าง)
+                $sheet->setCellValueExplicit("J{$r}", $it->product_resin ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);   // Resin (tb_products.resin)
+                $sheet->setCellValueExplicit("K{$r}", $it->product_code_val ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING); // CODE (tb_products.code)
                 $sheet->setCellValue("L{$r}", $it->speed_rpm ?: '');
-                $sheet->setCellValue("M{$r}", '');  // Pack (เว้นว่าง)
+                $sheet->setCellValueExplicit("M{$r}", $it->product_pack ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);   // Pack (tb_products.pack)
                 $sheet->setCellValue("N{$r}", '');  // Batch (เว้นว่าง)
-                $sheet->setCellValue("O{$r}", '');  // สูตรตัวอย่าง (เว้นว่าง)
+                $sheet->setCellValueExplicit("O{$r}", $it->product_sampling ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING); // สูตรตัวอย่าง (tb_products.sampling)
                 $sheet->setCellValue("P{$r}", $it->remark ?: '');
                 $groupSum += (float) ($it->quantity ?? 0);
                 $r++;
