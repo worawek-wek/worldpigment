@@ -131,6 +131,7 @@ SQL;
     public function dataQuery()
     {
         $search         = request('search');
+        $saleno         = request('saleno');
         $company        = request('company');
         $inplanStart    = request('inplan_start');
         $inplanEnd      = request('inplan_end');
@@ -172,6 +173,10 @@ SQL;
                         })
                         ->orWhereIn('tb_planning_header.id', $empRootIds);
                 });
+            })
+            // ค้นหาด้วยรหัส Sale (saleno ของ header) แบบ LIKE
+            ->when(!empty($saleno), function ($query) use ($saleno) {
+                $query->where('tb_planning_header.saleno', 'LIKE', '%'.$saleno.'%');
             })
             ->when(!empty($company), function ($query) use ($company) {
                 $query->where('tb_planning_header.company', $company);

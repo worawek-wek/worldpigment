@@ -158,22 +158,25 @@ class ReportController extends Controller
                 ->groupBy('planning_id');
         }
 
-        // แนบ steps + คำนวณ job_key (เวลาเริ่มขั้นตอนแรก; ถ้าไม่มีขั้นตอน = inplan 00:00) ให้แต่ละรายการ
+        // แนบ steps + คำนวณ job_key: "วัน" มาจาก inplan (tb_planning), "เวลา" มาจากขั้นตอนแรก
+        // (tb_planning_prod_method.start_time) — ถ้าไม่มีขั้นตอน/ไม่มีเวลา ใช้ 00:00:00; ไม่มี inplan → null
+        // (เดิมวันของ job_key อิง work_date ของขั้นตอน; เปลี่ยนมาใช้ inplan ให้ตรงกับ day_key — 15/08/2569)
         $rows->each(function ($it) use ($stepsByPlanning) {
             $steps = $stepsByPlanning->get($it->id, collect())->values();
             $it->steps = $steps;
 
-            if ($steps->isNotEmpty()) {
-                $first = $steps->first(); // เรียง work_date,start_time มาแล้วจาก query
-                $wd = $first->work_date ? substr($first->work_date, 0, 10) : null;
-                $st = $first->start_time ? substr($first->start_time, 0, 8) : '00:00:00';
-                $it->job_key = $wd ? ($wd.' '.$st) : ($it->inplan ? substr($it->inplan, 0, 10).' 00:00:00' : null);
+            $day = $it->inplan ? substr($it->inplan, 0, 10) : null; // วันของงาน = inplan
+            if ($day) {
+                // เวลาเริ่ม = start_time ของขั้นตอนแรก (query เรียง work_date,start_time มาแล้ว) ถ้ามี
+                $first = $steps->first();
+                $st = ($first && $first->start_time) ? substr($first->start_time, 0, 8) : '00:00:00';
+                $it->job_key = $day.' '.$st;
             } else {
-                $it->job_key = $it->inplan ? substr($it->inplan, 0, 10).' 00:00:00' : null;
+                $it->job_key = null;
             }
 
-            // วันของงาน (ใช้จัดกลุ่มคิวต่อวัน + กันลากข้ามวันฝั่ง UI) = วันที่ของ job_key
-            $it->day_key    = $it->job_key ? substr($it->job_key, 0, 10) : null;
+            // วันของงาน (ใช้จัดกลุ่มคิวต่อวัน + กันลากข้ามวันฝั่ง UI) = inplan (= วันที่ของ job_key)
+            $it->day_key    = $day;
             $it->queue_sort = $it->queue_sort === null ? null : (int) $it->queue_sort;
         });
 

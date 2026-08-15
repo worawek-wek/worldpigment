@@ -34,6 +34,10 @@
                                 <input id="searchInput" type="text" class="form-control"
                                 placeholder="รหัส Order, รหัสลูกค้า, ชื่อลูกค้า, ชื่อพนักงานผู้รับผิดชอบ">
                             </div>
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">รหัส Sale</label>
+                                <input id="searchSaleno" type="text" class="form-control" placeholder="saleno">
+                            </div>
                             <div class="col-md-3">
                                 <label class="form-label small mb-1">แผนก</label>
                                 <select id="searchCompany" class="form-select">
@@ -141,6 +145,7 @@
                 url: "{{ route('production.orderplan.datatable') }}",
                 data: function(d) {
                     d.search = $('#searchInput').val();
+                    d.saleno = $('#searchSaleno').val();
                     d.company = $('#searchCompany').val();
                     // ส่งค่าเสมอ ('all' | 'Y' | 'N') — ถ้าหา element ไม่เจอให้ใช้ค่าเริ่มต้น 'N'
                     d.end_order = $('#searchEndOrder').val() || 'N';
@@ -180,6 +185,12 @@
         oTable.draw();
     });
 
+    // ค้นหาด้วยรหัส Sale (saleno)
+    $(document).on('keyup', '#searchSaleno', function(e){
+        e.preventDefault();
+        oTable.draw();
+    });
+
     $(document).on('change', '#searchCompany', function(e){
         e.preventDefault();
         oTable.draw();
@@ -199,6 +210,7 @@
     // ล้างตัวกรองทั้งหมด
     $(document).on('click', '#btnClearFilter', function(){
         $('#searchInput').val('');
+        $('#searchSaleno').val('');
         $('#searchCompany').val('');
         // สถานะปิดงานกลับไปที่ค่าเริ่มต้น (ยังไม่ปิดงาน)
         $('#searchEndOrder').val('N');
