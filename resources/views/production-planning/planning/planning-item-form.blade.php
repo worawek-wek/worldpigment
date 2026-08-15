@@ -121,8 +121,10 @@
             </div>
             <div class="col-md-4 mb-3">
                 <label class="form-label">วันที่ต้องการรับ (custwant)</label>
+                {{-- data-original เก็บค่าเดิม (Y-m-d) ไว้เทียบว่ามีการแก้ไขไหม → ถ้าเปลี่ยนต้องยืนยันก่อนบันทึก --}}
                 <input type="text" name="custwant"
                     value="{{ $planning_item?->custwant ? substr($planning_item->custwant, 0, 10) : '' }}"
+                    data-original="{{ $planning_item?->custwant ? substr($planning_item->custwant, 0, 10) : '' }}"
                     class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
             </div>
             <div class="col-md-4 mb-3">

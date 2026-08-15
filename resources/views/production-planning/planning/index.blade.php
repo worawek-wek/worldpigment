@@ -554,10 +554,15 @@
         });
     }
 
-    $(document).on('click', '#btn_save_planning_item', function(e) {
-        e.preventDefault();
+    // แปลงวันที่ Y-m-d → d/m/Y สำหรับแสดงในกล่องยืนยัน (ค่าว่าง = "(ว่าง)")
+    function displayDateTH(v) {
+        if (!v) return '(ว่าง)';
+        var p = String(v).split('-');
+        return p.length === 3 ? (p[2] + '/' + p[1] + '/' + p[0]) : v;
+    }
 
-        var $btn = $(this);
+    // ส่งฟอร์มบันทึก Planning Item จริง (แยกออกมาเพื่อให้เรียกได้ทั้งแบบตรง ๆ และหลังกดยืนยัน)
+    function submitPlanningItem($btn) {
         var $form = $('#planning_item_form');
 
         // เรียก serialize_fn เพื่อแปลง semi/pigment rows → JSON ก่อน serialize form
@@ -565,7 +570,6 @@
         if (typeof serializeFn === 'function') serializeFn();
 
         var formData = $form.serialize() + '&_token={{ csrf_token() }}';
-        var planning_header_id = $form.find('input[name="planning_header_id"]').val();
 
         $btn.prop('disabled', true).html('<i class="ti ti-loader me-1"></i>กำลังบันทึก...');
 
@@ -586,13 +590,23 @@
                     // Refresh DataTable หลัก
                     oTable.draw();
 
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'สำเร็จ',
-                        text: response.message,
-                        timer: 1800,
-                        showConfirmButton: false
-                    });
+                    if (response.end_order_auto_closed) {
+                        // ปิดออเดอร์อัตโนมัติ (จบงานครบ) → แจ้งแบบให้กดรับทราบ เพราะ header ถูกล็อกแก้ไขแล้ว
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'ปิดออเดอร์อัตโนมัติ',
+                            text: response.message,
+                            confirmButtonText: 'รับทราบ'
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'สำเร็จ',
+                            text: response.message,
+                            timer: 1800,
+                            showConfirmButton: false
+                        });
+                    }
                 } else {
                     Swal.fire({
                         icon: 'warning',
@@ -610,6 +624,36 @@
                 $btn.prop('disabled', false).html('<i class="ti ti-device-floppy me-1"></i>บันทึก');
             }
         });
+    }
+
+    $(document).on('click', '#btn_save_planning_item', function(e) {
+        e.preventDefault();
+
+        var $btn  = $(this);
+        var $form = $('#planning_item_form');
+
+        // ตรวจว่ามีการแก้ไข "วันที่ต้องการรับ (custwant)" หรือไม่ (เทียบกับ data-original ที่ render มา)
+        // ถ้าเปลี่ยน → ให้ยืนยันก่อนบันทึก
+        var $cw     = $form.find('input[name="custwant"]');
+        var original = ($cw.attr('data-original') || '').trim();
+        var current  = ($cw.val() || '').trim();
+
+        if (current !== original) {
+            Swal.fire({
+                icon: 'question',
+                title: 'ยืนยันการแก้ไขวันที่ต้องการรับ',
+                html: 'วันที่ต้องการรับ (custwant) มีการเปลี่ยนแปลง<br>'
+                    + 'จาก <b>' + displayDateTH(original) + '</b> เป็น <b>' + displayDateTH(current) + '</b><br>'
+                    + 'ต้องการบันทึกหรือไม่?',
+                showCancelButton: true,
+                confirmButtonText: 'ยืนยันบันทึก',
+                cancelButtonText: 'ยกเลิก'
+            }).then(function (result) {
+                if (result.isConfirmed) submitPlanningItem($btn);
+            });
+        } else {
+            submitPlanningItem($btn);
+        }
     });
 
     // ---- จัดรูปแบบตัวเลขหลักพันสดขณะพิมพ์ (Quantity / Weight / Weight Produced) ----

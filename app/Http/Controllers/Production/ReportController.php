@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Department;
 use App\Models\Machine;
 use App\Models\Planning;
+use App\Models\SemiPigment;
 
 /**
  * รายงานการผลิต — เพิ่ม 2026-07-31
@@ -488,6 +489,7 @@ class ReportController extends Controller
                 'tb_planning.qc_time',    // เวลาที่ส่ง QC
                 'tb_planning.qc_status',  // สถานะ QC
                 'tb_planning.red_bill_code', // เลขที่ใบแดง
+                'tb_planning.senddate',      // กำหนดส่งทบทวน → แสดงในคอลัมน์ Revise (PDF)
             ])
             // แกนของรายงาน: เฉพาะงานที่ยังไม่ปิดงาน (นับ NULL ด้วย)
             ->where(function ($q) {
@@ -509,6 +511,63 @@ class ReportController extends Controller
             ->orderByRaw('tb_planning.inplan IS NULL, tb_planning.inplan ASC')
             ->orderBy('tb_planning.id', 'asc')
             ->get();
+
+        // ── ขาด Semi: ดึงคำร้องขอ semi ที่ทำไว้กับ "แผนการผลิตนี้" (tb_semi_pigment, type=semi)
+        //    เฉพาะสถานะ request/approved จับคู่ด้วย planning_id = tb_planning.id
+        //    (หมายเหตุ: tb_semi_pigment.itemno = รหัสของตัว semi ที่ขาด ไม่ใช่ itemno ของงาน
+        //     จึงต้องจับคู่ด้วย planning_id ไม่ใช่ itemno)
+        //    รวม 3 ฟิลด์จาก modal แก้ไข Semi (itemno ของ semi + semi_code + primary_color)
+        //    มาไว้ใน "คอลัมน์เดียว" (lack_semi) คั่นด้วย ", " — ตัดค่าว่าง/ซ้ำ
+        $planningIds = $rows->pluck('id')->filter()->unique()->values();
+
+        $semiByPlanning = collect();
+        if ($planningIds->isNotEmpty()) {
+            $semiByPlanning = SemiPigment::query()
+                // header ของ semi — ใช้เช็คว่าปิดออเดอร์หรือยัง
+                ->leftJoin('tb_planning_header as ph', 'ph.id', '=', 'tb_semi_pigment.planning_header_id')
+                ->where('tb_semi_pigment.type', 'semi')
+                ->whereIn('tb_semi_pigment.status', [SemiPigment::STATUS_REQUEST, SemiPigment::STATUS_APPROVED])
+                ->whereIn('tb_semi_pigment.planning_id', $planningIds)
+                // ดึงเฉพาะ semi ที่ยังไม่ปิดออเดอร์: tb_planning_header.end_order != 'Y' (รวม NULL)
+                ->where(function ($q) {
+                    $q->where('ph.end_order', '!=', 'Y')->orWhereNull('ph.end_order');
+                })
+                ->get([
+                    'tb_semi_pigment.planning_id',
+                    'tb_semi_pigment.itemno',
+                    'tb_semi_pigment.semi_code',
+                    'tb_semi_pigment.primary_color',
+                ])
+                ->groupBy('planning_id');
+        }
+
+        // ดึงค่าไม่ซ้ำ/ไม่ว่างของฟิลด์หนึ่งจากกลุ่ม record → array
+        $distinctValues = function ($group, string $field): array {
+            return $group
+                ->pluck($field)
+                ->map(fn ($v) => trim((string) $v))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+        };
+
+        foreach ($rows as $row) {
+            $group = $semiByPlanning->get($row->id) ?? collect();
+
+            if ($group->isEmpty()) {
+                $row->lack_semi = ''; // งานนี้ไม่มีคำร้องขอ semi → เว้นว่าง
+                continue;
+            }
+
+            // รหัสสินค้า (itemno ของ semi) ก่อน แล้วตามด้วย semi_code / primary_color (คั่นด้วย ", ")
+            $parts = array_merge(
+                $distinctValues($group, 'itemno'),
+                $distinctValues($group, 'semi_code'),
+                $distinctValues($group, 'primary_color'),
+            );
+            $row->lack_semi = implode(', ', $parts);
+        }
 
         return [
             'rows'    => $rows,
@@ -540,16 +599,16 @@ class ReportController extends Controller
 
         // คอลัมน์ตามผังฟอร์ม Access เดิม (Revise / น้ำ / ส่งชั่งสี ยังไม่มีฟิลด์ใน DB → เว้นว่าง)
         $headers = [
-            '#', 'แผนก', 'เลขที่ใบแดง', 'MACHINE No.', 'IN PLAN', 'Revise', 'สถานะปัจจุบัน', 'Cust Due',
+            '#', 'แผนก', 'เลขที่ใบแดง', 'MACHINE No.', 'IN PLAN', 'Revise', 'สถานะปัจจุบัน', 'ขาด semi', 'Cust Due',
             'Cust no', 'Cust Name', 'SaleNo', 'Order Date', 'Order No', 'PRODUCT NO',
             'LOT', 'น้ำ', 'หนัก', 'ส่งชั่งสี', 'เริ่มผลิต', 'วันที่ส่ง QC', 'เวลาที่ส่ง QC', 'สถานะ QC',
         ];
         $cols = [
             'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
             'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
-            'U', 'V',
+            'U', 'V', 'W',
         ];
-        $lastCol = 'V';
+        $lastCol = 'W';
 
         // หัวรายงาน
         $sheet->setCellValue('A1', 'รายงานการขาดวัตถุดิบ');
@@ -583,23 +642,24 @@ class ReportController extends Controller
             $sheet->setCellValueExplicit("C{$r}", $it->red_bill_code ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
             $sheet->setCellValueExplicit("D{$r}", $it->machine_no ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
             $sheet->setCellValue("E{$r}", $it->inplan ? \Carbon\Carbon::parse($it->inplan)->format('d/m/Y') : '-');
-            $sheet->setCellValue("F{$r}", '');  // Revise (ยังไม่มีฟิลด์)
+            $sheet->setCellValue("F{$r}", $it->senddate ? \Carbon\Carbon::parse($it->senddate)->format('d/m/Y') : '');  // Revise = senddate (กำหนดส่งทบทวน)
             $sheet->setCellValue("G{$r}", $it->planning_status ?: '-');
-            $sheet->setCellValue("H{$r}", $custDue ? \Carbon\Carbon::parse($custDue)->format('d/m/Y') : '-');
-            $sheet->setCellValueExplicit("I{$r}", $it->custno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-            $sheet->setCellValue("J{$r}", $it->cust_name ?: '-');
-            $sheet->setCellValueExplicit("K{$r}", $it->saleno ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-            $sheet->setCellValue("L{$r}", $it->order_date ? \Carbon\Carbon::parse($it->order_date)->format('d/m/Y') : '-');
-            $sheet->setCellValueExplicit("M{$r}", $it->orderno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-            $sheet->setCellValueExplicit("N{$r}", $it->itemno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-            $sheet->setCellValue("O{$r}", $it->lot ?: '-');
-            $sheet->setCellValue("P{$r}", '');  // น้ำ (ยังไม่มีฟิลด์)
-            $sheet->setCellValue("Q{$r}", $it->quantity !== null ? number_format($it->quantity, 2) : '-');
-            $sheet->setCellValue("R{$r}", '');  // ส่งชั่งสี (ยังไม่มีฟิลด์)
-            $sheet->setCellValue("S{$r}", $it->start_date ? \Carbon\Carbon::parse($it->start_date)->format('d/m/Y') : '');
-            $sheet->setCellValue("T{$r}", $it->qc_date ? \Carbon\Carbon::parse($it->qc_date)->format('d/m/Y') : '');
-            $sheet->setCellValue("U{$r}", $it->qc_time ? substr($it->qc_time, 0, 5) : '');
-            $sheet->setCellValue("V{$r}", $it->qc_status ?: '');
+            $sheet->setCellValue("H{$r}", $it->lack_semi ?: '');  // ขาด semi (itemno+semi_code+primary_color ของ semi)
+            $sheet->setCellValue("I{$r}", $custDue ? \Carbon\Carbon::parse($custDue)->format('d/m/Y') : '-');
+            $sheet->setCellValueExplicit("J{$r}", $it->custno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue("K{$r}", $it->cust_name ?: '-');
+            $sheet->setCellValueExplicit("L{$r}", $it->saleno ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue("M{$r}", $it->order_date ? \Carbon\Carbon::parse($it->order_date)->format('d/m/Y') : '-');
+            $sheet->setCellValueExplicit("N{$r}", $it->orderno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit("O{$r}", $it->itemno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue("P{$r}", $it->lot ?: '-');
+            $sheet->setCellValue("Q{$r}", '');  // น้ำ (ยังไม่มีฟิลด์)
+            $sheet->setCellValue("R{$r}", $it->quantity !== null ? number_format($it->quantity, 2) : '-');
+            $sheet->setCellValue("S{$r}", '');  // ส่งชั่งสี (ยังไม่มีฟิลด์)
+            $sheet->setCellValue("T{$r}", $it->start_date ? \Carbon\Carbon::parse($it->start_date)->format('d/m/Y') : '');
+            $sheet->setCellValue("U{$r}", $it->qc_date ? \Carbon\Carbon::parse($it->qc_date)->format('d/m/Y') : '');
+            $sheet->setCellValue("V{$r}", $it->qc_time ? substr($it->qc_time, 0, 5) : '');
+            $sheet->setCellValue("W{$r}", $it->qc_status ?: '');
             $r++;
         }
 

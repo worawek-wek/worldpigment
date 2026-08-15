@@ -4,6 +4,10 @@
         แผนการผลิต
         @if($planning_header)
             <span class="ms-1 opacity-75">— {{ $planning_header->planning_code }}</span>
+            {{-- Badge ปิดออเดอร์ — แสดงเมื่อ end_order = Y (รวมกรณี auto-close หลังจบงานครบ 15/08/2569) --}}
+            @if(($planning_header->end_order ?? 'N') === 'Y')
+                <span class="badge bg-success ms-2 align-middle"><i class="ti ti-lock me-1"></i>ปิดออเดอร์แล้ว</span>
+            @endif
         @endif
     </h5>
     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -81,6 +85,9 @@
                                    {{ ($planning_header->end_order ?? 'N') === 'Y' ? 'checked' : '' }}
                                    {{ (($planning_header->end_order ?? 'N') !== 'Y' && !$all_jobs_done) ? 'disabled' : '' }}>
                             <label class="form-check-label fw-semibold" for="planning_end_order">ปิดออเดอร์ (End Order)</label>
+                            @if(($planning_header->end_order ?? 'N') === 'Y')
+                                <span class="badge bg-success ms-2"><i class="ti ti-lock me-1"></i>ปิดออเดอร์แล้ว</span>
+                            @endif
                         </div>
                         @unless($all_jobs_done)
                             <div class="form-text text-warning">

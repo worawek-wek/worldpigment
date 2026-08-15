@@ -29,6 +29,7 @@
                 <th style="width: 5%;">IN PLAN</th>
                 <th style="width: 5%;">Revise</th>
                 <th style="width: 6%;">สถานะปัจจุบัน</th>
+                <th style="width: 12%;">ขาด semi</th>
                 <th style="width: 5%;">Cust Due</th>
                 <th style="width: 4%;">Cust no</th>
                 <th style="width: 12%;">Cust Name</th>
@@ -55,8 +56,9 @@
                     <td class="text-center">{{ $it->red_bill_code ?: '-' }}</td>
                     <td>{{ $it->machine_no ?: '-' }}</td>
                     <td class="text-center">{{ $it->inplan ? \Carbon\Carbon::parse($it->inplan)->format('d/m/y') : '-' }}</td>
-                    <td class="text-center"></td> {{-- Revise (ยังไม่มีฟิลด์) --}}
+                    <td class="text-center">{{ $it->senddate ? \Carbon\Carbon::parse($it->senddate)->format('d/m/y') : '' }}</td> {{-- Revise = senddate (กำหนดส่งทบทวน) --}}
                     <td class="status">{{ $it->planning_status ?: '' }}</td>
+                    <td class="status">{{ $it->lack_semi ?: '' }}</td>
                     <td class="text-center">{{ $custDue ? \Carbon\Carbon::parse($custDue)->format('d/m/y') : '-' }}</td>
                     <td class="text-center">{{ $it->custno ?: '-' }}</td>
                     <td>{{ $it->cust_name ?: '-' }}</td>
@@ -75,7 +77,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="22" class="text-center" style="padding: 14px;">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td>
+                    <td colspan="23" class="text-center" style="padding: 14px;">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td>
                 </tr>
             @endforelse
         </tbody>

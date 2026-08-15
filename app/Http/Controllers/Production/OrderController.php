@@ -175,6 +175,7 @@ class OrderController extends Controller
                 'plan_type'          => 'ORDER',
                 'mdate'              => $order->Mdate ?: null,
                 'custwant'           => $suborder->custwant ?: null,
+                'senddate'           => $suborder->senddate ?: null, // กำหนดส่งทบทวนจาก suborder → tb_planning.senddate
                 'remark'             => $suborder->Remark ?: null,
                 'red_bill_code'      => $order->Orderno, // เลขที่ Order → ใส่เป็นเลขที่ใบเบิก
                 'quantity'           => $order->netqty, // น้ำหนักสั่งตาม Order

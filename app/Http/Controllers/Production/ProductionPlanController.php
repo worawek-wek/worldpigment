@@ -530,6 +530,9 @@ class ProductionPlanController extends Controller
             }
         }
 
+        // ธงบอกว่ามีการปิดออเดอร์ให้อัตโนมัติในรอบนี้หรือไม่ (ใช้ประกอบข้อความตอบกลับ)
+        $auto_closed_order = false;
+
         DB::beginTransaction();
         try {
             // 1) บันทึก / อัปเดต planning หลัก
@@ -568,6 +571,20 @@ class ProductionPlanController extends Controller
             // 2) sync สถานะวิธีการผลิต (การ์ดสีน้ำเงิน) — ลบของเดิมแล้ว insert ใหม่จาก array ที่ส่งมา
             $this->syncProdMethods($planning_id, $request);
 
+            // 3) ปิดออเดอร์อัตโนมัติ (auto-close end_order):
+            //    เมื่อรอบนี้เป็นการ "ปิดงาน" item (end_job='Y') และทำให้ทุก item ในต้นไม้ของ header
+            //    จบงานครบ (allEndJobsDone) → ตั้ง end_order='Y' ให้เอง
+            //    - ใช้ predicate เดิม allEndJobsDone ซึ่งเป็นด่านเดียวกับการกดปิดออเดอร์เอง จึงคงเงื่อนไขเดิม
+            //    - ครอบคลุมทั้งกรณี header มี planning เดียว และกรณีเหลือ item สุดท้ายที่เพิ่งปิด
+            //    - ทำเฉพาะขา "ปิด" เท่านั้น (ไม่ auto-ปลด) และไม่แตะ end_close (ที่ต้องมีหมายเหตุ)
+            if (($request->end_job ?? 'N') === 'Y') {
+                $header = PlanningHeader::find($fields['planning_header_id']);
+                if ($header && ($header->end_order ?? 'N') !== 'Y' && $this->allEndJobsDone($header)) {
+                    $header->update(['end_order' => 'Y']);
+                    $auto_closed_order = true;
+                }
+            }
+
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
@@ -577,10 +594,16 @@ class ProductionPlanController extends Controller
             ]);
         }
 
+        $message = $is_update ? 'แก้ไขข้อมูล Planning สำเร็จ' : 'เพิ่มข้อมูล Planning สำเร็จ';
+        if ($auto_closed_order) {
+            $message .= ' และปิดออเดอร์ (End Order) อัตโนมัติแล้ว เพราะทุกรายการจบงานครบ';
+        }
+
         return response()->json([
             'status'             => 200,
-            'message'            => $is_update ? 'แก้ไขข้อมูล Planning สำเร็จ' : 'เพิ่มข้อมูล Planning สำเร็จ',
-            'planning_header_id' => $fields['planning_header_id']
+            'message'            => $message,
+            'planning_header_id' => $fields['planning_header_id'],
+            'end_order_auto_closed' => $auto_closed_order,
         ]);
     }
 
