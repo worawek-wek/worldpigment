@@ -100,6 +100,78 @@
 #orderItemsTable th { white-space: nowrap; font-size: .82rem; vertical-align: middle; }
 #orderItemsTable td { font-size: .85rem; }
 #orderItemsTable input.form-control-sm { min-width: 90px; }
+
+/* ══ ฟอร์มขออนุมัติราคาพิเศษ — โทนฟ้าตามฟอร์ม Access เดิม ══ */
+.pa-body { background: #eef6fb; }
+.pa-body .form-label { margin-bottom: .25rem; font-size: .85rem; font-weight: 600; }
+
+/* ช่องราคา 3 ช่อง + ช่องพิเศษ — กล่องเล็กเรียงแนวนอน */
+.pa-pricebox { width: 130px; }
+.pa-pricebox-cap {
+    font-size: .72rem;
+    font-weight: 600;
+    color: #5a6a78;
+    margin-bottom: .15rem;
+    white-space: nowrap;
+}
+/* กลุ่มราคาที่ตรงกับจำนวนสั่งซื้อ — เน้นกรอบให้เห็นว่าใช้ช่องไหน */
+.pa-pricebox.pa-active .form-control { border-color: #0d6efd; box-shadow: 0 0 0 .18rem rgba(13,110,253,.18); font-weight: 700; }
+.pa-pricebox.pa-active .pa-pricebox-cap { color: #0d6efd; }
+
+.pa-hl-yellow { background-color: #fff59d !important; font-weight: 600; }
+.pa-hl-pink   { background-color: #f8bbd0 !important; font-weight: 600; }
+.pa-sell      { background-color: #fff !important; color: #d32f2f; }
+
+/* กล่องข้อมูลราคาที่ตกลงไว้ (คอลัมน์ขวา) */
+.pa-sidebox {
+    background: #fff;
+    border: 1px solid #cfe2f3;
+    border-radius: .6rem;
+    padding: 1rem;
+}
+.pa-sidebox-title {
+    font-size: .95rem;
+    font-weight: 700;
+    color: #2c6ea4;
+    margin-bottom: .75rem;
+    padding-bottom: .45rem;
+    border-bottom: 2px solid #cfe2f3;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+#approvalGridTable th { white-space: nowrap; font-size: .8rem; }
+#approvalGridTable td { font-size: .85rem; }
+
+/* ══ ฟอร์มอนุมัติราคาใบสั่งซื้อ (morderAPPV) — โทนเทาอ่อนตามฟอร์มเดิม ══ */
+.oa-body { background: #f4f4f0; }
+.oa-body .form-label { margin-bottom: .25rem; font-size: .85rem; font-weight: 600; }
+.oa-checkrow { display: flex; flex-wrap: wrap; gap: 1.25rem; padding: .45rem .75rem; background: #fff; border: 1px solid #d9d9d2; border-radius: .375rem; }
+
+/* ตารางรายการ — พื้นเหลืองเหมือนฟอร์มเดิม */
+.oa-grid table { background: #ffffdd; }
+#oaItemsTable thead th { background: #e8e8d0; white-space: nowrap; font-size: .8rem; }
+#oaItemsTable tbody tr { cursor: pointer; }
+#oaItemsTable tbody tr:hover { background: #fff9a8; }
+#oaItemsTable tbody tr.oa-selected { background: #ffe082; font-weight: 600; }
+#oaItemsTable td { font-size: .85rem; }
+
+.oa-hl-blue  { background-color: #cfe9fb !important; }
+.oa-hl-green { background-color: #ccffcc !important; }
+.oa-sell     { background-color: #ffcdd2 !important; color: #c62828; font-size: 1.15rem; }
+
+/* แถบเดินระเบียนล่างฟอร์ม */
+.oa-nav {
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .5rem .75rem;
+    background: #e6e6de;
+    border: 1px solid #cfcfc4;
+    border-radius: .375rem;
+    font-size: .85rem;
+}
 </style>
 
 <body>
@@ -141,6 +213,15 @@
                     </div>
 
                     <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-label-warning border" onclick="orderApprovalOpen()">
+                            <i class="ti ti-gavel me-1"></i>
+                            อนุมัติราคาใบสั่งซื้อ
+                            <span class="badge bg-danger ms-1 d-none" id="oaQueueBadge">0</span>
+                        </button>
+                        <button class="btn btn-label-primary border" style="color: #1f158e;" onclick="approvalOpen()">
+                            <i class="ti ti-discount-check me-1"></i>
+                            ขออนุมัติราคาพิเศษ
+                        </button>
                         <button class="btn btn-primary" onclick="orderNew()">
                             <i class="ti ti-plus me-1"></i>
                             เพิ่มใบสั่งซื้อใหม่
@@ -291,6 +372,53 @@
     </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- Modal: อนุมัติราคาใบสั่งซื้อ (morderAPPV) — ผังตามฟอร์ม Access เดิม -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="modal modalHeadDecor fade" id="orderApprovalModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    อนุมัติราคาใบสั่งซื้อ
+                    <span class="fw-normal" style="font-size:.8rem;">(ไม่รวมทำ STOCK + ไม่รวมใบจอง R)</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            @include('order.order-approval')
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ปิด</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- Modal: ขออนุมัติราคาพิเศษ (MD) — ผังตามฟอร์ม Access เดิม           -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="modal modalHeadDecor fade" id="approvalModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">MK ขออนุมัติราคาพิเศษ</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            @include('order.price-approval')
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ปิด</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
     <!-- / Layout wrapper -->
     @include('layout/inc_js')
 <script>
@@ -365,6 +493,9 @@
         if (isNaN(n)) return '';
         return n.toLocaleString('en-US', {minimumFractionDigits: digits, maximumFractionDigits: digits});
     }
+    // หมายเหตุ: ช่องกรอกตัวเลขแบบใส่คอมมาอัตโนมัติ (class="js-comma") + ตัวช่วย
+    // numVal() / commaFmt() / stripCommaFields() อยู่ที่ layout/inc_js.blade.php (ใช้ร่วมทุกหน้า)
+
     // ตั้งค่าให้ flatpickr (รับ Y-m-d / datetime); ว่าง = เคลียร์
     function setFp(id, val){
         var el = document.getElementById(id);
@@ -439,7 +570,7 @@
         $('#o_Emp').val(o.Emp || '');
         $('#o_supno').val(o.supno || '');
         $('#o_RsvNo').val(o.RsvNo || '');
-        $('#o_netqty').val(o.netqty != null ? o.netqty : '');
+        $('#o_netqty').val(commaFmt(o.netqty, 2));
 
         // ประเภทอุตสาหกรรมของลูกค้า (ปุ่ม itype เดิม)
         $('#o_itype').val(res.customer && res.customer.type
@@ -452,8 +583,8 @@
         // กรณีสั่งทำสต๊อก
         setFp('o_sendend', o.sendend);
         $('#o_SendCust').val(o.SendCust != null ? o.SendCust : '');
-        $('#o_HMStore').val(o.HMStore != null ? o.HMStore : '');
-        $('#o_sendmth').val(o.sendmth != null ? o.sendmth : '');
+        $('#o_HMStore').val(commaFmt(o.HMStore, 2));
+        $('#o_sendmth').val(commaFmt(o.sendmth, 2));
 
         // checkbox (แปลงจาก -1 ของ Access มาแล้วฝั่ง server)
         $('#o_Send').prop('checked', !!o.Send);
@@ -486,7 +617,9 @@
         p = p || {};
         $('#o_fixed_price').val(fmtNum(p.fixed_price, 2));
         $('#o_price2').val(fmtNum(p.price2, 2));
-        $('#o_min_price').val(fmtNum(p.price2, 2));   // ฟอร์มเดิมโชว์เท่ากับราคาช่อง 2
+        // ราคาขั้นต่ำ = ราคาของกลุ่มที่ตรงกับน้ำหนักสั่ง (A ≥1,000 / B ≥500 / C ต่ำกว่า 500)
+        $('#o_min_price').val(fmtNum(p.min_price, 2));
+        $('#o_price_group').val(p.group ? p.group + ' — ' + (p.group_label || '') : '');
         $('#o_appv_price').val(fmtNum(p.appv_price, 2));
         $('#o_valid_to').val(fmtDate(p.valid_to));
     }
@@ -555,6 +688,367 @@
             title: 'ยังไม่เปิดใช้งานการบันทึก',
             html: 'หน้านี้เป็น UI + อ่านข้อมูลจริงเท่านั้น<br>' +
                   'การบันทึกจะเปิดใช้หลังยืนยันกติกาการเดินเลขที่ใบสั่ง (ตาราง <code>orderrun</code>) และคอลัมน์ที่แก้ได้'
+        });
+    }
+
+    // ════════════════════════════════════════════════════════
+    //  ฟอร์มอนุมัติราคาใบสั่งซื้อ (morderAPPV)
+    //  — คิวเดินทีละใบเหมือนฟอร์ม Access (ระเบียน N จาก M)
+    // ════════════════════════════════════════════════════════
+    var OA_URL   = "{{ $page_url }}/order-approval";
+    var oaQueue  = [];    // รายการใบที่รออนุมัติ
+    var oaIndex  = 0;     // ระเบียนที่กำลังแสดง (0-based)
+    var oaPrices = {};    // ราคาอ้างอิงของแต่ละเบอร์ในใบปัจจุบัน
+
+    // นับคิวรออนุมัติตั้งแต่เปิดหน้า → โชว์เป็น badge บนปุ่ม
+    $(function(){ oaLoadQueue(false); });
+
+    function oaLoadQueue(openAfter){
+        return $.getJSON(OA_URL + '/queue', function(res){
+            oaQueue = res.rows || [];
+            $('#oa_total').text(oaQueue.length);
+            var $badge = $('#oaQueueBadge');
+            if (oaQueue.length) $badge.text(oaQueue.length).removeClass('d-none');
+            else                $badge.addClass('d-none');
+            if (openAfter) oaGo(0);
+        });
+    }
+
+    function orderApprovalOpen(){
+        $('#orderApprovalModal').modal('show');
+        oaLoadQueue(true);
+    }
+
+    function orderApprovalRefresh(){ oaLoadQueue(true); }
+
+    // ไปยังระเบียนที่ i (i = -1 หมายถึงท้ายสุด)
+    function oaGo(i){
+        if (!oaQueue.length){ oaClear(); return; }
+        i = parseInt(i, 10);
+        if (isNaN(i) || i < 0) i = oaQueue.length - 1;
+        if (i > oaQueue.length - 1) i = oaQueue.length - 1;
+        oaIndex = i;
+        $('#oa_pos').val(i + 1);
+        oaLoadRecord(oaQueue[i].Orderno);
+    }
+    function oaStep(delta){
+        if (!oaQueue.length) return;
+        var i = oaIndex + delta;
+        if (i < 0) i = 0;
+        if (i > oaQueue.length - 1) i = oaQueue.length - 1;
+        oaGo(i);
+    }
+
+    function oaClear(){
+        $('#orderApprovalModal input[type="text"]').val('');
+        $('#orderApprovalModal input[type="checkbox"]').prop('checked', false);
+        $('#oa_pos').val('');
+        $('#oaItems').html('<tr><td colspan="7" class="text-center py-3 text-muted">ไม่มีใบสั่งซื้อที่รออนุมัติ</td></tr>');
+        oaPrices = {};
+    }
+
+    function oaLoadRecord(orderno){
+        $.getJSON(OA_URL + '/record', {orderno: orderno}, function(res){
+            if (!res.found){ oaClear(); return; }
+            fillOrderApproval(res);
+        });
+    }
+
+    function fillOrderApproval(res){
+        var o = res.order || {};
+        $('#oa_Mdate').val(fmtDateTime(o.Mdate));
+        $('#oa_Orderno').val(o.Orderno || '');
+        $('#oa_Company').val(o.Company || '');
+        $('#oa_PO').val(o.PO || '');
+        $('#oa_Custno').val(o.Custno || '');
+        $('#oa_Custname').val(o.Custname || '');
+        $('#oa_Emp').val(o.Emp || '');
+        $('#oa_sale').val(o.sale || '');
+        $('#oa_HMStore').val(fmtNum(o.HMStore, 2));
+        $('#oa_DVpoint').val(o.DVpoint || '');
+        $('#oa_SendCust').val(o.SendCust != null ? o.SendCust : '');
+
+        $('#oa_Send').prop('checked', !!o.Send);
+        $('#oa_RP').prop('checked', !!o.RP);
+        $('#oa_Spec').prop('checked', !!o.Spec);
+        $('#oa_Cer').prop('checked', !!o.Cer);
+
+        $('#oa_price').val(fmtNum(o.price, 2));
+        $('#oa_appv').prop('checked', !!o.appv);
+        $('#oa_appvDT').val(o.appvDT ? fmtDateTime(o.appvDT) : '');
+        // ท้ายฟอร์มเดิม: "(<เทอม> - <ส่วนลดเงินสด>%)"
+        $('#oa_term').val(o.term ? '(' + o.term + ' - ' + (o.cashdisc || 0) + '%)' : '');
+
+        oaPrices = res.prices || {};
+        oaRenderItems(res.items || []);
+    }
+
+    function oaRenderItems(items){
+        if (!items.length){
+            $('#oaItems').html('<tr><td colspan="7" class="text-center py-3 text-muted">ไม่มีรายการ</td></tr>');
+            oaFillPrice(null);
+            return;
+        }
+
+        var body = '';
+        items.forEach(function(r, i){
+            body += '<tr onclick="oaSelectItem(' + i + ', \'' + esc(r.Itemno || '') + '\')">'
+                 +  '<td class="text-primary">' + esc(r.Itemno || '-') + '</td>'
+                 +  '<td>' + esc(r.prodname || '-') + '</td>'
+                 +  '<td class="text-primary">' + esc(r.Lotno || '-') + '</td>'
+                 +  '<td class="text-end">' + (fmtNum(r.Stock, 2) || '0.00') + '</td>'
+                 +  '<td class="text-end">' + (fmtNum(r.Production, 2) || '0.00') + '</td>'
+                 +  '<td class="text-center text-primary">' + (fmtDate(r.senddate) || '-') + '</td>'
+                 +  '<td>' + esc(r.Remark || '') + '</td>'
+                 +  '</tr>';
+        });
+        $('#oaItems').html(body);
+        oaSelectItem(0, items[0].Itemno);   // เปิดมาเลือกแถวแรกให้เลย
+    }
+
+    function oaSelectItem(idx, itemno){
+        $('#oaItems tr').removeClass('oa-selected').eq(idx).addClass('oa-selected');
+        oaFillPrice(oaPrices[itemno] || null);
+    }
+
+    function oaFillPrice(p){
+        p = p || {};
+        $('#oa_rem1').val(p.rem1 || '');
+        $('#oa_rem2').val(p.rem2 || '');
+        $('#oa_fixed_price').val(fmtNum(p.fixed_price, 2));
+        $('#oa_price1').val(fmtNum(p.price1, 2));
+        $('#oa_price2').val(fmtNum(p.price2, 2));
+        $('#oa_price3').val(fmtNum(p.price3, 2));
+    }
+
+    // ปุ่มอนุมัติ — ยังไม่เขียนลง morder.appv / appvDT
+    function orderApprovalApprove(e){
+        e.preventDefault();
+        Swal.fire({
+            icon: 'info',
+            title: 'ยังไม่เปิดใช้งานการอนุมัติ',
+            html: 'ฟอร์มนี้เป็น UI + อ่านข้อมูลจริงเท่านั้น<br>' +
+                  'การกดอนุมัติจะเขียน <code>morder.appv</code> + <code>morder.appvDT</code> — ' +
+                  'รอยืนยันว่าใครมีสิทธิ์อนุมัติ และต้องบันทึกอะไรเพิ่มบ้าง'
+        });
+    }
+
+    // ════════════════════════════════════════════════════════
+    //  ฟอร์มขออนุมัติราคาพิเศษ (MD)
+    // ════════════════════════════════════════════════════════
+    var APPROVAL_URL = "{{ $page_url }}/price-approval";
+
+    // เปิดฟอร์ม — ระบุลูกค้า/เบอร์สินค้ามาด้วยก็ได้ (เช่นเรียกจากใบสั่งซื้อในอนาคต)
+    function approvalOpen(custno, itemno){
+        clearApprovalForm();
+        $('#approvalModal').modal('show');
+        if (custno){
+            $('#a_custno').val(custno);
+            onApprovalCustChange(custno, itemno);
+        }
+    }
+
+    function clearApprovalForm(){
+        $('#approvalModal input[type="text"], #approvalModal input[type="number"], #approvalModal input[type="password"]').val('');
+        $('#approvalModal textarea').val('');
+        $('#approvalModal input[type="checkbox"]').prop('checked', false);
+        $('#a_itemno').html('<option value="">— เลือกลูกค้าก่อน —</option>');
+        setFp('a_validto', '');
+        highlightPriceGroup();
+        renderApprovalGrid('ราคาที่ยืนไว้ของเบอร์นี้', ZCUST_COLS, []);
+    }
+
+    // เปลี่ยนรหัสลูกค้า → โหลดรายการเบอร์สินค้าของลูกค้ารายนั้น
+    var apvCustTimer = null;
+    function onApprovalCustChange(code, preselectItem){
+        code = (code || '').trim();
+        clearTimeout(apvCustTimer);
+        if (!code){
+            $('#a_itemno').html('<option value="">— เลือกลูกค้าก่อน —</option>');
+            $('#a_custname').val('');
+            $('#a_sale').val('');
+            return;
+        }
+        apvCustTimer = setTimeout(function(){
+            $.getJSON(APPROVAL_URL + '/items', {custno: code}, function(res){
+                if ($('#a_custno').val().trim() !== code) return;   // กันผลเก่ามาทับ
+                var html = '<option value="">— เลือกเบอร์สินค้า —</option>';
+                (res.items || []).forEach(function(it){
+                    html += '<option value="' + esc(it) + '">' + esc(it) + '</option>';
+                });
+                $('#a_itemno').html(html);
+                if (preselectItem) $('#a_itemno').val(preselectItem);
+                loadApprovalData();
+            });
+        }, 350);
+    }
+
+    // โหลดข้อมูลของคู่ (ลูกค้า, เบอร์สินค้า) มาเติมฟอร์ม
+    function loadApprovalData(){
+        var custno = $('#a_custno').val().trim();
+        var itemno = $('#a_itemno').val() || '';
+        if (!custno) return;
+
+        $.getJSON(APPROVAL_URL + '/data', {custno: custno, itemno: itemno}, function(res){
+            if (!res.found){
+                $('#a_custname').val('');
+                $('#a_sale').val('');
+                return;
+            }
+            fillApprovalForm(res);
+        });
+    }
+
+    function fillApprovalForm(res){
+        var c = res.customer || {};
+        $('#a_custname').val(c.name || '');
+        $('#a_sale').val(c.sale || '');
+
+        var r = res.request || {};
+        $('#a_ReqDate').val(r.ReqDate ? fmtDateTime(r.ReqDate) : '');
+        $('#a_price1').val(fmtNum(r.price1, 2));
+        $('#a_price2').val(fmtNum(r.price2, 2));
+        $('#a_price3').val(fmtNum(r.price3, 2));
+        $('#a_price').val(commaFmt(r.price, 2));
+        $('#a_weight').val(commaFmt(r.weight, 2));
+        $('#a_remark').val(r.remark || '');
+        $('#a_Appv').prop('checked', !!r.Appv);
+
+        // ราคาที่ตกลงไว้ล่าสุด (uprice)
+        var u = res.uprice || {};
+        $('#a_uprice').val(fmtNum(u.PRICE, 2));
+        $('#a_uprice_date').val(fmtDate(u.DATE, true));
+        $('#a_uprice_rem1').val(u.REM1 || '');
+        $('#a_uprice_rem2').val(u.REM2 || '');
+
+        // "อนุมัติราคาถึง" = วันที่ยืนราคาของเบอร์ที่เลือก (zcustprice.enddate)
+        var first = (res.rows || [])[0];
+        setFp('a_validto', first ? first.enddate : '');
+
+        highlightPriceGroup();
+        renderApprovalGrid('ราคาที่ยืนไว้ของเบอร์นี้', ZCUST_COLS, res.rows || []);
+    }
+
+    // เน้นช่องราคาที่ตรงกับจำนวนสั่งซื้อ (A ≥1,000 / B ≥500 / C ต่ำกว่า 500)
+    function highlightPriceGroup(){
+        var w = numVal('#a_weight');                 // ถอดคอมมาก่อน — '1,000' ต้องได้ 1000 ไม่ใช่ 1
+        $('.pa-pricebox').removeClass('pa-active');
+        if (w === null) { $('#a_group').val(''); return; }
+        var box = (w >= 1000) ? {id: '#a_box1', g: 'A'}
+                : (w >= 500)  ? {id: '#a_box2', g: 'B'}
+                :               {id: '#a_box3', g: 'C'};
+        $(box.id).addClass('pa-active');
+        $('#a_group').val(box.g);
+    }
+
+    // ── ตารางล่าง — ใช้ร่วมกันทั้งข้อมูลหลักและผลของปุ่มตรวจสอบ/ประวัติ ──
+    var ZCUST_COLS = [
+        {key: 'colorno', label: 'รหัสสี'},
+        {key: 'exprice', label: 'ราคาขาย', num: 2},
+        {key: 'enddate', label: 'ยืนราคาถึงวันที่', date: true},
+        {key: 'remark',  label: 'หมายเหตุ', wide: true}
+    ];
+    var OTHERCUST_COLS = [
+        {key: 'custno',   label: 'รหัสลูกค้า'},
+        {key: 'custname', label: 'ชื่อลูกค้า'},
+        {key: 'exprice',  label: 'ราคาขาย', num: 2},
+        {key: 'enddate',  label: 'ยืนราคาถึงวันที่', date: true},
+        {key: 'remark',   label: 'หมายเหตุ', wide: true}
+    ];
+    var HISTORY_COLS = [
+        {key: 'ReqDate', label: 'วันที่ขอราคา', datetime: true},
+        {key: 'weight',  label: 'จำนวนสั่งซื้อ', num: 2},
+        {key: 'group',   label: 'กลุ่ม'},
+        {key: 'price',   label: 'ราคาขายครั้งนี้', num: 2},
+        {key: 'price1',  label: 'ช่อง A', num: 2},
+        {key: 'price2',  label: 'ช่อง B', num: 2},
+        {key: 'price3',  label: 'ช่อง C', num: 2},
+        {key: 'Appv',    label: 'อนุมัติ', bool: true},
+        {key: 'remark',  label: 'หมายเหตุ', wide: true}
+    ];
+    var RESIN_COLS = [
+        {key: 'Orderno',     label: 'เลขที่ใบสั่ง'},
+        {key: 'Qdate',       label: 'วันที่', date: true},
+        {key: 'OrderPrice',  label: 'ราคาต่อใบสั่ง', num: 2},
+        {key: 'wage',        label: 'ค่าแรง', num: 2},
+        {key: 'Resin1Code',  label: 'รหัสเม็ด'},
+        {key: 'Resin1Price', label: 'ราคาเม็ด', num: 2},
+        {key: 'Resin1Per',   label: '%'},
+        {key: 'Diff',        label: 'ส่วนต่าง', num: 2},
+        {key: 'status',      label: 'สถานะ'}
+    ];
+
+    function renderApprovalGrid(title, cols, rows){
+        $('#a_gridTitle').text(title);
+        $('#a_gridCount').text(rows.length ? ('ระเบียน ' + rows.length + ' รายการ') : '');
+
+        var head = '<tr>';
+        cols.forEach(function(c){
+            head += '<th' + (c.wide ? ' style="min-width:320px;"' : '') + '>' + esc(c.label) + '</th>';
+        });
+        $('#a_gridHead').html(head + '</tr>');
+
+        if (!rows.length){
+            $('#a_gridBody').html('<tr><td colspan="' + cols.length + '" class="text-center py-3 text-muted">ไม่มีข้อมูล</td></tr>');
+            return;
+        }
+
+        var body = '';
+        rows.forEach(function(r){
+            body += '<tr>';
+            cols.forEach(function(c){
+                var v = r[c.key], cls = '', txt;
+                if (c.num !== undefined)      { txt = fmtNum(v, c.num); cls = ' class="text-end"'; }
+                else if (c.datetime)          { txt = fmtDateTime(v);   cls = ' class="text-center"'; }
+                else if (c.date)              { txt = fmtDate(v);       cls = ' class="text-center"'; }
+                else if (c.bool)              { txt = v ? 'อนุมัติแล้ว' : '-'; cls = ' class="text-center"'; }
+                else                          { txt = v == null ? '' : String(v); }
+                body += '<td' + cls + '>' + esc(txt || '-') + '</td>';
+            });
+            body += '</tr>';
+        });
+        $('#a_gridBody').html(body);
+    }
+
+    // ── ปุ่มตรวจสอบ / ประวัติ ──
+    function approvalOtherItems(){
+        var custno = $('#a_custno').val().trim();
+        if (!custno) return;
+        $.getJSON(APPROVAL_URL + '/other-items', {custno: custno}, function(res){
+            renderApprovalGrid(res.title, ZCUST_COLS, res.rows || []);
+        });
+    }
+    function approvalOtherCustomers(){
+        var itemno = $('#a_itemno').val() || '';
+        if (!itemno) return;
+        $.getJSON(APPROVAL_URL + '/other-customers', {itemno: itemno}, function(res){
+            renderApprovalGrid(res.title, OTHERCUST_COLS, res.rows || []);
+        });
+    }
+    function approvalHistory(){
+        var custno = $('#a_custno').val().trim();
+        var itemno = $('#a_itemno').val() || '';
+        if (!custno || !itemno) return;
+        $.getJSON(APPROVAL_URL + '/history', {custno: custno, itemno: itemno}, function(res){
+            renderApprovalGrid(res.title, HISTORY_COLS, res.rows || []);
+        });
+    }
+    function approvalResinHistory(){
+        var itemno = $('#a_itemno').val() || '';
+        if (!itemno) return;
+        $.getJSON(APPROVAL_URL + '/resin-history', {itemno: itemno}, function(res){
+            renderApprovalGrid(res.title, RESIN_COLS, res.rows || []);
+        });
+    }
+    function approvalRefresh(){ loadApprovalData(); }
+
+    // เพิ่ม/บันทึก, ลบรายการ, พิมพ์ — ยังไม่เปิดใช้งาน (รอยืนยันสิทธิ์อนุมัติ + คอลัมน์ที่แก้ได้)
+    function approvalSave(){
+        Swal.fire({
+            icon: 'info',
+            title: 'ยังไม่เปิดใช้งาน',
+            html: 'ฟอร์มนี้เป็น UI + อ่านข้อมูลจริงเท่านั้น<br>' +
+                  'การบันทึก/ลบ/พิมพ์ จะเปิดใช้หลังยืนยันวิธีตรวจรหัสผ่าน MD และคอลัมน์ที่แก้ได้'
         });
     }
 

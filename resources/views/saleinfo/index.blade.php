@@ -743,7 +743,9 @@
                 // เติมทุกช่องที่ชื่อตรงกับคอลัมน์ (ยกเว้น checkbox จัดการแยก)
                 ['CustNo', 'st_code', 'ITEMNO', 'DATE', 'NotifyDate', 'MOQ', 'PRICE', 'REM1', 'PackRem', 'Label', 'Author']
                     .forEach(function (name) {
-                        $('#form_saleinfo [name="' + name + '"]').val(d[name] ?? '');
+                        const $f = $('#form_saleinfo [name="' + name + '"]');
+                        // ช่องตัวเลขที่ใส่คอมมา (MOQ / PRICE) → จัดรูปแบบก่อนเติม
+                        $f.val($f.hasClass('js-comma') ? commaFmt(d[name], 2) : (d[name] ?? ''));
                     });
                 // NoAcp ปิดไว้ก่อน — ช่องในฟอร์มถูกคอมเมนต์ไว้ รอลูกค้ายืนยันความหมาย
                 // $('#saleinfo_noacp').prop('checked', Number(d.NoAcp) === 1);
@@ -803,6 +805,7 @@
         const isEdit = $('#form_saleinfo [name="_mode"]').val() === 'edit';
         const url    = "{{ $page_url }}/" + (isEdit ? 'update' : 'insert');
 
+        stripCommaFields(this);                 // '1,234.50' → '1234.50' ก่อนส่งขึ้น server
         const formData = $(this).serializeArray();
         if (isEdit) {
             formData.push({ name: 'id', value: $('#form_saleinfo [name="_pk"]').val() });

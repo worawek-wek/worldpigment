@@ -38,6 +38,8 @@ worldpigment/
 │   │   ├── Production/          # วางแผนการผลิต
 │   │   ├── ColorMatchingController.php
 │   │   ├── OrderController.php      # เมนู O-Order — ฟอร์มบันทึกใบสั่งซื้อ morder/suborder (12/08/2569)
+│   │   ├── PriceApprovalController.php  # ฟอร์มลูกของ O-Order — ขออนุมัติราคาพิเศษ appvreq (12/08/2569)
+│   │   ├── OrderApprovalController.php  # ฟอร์มลูกของ O-Order — อนุมัติราคาใบสั่งซื้อ morder.appv (12/08/2569)
 │   │   ├── QuotationController.php
 │   │   ├── CustomerController.php
 │   │   ├── ReportController.php
@@ -198,12 +200,62 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 
 **กล่องราคา** (อ่านอย่างเดียว, `OrderController::priceData`): ราคาที่กำหนดไว้ = `uprice.PRICE` (คู่ CustNo+ITEMNO) · ราคาช่อง 1/2/3 + ราคาอนุมัติ = `appvreq.price1/2/3` + `price` (ใบขออนุมัติล่าสุดของคู่ custno+itemno) · ยืนราคาถึง = `zcustprice.enddate` · ราคาทุน = `pdprice.Price`
 
-**ยังไม่ยืนยัน 3 จุด** (ทำ UI ไว้แล้วแต่ยังไม่ผูกข้อมูล/ผูกแบบอนุมาน): "ราคาต้องไม่ต่ำกว่า" (ตอนนี้ผูกกับราคาช่อง 2 ตามที่เห็นบนฟอร์มต้นฉบับ), "กลุ่มราคา", "ขั้นต่ำ"
+**กลุ่มราคา A/B/C** (นิยามอยู่ที่ `PriceApprovalController::PRICE_GROUPS`, เรียกผ่าน `groupOf($weight)`): `price1` = กลุ่ม A (1,000 kg.up) · `price2` = กลุ่ม B (500 kg.up) · `price3` = กลุ่ม C (under 500 kg.) — ฟอร์มใบสั่งซื้อใช้ `morder.netqty` หากลุ่ม แล้วโชว์ราคาของกลุ่มนั้นเป็น "ราคาต้องไม่ต่ำกว่า"
 
-**checkbox แบบ Access:** เก็บ `-1` = ติ๊ก, `0`/`NULL` = ไม่ติ๊ก → แปลงด้วย `OrderController::checked()` ก่อนส่งให้ฟอร์ม อย่าเทียบ `== 1`
+**ยังไม่ยืนยัน:** ช่อง "ขั้นต่ำ" (ทำ UI ไว้แล้วแต่ยังไม่ผูกข้อมูล)
+
+**checkbox แบบ Access:** เก็บ `-1` = ติ๊ก, `0`/`NULL` = ไม่ติ๊ก → แปลงด้วย `OrderController::checked()` / `PriceApprovalController::checked()` ก่อนส่งให้ฟอร์ม อย่าเทียบ `== 1`
+
+### ฟอร์มลูก: ขออนุมัติราคาพิเศษ (MD) — 12/08/2569
+
+แปลงจากฟอร์ม Access **"MK ขออนุมัติราคาพิเศษ"** — `PriceApprovalController` + route ใต้ prefix `order/price-approval/*` + view `order/price-approval.blade.php` (modal ในหน้า `/order`) **สถานะ: UI + อ่านอย่างเดียว** (ปุ่ม เพิ่ม/บันทึก · ลบรายการ · พิมพ์ ยังไม่เปิดใช้งาน)
+
+| ช่องบนฟอร์ม | คอลัมน์ |
+|---|---|
+| วันที่ขอราคา | `appvreq.ReqDate` (PK ร่วมกับ custno + itemno) |
+| รหัสลูกค้า · **# 15** · ชื่อลูกค้า | `appvreq.custno` · `customer.sale` (รหัสพนักงานขาย) · `customer.name` |
+| รหัสสินค้า | `appvreq.itemno` — ตัวเลือกรวมจาก `uprice.ITEMNO` + `zcustprice.colorno` ของลูกค้ารายนั้น |
+| ราคา 3 ช่อง | `appvreq.price1` / `price2` / `price3` (= กลุ่ม A/B/C) |
+| ราคาขายครั้งนี้ / จำนวนสั่งซื้อ | `appvreq.price` / `weight` |
+| หมายเหตุ การปรับราคา | `appvreq.remark` |
+| อนุมัติ | `appvreq.Appv` |
+| อนุมัติราคาถึง | `zcustprice.enddate` |
+| ตารางล่าง (รหัสสี · ราคาขาย · ยืนราคาถึงวันที่ · หมายเหตุ) | `zcustprice` (`colorno` · `exprice` · `enddate` · `remark`) |
+
+ปุ่มตรวจสอบ/ประวัติทั้ง 4 ปุ่มโหลดผลลงตารางล่างตัวเดียวกัน: **ตรวจสอบเบอร์อื่น** → `zcustprice` ทุกเบอร์ของลูกค้า · **ประวัติของเบอร์นี้** → `appvreq` ทุกครั้งของคู่ custno+itemno · **ตรวจสอบเฉพาะร้าน** → `zcustprice` ของลูกค้ารายอื่นที่ใช้เบอร์นี้ · **ประวัติราคาเม็ด CP** → `cp_itemprice` ของเบอร์นี้
+
+**ยังไม่ยืนยัน:** ที่เก็บ "รหัสผ่าน MD", คอลัมน์ของ checkbox "ต้นทุนวัตถุดิบปรับขึ้น…", และช่องราคา 2 ช่องขวา ("3-4 nn" / "1-2 nn")
+
+### ฟอร์มลูก: อนุมัติราคาใบสั่งซื้อ (morderAPPV) — 12/08/2569
+
+แปลงจากฟอร์ม Access **"morderAPPV"** — `OrderApprovalController` + route ใต้ prefix `order/order-approval/*` + view `order/order-approval.blade.php` (modal ในหน้า `/order`, เดินทีละระเบียนเหมือนฟอร์มเดิม) **สถานะ: UI + อ่านอย่างเดียว** (ปุ่ม "อนุมัติ" ยังไม่เขียน DB)
+
+**คิวรออนุมัติ** (`queueQuery()`) = `morder` ที่ `appv IS NULL` **ตัด**ใบจอง R (ตัวอักษรที่ 2 ของ `Orderno` = `R`) และ**ตัด**ใบสั่งทำสต๊อก (`HMStore`/`SendCust`/`sendmth` มีค่า) — ตรงกับข้อความกำกับบนหัวฟอร์มเดิม "ไม่รวมทำ STOCK + ไม่รวมใบจอง R"
+
+| ช่องบนฟอร์ม | คอลัมน์ |
+|---|---|
+| วัน-เวลา / เลขที่ใบสั่ง / แผนกที่ผลิต / PO | `morder.Mdate` / `Orderno` / `Company` / `PO` |
+| รหัสลูกค้า + ชื่อ / ผู้บันทึก | `morder.Custno` + `customer.name` / `morder.Emp` |
+| **ผู้ขาย** | `customer.sale` (ค่าเดียวกับ `morder.supno`) |
+| น.น.Stock คงเหลือปัจจุบัน / ส่งลูกค้าภายใน (เดือน) | `morder.HMStore` / `SendCust` |
+| ส่งก่อนได้ / RP / Spec / Cer / สถานที่ส่ง | `morder.Send` / `RP` / `Spec` / `Cer` / `DVpoint` |
+| ตารางเหลือง: รหัสสินค้า · ชื่อสินค้า · Lot No · **S** · **P** · กำหนดทบทวน · หมายเหตุ | `suborder.Itemno` · `prodname` · `Lotno` · `Stock` · `Production` · `senddate` · `Remark` |
+| REM1 / REM2 / ราคาที่กำหนดไว้ | `uprice.REM1` / `REM2` / `PRICE` (ของเบอร์ที่เลือกในตาราง) |
+| ราคา1 / ราคา2 / ราคา3 | `appvreq.price1` / `price2` / `price3` (= กลุ่ม A/B/C) |
+| `(<เทอม> - <ส่วนลด>%)` | `customer.term` + `customer.cashdisc` |
+| ราคาขายครั้งนี้ | `morder.price` |
+| **อนุมัติ / วัน-เวลา อนุมัติ** | **`morder.appv`** (-1 = อนุมัติ) / **`morder.appvDT`** |
+
+**ยังไม่ยืนยัน:** ช่อง "ผู้บริหาร" (กล่องเขียว) — ยังไม่พบคอลัมน์ที่เก็บ
 
 ## ข้อตกลงและข้อควรระวัง (Conventions & Gotchas)
 
+- **ช่องกรอกตัวเลขแบบใส่คอมมาอัตโนมัติ** (`resources/views/layout/inc_js.blade.php`, 18/08/2569): ช่องกรอกราคา/น้ำหนัก/จำนวน **ห้ามใช้ `type="number"`** (แสดงคอมมาไม่ได้) ให้ใช้ `type="text" class="js-comma"` แทน — ตัวช่วยกลางอยู่ใน `inc_js` จึงใช้ได้ทุกหน้าโดยไม่ต้อง include เพิ่ม
+  - `data-decimals="0"` = จำนวนเต็ม (ไม่ระบุ = ทศนิยม 2 ตำแหน่ง)
+  - **ค่าที่แสดงในช่องมีคอมมาเสมอ** → อ่านค่าด้วย `numVal(sel)` / `numOf(value)` และเรียก `stripCommaFields(form)` **ก่อน** `serialize()` / `new FormData()` ทุกครั้ง ไม่งั้น `'1,234.50'` จะลง DB เป็น `1.00`
+  - เติมค่าจาก DB ลงช่องด้วย `commaFmt(v, decimals)`
+  - ที่ใช้อยู่: Order (`o_netqty`/`o_HMStore`/`o_sendmth`/`a_price`/`a_weight`), กำหนดราคา (`MOQ`/`PRICE`), เทียบสี (`Wage`), ใบเสนอราคา (ทุกคอลัมน์ที่ `colRegistry` ตั้ง `num => true`)
+  - ที่**ตั้งใจไม่ใส่**: ตัวคูณ/หาร/บวกในตารางเงื่อนไขราคา, `PHR` (ทศนิยม 4 ตำแหน่ง), จำนวนเดือน, ช่องเดินระเบียน — ไม่ใช่ตัวเลขหลักพัน
 - Model ใช้ `protected $guarded = []` (เปิด mass assignment ทั้งหมด) และระบุ `protected $table = 'tb_...'` ตรง ๆ
 - Schema เป็นแบบ **database-first**: ตาราง/คอลัมน์จำนวนมากถูกสร้าง/เพิ่มมือใน DB โดยตรง migration ที่มีเป็นเพียงบางส่วน (ส่วนใหญ่เป็นการ *alter* / *create* เฉพาะจุด) — **อย่าคิดว่า migration อธิบาย schema ได้ครบ** ให้ตรวจสอบจาก database จริงเสมอ
 - **Migration ต้อง idempotent** (06/08/2569): เพราะ DB มักมีตาราง/คอลัมน์อยู่ก่อนแล้ว การ `add column` / `create table` ตรง ๆ จะพัง (`Duplicate column` / table exists) ตอนรัน `php artisan migrate` — ให้ครอบด้วย `Schema::hasColumn(...)` / `Schema::hasTable(...)` เสมอ (migration เก่าหลายไฟล์ถูกแก้ให้เป็นแบบนี้แล้ว)

@@ -114,14 +114,17 @@
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">MOQ <span class="text-muted fw-normal">(kg)</span></label>
-                                        <input type="number" step="0.01" name="MOQ" class="form-control text-end">
+                                        {{-- input ธรรมดา + คอมมาอัตโนมัติ (ถอดคอมมาก่อน submit ด้วย stripCommaFields) --}}
+                                        <input type="text" name="MOQ" class="form-control text-end js-comma"
+                                            inputmode="decimal" autocomplete="off" placeholder="0.00">
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1 text-danger">
                                             <i class="ti ti-asterisk-simple"></i>
                                             ราคา หรือ ค่าแรง+ค่าสี <span class="text-muted fw-normal">(เช่น 46.72)</span>
                                         </label>
-                                        <input type="number" step="0.01" name="PRICE" class="form-control text-end" required>
+                                        <input type="text" name="PRICE" class="form-control text-end js-comma"
+                                            inputmode="decimal" autocomplete="off" placeholder="0.00" required>
                                     </div>
                                     {{-- ปิดไว้ก่อน: NoAcp เป็นคอลัมน์ใน uprice ของเดิม (มีค่า 1 อยู่ 114 จาก 60,603 แถว)
                                          แต่ "ไม่รับ Order เบอร์นี้" เป็นการเดาความหมายจากชื่อคอลัมน์ — ไม่มีช่องนี้ในจอเก่า
