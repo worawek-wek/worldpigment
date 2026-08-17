@@ -6,22 +6,83 @@
     .app-brand .layout-menu-toggle i {
         color: #54BAB9 !important;
     }
+
+    /* ── ความกว้างแถบเมนู ── (ธีมตั้งไว้ 16.25rem)
+       แก้ที่ --wp-menu-w จุดเดียว แต่ต้อง override 2 ที่ให้เข้าคู่กันเสมอ:
+         1) ความกว้างของตัวแถบเมนู
+         2) padding-left ของ .layout-page (พื้นที่เนื้อหาที่เว้นไว้ให้เมนู fixed)
+       ถ้าแก้แค่ข้อ 1 จะเหลือช่องว่างคั่นระหว่างเมนูกับเนื้อหา */
+    :root { --wp-menu-w: 13.25rem; }
+    .menu-vertical,
+    .menu-vertical .menu-block,
+    .menu-vertical .menu-inner > .menu-item,
+    .menu-vertical .menu-inner > .menu-header {
+        width: var(--wp-menu-w);
+    }
+    @media (min-width: 1200px) {
+        .layout-menu-fixed:not(.layout-menu-collapsed) .layout-page,
+        .layout-menu-fixed-offcanvas:not(.layout-menu-collapsed) .layout-page {
+            padding-left: var(--wp-menu-w);
+        }
+    }
+
+    /* ── โลโก้หัวเมนู ──
+       คุมความสูงจุดเดียวที่ --wp-brand-h (เดิม height="100%" ทำให้รูปยืดเต็มพื้นที่)
+       ใช้ class ของเราเอง ไม่ใช่ .app-brand-img ของธีม เพราะธีมจะซ่อนรูปนั้นตอนพับเมนู */
+    :root { --wp-brand-h: 110px; }
+    .wp-brand-img {
+        height: var(--wp-brand-h);
+        width: auto;
+        object-fit: contain;
+    }
+    /* li ที่ห่อโลโก้ไว้ในรายการเมนู — ไม่ใช่ .menu-item จึงต้องเคลียร์ list-style เอง */
+    .wp-brand-li {
+        list-style: none;
+        margin-bottom: .25rem;
+        /* .menu-inner เป็น flex column ที่ align-items: flex-start → li จะหดตามเนื้อหา
+           ต้องยืดเต็มความกว้างแถบเมนู ปุ่มพับ (ms-auto) ถึงจะไปสุดขอบขวาได้จริง */
+        width: 100%;
+        align-self: stretch;
+    }
+    /* ปุ่มพับเมนู — ธีมเว้นระยะขวาไว้เยอะ (margin .875rem + padding .5rem) ทำให้ปุ่มลอยเข้ามาข้างใน
+       ล้างของธีมทิ้ง แล้วเว้นช่องไฟขวาเองที่ --wp-brand-gap จุดเดียว */
+    :root { --wp-brand-gap: .5rem; }
+    .wp-brand-li .app-brand {
+        position: relative;
+        margin-right: 0;
+        padding-right: var(--wp-brand-gap);
+        justify-content: center;      /* โลโก้อยู่กึ่งกลางแถบเมนู */
+    }
+    /* ปุ่มพับเมนูถอดออกจากการจัดวางแบบ flex (ไม่งั้นจะดันโลโก้ให้เยื้องซ้าย)
+       แล้วตรึงไว้ชิดขวากึ่งกลางแนวตั้งแทน */
+    .wp-brand-li .app-brand .layout-menu-toggle {
+        position: absolute;
+        top: 50%;
+        right: var(--wp-brand-gap);
+        transform: translateY(-50%);
+        margin-left: 0;
+        padding-right: 0;
+    }
 </style>
 <aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
-    <div class="app-brand">
-        <a href="javascript:void(0)" class="app-brand-link">
-            <img src="assets/img/illustrations/main.png" alt="" class="mw-100" height="100%">
-        </a>
-
-        <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">
-            <i class="ti menu-toggle-icon d-none d-xl-block ti-sm align-middle"></i>
-            <i class="ti ti-x d-block d-xl-none ti-sm align-middle"></i>
-        </a>
-    </div>
-
     <div class="menu-inner-shadow"></div>
 
     <ul class="menu-inner py-1">
+        {{-- โลโก้อยู่ "ใน" รายการเมนู (ไม่ใช่ปักไว้นอกกล่อง scroll เหมือนเดิม)
+             เวลาเลื่อนเมนูยาว ๆ โลโก้จึงเลื่อนหายขึ้นไปด้วย ได้พื้นที่เมนูเพิ่ม --}}
+        <li class="wp-brand-li">
+            <div class="app-brand">
+                <a href="javascript:void(0)" class="app-brand-link">
+                    {{-- โลโก้ — คุมขนาดที่ --wp-brand-h ในบล็อก style ด้านบน (เดิม height="100%" ทำให้ยืดเต็มพื้นที่) --}}
+                    <img src="assets/img/illustrations/main.png" alt="" class="wp-brand-img mw-100">
+                </a>
+
+                <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">
+                    <i class="ti menu-toggle-icon d-none d-xl-block ti-sm align-middle"></i>
+                    <i class="ti ti-x d-block d-xl-none ti-sm align-middle"></i>
+                </a>
+            </div>
+        </li>
 
         @php
             $pageName = request()->route()->getName();
