@@ -30,4 +30,10 @@ class Role extends Model
     {
         return $this->permissions->pluck('menu_key')->all();
     }
+
+    // id ของ role ที่ถูกตั้งเป็นค่าเริ่มต้นสำหรับพนักงานใหม่ (ไม่มี = null)
+    public static function defaultRoleId(): ?int
+    {
+        return static::where('is_default', 'Y')->value('id');
+    }
 }

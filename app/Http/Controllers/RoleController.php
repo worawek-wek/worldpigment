@@ -22,7 +22,7 @@ class RoleController extends Controller
     {
         $roles = Role::query()
             ->withCount('employees')
-            ->select(['id', 'name', 'description', 'is_active']);
+            ->select(['id', 'name', 'description', 'is_active', 'is_default']);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -44,6 +44,14 @@ class RoleController extends Controller
             ->addColumn('employees_count', function ($role) {
                 return $role->employees_count;
             })
+            // แสดงชื่อ Role พร้อม badge "ค่าเริ่มต้น" เมื่อ role นี้เป็นค่าเริ่มต้นของพนักงานใหม่
+            ->editColumn('name', function ($role) {
+                $name = e($role->name);
+                if ($role->is_default === 'Y') {
+                    $name .= ' <span class="badge bg-label-primary">ค่าเริ่มต้น</span>';
+                }
+                return $name;
+            })
             ->addColumn('status_badge', function ($role) {
                 if ($role->is_active === 'Y') {
                     return '<span class="badge bg-label-success">เปิดใช้งาน</span>';
@@ -58,7 +66,7 @@ class RoleController extends Controller
                             <i class="ti ti-trash ti-sm"></i>
                         </button>';
             })
-            ->rawColumns(['status_badge', 'btnedit'])
+            ->rawColumns(['name', 'status_badge', 'btnedit'])
             ->make(true);
     }
 
@@ -90,6 +98,7 @@ class RoleController extends Controller
             ],
             'description'   => 'nullable|string|max:255',
             'is_active'     => 'nullable|in:Y,N',
+            'is_default'    => 'nullable|in:Y,N',
             'permissions'   => 'nullable|array',
             'permissions.*' => 'string',
         ]);
@@ -105,14 +114,18 @@ class RoleController extends Controller
         $validKeys = $this->allMenuKeys();
         $selected  = array_values(array_intersect((array) $request->permissions, $validKeys));
 
+        // switch ในฟอร์ม: ติ๊ก = ตั้งเป็นค่าเริ่มต้นของพนักงานใหม่ (Y) มีได้ role เดียวในระบบ
+        $isDefault = $request->has('is_default');
+
         $fields = [
             'name'        => $request->name,
             'description' => $request->description,
             'is_active'   => $request->has('is_active') ? 'Y' : 'N',
+            'is_default'  => $isDefault ? 'Y' : 'N',
         ];
 
         try {
-            DB::transaction(function () use ($request, $is_edit, $fields, $selected, &$role) {
+            DB::transaction(function () use ($request, $is_edit, $fields, $selected, $isDefault, &$role) {
                 if ($is_edit) {
                     $role = Role::find($request->id);
                     if ($role) {
@@ -120,6 +133,13 @@ class RoleController extends Controller
                     }
                 } else {
                     $role = Role::create($fields);
+                }
+
+                // บังคับให้มี role ค่าเริ่มต้นได้แค่ตัวเดียว: เมื่อตั้ง role นี้เป็น default ให้ปลด default ของตัวอื่นทั้งหมด
+                if ($role && $isDefault) {
+                    Role::where('id', '!=', $role->id)
+                        ->where('is_default', 'Y')
+                        ->update(['is_default' => 'N']);
                 }
 
                 if ($role) {

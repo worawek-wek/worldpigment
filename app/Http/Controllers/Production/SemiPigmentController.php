@@ -71,7 +71,8 @@ class SemiPigmentController extends Controller
     public function exportExcel()
     {
         // export เรียงใหม่→เก่าตาม id เสมอ (baseQuery ไม่ได้ orderBy แล้ว จึงระบุที่นี่)
-        $rows = $this->semiListQuery()->orderBy('tb_semi_pigment.id', 'desc')->get();
+        // eager-load planning เพื่อดึงเลขที่ใบเบิก (Red Bill) + รหัสสินค้า (Item No.) ของ "งานผลิต" ที่ Semi นี้ผูกอยู่ (กัน N+1)
+        $rows = $this->semiListQuery()->with('planning')->orderBy('tb_semi_pigment.id', 'desc')->get();
 
         // หัวคอลัมน์ + ชื่อฟิลด์ที่ใช้ดึงค่า (เรียงตามลำดับคอลัมน์ในไฟล์)
         $headers = [
@@ -91,6 +92,9 @@ class SemiPigmentController extends Controller
             'น้ำหนักที่จะผลิต',
             'เลขที่ออกใบแดง',
             'ผลการอนุมัติ',
+            // 2 คอลัมน์ท้าย: ค่าจาก "งานผลิต" (tb_planning) ที่ Semi นี้ผูกอยู่ — คนละตัวกับของ Semi เอง
+            'เลขที่ใบเบิก Red Bill (งาน)',
+            'รหัสสินค้า Item No. (งาน)',
         ];
 
         // ตำแหน่งคอลัมน์ที่ต้องจัดรูปแบบเป็นตัวเลขทศนิยม 2 ตำแหน่ง
@@ -100,7 +104,7 @@ class SemiPigmentController extends Controller
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('ใบขอสั่งทำ SEMI');
 
-        $lastCol = 'P'; // 16 คอลัมน์ = A..P
+        $lastCol = 'R'; // 18 คอลัมน์ = A..R (P + 2 คอลัมน์งานผลิต Q,R)
 
         // แถวที่ 1: หัวเรื่อง
         $sheet->setCellValue('A1', 'ใบขอสั่งทำ SEMI');
@@ -146,6 +150,9 @@ class SemiPigmentController extends Controller
                 $row->weight_production,
                 $row->red_bill_code,
                 $row->statusLabel(),
+                // งานผลิตที่ผูกอยู่ (อาจว่างถ้าเป็น Semi แบบสร้างเองไม่ผูกแผน)
+                optional($row->planning)->red_bill_code,
+                optional($row->planning)->itemno,
             ], null, 'A'.$rowIndex);
 
             $rowIndex++;

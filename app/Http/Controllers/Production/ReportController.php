@@ -120,6 +120,7 @@ class ReportController extends Controller
                 'tb_planning.red_bill_code',
                 'tb_planning.itemno',
                 'tb_planning.lot',
+                'tb_planning.senddate',       // กำหนดส่งทบทวน → แสดงในคอลัมน์ Revise (2026-08-20)
                 'tb_planning.quantity',
                 'tb_planning.weight', // น้ำหนัก TP (Weight)
                 'tb_planning.remark',
@@ -342,7 +343,7 @@ class ReportController extends Controller
                 // แถวผลิตสินค้า
                 $sheet->setCellValue("A{$r}", ++$rownum);
                 $sheet->setCellValue("B{$r}", $it->inplan ? \Carbon\Carbon::parse($it->inplan)->format('d/m/Y') : '-');
-                $sheet->setCellValue("C{$r}", '');  // Revise (เว้นว่าง)
+                $sheet->setCellValue("C{$r}", $it->senddate ? \Carbon\Carbon::parse($it->senddate)->format('d/m/Y') : '');  // Revise = senddate (กำหนดส่งทบทวน)
                 $sheet->setCellValue("D{$r}", $it->cust_name ?: '-');
                 $sheet->setCellValue("E{$r}", $it->red_bill_code ?: '-');
                 $sheet->setCellValueExplicit("F{$r}", $it->itemno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);

@@ -628,7 +628,9 @@
 </div>
 
 {{-- ── Modal เพิ่ม Semi / Pigment ── --}}
-<div class="modal fade" id="sp_entry_modal" tabindex="-1" aria-hidden="true">
+{{-- backdrop=static + keyboard=false: ปิด modal ได้เฉพาะปุ่ม ยกเลิก / กากบาท (กันคลิกนอก+ESC) --}}
+<div class="modal fade" id="sp_entry_modal" tabindex="-1" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header" style="background-color:#3A8EBA; padding:.75rem 1.25rem;">
@@ -658,7 +660,9 @@
 </div>
 
 {{-- ── Modal เพิ่ม / แก้ไข Pigment (แยกจาก Semi, อ้างอิงตาราง tb_pigment) ── --}}
-<div class="modal fade" id="pigment_entry_modal" tabindex="-1" aria-hidden="true">
+{{-- backdrop=static + keyboard=false: ปิด modal ได้เฉพาะปุ่ม ยกเลิก / กากบาท (กันคลิกนอก+ESC) --}}
+<div class="modal fade" id="pigment_entry_modal" tabindex="-1" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header" style="background-color:#28a745; padding:.75rem 1.25rem;">

@@ -66,7 +66,7 @@
                     <tr>
                         <td class="text-center">{{ ++$rownum }}</td>
                         <td class="text-center">{{ $it->inplan ? \Carbon\Carbon::parse($it->inplan)->format('d/m/Y') : '-' }}</td>
-                        <td></td> {{-- Revise --}}
+                        <td class="text-center">{{ $it->senddate ? \Carbon\Carbon::parse($it->senddate)->format('d/m/Y') : '' }}</td> {{-- Revise = senddate (กำหนดส่งทบทวน) --}}
                         <td>{{ $it->cust_name ?: '-' }}</td>
                         <td class="text-center">{{ $it->red_bill_code ?: '-' }}</td>
                         <td>{{ $it->itemno ?: '-' }}</td>

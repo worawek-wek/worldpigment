@@ -53,9 +53,13 @@
         <label class="form-label" for="employee_role">สิทธิ์การใช้งาน (Role)</label>
         <select class="form-select" id="employee_role" name="role_id">
             <option value="">-- เลือก Role --</option>
+            @php
+                // แก้ไข: ยึด role เดิมของพนักงาน / เพิ่มใหม่: ยึด role ค่าเริ่มต้น (ถ้าตั้งไว้)
+                $selectedRoleId = $employee?->role_id ?? ($defaultRoleId ?? '');
+            @endphp
             @foreach($roles as $role)
                 <option value="{{ $role->id }}"
-                    {{ (string)($employee?->role_id ?? '') === (string)$role->id ? 'selected' : '' }}>
+                    {{ (string)$selectedRoleId === (string)$role->id ? 'selected' : '' }}>
                     {{ $role->name }}
                 </option>
             @endforeach

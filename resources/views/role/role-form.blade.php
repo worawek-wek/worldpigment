@@ -28,6 +28,15 @@
                 {{ ($role?->is_active ?? 'Y') === 'Y' ? 'checked' : '' }}>
             <label class="form-check-label" for="role_is_active">เปิดใช้งาน</label>
         </div>
+        <div class="form-check form-switch mt-2">
+            <input class="form-check-input" type="checkbox" role="switch"
+                id="role_is_default" name="is_default" value="Y"
+                {{ ($role?->is_default ?? 'N') === 'Y' ? 'checked' : '' }}>
+            <label class="form-check-label" for="role_is_default">
+                ตั้งเป็นค่าเริ่มต้นของพนักงานใหม่
+                <small class="text-muted d-block">Role นี้จะถูกเลือกให้อัตโนมัติเมื่อเพิ่มพนักงานใหม่ (มีได้เพียง Role เดียว)</small>
+            </label>
+        </div>
     </div>
 
     <hr class="my-3">

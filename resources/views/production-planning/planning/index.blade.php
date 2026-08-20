@@ -148,7 +148,9 @@
     </div>
 
     <!-- Modal 1: Planning Header + Planning List -->
-    <div class="modal fade" id="planningModal" tabindex="-1" aria-hidden="true">
+    <!-- backdrop=static + keyboard=false: ปิด modal ได้เฉพาะปุ่ม กากบาท (กันคลิกนอก+ESC) -->
+    <div class="modal fade" id="planningModal" tabindex="-1" aria-hidden="true"
+        data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog modal-xl">
             <div class="modal-content" id="result_detail"></div>
         </div>

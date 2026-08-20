@@ -99,10 +99,14 @@ class EmpController extends Controller
             ->orderBy('name', 'asc')
             ->get(['id', 'name']);
 
+        // role ค่าเริ่มต้นสำหรับ "เพิ่มพนักงานใหม่" เท่านั้น (ตอนแก้ไขยึด role เดิมของพนักงาน)
+        $defaultRoleId = $employee ? null : Role::defaultRoleId();
+
         $html = view('employee.employee-form', [
-            'employee'    => $employee,
-            'departments' => $departments,
-            'roles'       => $roles,
+            'employee'      => $employee,
+            'departments'   => $departments,
+            'roles'         => $roles,
+            'defaultRoleId' => $defaultRoleId,
         ])->render();
 
         return response()->json([
