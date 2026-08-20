@@ -184,7 +184,7 @@
                     var modal = bootstrap.Modal.getInstance(document.getElementById('planningStatusModal'));
                     if (modal) modal.hide();
 
-                    oTable.draw();
+                    oTable.draw(false); // draw(false) = คงหน้า pagination เดิม (ไม่เด้งกลับหน้า 1)
 
                     Swal.fire({
                         icon: 'success',

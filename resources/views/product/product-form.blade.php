@@ -49,9 +49,9 @@
         </div>
 
         <div class="col-md-6 mb-3">
-            <label class="form-label" for="product_sampling">การชักตัวอย่าง (Sampling)</label>
+            <label class="form-label" for="product_sampling">สุ่มตัวอย่าง (Sampling)</label>
             <input type="text" class="form-control" id="product_sampling" name="sampling"
-                value="{{ $product?->sampling }}" placeholder="กรอกการชักตัวอย่าง">
+                value="{{ $product?->sampling }}" placeholder="สุ่มตัวอย่าง">
         </div>
     </div>
 

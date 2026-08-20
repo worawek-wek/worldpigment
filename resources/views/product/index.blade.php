@@ -175,7 +175,7 @@
                 data: { _token: "{{ csrf_token() }}", id: id },
                 success: function(res){
                     if (res.status == 200) {
-                        oTable.draw();
+                        oTable.draw(false); // draw(false) = คงหน้า pagination เดิม (ไม่เด้งกลับหน้า 1)
                         Swal.fire({ icon: 'success', title: res.message, toast: true,
                             position: 'top-end', timer: 1500, showConfirmButton: false });
                     } else {
@@ -205,7 +205,7 @@
             success: function(response) {
                 if (response.status == 200) {
                     $('#productModal').modal('hide');
-                    oTable.draw();
+                    oTable.draw(false); // draw(false) = คงหน้า pagination เดิม (ไม่เด้งกลับหน้า 1)
                     Swal.fire({
                         icon: 'success',
                         title: 'สำเร็จ',

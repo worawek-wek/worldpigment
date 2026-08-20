@@ -587,8 +587,8 @@
                     // โหลดตาราง Planning ใน Modal 1 ใหม่
                     reloadPlanningHeaderContent(response.planning_header_id);
 
-                    // Refresh DataTable หลัก
-                    oTable.draw();
+                    // Refresh DataTable หลัก — draw(false) = คงหน้า pagination เดิม (ไม่เด้งกลับหน้า 1)
+                    oTable.draw(false);
 
                     if (response.end_order_auto_closed) {
                         // ปิดออเดอร์อัตโนมัติ (จบงานครบ) → แจ้งแบบให้กดรับทราบ เพราะ header ถูกล็อกแก้ไขแล้ว
@@ -718,7 +718,7 @@
                 if (res.status == 200) {
                     // รีเฟรชการ์ด Modal 1 (สถานะ checkbox/disabled จะถูกคำนวณใหม่ฝั่ง server)
                     reloadPlanningHeaderContent(planning_header_id);
-                    oTable.draw();
+                    oTable.draw(false); // draw(false) = คงหน้า pagination เดิม (ไม่เด้งกลับหน้า 1)
                     Swal.fire({
                         icon: 'success',
                         title: 'สำเร็จ',
@@ -789,7 +789,7 @@
             success: function (res) {
                 if (res.status == 200) {
                     reloadPlanningHeaderContent(planning_header_id);
-                    oTable.draw();
+                    oTable.draw(false); // draw(false) = คงหน้า pagination เดิม (ไม่เด้งกลับหน้า 1)
                     Swal.fire({
                         icon: 'success',
                         title: 'สำเร็จ',

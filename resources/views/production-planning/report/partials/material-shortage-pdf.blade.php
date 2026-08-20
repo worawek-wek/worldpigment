@@ -30,6 +30,7 @@
                 <th style="width: 5%;">Revise</th>
                 <th style="width: 6%;">สถานะปัจจุบัน</th>
                 <th style="width: 12%;">ขาด semi</th>
+                <th style="width: 10%;">ขาด Pigment</th>
                 <th style="width: 5%;">Cust Due</th>
                 <th style="width: 4%;">Cust no</th>
                 <th style="width: 12%;">Cust Name</th>
@@ -38,8 +39,7 @@
                 <th style="width: 7%;">Order No</th>
                 <th style="width: 8%;">PRODUCT NO</th>
                 <th style="width: 5%;">LOT</th>
-                <th style="width: 4%;">น้ำ</th>
-                <th style="width: 5%;">หนัก</th>
+                <th style="width: 5%;">น้ำหนัก</th>
                 <th style="width: 4%;">ส่งชั่งสี</th>
                 <th style="width: 5%;">เริ่มผลิต</th>
                 <th style="width: 5%;">วันที่ส่ง QC</th>
@@ -59,6 +59,7 @@
                     <td class="text-center">{{ $it->senddate ? \Carbon\Carbon::parse($it->senddate)->format('d/m/y') : '' }}</td> {{-- Revise = senddate (กำหนดส่งทบทวน) --}}
                     <td class="status">{{ $it->planning_status ?: '' }}</td>
                     <td class="status">{{ $it->lack_semi ?: '' }}</td>
+                    <td class="status">{{ $it->lack_pigment ?: '' }}</td>
                     <td class="text-center">{{ $custDue ? \Carbon\Carbon::parse($custDue)->format('d/m/y') : '-' }}</td>
                     <td class="text-center">{{ $it->custno ?: '-' }}</td>
                     <td>{{ $it->cust_name ?: '-' }}</td>
@@ -67,8 +68,7 @@
                     <td class="text-center">{{ $it->orderno ?: '-' }}</td>
                     <td>{{ $it->itemno ?: '-' }}</td>
                     <td class="text-center">{{ $it->lot ?: '-' }}</td>
-                    <td></td> {{-- น้ำ (ยังไม่มีฟิลด์) --}}
-                    <td class="text-end">{{ $it->quantity !== null ? number_format($it->quantity, 2) : '' }}</td>
+                    <td class="text-end">{{ $it->quantity !== null ? number_format($it->quantity, 2) : '' }}</td> {{-- น้ำหนัก (quantity) --}}
                     <td></td> {{-- ส่งชั่งสี (ยังไม่มีฟิลด์) --}}
                     <td class="text-center">{{ $it->start_date ? \Carbon\Carbon::parse($it->start_date)->format('d/m/y') : '' }}</td>
                     <td class="text-center">{{ $it->qc_date ? \Carbon\Carbon::parse($it->qc_date)->format('d/m/y') : '' }}</td>

@@ -212,7 +212,7 @@
             success: function(response) {
                 if (response.status == 200) {
                     $('#prodMethodModal').modal('hide');
-                    oTable.draw();
+                    oTable.draw(false); // draw(false) = คงหน้า pagination เดิม (ไม่เด้งกลับหน้า 1)
                     Swal.fire({
                         icon: 'success',
                         title: 'สำเร็จ',

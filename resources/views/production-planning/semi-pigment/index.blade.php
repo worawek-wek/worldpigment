@@ -281,7 +281,7 @@
             success: function (response) {
                 if (response.status == 200) {
                     closeEditModal();
-                    oTable.draw();
+                    oTable.draw(false); // draw(false) = คงหน้า pagination เดิม (ไม่เด้งกลับหน้า 1)
                     Swal.fire({ icon: 'success', title: 'สำเร็จ', text: response.message, timer: 1800, showConfirmButton: false });
                 } else {
                     Swal.fire({ icon: 'warning', title: response.status == 422 ? 'ข้อมูลไม่ถูกต้อง' : 'ผิดพลาด', text: response.message });
@@ -325,7 +325,7 @@
                 success: function (response) {
                     if (response.status == 200) {
                         closeEditModal();
-                        oTable.draw();
+                        oTable.draw(false); // draw(false) = คงหน้า pagination เดิม (ไม่เด้งกลับหน้า 1)
                         Swal.fire({
                             icon: 'success',
                             title: 'สำเร็จ',
@@ -368,7 +368,7 @@
                 success: function (response) {
                     if (response.status == 200) {
                         closeEditModal();
-                        oTable.draw();
+                        oTable.draw(false); // draw(false) = คงหน้า pagination เดิม (ไม่เด้งกลับหน้า 1)
                         Swal.fire({
                             icon: 'success',
                             title: 'สำเร็จ',
@@ -433,7 +433,7 @@
                 data: { id: id, _token: '{{ csrf_token() }}' },
                 success: function (response) {
                     if (response.status == 200) {
-                        oTable.draw();
+                        oTable.draw(false); // draw(false) = คงหน้า pagination เดิม (ไม่เด้งกลับหน้า 1)
                         Swal.fire({
                             icon: 'success',
                             title: 'สำเร็จ',

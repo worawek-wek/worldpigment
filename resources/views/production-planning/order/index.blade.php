@@ -211,7 +211,8 @@
             success: function(response) {
                 if (response.status == 200) {
 
-                    oTable.draw();
+                    // draw(false) = วาดตารางใหม่แต่คงหน้า pagination เดิมไว้ (ไม่เด้งกลับหน้า 1)
+                    oTable.draw(false);
 
                     Swal.fire({
                         title: "Create Complate.!",

@@ -8,6 +8,7 @@ use App\Models\Department;
 use App\Models\Machine;
 use App\Models\Planning;
 use App\Models\SemiPigment;
+use App\Models\Pigment;
 
 /**
  * รายงานการผลิต — เพิ่ม 2026-07-31
@@ -109,6 +110,8 @@ class ReportController extends Controller
             // ข้อมูลสินค้า (master): tb_products.product_code = tb_planning.itemno
             // → เติมคอลัมน์ Resin / CODE / Pack / สูตรตัวอย่าง (2026-08-13)
             ->leftJoin('tb_products', 'tb_products.product_code', '=', 'tb_planning.itemno')
+            // Temp (อ้างอิงตาม Product no): tb_products.temp_id → temp.id, แสดง temp.Temp1 (2026-08-20)
+            ->leftJoin('temp', 'temp.id', '=', 'tb_products.temp_id')
             ->select([
                 'tb_planning.id',
                 'tb_planning.machine_no',
@@ -123,6 +126,7 @@ class ReportController extends Controller
                 'customer.name as cust_name',
                 // ข้อมูลสินค้าจาก tb_products (2026-08-13)
                 'tb_products.resin as product_resin',
+                'temp.Temp1 as product_temp',
                 'tb_products.code as product_code_val',
                 'tb_products.pack as product_pack',
                 'tb_products.batch as product_batch',
@@ -272,11 +276,11 @@ class ReportController extends Controller
         // Speed (RPM) ย้ายไปแสดงต่อท้ายหัวกลุ่มเครื่องจักรแทน (2026-08-13)
         $headers = [
             '#', 'วันที่ลงแผน', 'Revise', 'Cust Name', 'เลขที่ใบเบิก', 'PRODUCT NO', 'LOT',
-            'น้ำหนักออเดอร์', 'TP', 'Resin', 'CODE', 'Packaging', 'Batch',
+            'น้ำหนักออเดอร์', 'TP', 'Resin', 'Temp', 'CODE', 'Packaging', 'Batch',
             'สูตรตัวอย่าง', 'Remark',
         ];
-        $cols    = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O'];
-        $lastCol = 'O';
+        $cols    = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P'];
+        $lastCol = 'P';
         $weightCol = 'H'; // คอลัมน์น้ำหนักออเดอร์ (ใช้ทำผลรวมต่อเครื่อง)
 
         // หัวรายงาน
@@ -346,11 +350,12 @@ class ReportController extends Controller
                 $sheet->setCellValue("H{$r}", $it->quantity !== null ? number_format($it->quantity, 2) : '-');
                 $sheet->setCellValue("I{$r}", $it->weight !== null ? number_format($it->weight, 2) : '');  // TP = น้ำหนัก TP (Weight)
                 $sheet->setCellValueExplicit("J{$r}", $it->product_resin ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);   // Resin (tb_products.resin)
-                $sheet->setCellValueExplicit("K{$r}", $it->product_code_val ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING); // CODE (tb_products.code)
-                $sheet->setCellValueExplicit("L{$r}", $it->product_pack ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);   // Packaging (tb_products.pack)
-                $sheet->setCellValueExplicit("M{$r}", $it->product_batch ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);  // Batch (tb_products.batch)
-                $sheet->setCellValueExplicit("N{$r}", $it->product_sampling ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING); // สูตรตัวอย่าง (tb_products.sampling)
-                $sheet->setCellValue("O{$r}", $it->remark ?: '');
+                $sheet->setCellValueExplicit("K{$r}", $it->product_temp ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);   // Temp (temp.Temp1 via tb_products.temp_id)
+                $sheet->setCellValueExplicit("L{$r}", $it->product_code_val ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING); // CODE (tb_products.code)
+                $sheet->setCellValueExplicit("M{$r}", $it->product_pack ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);   // Packaging (tb_products.pack)
+                $sheet->setCellValueExplicit("N{$r}", $it->product_batch ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);  // Batch (tb_products.batch)
+                $sheet->setCellValueExplicit("O{$r}", $it->product_sampling ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING); // สูตรตัวอย่าง (tb_products.sampling)
+                $sheet->setCellValue("P{$r}", $it->remark ?: '');
                 $groupSum += (float) ($it->quantity ?? 0);
                 $r++;
             }
@@ -555,21 +560,47 @@ class ReportController extends Controller
                 ->all();
         };
 
+        // ── ขาด Pigment: ดึงคำร้องขอ pigment ที่ทำไว้กับ "แผนการผลิตนี้" — 20/08/2569
+        //    ต่างจาก semi ตรงที่คำขอ pigment อยู่ตาราง tb_pigment (Model Pigment) แยกต่างหาก
+        //    ไม่ใช่ tb_semi_pigment; และ tb_pigment ไม่มี semi_code/primary_color → แสดงได้แค่ itemno
+        //    เฉพาะสถานะ request/approved จับคู่ด้วย planning_id = tb_planning.id
+        //    กรอง pigment ที่ปิดออเดอร์แล้วออก (tb_planning_header.end_order != 'Y' รวม NULL)
+        $pigmentByPlanning = collect();
+        if ($planningIds->isNotEmpty()) {
+            $pigmentByPlanning = Pigment::query()
+                ->leftJoin('tb_planning_header as ph', 'ph.id', '=', 'tb_pigment.planning_header_id')
+                ->whereIn('tb_pigment.status', [Pigment::STATUS_REQUEST, Pigment::STATUS_APPROVED])
+                ->whereIn('tb_pigment.planning_id', $planningIds)
+                ->where(function ($q) {
+                    $q->where('ph.end_order', '!=', 'Y')->orWhereNull('ph.end_order');
+                })
+                ->get([
+                    'tb_pigment.planning_id',
+                    'tb_pigment.itemno',
+                ])
+                ->groupBy('planning_id');
+        }
+
         foreach ($rows as $row) {
             $group = $semiByPlanning->get($row->id) ?? collect();
 
             if ($group->isEmpty()) {
                 $row->lack_semi = ''; // งานนี้ไม่มีคำร้องขอ semi → เว้นว่าง
-                continue;
+            } else {
+                // รหัสสินค้า (itemno ของ semi) ก่อน แล้วตามด้วย semi_code / primary_color (คั่นด้วย ", ")
+                $parts = array_merge(
+                    $distinctValues($group, 'itemno'),
+                    $distinctValues($group, 'semi_code'),
+                    $distinctValues($group, 'primary_color'),
+                );
+                $row->lack_semi = implode(', ', $parts);
             }
 
-            // รหัสสินค้า (itemno ของ semi) ก่อน แล้วตามด้วย semi_code / primary_color (คั่นด้วย ", ")
-            $parts = array_merge(
-                $distinctValues($group, 'itemno'),
-                $distinctValues($group, 'semi_code'),
-                $distinctValues($group, 'primary_color'),
-            );
-            $row->lack_semi = implode(', ', $parts);
+            // ขาด Pigment: itemno ของทุกคำขอ pigment ของงานนี้ (ไม่ซ้ำ/ไม่ว่าง) คั่นด้วย ", "
+            $pgGroup = $pigmentByPlanning->get($row->id) ?? collect();
+            $row->lack_pigment = $pgGroup->isEmpty()
+                ? ''
+                : implode(', ', $distinctValues($pgGroup, 'itemno'));
         }
 
         return [
@@ -602,9 +633,9 @@ class ReportController extends Controller
 
         // คอลัมน์ตามผังฟอร์ม Access เดิม (Revise / น้ำ / ส่งชั่งสี ยังไม่มีฟิลด์ใน DB → เว้นว่าง)
         $headers = [
-            '#', 'แผนก', 'เลขที่ใบแดง', 'MACHINE No.', 'IN PLAN', 'Revise', 'สถานะปัจจุบัน', 'ขาด semi', 'Cust Due',
+            '#', 'แผนก', 'เลขที่ใบแดง', 'MACHINE No.', 'IN PLAN', 'Revise', 'สถานะปัจจุบัน', 'ขาด semi', 'ขาด Pigment', 'Cust Due',
             'Cust no', 'Cust Name', 'SaleNo', 'Order Date', 'Order No', 'PRODUCT NO',
-            'LOT', 'น้ำ', 'หนัก', 'ส่งชั่งสี', 'เริ่มผลิต', 'วันที่ส่ง QC', 'เวลาที่ส่ง QC', 'สถานะ QC',
+            'LOT', 'น้ำหนัก', 'ส่งชั่งสี', 'เริ่มผลิต', 'วันที่ส่ง QC', 'เวลาที่ส่ง QC', 'สถานะ QC',
         ];
         $cols = [
             'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
@@ -648,16 +679,16 @@ class ReportController extends Controller
             $sheet->setCellValue("F{$r}", $it->senddate ? \Carbon\Carbon::parse($it->senddate)->format('d/m/Y') : '');  // Revise = senddate (กำหนดส่งทบทวน)
             $sheet->setCellValue("G{$r}", $it->planning_status ?: '-');
             $sheet->setCellValue("H{$r}", $it->lack_semi ?: '');  // ขาด semi (itemno+semi_code+primary_color ของ semi)
-            $sheet->setCellValue("I{$r}", $custDue ? \Carbon\Carbon::parse($custDue)->format('d/m/Y') : '-');
-            $sheet->setCellValueExplicit("J{$r}", $it->custno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-            $sheet->setCellValue("K{$r}", $it->cust_name ?: '-');
-            $sheet->setCellValueExplicit("L{$r}", $it->saleno ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-            $sheet->setCellValue("M{$r}", $it->order_date ? \Carbon\Carbon::parse($it->order_date)->format('d/m/Y') : '-');
-            $sheet->setCellValueExplicit("N{$r}", $it->orderno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-            $sheet->setCellValueExplicit("O{$r}", $it->itemno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-            $sheet->setCellValue("P{$r}", $it->lot ?: '-');
-            $sheet->setCellValue("Q{$r}", '');  // น้ำ (ยังไม่มีฟิลด์)
-            $sheet->setCellValue("R{$r}", $it->quantity !== null ? number_format($it->quantity, 2) : '-');
+            $sheet->setCellValue("I{$r}", $it->lack_pigment ?: '');  // ขาด Pigment (itemno ของ pigment ที่ขอ) — 20/08/2569
+            $sheet->setCellValue("J{$r}", $custDue ? \Carbon\Carbon::parse($custDue)->format('d/m/Y') : '-');
+            $sheet->setCellValueExplicit("K{$r}", $it->custno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue("L{$r}", $it->cust_name ?: '-');
+            $sheet->setCellValueExplicit("M{$r}", $it->saleno ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue("N{$r}", $it->order_date ? \Carbon\Carbon::parse($it->order_date)->format('d/m/Y') : '-');
+            $sheet->setCellValueExplicit("O{$r}", $it->orderno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit("P{$r}", $it->itemno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue("Q{$r}", $it->lot ?: '-');
+            $sheet->setCellValue("R{$r}", $it->quantity !== null ? number_format($it->quantity, 2) : '-');  // น้ำหนัก (quantity)
             $sheet->setCellValue("S{$r}", '');  // ส่งชั่งสี (ยังไม่มีฟิลด์)
             $sheet->setCellValue("T{$r}", $it->start_date ? \Carbon\Carbon::parse($it->start_date)->format('d/m/Y') : '');
             $sheet->setCellValue("U{$r}", $it->qc_date ? \Carbon\Carbon::parse($it->qc_date)->format('d/m/Y') : '');

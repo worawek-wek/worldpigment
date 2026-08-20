@@ -34,6 +34,7 @@
                 <th style="width: 7%;">น้ำหนักออเดอร์</th>
                 <th style="width: 4%;">TP</th>
                 <th style="width: 6%;">Resin</th>
+                <th style="width: 5%;">Temp</th>
                 <th style="width: 5%;">CODE</th>
                 <th style="width: 5%;">Packaging</th>
                 <th style="width: 4%;">Batch</th>
@@ -46,7 +47,7 @@
             @forelse($groups as $group)
                 @php $machineLabel = $group['machine'] !== '' ? $group['machine'] : 'ไม่ระบุเครื่องจักร'; $groupSum = 0; @endphp
                 <tr class="group-row">
-                    <td colspan="15">เครื่องจักร: {{ $machineLabel }}@if(!empty($group['speed_rpm'])) (Speed RPM: {{ $group['speed_rpm'] }})@endif</td>
+                    <td colspan="16">เครื่องจักร: {{ $machineLabel }}@if(!empty($group['speed_rpm'])) (Speed RPM: {{ $group['speed_rpm'] }})@endif</td>
                 </tr>
                 @foreach($group['items'] as $it)
                     @php $groupSum += (float) ($it->quantity ?? 0); @endphp
@@ -55,7 +56,7 @@
                         <tr class="step-row">
                             <td class="text-center">↳</td>
                             <td class="text-center">{{ $s->work_date ? \Carbon\Carbon::parse($s->work_date)->format('d/m/Y') : '-' }}</td>
-                            <td colspan="13">
+                            <td colspan="14">
                                 ขั้นตอน: {{ $s->method_name ?: '-' }}
                                 ({{ $s->start_time ? substr($s->start_time, 0, 5) : '--' }}–{{ $s->end_time ? substr($s->end_time, 0, 5) : '--' }})
                             </td>
@@ -73,6 +74,7 @@
                         <td class="text-end">{{ $it->quantity !== null ? number_format($it->quantity, 2) : '-' }}</td>
                         <td class="text-end">{{ $it->weight !== null ? number_format($it->weight, 2) : '' }}</td> {{-- TP = น้ำหนัก TP (Weight) --}}
                         <td>{{ $it->product_resin ?: '' }}</td> {{-- Resin (tb_products.resin) --}}
+                        <td class="text-center">{{ $it->product_temp ?: '' }}</td> {{-- Temp (temp.Temp1 via tb_products.temp_id) --}}
                         <td>{{ $it->product_code_val ?: '' }}</td> {{-- CODE (tb_products.code) --}}
                         <td class="text-center">{{ $it->product_pack ?: '' }}</td> {{-- Packaging (tb_products.pack) --}}
                         <td class="text-center">{{ $it->product_batch ?: '' }}</td> {{-- Batch (tb_products.batch) --}}
@@ -85,11 +87,11 @@
                     <td class="text-center">{{ number_format($group['items']->count()) }} รายการ</td>
                     <td></td>
                     <td class="text-end">{{ number_format($groupSum, 2) }}</td>
-                    <td colspan="7"></td>
+                    <td colspan="8"></td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="15" class="text-center" style="padding: 14px;">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td>
+                    <td colspan="16" class="text-center" style="padding: 14px;">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td>
                 </tr>
             @endforelse
         </tbody>

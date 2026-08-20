@@ -66,13 +66,6 @@ return [
                 'route_name' => 'production.planning.index',
                 'permission' => 'productionplanning read',
             ],
-            'PlanningStatus' => [
-                'title' => 'สถานะ Planning',
-                'icon' => '',
-                'menu_parent' => 'Production',
-                'route_name' => 'production.planningstatus.index',
-                'permission' => 'productionplanning read',
-            ],
             // กลุ่มย่อย "รายงาน" (ซ้อนอีกชั้นใต้แผนการผลิต) — เพิ่ม 2026-07-31
             'ProductionReport' => [
                 'title' => 'รายงาน',
@@ -153,6 +146,14 @@ return [
         'icon' => 'ti-shopping-cart',
         'route_name' => 'department.index',
         'permission' => 'department read',
+    ],
+
+    // สถานะ Planning — ย้ายออกจากเมนูย่อย PL-แผนการผลิต มาเป็นเมนูด้านนอก ใต้แผนก — 20/08/2569
+    'PlanningStatus' => [
+        'title' => 'สถานะ Planning',
+        'icon' => 'ti-list-check',
+        'route_name' => 'production.planningstatus.index',
+        'permission' => 'productionplanning read',
     ],
 
     'Machine' => [

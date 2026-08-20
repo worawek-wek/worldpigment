@@ -219,7 +219,7 @@
             success: function(response) {
                 if (response.status == 200) {
                     $('#employeeModal').modal('hide');
-                    oTable.draw();
+                    oTable.draw(false); // draw(false) = คงหน้า pagination เดิม (ไม่เด้งกลับหน้า 1)
                     Swal.fire({
                         icon: 'success',
                         title: 'สำเร็จ',
@@ -264,7 +264,7 @@
                 data: { _token: "{{ csrf_token() }}", empno: empno },
                 success: function(response) {
                     if (response.status == 200) {
-                        oTable.draw();
+                        oTable.draw(false); // draw(false) = คงหน้า pagination เดิม (ไม่เด้งกลับหน้า 1)
                         Swal.fire({ icon: 'success', title: 'สำเร็จ', text: response.message,
                             timer: 1500, showConfirmButton: false });
                     } else {
