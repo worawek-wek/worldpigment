@@ -9,15 +9,19 @@
     <div class="of-typebar">
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
             <div>
-                <div class="of-typebar-title">บันทึกคำสั่งซื้อ</div>
+                {{-- จัดปุ่มเป็นกลุ่มละ 2 (C / H / W) แล้วเว้นช่องไฟระหว่างกลุ่ม --}}
                 <div class="of-typegrid">
-                    @foreach ($type_rows as $rowIdx => $types)
+                    @foreach ($type_rows as $types)
                         <div class="of-typerow">
-                            @foreach ($types as $t)
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="order_type_form"
-                                        id="o_type_{{ $t }}" value="{{ $t }}" onchange="onOrderTypeChange('{{ $t }}')">
-                                    <label class="form-check-label" for="o_type_{{ $t }}">{{ $t }}</label>
+                            @foreach (array_chunk($types, 2) as $pair)
+                                <div class="of-typepair">
+                                    @foreach ($pair as $t)
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="order_type_form"
+                                                id="o_type_{{ $t }}" value="{{ $t }}" onchange="onOrderTypeChange('{{ $t }}')">
+                                            <label class="form-check-label" for="o_type_{{ $t }}">{{ $t }}</label>
+                                        </div>
+                                    @endforeach
                                 </div>
                             @endforeach
                         </div>
@@ -25,7 +29,7 @@
                 </div>
             </div>
 
-            <button type="button" class="btn btn-light" onclick="orderNew()">
+            <button type="button" class="btn of-btn-new" onclick="orderNew()">
                 <i class="ti ti-plus me-1"></i>เพิ่มใบสั่งซื้อใหม่
             </button>
         </div>
@@ -41,11 +45,17 @@
                 <div class="row g-3">
                     <div class="col-sm-6">
                         <label class="form-label">เลขที่ใบสั่ง</label>
-                        <input type="text" id="o_Orderno" class="form-control fw-bold text-primary" maxlength="15" readonly>
+                        <input type="text" id="o_Orderno" class="form-control fw-bold text-primary" maxlength="15"
+                            autocomplete="off" readonly>
+                        {{-- โชว์เฉพาะตอนเพิ่งเปิดฟอร์ม (โหมด idle) --}}
+                        <div class="form-text d-none" id="o_orderno_hint">
+                            <i class="ti ti-corner-down-left me-1"></i>กรอกเลขที่ใบเดิมแล้วกด Enter เพื่อแก้ไขใบนั้น
+                        </div>
                     </div>
                     <div class="col-sm-6">
                         <label class="form-label">วันที่</label>
-                        <input type="text" id="o_Mdate" class="form-control" readonly>
+                        <input type="text" id="o_Mdate" class="form-control flatpickr-datetime"
+                            autocomplete="off" placeholder="วว/ดด/ปปปป ชม:นท">
                     </div>
 
                     <div class="col-sm-6">
@@ -62,12 +72,14 @@
                         <input type="text" id="o_PO" class="form-control" maxlength="25">
                     </div>
 
+                    {{-- รหัสลูกค้า / ชื่อลูกค้า อยู่คนละแถวกัน
+                         (รหัสลูกค้าคง col-sm-4 เท่าเดิม ส่วนชื่อลูกค้าเป็น col-12 จึงตกไปอยู่แถวถัดไปเอง) --}}
                     <div class="col-sm-4">
                         <label class="form-label">รหัสลูกค้า</label>
                         <input type="text" id="o_Custno" class="form-control" maxlength="10"
                             oninput="lookupOrderCustomer(this.value)">
                     </div>
-                    <div class="col-sm-8">
+                    <div class="col-12">
                         <label class="form-label">ชื่อลูกค้า</label>
                         <input type="text" id="o_Custname" class="form-control text-primary fw-semibold" readonly>
                     </div>
@@ -87,8 +99,11 @@
                         <input type="text" id="o_Emp" class="form-control" maxlength="20">
                     </div>
                     <div class="col-sm-3">
-                        <label class="form-label">รหัสผู้ขาย</label>
-                        <input type="text" id="o_supno" class="form-control" maxlength="2">
+                        <label class="form-label">
+                            รหัสผู้ขาย
+                            <i class="ti ti-info-circle text-muted" title="ดึงจากพนักงานขายประจำลูกค้า (customer.sale)"></i>
+                        </label>
+                        <input type="text" id="o_supno" class="form-control bg-light" maxlength="2" readonly>
                     </div>
                     <div class="col-sm-5">
                         <label class="form-label">
@@ -103,8 +118,15 @@
                         <input type="text" id="o_RsvNo" class="form-control" maxlength="20">
                     </div>
 
-                    {{-- checkbox ชุดล่าง — ใน Access เก็บเป็น -1 = ติ๊ก --}}
+                    {{-- checkbox ชุดล่าง — ใน Access เก็บเป็น -1 = ติ๊ก
+                         RP / CER / MSDS ติ๊กให้ตามค่าประจำลูกค้า (customer) เมื่อเลือกลูกค้า — แก้ทับได้
+                         ส่งก่อนได้ / SPEC ไม่มีค่าประจำลูกค้า ต้องติ๊กเอง --}}
                     <div class="col-12">
+                        <label class="form-label d-block">
+                            เงื่อนไขบนใบสั่ง
+                            <i class="ti ti-info-circle text-muted"
+                                title="RP / CER / MSDS ตั้งให้ตามข้อมูลลูกค้าเมื่อเลือกลูกค้า — แก้ทับได้"></i>
+                        </label>
                         <div class="of-checkrow">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="o_Send">
@@ -177,8 +199,7 @@
                     <div class="col-6">
                         <label class="form-label mb-0 small">
                             ราคาต้องไม่ต่ำกว่า
-                            <i class="ti ti-info-circle text-muted"
-                                title="ราคาของกลุ่มที่ตรงกับน้ำหนักสั่ง (A ≥1,000 / B ≥500 / C ต่ำกว่า 500 ก.ก.)"></i>
+                            <i class="ti ti-info-circle text-muted" title="= ราคาช่อง 2 จากระบบกำหนดราคา"></i>
                         </label>
                     </div>
                     <div class="col-6">
@@ -195,7 +216,12 @@
                         <input type="text" id="o_valid_to" class="form-control form-control-sm text-end" readonly>
                     </div>
 
-                    <div class="col-6"><label class="form-label mb-0 small">ราคาที่กำหนดไว้</label></div>
+                    <div class="col-6">
+                        <label class="form-label mb-0 small">
+                            ราคาที่กำหนดไว้
+                            <i class="ti ti-info-circle text-muted" title="= ราคาช่อง 1 จากระบบกำหนดราคา"></i>
+                        </label>
+                    </div>
                     <div class="col-6">
                         <input type="text" id="o_fixed_price" class="form-control form-control-sm text-end" readonly>
                     </div>
@@ -205,9 +231,16 @@
                         <input type="text" id="o_price2" class="form-control form-control-sm text-end" readonly>
                     </div>
 
-                    <div class="col-6"><label class="form-label mb-0 fw-bold">ราคาขาย</label></div>
+                    {{-- ราคาขาย = ช่องเดียวในกล่องนี้ที่ผู้ใช้พิมพ์เอง --}}
+                    <div class="col-6"><label class="form-label mb-0 fw-bold" for="o_price">ราคาขาย</label></div>
                     <div class="col-6">
-                        <input type="text" id="o_price" class="form-control form-control-sm text-end fw-bold of-sell" readonly>
+                        <input type="text" id="o_price" class="form-control form-control-sm text-end fw-bold js-comma"
+                            inputmode="decimal" autocomplete="off" placeholder="0.00">
+                    </div>
+
+                    {{-- บอกที่มา/เหตุผลของค่าในกล่องนี้ — กันสับสนเวลาช่องว่างเพราะไม่มีข้อมูล --}}
+                    <div class="col-12">
+                        <div class="of-price-note" id="o_price_note"></div>
                     </div>
                 </div>
             </div>
@@ -219,7 +252,10 @@
                 <div class="of-sec-title"><i class="ti ti-package"></i>สินค้า</div>
 
                 <div class="mb-3">
-                    <label class="form-label">รหัสสินค้า</label>
+                    <label class="form-label">
+                        รหัสสินค้า
+                        <i class="ti ti-info-circle text-muted" title="ดึงจากรหัสสินค้าที่กรอกในตารางรายการ"></i>
+                    </label>
                     <input type="text" id="o_itemno" class="form-control of-hl-yellow fw-semibold" readonly>
                 </div>
 
@@ -227,7 +263,8 @@
                     <label class="form-label">น้ำหนักรวม</label>
                     <div class="input-group">
                         <input type="text" id="o_netqty" class="form-control text-end js-comma"
-                            inputmode="decimal" autocomplete="off" placeholder="0.00">
+                            inputmode="decimal" autocomplete="off" placeholder="0.00"
+                            oninput="refreshOrderPrice()">
                         <span class="input-group-text">ก.ก.</span>
                     </div>
                 </div>
@@ -250,7 +287,7 @@
                 </div>
 
                 <div class="mt-auto">
-                    <button type="button" class="btn btn-primary w-100" onclick="saveOrder()">
+                    <button type="button" id="btnSaveOrder" class="btn btn-primary w-100" onclick="saveOrder()">
                         <i class="ti ti-device-floppy me-1"></i>บันทึกการรับคำสั่งซื้อ
                     </button>
                 </div>
@@ -258,38 +295,62 @@
         </div>
     </div>
 
-    {{-- ═══════════ ตารางรายการ (suborder) ═══════════ --}}
+    {{-- ═══════════ ตารางรายการ (suborder) — ช่องกรอก เพิ่ม/ลบแถวได้ ═══════════ --}}
     <div class="of-sec mt-3">
-        <div class="of-sec-title"><i class="ti ti-list-details"></i>รายการในใบสั่งซื้อ</div>
+        <div class="of-sec-title d-flex justify-content-between align-items-center">
+            <span><i class="ti ti-list-details"></i>รายการในใบสั่งซื้อ</span>
+            <button type="button" class="btn btn-sm btn-label-warning" onclick="addOrderItem()">
+                <i class="ti ti-plus me-1"></i>เพิ่มแถว
+            </button>
+        </div>
+
+        {{-- แถบเตือนแบบฟอร์มเดิม: สีที่ไม่ได้สั่งมานานต้อง Match ใหม่ --}}
+        <div class="of-matchwarn d-none" id="o_match_warn">
+            สีที่สั่งซื้อล่าสุดเกิน 3 ปี จะต้อง Match ใหม่
+            <span class="fw-normal ms-2" id="o_match_detail"></span>
+        </div>
 
         <div class="table-responsive">
             <table class="table table-bordered table-sm align-middle mb-0" id="orderItemsTable">
-                <thead class="table-light text-center">
+                <thead class="text-center">
                     <tr>
-                        <th rowspan="2" style="width:44px;">#</th>
+                        <th rowspan="2" style="width:40px;">#</th>
+                        <th rowspan="2" style="min-width:150px;">รหัสสินค้า</th>
+                        <th rowspan="2" style="width:80px;">รหัส</th>
+                        <th rowspan="2" style="min-width:150px;">ชื่อสินค้า</th>
+                        <th rowspan="2" style="min-width:110px;">Lotno.</th>
                         <th colspan="2">น้ำหนัก (ก.ก.)</th>
-                        <th rowspan="2">กำหนดที่ลูกค้าต้องการ</th>
-                        <th rowspan="2">กำหนดส่งทบทวน</th>
-                        <th rowspan="2">วันที่ผลิตเสร็จ</th>
-                        <th rowspan="2">วันที่ลูกค้าได้รับ</th>
-                        <th rowspan="2">เลขที่ใบส่ง</th>
-                        <th rowspan="2" style="min-width:280px;">หมายเหตุ</th>
+                        <th rowspan="2" style="min-width:120px;">กำหนดที่ลูกค้า<br>ต้องการ</th>
+                        <th rowspan="2" style="min-width:120px;">กำหนดส่ง<br>ทบทวน</th>
+                        <th rowspan="2" style="min-width:120px;">วันที่ผลิตเสร็จ</th>
+                        <th rowspan="2" style="min-width:120px;">วันที่ลูกค้าได้รับ</th>
+                        <th rowspan="2" style="min-width:110px;">เลขที่ใบส่ง</th>
+                        <th rowspan="2" style="min-width:260px;">หมายเหตุ</th>
+                        <th rowspan="2" style="width:46px;">ลบ</th>
                     </tr>
                     <tr>
-                        <th style="width:110px;">สต๊อก</th>
-                        <th style="width:110px;">ผลิต</th>
+                        <th style="width:105px;">S</th>
+                        <th style="width:105px;">P</th>
                     </tr>
                 </thead>
                 <tbody id="orderItems"></tbody>
-                <tfoot class="table-light">
+                <tfoot>
                     <tr>
-                        <th class="text-end" colspan="2">รวม</th>
+                        <th class="text-end" colspan="5">รวม</th>
+                        <th class="text-end" id="o_total_stock">0.00</th>
                         <th class="text-end" id="o_total_prod">0.00</th>
-                        <th colspan="6"></th>
+                        <th colspan="7"></th>
                     </tr>
                 </tfoot>
             </table>
         </div>
+
+        {{-- ตัวเลือกของช่อง "รหัส" (suborder.nold) --}}
+        <datalist id="noldList">
+            @foreach ($nold_options as $n)
+                <option value="{{ $n }}"></option>
+            @endforeach
+        </datalist>
 
         {{-- รายการหมายเหตุสำเร็จรูป (ตาราง ordrem) — ฟอร์มเดิมเป็น dropdown ในช่องหมายเหตุ --}}
         <datalist id="ordremList">

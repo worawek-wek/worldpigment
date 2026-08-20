@@ -303,6 +303,22 @@
 
         <div class="card-header border-bottom">
 
+            {{-- แถบหัว: ปุ่มพับ/กางตัวกรอง + ปุ่มล้างตัวกรอง (ชิดขวาทั้งคู่) — ค่าเริ่มต้นคือ "ซ่อนไว้" --}}
+            <div class="d-flex justify-content-end align-items-center gap-2">
+                <button type="button" id="btnToggleFilters" class="btn btn-label-primary btn-sm"
+                    data-bs-toggle="collapse" data-bs-target="#saleinfoFilterBox"
+                    aria-expanded="false" aria-controls="saleinfoFilterBox">
+                    <i class="ti ti-filter me-1"></i>ตัวกรอง
+                    <i class="ti ti-chevron-down ms-1 toggle-caret"></i>
+                </button>
+                <button type="button" id="btnResetFilters" class="btn btn-label-secondary btn-sm" onclick="resetFilters()">
+                    <i class="ti ti-x me-1"></i>ล้างตัวกรอง<span class="filter-count ms-1"></span>
+                </button>
+            </div>
+
+            <div class="collapse" id="saleinfoFilterBox">
+            <div class="pt-3">
+
             <div class="row g-3 align-items-end">
                 <div class="col-md-6">
                     <label class="form-label small fw-medium mb-1">
@@ -326,10 +342,11 @@
                 </div>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
-                <button type="button" id="btnResetFilters" class="btn btn-label-secondary" onclick="resetFilters()">
-                    <i class="ti ti-x me-1"></i>ล้างตัวกรอง
-                </button>
+            </div>
+            </div>
+            {{-- /#saleinfoFilterBox --}}
+
+            <div class="d-flex justify-content-end align-items-center mt-3 pt-3 border-top">
                 <div class="d-flex align-items-center">
                     <label class="form-label small fw-medium mb-0 me-2">แสดง</label>
                     <select name="limit" class="form-select form-select-sm p_search"
@@ -493,8 +510,28 @@
         return data;
     }
 
+    // อัปเดตปุ่มล้างตัวกรองตามจำนวน filter ที่ใช้อยู่ (ไม่นับ limit)
+    function updateFilterButtonState() {
+        var count = 0;
+        $('.p_search:not([name="limit"])').each(function () {
+            var v = $(this).val();
+            if (v !== '' && v !== null) count++;
+        });
+        var $btn = $('#btnResetFilters');
+        if (count > 0) { $btn.removeClass('btn-label-secondary').addClass('btn-danger'); $btn.find('.filter-count').text('(' + count + ')'); }
+        else           { $btn.removeClass('btn-danger').addClass('btn-label-secondary'); $btn.find('.filter-count').text(''); }
+    }
+
+    // หมุนลูกศรตามสถานะพับ/กาง
+    $(document).on('show.bs.collapse hide.bs.collapse', '#saleinfoFilterBox', function (e) {
+        $('#btnToggleFilters .toggle-caret')
+            .toggleClass('ti-chevron-down', e.type === 'hide')
+            .toggleClass('ti-chevron-up',   e.type === 'show');
+    });
+
     // กัน AJAX race: ยกเลิก request เก่า + รับเฉพาะผลของ request ล่าสุด
     function loadData(pages) {
+        updateFilterButtonState();
         searchData = collectSearchData();
         page = pages;
 

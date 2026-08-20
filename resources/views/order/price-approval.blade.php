@@ -94,18 +94,19 @@
                             <input type="text" id="a_price3" class="form-control text-end" readonly>
                         </div>
 
-                        {{-- 2 ช่องขวาบนฟอร์มเดิม — ยังไม่ทราบแหล่งข้อมูล --}}
+                        {{-- 2 ช่องขวาของฟอร์มเดิม = ขั้น DB 3-4 Kg. / DB 1-2 Kg. ของระบบกำหนดราคา
+                             ⚠ ตัวคูณยังเป็นค่าเดา (ดู config/product_price.php → tier) --}}
                         <div class="pa-pricebox">
                             <div class="pa-pricebox-cap">
-                                3-4 nn
-                                <i class="ti ti-info-circle text-muted" title="ยังไม่ยืนยันแหล่งข้อมูล — รอผู้ใช้ระบุ"></i>
+                                DB 3-4 Kg.
+                                <i class="ti ti-info-circle text-danger" title="ตัวคูณยังเป็นค่าเดา — รอสูตรจริงจากลูกค้า"></i>
                             </div>
                             <input type="text" id="a_price_34" class="form-control text-end pa-hl-yellow" readonly>
                         </div>
                         <div class="pa-pricebox">
                             <div class="pa-pricebox-cap">
-                                1-2 nn
-                                <i class="ti ti-info-circle text-muted" title="ยังไม่ยืนยันแหล่งข้อมูล — รอผู้ใช้ระบุ"></i>
+                                DB 1-2 Kg.
+                                <i class="ti ti-info-circle text-danger" title="ตัวคูณยังเป็นค่าเดา — รอสูตรจริงจากลูกค้า"></i>
                             </div>
                             <input type="text" id="a_price_12" class="form-control text-end pa-hl-pink" readonly>
                         </div>
@@ -174,13 +175,13 @@
                 </div>
                 <div class="col-md-5">
                     <div class="d-flex gap-2 justify-content-md-end">
-                        <button type="button" class="btn btn-primary" onclick="approvalSave()">
+                        <button type="button" id="btnApprovalSave" class="btn btn-primary" onclick="approvalSave()">
                             <i class="ti ti-plus me-1"></i>เพิ่ม / บันทึก
                         </button>
-                        <button type="button" class="btn btn-label-danger" onclick="approvalSave()">
+                        <button type="button" id="btnApprovalDelete" class="btn btn-label-danger" onclick="approvalDelete()">
                             <i class="ti ti-trash me-1"></i>ลบ รายการ
                         </button>
-                        <button type="button" class="btn btn-label-info" onclick="approvalSave()">
+                        <button type="button" class="btn btn-label-info" onclick="approvalPrint()">
                             <i class="ti ti-printer me-1"></i>พิมพ์
                         </button>
                     </div>

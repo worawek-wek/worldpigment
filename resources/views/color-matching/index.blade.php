@@ -258,7 +258,21 @@
 
         <div class="card-header border-bottom">
 
-            {{-- ปุ่มล้างตัวกรอง (มุมขวาบน) --}}
+            {{-- แถบหัว: ปุ่มพับ/กางตัวกรอง + ปุ่มล้างตัวกรอง (ชิดขวาทั้งคู่) — ค่าเริ่มต้นคือ "ซ่อนไว้" --}}
+            <div class="d-flex justify-content-end align-items-center gap-2">
+                <button type="button" id="btnToggleFilters" class="btn btn-label-primary btn-sm"
+                    data-bs-toggle="collapse" data-bs-target="#cmFilterBox"
+                    aria-expanded="false" aria-controls="cmFilterBox">
+                    <i class="ti ti-filter me-1"></i>ตัวกรอง
+                    <i class="ti ti-chevron-down ms-1 toggle-caret"></i>
+                </button>
+                <button type="button" id="btnResetFilters" class="btn btn-label-secondary btn-sm" onclick="resetFilters()">
+                    <i class="ti ti-x me-1"></i>ล้างตัวกรอง<span class="filter-count ms-1"></span>
+                </button>
+            </div>
+
+            <div class="collapse" id="cmFilterBox">
+            <div class="pt-3">
 
             {{-- แถวตัวกรอง 1: ค้นหา + ช่วงวันที่ --}}
             <div class="row g-3 align-items-end">
@@ -325,7 +339,7 @@
                         oninput="loadData(page)">
                 </div>
             </div>
-            <div class="d-flex justify-content-center align-items-center my-3 position-relative">
+            <div class="d-flex justify-content-center align-items-center my-3">
                 {{-- ประเภทเอกสาร (อยู่ตรงกลาง) — กลุ่ม checkbox เลือกได้หลายอัน (ติ๊ก=แสดง) --}}
                 <div class="doc-filter d-flex align-items-center flex-wrap justify-content-center gap-3 py-2">
                     <div class="form-check mb-0">
@@ -343,10 +357,11 @@
                         </label>
                     </div>
                 </div>
-                <button type="button" id="btnResetFilters" class="btn btn-label-secondary position-absolute end-0" onclick="resetFilters()">
-                    <i class="ti ti-x me-1"></i>ล้างตัวกรอง<span class="filter-count ms-1"></span>
-                </button>
             </div>
+
+            </div>
+            </div>
+            {{-- /#cmFilterBox --}}
 
             {{-- เรียงข้อมูล (คลิกหัวตาราง) + จำนวนต่อหน้า (ขวา) --}}
             {{-- state การเรียง — เก็บไว้นอก #table-data เพื่อให้คงค่าเมื่อตารางโหลดใหม่ (default = id desc = ล่าสุด) --}}
@@ -546,6 +561,13 @@
                 $btn.find('.filter-count').text('');
             }
         }
+
+        // หมุนลูกศรตามสถานะพับ/กาง
+        $(document).on('show.bs.collapse hide.bs.collapse', '#cmFilterBox', function(e){
+            $('#btnToggleFilters .toggle-caret')
+                .toggleClass('ti-chevron-down', e.type === 'hide')
+                .toggleClass('ti-chevron-up',   e.type === 'show');
+        });
 
         // กัน AJAX race: ยกเลิก request เก่า + รับเฉพาะผลของ request ล่าสุด
         // (ช่องค้นหาเป็น oninput ยิงถี่ → ผลอาจกลับมาไม่เรียงลำดับ ทับกันเอง)

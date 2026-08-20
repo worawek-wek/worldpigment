@@ -176,6 +176,22 @@
 
         <div class="card-header border-bottom">
 
+            {{-- แถบหัว: ปุ่มพับ/กางตัวกรอง + ปุ่มล้างตัวกรอง (ชิดขวาทั้งคู่) — ค่าเริ่มต้นคือ "ซ่อนไว้" --}}
+            <div class="d-flex justify-content-end align-items-center gap-2">
+                <button type="button" id="btnToggleFilters" class="btn btn-label-primary btn-sm"
+                    data-bs-toggle="collapse" data-bs-target="#quotationFilterBox"
+                    aria-expanded="false" aria-controls="quotationFilterBox">
+                    <i class="ti ti-filter me-1"></i>ตัวกรอง
+                    <i class="ti ti-chevron-down ms-1 toggle-caret"></i>
+                </button>
+                <button type="button" id="btnResetFilters" class="btn btn-label-secondary btn-sm" onclick="resetFilters()">
+                    <i class="ti ti-x me-1"></i>ล้างตัวกรอง<span class="filter-count ms-1"></span>
+                </button>
+            </div>
+
+            <div class="collapse" id="quotationFilterBox">
+            <div class="pt-3">
+
             {{-- แถวตัวกรอง 1: ค้นหา + ช่วงวันที่ --}}
             <div class="row g-3 align-items-end">
                 <div class="col-md-6">
@@ -210,11 +226,9 @@
                 </div>
             </div>
 
-            <div class="d-flex justify-content-end my-3">
-                <button type="button" id="btnResetFilters" class="btn btn-label-secondary" onclick="resetFilters()">
-                    <i class="ti ti-x me-1"></i>ล้างตัวกรอง<span class="filter-count ms-1"></span>
-                </button>
             </div>
+            </div>
+            {{-- /#quotationFilterBox --}}
 
             {{-- state การเรียง — เก็บนอก #table-data เพื่อคงค่าเมื่อตารางโหลดใหม่ (default = id desc = ล่าสุด) --}}
             <input type="hidden" name="sort_col" value="id" class="p_search">
@@ -1269,6 +1283,16 @@
             if (count > 0) { $btn.removeClass('btn-label-secondary').addClass('btn-danger'); $btn.find('.filter-count').text('('+count+')'); }
             else           { $btn.removeClass('btn-danger').addClass('btn-label-secondary'); $btn.find('.filter-count').text(''); }
         }
+
+        // หมุนลูกศรตามสถานะพับ/กาง + วาด selectpicker ใหม่ (ตอนพับอยู่จะวัดความกว้างไม่ได้)
+        $(document).on('show.bs.collapse hide.bs.collapse', '#quotationFilterBox', function(e){
+            $('#btnToggleFilters .toggle-caret')
+                .toggleClass('ti-chevron-down', e.type === 'hide')
+                .toggleClass('ti-chevron-up',   e.type === 'show');
+        });
+        $(document).on('shown.bs.collapse', '#quotationFilterBox', function(){
+            refreshPickers('#quotationFilterBox');
+        });
 
         // กัน AJAX race: รับเฉพาะผลของ request ล่าสุด (dtXhr/dtSeq ประกาศด้านบนแล้ว)
         function loadData(pages){

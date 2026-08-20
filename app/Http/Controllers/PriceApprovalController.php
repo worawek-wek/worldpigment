@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Services\ProductPriceService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 /**
  * ขออนุมัติราคาพิเศษ (MD) — แปลงมาจากฟอร์ม Access "MK ขออนุมัติราคาพิเศษ"
@@ -132,8 +135,11 @@ class PriceApprovalController extends Controller
                 'price2'  => $req->price2,
                 'price3'  => $req->price3,
                 'remark'  => $req->remark,
+                'costup'  => self::checked($req->costup ?? null),
                 'Appv'    => self::checked($req->Appv),
             ] : null,
+            // ราคาที่ระบบกำหนดราคาคำนวณได้จากรหัสสินค้า — ไว้เทียบ/เติมให้ตอนขึ้นใบใหม่
+            'calc'     => $itemno === '' ? null : app(ProductPriceService::class)->lookup($itemno),
             // กลุ่มราคาที่ตรงกับปริมาณสั่งซื้อในใบนี้ (ใช้เน้นช่องราคาที่เกี่ยวข้อง)
             'group'    => $group,
             'groups'   => self::PRICE_GROUPS,
@@ -230,6 +236,192 @@ class PriceApprovalController extends Controller
             'title' => 'ประวัติราคาเม็ด CP — ' . $itemno,
             'rows'  => $rows,
         ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  บันทึก / ลบ ใบขออนุมัติราคา
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * ตรวจรหัสผ่าน MD
+     *
+     * ⚠ ยังไม่พบว่าระบบเดิมเก็บรหัสนี้ไว้ที่ไหน — เดาว่าเป็นรหัสเดียวใช้ร่วมกัน
+     * เก็บไว้ที่ `config/order.php` (ตั้งทับได้ด้วย ORDER_MD_PASSWORD ใน .env)
+     * ได้ที่เก็บจริงเมื่อไหร่ แก้เมธอดนี้ที่เดียวพอ
+     */
+    private function checkMdPassword($input): bool
+    {
+        $expected = (string) config('order.md_password', '');
+
+        return $expected !== '' && hash_equals($expected, (string) $input);
+    }
+
+    /**
+     * POST — เพิ่ม / บันทึกใบขออนุมัติราคา
+     *
+     * เขียนลง `appvreq` (PK = ReqDate + custno + itemno)
+     *   - ส่ง ReqDate มา = แก้ใบเดิม, ไม่ส่ง = ขึ้นใบใหม่ด้วยเวลาปัจจุบัน
+     *   - ติ๊ก "อนุมัติ" ต้องกรอกรหัสผ่าน MD ให้ถูก
+     *   - เมื่ออนุมัติแล้วจะเขียนราคาที่ยืนไว้ลง `zcustprice` ด้วย (ราคาขายครั้งนี้ + อนุมัติราคาถึง)
+     *     ตามที่ฟอร์มเดิมโชว์ทั้งสองที่คู่กัน
+     */
+    public function save(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'custno' => 'required|string|max:10',
+            'itemno' => 'required|string|max:20',
+        ], [
+            'custno.required' => 'ต้องระบุรหัสลูกค้า',
+            'itemno.required' => 'ต้องเลือกรหัสสินค้า',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'message' => $validator->errors()->first()], 422);
+        }
+
+        // ราคาขายครั้งนี้ — ตรวจหลังถอดคอมมาแล้ว (rule numeric ของ Laravel ไม่รับ "1,234.50")
+        $price = $this->numOrNull($request->input('price'));
+        if ($price === null) {
+            return response()->json(['status' => false, 'message' => 'ต้องกรอกราคาขายครั้งนี้เป็นตัวเลข'], 422);
+        }
+
+        $custno = trim((string) $request->input('custno'));
+        $itemno = trim((string) $request->input('itemno'));
+        $appv   = $request->boolean('Appv');
+
+        if (!DB::table('customer')->where('code', $custno)->exists()) {
+            return response()->json(['status' => false, 'message' => 'ไม่พบรหัสลูกค้า ' . $custno], 422);
+        }
+
+        // ติ๊กอนุมัติ = ต้องผ่านรหัสผ่าน MD
+        if ($appv && !$this->checkMdPassword($request->input('md_password'))) {
+            return response()->json(['status' => false, 'message' => 'รหัสผ่าน MD ไม่ถูกต้อง'], 422);
+        }
+
+        $reqDate = $this->parseDateTime($request->input('ReqDate')) ?? now()->format('Y-m-d H:i:s');
+        $validTo = $this->parseDate($request->input('valid_to'));
+
+        $row = [
+            'weight'  => $this->numOrNull($request->input('weight')),
+            'price'   => $price,
+            'price1'  => $this->numOrNull($request->input('price1')),
+            'price2'  => $this->numOrNull($request->input('price2')),
+            'price3'  => $this->numOrNull($request->input('price3')),
+            'remark'  => $this->nullIfBlank($request->input('remark')),
+            'costup'  => $request->boolean('costup') ? -1 : 0,
+            'Appv'    => $appv ? -1 : 0,
+        ];
+
+        try {
+            DB::transaction(function () use ($custno, $itemno, $reqDate, $row, $appv, $validTo, $request) {
+                $key = ['ReqDate' => $reqDate, 'custno' => $custno, 'itemno' => $itemno];
+
+                if (DB::table('appvreq')->where($key)->exists()) {
+                    DB::table('appvreq')->where($key)->update($row);
+                } else {
+                    DB::table('appvreq')->insert($key + $row);
+                }
+
+                // อนุมัติแล้ว → บันทึกราคาที่ยืนไว้ให้ลูกค้ารายนี้ (ตารางล่างของฟอร์ม)
+                if ($appv) {
+                    $zkey = ['custno' => $custno, 'colorno' => $itemno];
+                    $zrow = [
+                        'exprice' => $this->numOrNull($request->input('price')),
+                        'enddate' => $validTo,
+                        'remark'  => $this->nullIfBlank($request->input('remark')),
+                    ];
+
+                    if (DB::table('zcustprice')->where($zkey)->exists()) {
+                        DB::table('zcustprice')->where($zkey)->update($zrow);
+                    } else {
+                        DB::table('zcustprice')->insert($zkey + $zrow);
+                    }
+                }
+            });
+        } catch (\Throwable $e) {
+            return response()->json(['status' => false, 'message' => 'บันทึกไม่สำเร็จ: ' . $e->getMessage()], 500);
+        }
+
+        return response()->json([
+            'status'  => true,
+            'message' => $appv ? 'บันทึกและอนุมัติราคาเรียบร้อย' : 'บันทึกใบขออนุมัติราคาเรียบร้อย',
+            'ReqDate' => $reqDate,
+        ]);
+    }
+
+    /**
+     * POST — ลบใบขออนุมัติราคา 1 ใบ (ปุ่ม "ลบ รายการ")
+     * ลบเฉพาะแถวใน appvreq — ไม่แตะราคาที่ยืนไว้ใน zcustprice
+     */
+    public function destroy(Request $request)
+    {
+        $custno  = trim((string) $request->input('custno'));
+        $itemno  = trim((string) $request->input('itemno'));
+        $reqDate = $this->parseDateTime($request->input('ReqDate'));
+
+        if ($custno === '' || $itemno === '' || !$reqDate) {
+            return response()->json(['status' => false, 'message' => 'ไม่พบใบขออนุมัติราคาที่จะลบ'], 422);
+        }
+
+        $deleted = DB::table('appvreq')
+            ->where(['ReqDate' => $reqDate, 'custno' => $custno, 'itemno' => $itemno])
+            ->delete();
+
+        if (!$deleted) {
+            return response()->json(['status' => false, 'message' => 'ไม่พบใบขออนุมัติราคาที่จะลบ'], 422);
+        }
+
+        return response()->json(['status' => true, 'message' => 'ลบใบขออนุมัติราคาเรียบร้อย']);
+    }
+
+    /** ค่าว่าง → null */
+    private function nullIfBlank($value)
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
+    }
+
+    /** ตัวเลขจากฟอร์ม (ผ่าน stripCommaFields มาแล้ว) — ว่าง/ไม่ใช่ตัวเลข = null */
+    private function numOrNull($value)
+    {
+        $value = str_replace(',', '', trim((string) $value));
+
+        return ($value === '' || !is_numeric($value)) ? null : (float) $value;
+    }
+
+    /** d/m/Y → Y-m-d (ว่าง/รูปแบบผิด = null) */
+    private function parseDate($value): ?string
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+        if (preg_match('#^(\d{1,2})/(\d{1,2})/(\d{4})$#', $value, $m)) {
+            return sprintf('%04d-%02d-%02d', $m[3], $m[2], $m[1]);
+        }
+        if (preg_match('#^\d{4}-\d{2}-\d{2}#', $value)) {
+            return substr($value, 0, 10);
+        }
+
+        return null;
+    }
+
+    /** d/m/Y H:i หรือ Y-m-d H:i:s → Y-m-d H:i:s (ว่าง/รูปแบบผิด = null) */
+    private function parseDateTime($value): ?string
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+        if (preg_match('#^(\d{1,2})/(\d{1,2})/(\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$#', $value, $m)) {
+            return sprintf('%04d-%02d-%02d %02d:%02d:%02d', $m[3], $m[2], $m[1], $m[4] ?? 0, $m[5] ?? 0, $m[6] ?? 0);
+        }
+        if (preg_match('#^\d{4}-\d{2}-\d{2}#', $value)) {
+            return Carbon::parse($value)->format('Y-m-d H:i:s');
+        }
+
+        return null;
     }
 
     /** ตารางราคาที่ยืนไว้ (zcustprice) — ระบุ itemno = เฉพาะเบอร์นั้น, null = ทุกเบอร์ของลูกค้า */

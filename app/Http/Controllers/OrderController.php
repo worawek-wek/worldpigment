@@ -5,8 +5,12 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Morder;
 use App\Models\SubOrder;
+use App\Services\ProductPriceService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 /**
  * ใบสั่งซื้อ (O-Order) — แปลงมาจากฟอร์ม Access "บันทึกคำสั่งซื้อ"
@@ -66,6 +70,16 @@ class OrderController extends Controller
 
         // ข้อความหมายเหตุสำเร็จรูปของตารางรายการ
         $data['remarks'] = DB::table('ordrem')->orderBy('rem')->pluck('rem');
+
+        // ค่า "รหัส" (suborder.nold) ที่เคยใช้จริงในระบบ — ใช้เป็นตัวเลือกในตารางรายการ
+        $data['nold_options'] = DB::table('suborder')
+            ->whereRaw("TRIM(COALESCE(nold, '')) <> ''")
+            ->distinct()
+            ->orderBy('nold')
+            ->pluck('nold');
+
+        // ผู้บันทึก = พนักงานที่ล็อกอินอยู่ (เติมให้อัตโนมัติเมื่อเปิดใบใหม่)
+        $data['current_emp'] = optional(Auth::user())->empno;
 
         return view('order.index', $data);
     }
@@ -312,6 +326,7 @@ class OrderController extends Controller
             'code'      => $cust->code,
             'name'      => $cust->name,
             'nameEN'    => $cust->nameEN,
+            'sale'      => $cust->sale,     // รหัสผู้ขายประจำลูกค้า → เติมช่อง "รหัสผู้ขาย" (morder.supno)
             'term'      => $cust->term,
             'type'      => $cust->type,
             'type_name' => $typeName,
@@ -351,14 +366,24 @@ class OrderController extends Controller
     }
 
     /**
-     * กล่องราคาบนฟอร์ม — ดึงจากหลายตารางตามฟอร์ม Access เดิม
-     *   fixed_price  ราคาที่กำหนดไว้      uprice.PRICE           (ราคาตกลงกับลูกค้ารายนี้)
-     *   price1/2/3   ราคาช่อง 1/2/3       appvreq (ใบขออนุมัติราคาล่าสุด, แบ่งตามกลุ่มปริมาณ A/B/C)
+     * กล่องราคาบนฟอร์ม
+     *
+     * ราคา 1/2/3 มาจาก **ระบบกำหนดราคา** (`ProductPriceService` ตัวเดียวกับที่หน้า
+     * "ค้นหาราคาสินค้า" ใน /saleinfo ใช้) — คำนวณจากราคาทุนใน `access_pdprice`
+     * ตามเงื่อนไขที่จับคู่ด้วยตัวขึ้นต้นรหัส: ราคา1 = ทุน × mul ÷ div + add,
+     * ราคา2 = ราคา1 × 1.14, ราคา3 = ราคา2 × 1.30 (ตัวคูณอยู่ที่ `product_price.tier`)
+     * → **อ้างอิงจากรหัสสินค้าอย่างเดียว ไม่เกี่ยวกับลูกค้า**
+     *
+     *   fixed_price  ราคาที่กำหนดไว้      = ราคาขาย 1
+     *   price2       ราคาช่อง 2           = ราคาขาย 2
+     *   min_price    ราคาต้องไม่ต่ำกว่า    = ราคาขาย 2
+     *   cost_price   ราคาทุน              = ราคาทุนที่ใช้คำนวณ
+     *
+     * ส่วนที่ผูกกับลูกค้า (ใช้ custno ด้วย):
      *   appv_price   ราคาอนุมัติ          appvreq.price
      *   valid_to     ยืนราคาถึง           zcustprice.enddate
-     *   cost_price   ราคาทุน              pdprice.Price
-     *   group        กลุ่มราคา A/B/C ตามน้ำหนักที่สั่ง (นิยามกลุ่มอยู่ที่ PriceApprovalController)
-     *   min_price    ราคาของกลุ่มนั้น = "ราคาต้องไม่ต่ำกว่า" บนฟอร์ม
+     *
+     * หมายเหตุ: "ราคาขาย" (morder.price) ผู้ใช้พิมพ์เอง ไม่ได้ดึงมาจากที่นี่
      */
     private function priceData($custno, $itemno, $weight = null): array
     {
@@ -366,65 +391,84 @@ class OrderController extends Controller
         $itemno = trim((string) $itemno);
 
         $empty = [
-            'fixed_price' => null, 'price1' => null, 'price2' => null, 'price3' => null,
+            'found'       => false, 'message' => null, 'others' => [],
+            'fixed_price' => null, 'fixed_src' => null,
+            'price1'      => null, 'price2' => null, 'price3' => null,
             'appv_price'  => null, 'appv'   => null, 'valid_to' => null,
             'cost_price'  => null, 'remark' => null,
             'group'       => null, 'min_price' => null,
         ];
 
-        if ($custno === '' || $itemno === '') {
-            return $empty;
+        // ต้องมีรหัสสินค้าเป็นอย่างน้อย — ราคา 1/2/3 คำนวณจากรหัสสินค้าล้วน ไม่ต้องรู้ลูกค้า
+        if ($itemno === '') {
+            return $empty + ['message' => 'ยังไม่ได้กรอกรหัสสินค้าในตารางรายการ'];
         }
 
         // ราคาที่ตกลงไว้กับลูกค้ารายนี้
-        $uprice = DB::table('uprice')
+        $uprice = $custno === '' ? null : DB::table('uprice')
             ->where('CustNo', $custno)
             ->where('ITEMNO', $itemno)
             ->orderByDesc('DATE')
             ->first(['PRICE', 'REM2']);
 
-        // ใบขออนุมัติราคาล่าสุดของคู่นี้ (price1/2/3 = ราคาตามช่วงน้ำหนักสั่ง)
-        $appv = DB::table('appvreq')
+        // ใบขออนุมัติราคาล่าสุดของคู่นี้ (ใช้เฉพาะ "ราคาอนุมัติ")
+        $appv = $custno === '' ? null : DB::table('appvreq')
             ->where('custno', $custno)
             ->where('itemno', $itemno)
             ->orderByDesc('ReqDate')
             ->first(['price', 'price1', 'price2', 'price3', 'Appv']);
 
         // วันสิ้นสุดการยืนราคา
-        $zcust = DB::table('zcustprice')
+        $zcust = $custno === '' ? null : DB::table('zcustprice')
             ->where('custno', $custno)
             ->where('colorno', $itemno)
             ->first(['exprice', 'enddate']);
 
-        // ราคาทุนของสินค้า
-        $cost = DB::table('pdprice')->where('PdCode', $itemno)->value('Price');
+        // ── ราคา 1/2/3 จากระบบกำหนดราคา (ตัวเดียวกับหน้า "ค้นหาราคาสินค้า" ใน /saleinfo) ──
+        $calc   = app(ProductPriceService::class)->lookup($itemno);
+        $prices = $calc['prices'] ?? null;
 
-        // กลุ่มราคาตามปริมาณที่สั่ง (A ≥1,000 / B ≥500 / C ต่ำกว่า 500) → ราคาขั้นต่ำของกลุ่มนั้น
-        $group     = PriceApprovalController::groupOf($weight);
-        $minPrice  = ($group && $appv) ? ($appv->{$group['key']} ?? null) : null;
+        // กลุ่มราคาตามปริมาณที่สั่ง (A ≥1,000 / B ≥500 / C ต่ำกว่า 500) — แสดงประกอบเฉย ๆ
+        $group = PriceApprovalController::groupOf($weight);
+
+        // คำนวณไม่ได้ → บอกเหตุผลที่ระบบกำหนดราคาให้มา (ไม่พบราคาทุน / ไม่มีเงื่อนไขรองรับ ฯลฯ)
+        $message = $prices ? null : ($calc['reason'] ?? 'คำนวณราคาไม่ได้');
 
         return [
+            'found'       => (bool) $prices,
+            'message'     => $message,
+            'others'      => [],
             'group'       => $group ? $group['group'] : null,
             'group_label' => $group ? $group['label'] : null,
-            'min_price'   => $minPrice,
-            'fixed_price' => $uprice->PRICE ?? null,
-            'price1'      => $appv->price1 ?? null,
-            'price2'      => $appv->price2 ?? null,
-            'price3'      => $appv->price3 ?? null,
+            // ราคาที่กำหนดไว้ = ราคาขาย 1 · ราคาช่อง 2 / ราคาต้องไม่ต่ำกว่า = ราคาขาย 2
+            'fixed_price' => $prices['price_1'] ?? null,
+            'price2'      => $prices['price_2'] ?? null,
+            'min_price'   => $prices['price_2'] ?? null,
+            'price1'      => $prices['price_1'] ?? null,
+            'price3'      => $prices['price_3'] ?? null,
+            // ที่มาของราคา — ราคาทุน + เงื่อนไขที่จับคู่ได้ + สูตร (โชว์ใต้กล่องราคา)
+            'cost_price'  => $calc['base_price'] ?? null,
+            'rule_label'  => $calc['rule']['label'] ?? null,
+            'formula'     => isset($calc['rule'])
+                ? '× ' . $calc['rule']['mul'] . ' ÷ ' . $calc['rule']['div'] . ' + ' . $calc['rule']['add']
+                : null,
+            // ส่วนที่ผูกกับลูกค้า
             'appv_price'  => $appv->price ?? null,
             'appv'        => isset($appv->Appv) ? self::checked($appv->Appv) : null,
             'valid_to'    => $zcust->enddate ?? null,
-            'cost_price'  => $cost,
             'remark'      => $uprice->REM2 ?? null,
         ];
     }
 
     /**
      * GET — เลขที่ใบสั่งถัดไปของประเภทที่เลือก (ปุ่ม "เพิ่มใบสั่งซื้อใหม่")
-     *   ?type=WM  →  { orderno: "WM24564" }
+     *   ?type=WM  →  { orderno: "WM24565" }
      *
-     * เลขรันเก็บใน orderrun (1 แถว หลายคอลัมน์ แยกตามประเภท) — เฟสนี้แค่ "อ่านมาโชว์"
-     * ยังไม่เดินเลข เพราะการเดินเลขต้องทำพร้อมตอนบันทึกจริง
+     * ค่าใน orderrun คือ "เลขล่าสุดที่ใช้ไปแล้ว" → เลขถัดไป = ค่านั้น + 1
+     * แล้วข้ามเลขที่มีใบสั่งอยู่จริง (เผื่อค่าใน orderrun ไม่ตรงกับข้อมูลจริง)
+     *
+     * เป็นแค่ "เลขที่คาดว่าจะได้" ไว้โชว์บนฟอร์ม — ยังไม่เดินเลขจริง
+     * การเดินเลขจริงต้องทำตอนบันทึก ซึ่งยังไม่เปิดใช้งานในเฟสนี้
      */
     public function nextOrderno(Request $request)
     {
@@ -433,15 +477,308 @@ class OrderController extends Controller
             return response()->json(['found' => false]);
         }
 
-        $column = self::ORDER_TYPES[$type];
-        $run    = DB::table('orderrun')->first();
-        $next   = $run ? (int) ($run->{$column} ?? 0) : 0;
+        $column   = self::ORDER_TYPES[$type];
+        $run      = DB::table('orderrun')->first();
+        // ประเภทอื่นที่ใช้เลขรันคอลัมน์เดียวกัน (เช่น CM กับ CI ใช้ c ร่วมกัน) — ต้องไม่ชนกัน
+        $siblings = array_keys(self::ORDER_TYPES, $column, true);
+
+        $next = $run ? (int) ($run->{$column} ?? 0) : 0;
+        do {
+            $next++;
+            $taken = DB::table('morder')
+                ->whereIn('Orderno', array_map(fn ($p) => $p . $next, $siblings))
+                ->exists();
+        } while ($taken);
 
         return response()->json([
             'found'   => true,
             'type'    => $type,
             'run'     => $next,
-            'orderno' => $next ? $type . $next : null,
+            'orderno' => $type . $next,
         ]);
+    }
+
+    /**
+     * GET — ค้นข้อมูลสินค้าจากรหัสที่กรอกในตารางรายการ
+     *   ?itemno=CP8F247B
+     *
+     * คืนชื่อสินค้าไว้เติมให้อัตโนมัติ + คำเตือน "ต้อง Match ใหม่"
+     * (ฟอร์มเดิมขึ้นแถบแดง "สีที่สั่งซื้อล่าสุดเกิน 3 ปี จะต้อง Match ใหม่")
+     */
+    public function itemLookup(Request $request)
+    {
+        $itemno = trim((string) $request->query('itemno', ''));
+        if ($itemno === '') {
+            return response()->json(['found' => false]);
+        }
+
+        // ชื่อสินค้า — ใช้ชื่อที่เคยบันทึกไว้ในใบสั่งก่อนหน้าเป็นหลัก ไม่มีค่อยดูจากตารางราคา
+        $prodname = DB::table('suborder')
+            ->where('Itemno', $itemno)
+            ->whereRaw("TRIM(COALESCE(prodname, '')) <> ''")
+            ->orderByDesc('Runno')
+            ->value('prodname');
+
+        if (!$prodname) {
+            $up = DB::table('uprice')
+                ->where('ITEMNO', $itemno)
+                ->orderByDesc('DATE')
+                ->first(['Label', 'PackRem', 'st_code']);
+            $prodname = $up->Label ?? $up->PackRem ?? $up->st_code ?? null;
+        }
+
+        // วันที่สั่งซื้อล่าสุดของเบอร์นี้ (ทุกลูกค้า — การ Match เป็นเรื่องของสูตรสี ไม่ผูกกับลูกค้า)
+        $lastDate = DB::table('suborder')
+            ->join('morder', 'morder.Orderno', '=', 'suborder.Orderno')
+            ->where('suborder.Itemno', $itemno)
+            ->max('morder.Mdate');
+
+        return response()->json([
+            'found'           => (bool) ($prodname || $lastDate),
+            'itemno'          => $itemno,
+            'prodname'        => $prodname,
+            'last_order_date' => $lastDate,
+            // เกิน 3 ปี (หรือไม่เคยสั่งเลย) → ต้อง Match ใหม่
+            'need_match'      => !$lastDate || Carbon::parse($lastDate)->lt(Carbon::now()->subYears(3)),
+        ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  บันทึกใบสั่งซื้อ
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * POST — บันทึกใบสั่งซื้อ (สร้างใหม่ / แก้ไขใบเดิม)
+     *
+     * insert: จองเลขที่ใบสั่งจาก orderrun ในทรานแซกชันเดียวกับการบันทึก
+     *         และปล่อย appv ว่างไว้ → ใบจะไปเข้าคิวอนุมัติราคาเอง (ดู OrderApprovalController)
+     * update: ไม่แตะเลขที่ใบสั่ง, วันที่เปิดใบ และสถานะอนุมัติ (appv / appvDT)
+     */
+    public function save(Request $request)
+    {
+        $mode = $request->input('mode') === 'update' ? 'update' : 'insert';
+
+        $rules = [
+            'Custno' => 'required|string|max:10',
+            'items'  => 'required|array|min:1',
+        ];
+        $rules[$mode === 'insert' ? 'order_type' : 'Orderno'] = 'required|string';
+
+        $validator = Validator::make($request->all(), $rules, [
+            'Custno.required'     => 'ต้องระบุรหัสลูกค้า',
+            'items.required'      => 'ต้องมีรายการสินค้าอย่างน้อย 1 รายการ',
+            'items.min'           => 'ต้องมีรายการสินค้าอย่างน้อย 1 รายการ',
+            'order_type.required' => 'ต้องเลือกประเภทใบสั่ง',
+            'Orderno.required'    => 'ไม่พบเลขที่ใบสั่งที่จะแก้ไข',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'message' => $validator->errors()->first()], 422);
+        }
+
+        $custno = trim((string) $request->input('Custno'));
+        $cust   = DB::table('customer')->where('code', $custno)->first(['code', 'name']);
+        if (!$cust) {
+            return response()->json(['status' => false, 'message' => 'ไม่พบรหัสลูกค้า ' . $custno], 422);
+        }
+
+        // แถวที่ยังไม่กรอกรหัสสินค้า = แถวเปล่า ข้ามไป
+        $items = array_values(array_filter(
+            (array) $request->input('items', []),
+            fn ($row) => trim((string) ($row['Itemno'] ?? '')) !== ''
+        ));
+        if (empty($items)) {
+            return response()->json(['status' => false, 'message' => 'ต้องกรอกรหัสสินค้าอย่างน้อย 1 รายการ'], 422);
+        }
+
+        $type = strtoupper(trim((string) $request->input('order_type')));
+        if ($mode === 'insert' && !isset(self::ORDER_TYPES[$type])) {
+            return response()->json(['status' => false, 'message' => 'ประเภทใบสั่งไม่ถูกต้อง'], 422);
+        }
+
+        try {
+            $orderno = DB::transaction(function () use ($request, $mode, $type, $custno, $cust, $items) {
+                if ($mode === 'insert') {
+                    $orderno = $this->allocateOrderno($type);
+                    DB::table('morder')->insert(
+                        ['Orderno' => $orderno] + $this->headerPayload($request, $custno, $cust)
+                    );
+                } else {
+                    $orderno = trim((string) $request->input('Orderno'));
+                    if (!DB::table('morder')->where('Orderno', $orderno)->exists()) {
+                        throw new \RuntimeException('ไม่พบใบสั่งซื้อเลขที่ ' . $orderno);
+                    }
+                    DB::table('morder')->where('Orderno', $orderno)
+                        ->update($this->headerPayload($request, $custno, $cust));
+                }
+
+                $this->syncItems($orderno, $items);
+
+                return $orderno;
+            });
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'บันทึกไม่สำเร็จ: ' . $e->getMessage(),
+            ], 500);
+        }
+
+        return response()->json([
+            'status'  => true,
+            'message' => $mode === 'insert' ? 'บันทึกใบสั่งซื้อใหม่เรียบร้อย' : 'แก้ไขใบสั่งซื้อเรียบร้อย',
+            'orderno' => $orderno,
+        ]);
+    }
+
+    /** ค่าที่จะเขียนลง morder (ใช้ร่วมทั้ง insert / update) */
+    private function headerPayload(Request $request, string $custno, $cust): array
+    {
+        return [
+            // วันที่เปิดใบ — ฟอร์มตั้งค่าปัจจุบันให้ แต่ผู้ใช้แก้ได้ (ว่าง/รูปแบบผิด = ใช้เวลาปัจจุบัน)
+            'Mdate'    => $this->parseDateTime($request->input('Mdate')) ?? now(),
+            'Company'  => $this->nullIfBlank($request->input('Company')),
+            'PO'       => $this->nullIfBlank($request->input('PO')),
+            'Custno'   => $custno,
+            'Custname' => $cust->name,
+            'Emp'      => $this->nullIfBlank($request->input('Emp')),
+            'supno'    => $this->nullIfBlank($request->input('supno')),
+            'DVpoint'  => $this->nullIfBlank($request->input('DVpoint')),
+            'RsvNo'    => $this->nullIfBlank($request->input('RsvNo')),
+            'netqty'   => $this->numOrNull($request->input('netqty')),
+            'price'    => $this->numOrNull($request->input('price')),
+            // กรณีสั่งทำสต๊อก
+            'sendend'  => $this->parseDate($request->input('sendend')),
+            'SendCust' => (int) $this->numOrNull($request->input('SendCust')),
+            'HMStore'  => (float) $this->numOrNull($request->input('HMStore')),
+            'sendmth'  => $this->numOrNull($request->input('sendmth')),
+            // checkbox — Access เก็บ -1 = ติ๊ก
+            'Send'     => $this->flag($request->input('Send')),
+            'RP'       => $this->flag($request->input('RP')),
+            'Spec'     => $this->flag($request->input('Spec')),
+            'Cer'      => $this->flag($request->input('Cer')),
+            'MSDS'     => $this->flag($request->input('MSDS')),
+        ];
+    }
+
+    /**
+     * เขียนรายการลง suborder แบบเทียบกับของเดิม:
+     * แถวที่มี Runno = แก้ไข · แถวใหม่ = เพิ่ม · แถวที่หายไปจากฟอร์ม = ลบ
+     * (คง Runno เดิมไว้ ไม่ลบทั้งใบแล้วใส่ใหม่ เพราะ Runno เป็นเลขอ้างอิงของระบบเดิม)
+     */
+    private function syncItems(string $orderno, array $items): void
+    {
+        $keep = [];
+
+        foreach ($items as $row) {
+            $data = [
+                'Itemno'     => trim((string) ($row['Itemno'] ?? '')),
+                'nold'       => $this->nullIfBlank($row['nold'] ?? null),
+                'prodname'   => $this->nullIfBlank($row['prodname'] ?? null),
+                'Lotno'      => $this->nullIfBlank($row['Lotno'] ?? null),
+                'Stock'      => (float) $this->numOrNull($row['Stock'] ?? null),
+                'Production' => (float) $this->numOrNull($row['Production'] ?? null),
+                'custwant'   => $this->parseDate($row['custwant'] ?? null),
+                'senddate'   => $this->parseDate($row['senddate'] ?? null),
+                'EndP'       => $this->parseDate($row['EndP'] ?? null),
+                'DVDate'     => $this->parseDate($row['DVDate'] ?? null),
+                'outno'      => $this->nullIfBlank($row['outno'] ?? null),
+                'Remark'     => $this->nullIfBlank($row['Remark'] ?? null),
+            ];
+
+            $runno = (int) ($row['Runno'] ?? 0);
+            $isOld = $runno > 0 && DB::table('suborder')
+                ->where('Orderno', $orderno)->where('Runno', $runno)->exists();
+
+            if ($isOld) {
+                DB::table('suborder')->where('Orderno', $orderno)->where('Runno', $runno)->update($data);
+                $keep[] = $runno;
+            } else {
+                $data['Orderno'] = $orderno;
+                $keep[] = DB::table('suborder')->insertGetId($data);
+            }
+        }
+
+        // แถวที่ผู้ใช้ลบออกจากฟอร์ม
+        DB::table('suborder')
+            ->where('Orderno', $orderno)
+            ->whereNotIn('Runno', $keep)
+            ->delete();
+    }
+
+    /**
+     * จองเลขที่ใบสั่งของประเภทที่เลือก — ต้องเรียกภายใน transaction เท่านั้น
+     *
+     * ล็อกแถว orderrun ไว้ก่อน กันสองคนกดบันทึกพร้อมกันแล้วได้เลขซ้ำ
+     * แล้วเดินเลขต่อจากค่าล่าสุด ข้ามเลขที่มีใบสั่งอยู่จริง (เผื่อค่าใน orderrun ไม่ตรงกับข้อมูลจริง)
+     */
+    private function allocateOrderno(string $type): string
+    {
+        $column = self::ORDER_TYPES[$type];
+
+        $run = DB::table('orderrun')->lockForUpdate()->first();
+        if (!$run) {
+            throw new \RuntimeException('ไม่พบข้อมูลเลขรันในตาราง orderrun');
+        }
+
+        $siblings = array_keys(self::ORDER_TYPES, $column, true);
+
+        $next = (int) ($run->{$column} ?? 0);
+        do {
+            $next++;
+            $taken = DB::table('morder')
+                ->whereIn('Orderno', array_map(fn ($p) => $p . $next, $siblings))
+                ->exists();
+        } while ($taken);
+
+        DB::table('orderrun')->update([$column => $next]);
+
+        return $type . $next;
+    }
+
+    /**
+     * แปลงวันที่+เวลาจากช่องกรอก (flatpickr ส่งมาเป็น d/m/Y H:i) → Y-m-d H:i:s
+     * รับรูปแบบไม่มีเวลา (d/m/Y) และรูปแบบของ DB (Y-m-d H:i:s) ได้ด้วย
+     */
+    private function parseDateTime($value): ?string
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        if (preg_match('#^(\d{1,2})/(\d{1,2})/(\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$#', $value, $m)) {
+            return sprintf(
+                '%04d-%02d-%02d %02d:%02d:%02d',
+                $m[3], $m[2], $m[1], $m[4] ?? 0, $m[5] ?? 0, $m[6] ?? 0
+            );
+        }
+
+        if (preg_match('#^\d{4}-\d{2}-\d{2}#', $value)) {
+            return substr($value . ' 00:00:00', 0, 19);
+        }
+
+        return null;
+    }
+
+    /** ค่าว่าง → null (กันช่องว่างกลายเป็นสตริงว่างใน DB) */
+    private function nullIfBlank($value)
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
+    }
+
+    /** ตัวเลขจากฟอร์ม (ผ่าน stripCommaFields มาแล้ว) — ว่าง/ไม่ใช่ตัวเลข = null */
+    private function numOrNull($value)
+    {
+        $value = str_replace(',', '', trim((string) $value));
+
+        return ($value === '' || !is_numeric($value)) ? null : (float) $value;
+    }
+
+    /** checkbox บนฟอร์ม → รูปแบบของ Access (-1 = ติ๊ก, 0 = ไม่ติ๊ก) */
+    private function flag($value): int
+    {
+        return in_array((string) $value, ['1', 'true', 'on', '-1'], true) ? -1 : 0;
     }
 }
