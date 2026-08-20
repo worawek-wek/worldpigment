@@ -69,6 +69,92 @@
     <script src="assets/js/forms-selects.js"></script>
     {{-- <script src="assets/js/forms-pickers.js"></script> --}}
 
+    {{-- ═══════════════════════════════════════════════════════════════ --}}
+    {{-- ช่องกรอกตัวเลขแบบใส่คอมมาอัตโนมัติ (18/08/2569)                    --}}
+    {{--                                                                 --}}
+    {{-- วิธีใช้: ที่ input ใส่ type="text" class="js-comma"               --}}
+    {{--   - data-decimals="0"  → จำนวนเต็ม (ไม่เติม .00 ตอนออกจากช่อง)     --}}
+    {{--   - ไม่ระบุ = ทศนิยม 2 ตำแหน่ง                                    --}}
+    {{-- ⚠ เวลาอ่านค่าไปคำนวณ/ส่ง server ห้ามใช้ .val() ตรง ๆ ให้ใช้        --}}
+    {{--   numVal(sel) หรือเรียก stripCommaFields(form) ก่อน serialize      --}}
+    {{-- ═══════════════════════════════════════════════════════════════ --}}
+    <script>
+        // '1,234.50' → '1234.50'
+        function stripCommas(v){
+            return String(v == null ? '' : v).replace(/,/g, '').trim();
+        }
+
+        // แปลง "ค่า" เป็นตัวเลข — ว่าง/ไม่ใช่ตัวเลข = null
+        function numOf(v){
+            var raw = stripCommas(v);
+            if (raw === '') return null;
+            var n = parseFloat(raw);
+            return isNaN(n) ? null : n;
+        }
+
+        // อ่านค่าจาก "ช่อง" (selector / element / jQuery) เป็นตัวเลข
+        function numVal(sel){ return numOf($(sel).val()); }
+
+        // ใส่คอมมาให้เฉพาะส่วนจำนวนเต็ม — คงส่วนทศนิยมที่กำลังพิมพ์ค้างไว้ตามเดิม
+        function addCommas(s, decimals){
+            s = String(s == null ? '' : s);
+            var neg = s.charAt(0) === '-';
+            s = s.replace(/[^\d.]/g, '');
+            var maxDec = (decimals === undefined || decimals === null) ? 2 : Number(decimals);
+            var dot = s.indexOf('.');
+            var intPart = (dot === -1) ? s : s.substring(0, dot);
+            var decPart = '';
+            if (dot !== -1 && maxDec > 0){
+                decPart = '.' + s.substring(dot + 1).replace(/\./g, '').substring(0, maxDec);
+            }
+            intPart = intPart.replace(/^0+(?=\d)/, '');                    // ตัดศูนย์นำหน้า
+            intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            if (intPart === '' && decPart === '') return neg ? '-' : '';
+            return (neg ? '-' : '') + intPart + decPart;
+        }
+
+        // ค่าจาก DB → ข้อความพร้อมคอมมาสำหรับใส่ในช่อง (ว่าง = '')
+        function commaFmt(v, decimals){
+            var n = numOf(v);
+            if (n === null) return '';
+            var d = (decimals === undefined || decimals === null) ? 2 : Number(decimals);
+            return n.toLocaleString('en-US', {minimumFractionDigits: d, maximumFractionDigits: d});
+        }
+
+        // ทศนิยมของช่องนั้น (data-decimals, ไม่ระบุ = 2)
+        function commaDecimals(el){
+            var d = $(el).data('decimals');
+            return (d === undefined || d === null || d === '') ? 2 : Number(d);
+        }
+
+        // ถอดคอมมาออกจากทุกช่อง .js-comma ใน scope — เรียกก่อน serialize()/new FormData()
+        // ไม่งั้นค่าที่ส่งขึ้น server จะเป็น '1,234.50' แล้วลง DB เป็น 1.00
+        function stripCommaFields(scope){
+            $(scope).find('.js-comma').addBack('.js-comma').each(function(){
+                this.value = stripCommas(this.value);
+            });
+        }
+
+        // จัดรูปแบบระหว่างพิมพ์ + คืนตำแหน่งเคอร์เซอร์ให้อยู่หลังอักขระตัวเดิม
+        $(document).on('input', '.js-comma', function(){
+            var el = this;
+            var head = el.value.substring(0, el.selectionStart).replace(/[^\d.]/g, '').length;
+            el.value = addCommas(el.value, commaDecimals(el));
+            var pos = 0, seen = 0;
+            while (pos < el.value.length && seen < head){
+                if (/[\d.]/.test(el.value.charAt(pos))) seen++;
+                pos++;
+            }
+            try { el.setSelectionRange(pos, pos); } catch (e) {}
+        });
+
+        // ออกจากช่อง → จัดทศนิยมให้ครบตามที่กำหนด
+        $(document).on('blur', '.js-comma', function(){
+            var n = numOf(this.value);
+            this.value = (n === null) ? '' : commaFmt(n, commaDecimals(this));
+        });
+    </script>
+
     <script>
             // get_summary_menu()
             // function get_summary_menu(){

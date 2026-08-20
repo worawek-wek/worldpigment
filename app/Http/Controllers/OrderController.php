@@ -218,7 +218,7 @@ class OrderController extends Controller
             'customer'  => $this->customerPayload($order->Custno),
             'dvpoints'  => $this->dvpoints($order->Custno),
             'itemno'    => $itemno,
-            'price'     => $this->priceData($order->Custno, $itemno),
+            'price'     => $this->priceData($order->Custno, $itemno, $order->netqty),
         ]);
     }
 
@@ -343,20 +343,24 @@ class OrderController extends Controller
      */
     public function priceInfo(Request $request)
     {
-        return response()->json(
-            $this->priceData($request->query('custno'), $request->query('itemno'))
-        );
+        return response()->json($this->priceData(
+            $request->query('custno'),
+            $request->query('itemno'),
+            $request->query('weight')
+        ));
     }
 
     /**
      * กล่องราคาบนฟอร์ม — ดึงจากหลายตารางตามฟอร์ม Access เดิม
      *   fixed_price  ราคาที่กำหนดไว้      uprice.PRICE           (ราคาตกลงกับลูกค้ารายนี้)
-     *   price1/2/3   ราคาช่อง 1/2/3       appvreq (ใบขออนุมัติราคาล่าสุด, แบ่งตามช่วงน้ำหนัก)
+     *   price1/2/3   ราคาช่อง 1/2/3       appvreq (ใบขออนุมัติราคาล่าสุด, แบ่งตามกลุ่มปริมาณ A/B/C)
      *   appv_price   ราคาอนุมัติ          appvreq.price
      *   valid_to     ยืนราคาถึง           zcustprice.enddate
      *   cost_price   ราคาทุน              pdprice.Price
+     *   group        กลุ่มราคา A/B/C ตามน้ำหนักที่สั่ง (นิยามกลุ่มอยู่ที่ PriceApprovalController)
+     *   min_price    ราคาของกลุ่มนั้น = "ราคาต้องไม่ต่ำกว่า" บนฟอร์ม
      */
-    private function priceData($custno, $itemno): array
+    private function priceData($custno, $itemno, $weight = null): array
     {
         $custno = trim((string) $custno);
         $itemno = trim((string) $itemno);
@@ -365,6 +369,7 @@ class OrderController extends Controller
             'fixed_price' => null, 'price1' => null, 'price2' => null, 'price3' => null,
             'appv_price'  => null, 'appv'   => null, 'valid_to' => null,
             'cost_price'  => null, 'remark' => null,
+            'group'       => null, 'min_price' => null,
         ];
 
         if ($custno === '' || $itemno === '') {
@@ -394,7 +399,14 @@ class OrderController extends Controller
         // ราคาทุนของสินค้า
         $cost = DB::table('pdprice')->where('PdCode', $itemno)->value('Price');
 
+        // กลุ่มราคาตามปริมาณที่สั่ง (A ≥1,000 / B ≥500 / C ต่ำกว่า 500) → ราคาขั้นต่ำของกลุ่มนั้น
+        $group     = PriceApprovalController::groupOf($weight);
+        $minPrice  = ($group && $appv) ? ($appv->{$group['key']} ?? null) : null;
+
         return [
+            'group'       => $group ? $group['group'] : null,
+            'group_label' => $group ? $group['label'] : null,
+            'min_price'   => $minPrice,
             'fixed_price' => $uprice->PRICE ?? null,
             'price1'      => $appv->price1 ?? null,
             'price2'      => $appv->price2 ?? null,

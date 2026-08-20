@@ -153,14 +153,16 @@
                     <div class="col-12">
                         <label class="form-label">นน.ในคลังคงเหลือ</label>
                         <div class="input-group">
-                            <input type="number" id="o_HMStore" class="form-control text-end" step="0.01">
+                            <input type="text" id="o_HMStore" class="form-control text-end js-comma"
+                                inputmode="decimal" autocomplete="off" placeholder="0.00">
                             <span class="input-group-text">ก.ก.</span>
                         </div>
                     </div>
                     <div class="col-12">
                         <label class="form-label">จะส่งมอบเดือนละ</label>
                         <div class="input-group">
-                            <input type="number" id="o_sendmth" class="form-control text-end" step="0.01">
+                            <input type="text" id="o_sendmth" class="form-control text-end js-comma"
+                                inputmode="decimal" autocomplete="off" placeholder="0.00">
                             <span class="input-group-text">ก.ก.</span>
                         </div>
                     </div>
@@ -176,7 +178,7 @@
                         <label class="form-label mb-0 small">
                             ราคาต้องไม่ต่ำกว่า
                             <i class="ti ti-info-circle text-muted"
-                                title="อนุมานจากฟอร์มเดิมว่าเท่ากับราคาช่อง 2 — รอยืนยันกติกาจริง"></i>
+                                title="ราคาของกลุ่มที่ตรงกับน้ำหนักสั่ง (A ≥1,000 / B ≥500 / C ต่ำกว่า 500 ก.ก.)"></i>
                         </label>
                     </div>
                     <div class="col-6">
@@ -224,7 +226,8 @@
                 <div class="mb-3">
                     <label class="form-label">น้ำหนักรวม</label>
                     <div class="input-group">
-                        <input type="number" id="o_netqty" class="form-control text-end" step="0.01">
+                        <input type="text" id="o_netqty" class="form-control text-end js-comma"
+                            inputmode="decimal" autocomplete="off" placeholder="0.00">
                         <span class="input-group-text">ก.ก.</span>
                     </div>
                 </div>
@@ -232,7 +235,8 @@
                 <div class="mb-3">
                     <label class="form-label">
                         กลุ่มราคา
-                        <i class="ti ti-info-circle text-muted" title="ยังไม่ยืนยันแหล่งข้อมูล — รอผู้ใช้ระบุ"></i>
+                        <i class="ti ti-info-circle text-muted"
+                            title="คำนวณจากน้ำหนักรวม — A = 1,000 kg.up / B = 500 kg.up / C = under 500 kg."></i>
                     </label>
                     <input type="text" id="o_price_group" class="form-control of-hl-green" readonly>
                 </div>

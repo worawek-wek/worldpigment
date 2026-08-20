@@ -152,7 +152,9 @@
                                     </div>
                                     <div class="col-md-2">
                                         <label class="form-label small mb-1">น้ำหนัก (กรัม) <span class="text-muted fw-normal"><br>(เช่น 100)</span></label>
-                                        <input type="number" name="Wage" class="form-control">
+                                        {{-- จำนวนเต็ม (กรัม) — คอมมาอัตโนมัติ, ถอดคอมมาก่อน submit --}}
+                                        <input type="text" name="Wage" class="form-control text-end js-comma"
+                                            data-decimals="0" inputmode="numeric" autocomplete="off">
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">Standard <span class="text-muted fw-normal">(เช่น PT 494 C)</span></label>

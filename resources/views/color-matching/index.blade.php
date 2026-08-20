@@ -1088,6 +1088,12 @@
                     return;
                 }
 
+                // ช่องตัวเลขแบบใส่คอมมา (js-comma) → จัดรูปแบบก่อนเติม
+                if ($input.hasClass('js-comma')) {
+                    $input.val(commaFmt(val, commaDecimals($input)));
+                    return;
+                }
+
                 $input.val(val ?? '');
             });
         }
@@ -1111,6 +1117,7 @@
             }).then((result) => {
                 if (!result.isConfirmed) return;
 
+                stripCommaFields(this);          // ถอดคอมมาออกจากช่อง js-comma ก่อนส่ง
                 const fd = new FormData(this);
                 fd.append('_token', CSRF);
 
@@ -1163,6 +1170,7 @@
                     $('#form_sample_delivery [name="SendNo"]').val('SD' + String(Date.now()).slice(-10));
                 }
 
+                stripCommaFields(this);          // ถอดคอมมาออกจากช่อง js-comma ก่อนส่ง (เช่น น้ำหนัก Wage)
                 const fd = new FormData(this);
                 fd.append('_token', CSRF);
 

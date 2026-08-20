@@ -782,21 +782,24 @@
                 currentItems.forEach(function(row, idx){
                     body += '<tr>';
                     cols.forEach(function(c){
-                        var typ = c.num ? 'number' : 'text';
+                        // คอลัมน์ตัวเลข = input ธรรมดา + คอมมาอัตโนมัติ (js-comma) — ไม่ใช้ type=number
+                        // ค่าที่เก็บใน currentItems เป็นค่าดิบไม่มีคอมมาเสมอ (updateItem ถอดให้)
                         var cls = 'form-control form-control-sm qitem-input qitem-' + c.key + (c.num ? ' text-end' : '');
-                        var step = c.num ? ' step="0.01"' : '';
                         var rc = revClasses(c.key, edges);
                         var tdcls = rc ? ' class="'+rc+'"' : '';
+                        var val = c.num ? commaFmt(row[c.key], 2) : (row[c.key] == null ? '' : row[c.key]);
                         // ช่องรหัสสินค้า → ค้นชื่อ/ราคา/รายละเอียดมาเติมช่องที่ว่าง (oninput + debounce)
                         var oncode = (c.key === 'code') ? '; lookupItem('+idx+',this.value)' : '';
                         // ช่อง VAT = คำนวณอัตโนมัติอย่างเดียว → ห้ามแก้เอง (readonly, ไม่รับ oninput)
                         if (c.key === 'price_vat'){
-                            body += '<td'+tdcls+'><input type="'+typ+'" class="'+cls+' qitem-readonly"'+step
-                                 +  ' value="'+esc(row[c.key])+'" readonly tabindex="-1"'
+                            body += '<td'+tdcls+'><input type="text" class="'+cls+' qitem-readonly"'
+                                 +  ' value="'+esc(val)+'" readonly tabindex="-1"'
                                  +  ' title="คำนวณอัตโนมัติจากราคา (VAT '+(VAT_RATE*100)+'%)"></td>';
                             return;
                         }
-                        body += '<td'+tdcls+'><input type="'+typ+'" class="'+cls+'"'+step+' value="'+esc(row[c.key])+'" oninput="updateItem('+idx+',\''+c.key+'\',this.value)'+oncode+'"></td>';
+                        var numAttr = c.num ? ' inputmode="decimal" autocomplete="off"' : '';
+                        body += '<td'+tdcls+'><input type="text" class="'+cls+(c.num ? ' js-comma' : '')+'"'+numAttr
+                             +  ' value="'+esc(val)+'" oninput="updateItem('+idx+',\''+c.key+'\',this.value)'+oncode+'"></td>';
                     });
                     body += '<td class="text-center"><button type="button" class="btn btn-sm btn-icon btn-label-danger" title="ลบ" onclick="removeItemRow('+idx+')"><i class="ti ti-trash"></i></button></td>';
                     body += '</tr>';
@@ -807,10 +810,14 @@
             recalcAllVat();
         }
 
+        // คอลัมน์นี้เป็นตัวเลขไหม (ใช้ตัดสินว่าต้องถอดคอมมา/ใส่คอมมา)
+        function isNumCol(key){ return !!(COL_REG[key] && COL_REG[key].num); }
+
         function updateItem(idx, key, val){
             var row = currentItems[idx];
             if (!row) return;
-            row[key] = val;
+            // เก็บค่าดิบ (ไม่มีคอมมา) ลง data model เสมอ — ส่วนที่แสดงบนช่องค่อยใส่คอมมาให้
+            row[key] = isNumCol(key) ? stripCommas(val) : val;
             // ผู้ใช้แก้ช่องนี้เอง → ไม่ถือเป็น auto-fill อีก (กันโดนล้างตอนรหัสไม่เจอ)
             if (row.__auto && row.__auto[key]) delete row.__auto[key];
 
@@ -829,7 +836,7 @@
         var VAT_RATE = 0.07;   // ภาษีมูลค่าเพิ่ม 7%
 
         function toNum(v){
-            var s = String(v == null ? '' : v).trim();
+            var s = String(v == null ? '' : v).replace(/,/g, '').trim();
             if (s === '') return null;
             var n = parseFloat(s);
             return isNaN(n) ? null : n;
@@ -852,7 +859,8 @@
             var pos = -1;
             activeCols().forEach(function(c, i){ if (c.key === key) pos = i; });
             if (pos < 0) return;
-            $('#quotationItems tr').eq(idx).find('input').eq(pos).val(val);
+            $('#quotationItems tr').eq(idx).find('input').eq(pos)
+                .val(isNumCol(key) ? commaFmt(val, 2) : val);
         }
 
         function recalcVat(idx){
@@ -889,7 +897,7 @@
             activeCols().forEach(function(c, i){
                 if (c.key === 'code') return;   // อย่าแตะช่องที่กำลังพิมพ์
                 var v = currentItems[idx][c.key];
-                $inputs.eq(i).val(v == null ? '' : v);
+                $inputs.eq(i).val(c.num ? commaFmt(v, 2) : (v == null ? '' : v));
             });
         }
         function applyItemLookup(idx, code){
