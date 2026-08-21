@@ -101,6 +101,7 @@ Route::middleware(['auth', 'access'])->group(function() {
     @include_once('color-matching.php');
     @include_once('quotation.php');
     @include_once('saleinfo.php');
+    @include_once('pricerule.php');  // ตั้งค่าเงื่อนไขราคา (คูณ/หาร/บวก) — แยกจากหน้ากำหนดราคา 21/08/2569
     @include_once('order.php');
     @include_once('customer.php');
     @include_once('report.php');

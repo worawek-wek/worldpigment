@@ -47,6 +47,7 @@ worldpigment/
 │   │   ├── PermissionController.php
 │   │   ├── PDFController.php
 │   │   ├── SaleinfoController.php   # กำหนดราคา + ค้นหาราคาสินค้า (04/08/2569)
+│   │   ├── PriceRuleController.php  # ตั้งค่าเงื่อนไขราคา คูณ/หาร/บวก — เมนูแยก /price-rule (21/08/2569)
 │   │   ├── ProductController.php    # ข้อมูลสินค้า tb_products — CRUD (07/08/2569)
 │   │   └── ExportExcelController.php
 │   ├── Models/
@@ -71,7 +72,8 @@ worldpigment/
 │   ├── customer.php
 │   ├── report.php
 │   ├── permission.php
-│   └── product.php              # ข้อมูลสินค้า tb_products (07/08/2569)
+│   ├── product.php              # ข้อมูลสินค้า tb_products (07/08/2569)
+│   └── pricerule.php            # ตั้งค่าเงื่อนไขราคา tb_price_rule (21/08/2569)
 └── public/
 ```
 
@@ -128,7 +130,7 @@ php artisan migrate --seed
 
 `routes/web.php` เป็นจุดเริ่มต้น แต่ route ส่วนใหญ่แยกอยู่ใน**ไฟล์ตาม feature** ในโฟลเดอร์ `routes/` และถูกดึงเข้ามาด้วย `@include_once(...)` จาก*ภายใน* group `Route::middleware('auth')` ใน `web.php`:
 
-- `color-matching.php`, `quotation.php`, `order.php`, `customer.php`, `report.php`, `permission.php`, `production.php`
+- `color-matching.php`, `quotation.php`, `saleinfo.php`, `pricerule.php`, `order.php`, `customer.php`, `report.php`, `permission.php`, `product.php`, `worker.php`, `production.php`
 
 ดังนั้น route ในไฟล์เหล่านี้จึงถูกป้องกันด้วย `auth` โดยปริยายจากตำแหน่งที่มัน include เข้ามา — **ห้าม** ครอบ `auth` ซ้ำอีก
 
@@ -327,6 +329,11 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 - **แถบตัวกรองแบบพับได้** (21/08/2569): หน้ารายการหลักทุกหน้าที่มีแถบตัวกรอง — **Order**, **ใบเสนอราคา**, **เทียบสี**, **กำหนดราคา** — ครอบตัวกรองทั้งหมดไว้ใน `<div class="collapse" id="<หน้า>FilterBox">` โดย**ไม่ใส่ class `show`** ⇒ **ค่าเริ่มต้นคือซ่อนไว้**
   - หัวการ์ดเป็นแถบเดียว `d-flex justify-content-end gap-2`: **ปุ่ม `#btnToggleFilters` (พับ/กาง) + ปุ่ม `#btnResetFilters` (ล้างตัวกรอง) ชิดขวาทั้งคู่** — ปุ่มล้างตัวกรอง**อยู่นอกกล่องพับ** จึงกดล้างได้โดยไม่ต้องกางก่อน และ `.filter-count` บนปุ่มทำหน้าที่บอกจำนวนตัวกรองที่ใช้อยู่แม้ตอนพับซ่อน (ไม่ต้องมี badge บนปุ่มตัวกรองซ้ำอีก)
   - จำนวนตัวกรองอัปเดตใน `updateFilterButtonState()` ของแต่ละหน้า — หน้ากำหนดราคาเดิมไม่มีฟังก์ชันนี้ จึงเพิ่งเพิ่มเข้าไป
+  - **แถบสรุปเงื่อนไขที่กรองอยู่ `#filterSummary`** (ชิดซ้ายของแถบหัว): `renderFilterSummary()` ไล่อ่านค่าจาก `.p_search` แล้ววาดเป็น badge `"<ป้ายชื่อ>: <ค่า>"` — โชว์**เฉพาะตอนพับตัวกรอง** (สลับ `d-none` ด้วย event `show/hide.bs.collapse`) — ไม่มีตัวกรองเลย = ปล่อยว่าง ไม่ต้องขึ้นข้อความใด ๆ
+    - ป้ายชื่อมาจาก map `FILTER_LABELS` (name ของ input → ป้ายไทย) ที่ประกาศไว้ต้นสคริปต์ของแต่ละหน้า — **เพิ่มช่องกรองใหม่ต้องเพิ่มบรรทัดใน map ด้วย** ไม่งั้นจะไม่ขึ้นในแถบสรุป; `select` เอา**ข้อความของ option** ไม่ใช่ value
+    - เรียกจากท้าย `updateFilterButtonState()` (ซึ่ง `loadData()` เรียกอยู่แล้วทุกครั้ง) จึงอัปเดตเองอัตโนมัติ ไม่ต้องไปแทรกตามจุดที่แก้ค่า
+    - ค่าที่ผู้ใช้พิมพ์ถูก escape ด้วย `escHtml()` ก่อนต่อเป็น HTML — **อย่าเอาค่าดิบยัด `.html()` ตรง ๆ**
+    - หน้าเทียบสีมี checkbox "ประเภทเอกสาร" ที่ default = ติ๊กครบ (แปลว่าไม่ได้กรอง) จึงสรุปแยกจาก loop และขึ้น badge เฉพาะเมื่อติ๊กไม่ครบ
   - แถว "เรียงตาม / จำนวนรายการต่อหน้า" **อยู่นอกกล่องพับ** (เป็นการตั้งค่าแสดงผล ไม่ใช่ตัวกรอง) เช่นเดียวกับ hidden input `sort_col`/`sort_dir`
   - element ที่ถูก collapse ยังอยู่ใน DOM → `.p_search` / `collectSearchData()` / `resetFilters()` ทำงานเหมือนเดิม **ไม่ต้องแก้**; หน้าใบเสนอราคาต้องเรียก `refreshPickers()` ตอน `shown.bs.collapse` เพราะ bootstrap-select วัดความกว้างตอนซ่อนอยู่ไม่ได้ (select2 ในหน้าเทียบสีใช้ `width:'100%'` จึงไม่มีปัญหานี้)
   - หน้า **ข้อมูลสินค้า** (`/product`) มีแค่ช่องค้นหาช่องเดียว ไม่มีแถบตัวกรอง จึง**ไม่ได้ทำ**
@@ -356,5 +363,8 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
   - ดูข้อมูลทั้ง 3 ตารางได้ที่ท้ายหน้า **กำหนดราคา** (`/saleinfo`) — แท็บ Compo / PdPrice / TestMai อ่านอย่างเดียว ผ่าน `SaleinfoController::accessData()` → `saleinfo/access-table.blade.php` (05/08/2569)
 - **ตารางเงื่อนไขคิดราคาขาย** (`config/product_price.php` + `ProductPriceService`, 10/08/2569): แต่ละแถวมี `key` (ห้ามเปลี่ยน/ซ้ำ), `prefix`, `suffix`, `suffix_pos` (= ตัวลงท้ายต้องเริ่มที่ตัวที่ N พอดี เช่น "MB ตัวที่ 8 ลงท้ายด้วย P/PC/K/J") และ `mul`/`div`/`add`
   - โครงเงื่อนไข (label/prefix/suffix/suffix_pos) แก้ที่ไฟล์ config เท่านั้น
-  - ส่วน **คูณ/หาร/บวก ผู้ใช้แก้เองได้** จากปุ่ม "ตั้งค่าเงื่อนไขราคา" ในหน้า `/saleinfo` (modal `saleinfo/modal-pricerule.blade.php`) → เก็บลงตาราง `tb_price_rule` (`rule_key` unique) ซึ่ง **ทับ** ค่าใน config; แถวที่ค่าตรงกับค่าตั้งต้นจะถูกลบทิ้ง = กลับไปใช้ค่า config
+  - ส่วน **คูณ/หาร/บวก ผู้ใช้แก้เองได้** → เก็บลงตาราง `tb_price_rule` (`rule_key` unique) ซึ่ง **ทับ** ค่าใน config; แถวที่ค่าตรงกับค่าตั้งต้นจะถูกลบทิ้ง = กลับไปใช้ค่า config
+  - **หน้าจอแก้ค่าย้ายออกมาเป็นเมนูของตัวเองแล้ว: "ตั้งค่าเงื่อนไขราคา" `/price-rule` (21/08/2569)** — `PriceRuleController` (`index` / `data` → JSON / `update`) + `routes/pricerule.php` + view `pricerule/index.blade.php`; menu key **`PriceRule`** อยู่ใต้หัวข้อ Settings (ต่อจาก "สถานะ Planning"). เดิมเป็น modal `saleinfo/modal-pricerule.blade.php` ในหน้า `/saleinfo` — **ลบทิ้งแล้ว** พร้อม method `SaleinfoController::priceRules/priceRulesUpdate` + route `saleinfo/price-rules*` (ย้ายโค้ดมาทั้งชุด ตรรกะเดิมทุกอย่าง); **ปุ่ม "ตั้งค่าเงื่อนไขราคา" บนหัวหน้า `/saleinfo` ปิดไปแล้ว** เข้าได้ทางเมนูอย่างเดียว
+  - **หน้าจอไม่แสดงเรื่อง "ค่าตั้งต้น" เลย** (21/08/2569) — ไม่มีคอลัมน์ค่าตั้งต้น ไม่มีปุ่มคืนค่า และไม่มีป้าย "แก้แล้ว" เพราะค่าจริงถูกแก้อยู่ตลอด ค่าใน config จึงไม่ใช่ค่าอ้างอิงที่มีความหมายกับผู้ใช้ · ตาราง 4 คอลัมน์ = เงื่อนไข / คูณ / หาร / บวก เท่านั้น (ฝั่ง server ยังลบแถว `tb_price_rule` เมื่อค่าตรงกับ config เหมือนเดิม — ผู้ใช้ไม่เห็นความต่าง). มีบรรทัดบอกตัวคูณระหว่างขั้นราคา (`tier.price_2_from_price_1` / `price_3_from_price_2` — อ่านอย่างเดียว แก้ที่ config)
+  - ⚠ สิทธิ์คุมด้วย **menu key** (`AccessControl` เทียบ namespace ของ route name = `pricerule`) ไม่ใช่ค่าในช่อง `permission` → พนักงาน (guard `emp`) ต้องไปติ๊กเมนู "ตั้งค่าเงื่อนไขราคา" ให้ role ที่หน้า "จัดการสิทธิ์" ก่อน ถึงจะเข้าได้ (admin เข้าได้อยู่แล้ว)
   - `ProductPriceService::rules()` เป็นตัว merge config + override (แถวจะมี `is_custom` / `default` ติดมาด้วย) — โค้ดที่ต้องการตารางเงื่อนไข **ห้ามอ่าน `config('product_price.rules')` ตรง ๆ** ให้เรียกผ่าน `rules()` ไม่งั้นจะได้ค่าตั้งต้นเสมอ

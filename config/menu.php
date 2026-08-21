@@ -156,6 +156,14 @@ return [
         'permission' => 'productionplanning read',
     ],
 
+    // ตั้งค่าเงื่อนไขราคา — แยกออกจาก modal ในหน้ากำหนดราคา มาเป็นเมนูของตัวเอง — 21/08/2569
+    'PriceRule' => [
+        'title' => 'ตั้งค่าเงื่อนไขราคา',
+        'icon' => 'ti-adjustments-alt',
+        'route_name' => 'pricerule.index',
+        'permission' => 'pricerule read',
+    ],
+
     'Machine' => [
         'title' => 'เครื่องจักร',
         'icon' => 'ti-tools',
