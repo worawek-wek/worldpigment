@@ -71,7 +71,8 @@ class PigmentController extends Controller
     public function exportExcel()
     {
         // export เรียงใหม่→เก่าตาม id เสมอ (baseQuery ไม่ได้ orderBy แล้ว จึงระบุที่นี่)
-        $rows = $this->pigmentListQuery()->orderBy('tb_pigment.id', 'desc')->get();
+        // eager-load planning เพื่อดึงเลขที่ใบเบิก (Red Bill) + รหัสสินค้า (Item No.) ของ "งานผลิต" ที่ Pigment นี้ผูกอยู่ (กัน N+1)
+        $rows = $this->pigmentListQuery()->with('planning')->orderBy('tb_pigment.id', 'desc')->get();
 
         $headers = [
             'วันที่ขอ',
@@ -85,6 +86,9 @@ class PigmentController extends Controller
             'น้ำหนักที่ใช้',
             'น้ำหนักที่จะสั่ง',
             'ผลการอนุมัติ',
+            // 2 คอลัมน์ท้าย: ค่าจาก "งานผลิต" (tb_planning) ที่ Pigment นี้ผูกอยู่ — คนละตัวกับ Item No. ของ Pigment เอง
+            'เลขที่ใบเบิก Red Bill (งาน)',
+            'รหัสสินค้า Item No. (งาน)',
         ];
 
         // ตำแหน่งคอลัมน์ที่ต้องจัดรูปแบบเป็นตัวเลขทศนิยม 2 ตำแหน่ง
@@ -94,7 +98,7 @@ class PigmentController extends Controller
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('ใบขอสั่ง PIGMENT');
 
-        $lastCol = 'K'; // 11 คอลัมน์ = A..K
+        $lastCol = 'M'; // 13 คอลัมน์ = A..M (K + 2 คอลัมน์งานผลิต L,M)
 
         // แถวที่ 1: หัวเรื่อง
         $sheet->setCellValue('A1', 'ใบขอสั่ง PIGMENT');
@@ -135,6 +139,9 @@ class PigmentController extends Controller
                 $row->weight_request,
                 $row->weight_production,
                 $row->statusLabel(),
+                // งานผลิตที่ผูกอยู่ (อาจว่างถ้าเป็น Pigment แบบไม่ผูกแผน)
+                optional($row->planning)->red_bill_code,
+                optional($row->planning)->itemno,
             ], null, 'A'.$rowIndex);
 
             $rowIndex++;
@@ -181,6 +188,42 @@ class PigmentController extends Controller
         }, $fileName, [
             'Content-Type'  => 'application/vnd.ms-excel',
             'Cache-Control' => 'max-age=0',
+        ]);
+    }
+
+    /* ===================== Export PDF ===================== */
+
+    /**
+     * Export รายการ Pigment เป็นไฟล์ PDF — "ใบขอสั่ง PIGMENT"
+     *
+     * ใช้ query + ชุดคอลัมน์เดียวกับ exportExcel (pigmentListQuery) เพื่อให้ PDF ตรงกับไฟล์ Excel
+     * ทุกประการ (13 คอลัมน์ตามฟอร์ม) — ดึงทุกแถวตามเงื่อนไขค้นหาปัจจุบัน (ไม่แบ่งหน้า)
+     */
+    public function exportPdf()
+    {
+        $rows = $this->pigmentListQuery()->with('planning')->orderBy('tb_pigment.id', 'desc')->get();
+
+        $html = view('production-planning.pigment.pdf', [
+            'rows'    => $rows,
+            'summary' => $this->exportConditionText().' | พิมพ์เมื่อ '.now()->format('d/m/Y H:i'),
+        ])->render();
+
+        $mpdf = new \Mpdf\Mpdf([
+            'mode'          => 'utf-8',
+            'format'        => 'A4-L', // แนวนอน (คอลัมน์เยอะตามฟอร์ม)
+            'margin_left'   => 6,
+            'margin_right'  => 6,
+            'margin_top'    => 8,
+            'margin_bottom' => 8,
+        ]);
+        $mpdf->autoScriptToLang = true;
+        $mpdf->autoLangToFont   = true;
+        $mpdf->SetFont('sarabun');
+        $mpdf->WriteHTML($html);
+
+        return response($mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="pigment-request.pdf"',
         ]);
     }
 

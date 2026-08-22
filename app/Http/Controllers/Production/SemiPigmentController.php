@@ -202,6 +202,42 @@ class SemiPigmentController extends Controller
         ]);
     }
 
+    /* ===================== Export PDF ===================== */
+
+    /**
+     * Export รายการ Semi เป็นไฟล์ PDF — "ใบขอสั่งทำ SEMI"
+     *
+     * ใช้ query + ชุดคอลัมน์เดียวกับ exportExcel (semiListQuery) เพื่อให้ PDF ตรงกับไฟล์ Excel
+     * ทุกประการ (18 คอลัมน์ตามฟอร์ม) — ดึงทุกแถวตามเงื่อนไขค้นหาปัจจุบัน (ไม่แบ่งหน้า)
+     */
+    public function exportPdf()
+    {
+        $rows = $this->semiListQuery()->with('planning')->orderBy('tb_semi_pigment.id', 'desc')->get();
+
+        $html = view('production-planning.semi-pigment.pdf', [
+            'rows'    => $rows,
+            'summary' => $this->exportConditionText().' | พิมพ์เมื่อ '.now()->format('d/m/Y H:i'),
+        ])->render();
+
+        $mpdf = new \Mpdf\Mpdf([
+            'mode'          => 'utf-8',
+            'format'        => 'A4-L', // แนวนอน (คอลัมน์เยอะตามฟอร์ม)
+            'margin_left'   => 6,
+            'margin_right'  => 6,
+            'margin_top'    => 8,
+            'margin_bottom' => 8,
+        ]);
+        $mpdf->autoScriptToLang = true;
+        $mpdf->autoLangToFont   = true;
+        $mpdf->SetFont('sarabun');
+        $mpdf->WriteHTML($html);
+
+        return response($mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="semi-request.pdf"',
+        ]);
+    }
+
     /**
      * แปลงค่าวันที่เป็น d/m/Y สำหรับใส่ในไฟล์ Excel (ค่าว่างคืนสตริงว่าง)
      */

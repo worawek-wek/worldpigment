@@ -82,6 +82,8 @@ Route::prefix('production-planning')->group(function () {
     Route::get('/pigment/datatable', [Production\PigmentController::class, 'datatable'])->name('production.pigment.datatable');
     // Export Excel "ใบขอสั่ง PIGMENT" — ใช้เงื่อนไขค้นหาชุดเดียวกับ datatable (ทุกหน้า ไม่แบ่งหน้า)
     Route::get('/pigment/export-excel', [Production\PigmentController::class, 'exportExcel'])->name('production.pigment.export-excel');
+    // Export PDF "ใบขอสั่ง PIGMENT" — ผังคอลัมน์ตรงกับไฟล์ Excel (เงื่อนไขค้นหาชุดเดียวกัน ทุกหน้า)
+    Route::get('/pigment/export-pdf', [Production\PigmentController::class, 'exportPdf'])->name('production.pigment.export-pdf');
     Route::get('/pigment/edit', [Production\PigmentController::class, 'editForm'])->name('production.pigment.edit');
     Route::get('/pigment/detail', [Production\PigmentController::class, 'detail'])->name('production.pigment.detail');
     Route::post('/pigment/approve', [Production\PigmentController::class, 'approve'])->name('production.pigment.approve');
@@ -93,6 +95,8 @@ Route::prefix('production-planning')->group(function () {
     Route::get('/semi-pigment/datatable', [Production\SemiPigmentController::class, 'datatable'])->name('production.semipigment.datatable');
     // Export Excel "ใบขอสั่งทำ SEMI" — ใช้เงื่อนไขค้นหาชุดเดียวกับ datatable (ทุกหน้า ไม่แบ่งหน้า)
     Route::get('/semi-pigment/export-excel', [Production\SemiPigmentController::class, 'exportExcel'])->name('production.semipigment.export-excel');
+    // Export PDF "ใบขอสั่งทำ SEMI" — ผังคอลัมน์ตรงกับไฟล์ Excel (เงื่อนไขค้นหาชุดเดียวกัน ทุกหน้า)
+    Route::get('/semi-pigment/export-pdf', [Production\SemiPigmentController::class, 'exportPdf'])->name('production.semipigment.export-pdf');
     Route::get('/semi-pigment/edit', [Production\SemiPigmentController::class, 'editForm'])->name('production.semipigment.edit');
     Route::post('/semi-pigment/approve', [Production\SemiPigmentController::class, 'approve'])->name('production.semipigment.approve');
     Route::post('/semi-pigment/reject', [Production\SemiPigmentController::class, 'reject'])->name('production.semipigment.reject');

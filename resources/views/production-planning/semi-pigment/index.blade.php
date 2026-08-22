@@ -25,10 +25,14 @@
                 <div class="card">
                     <div class="card-header">
                         {{-- แถวบนสุด: ปุ่ม Export ชิดขวา — export ตามเงื่อนไขค้นหาปัจจุบัน (ทุกหน้า ไม่ใช่เฉพาะหน้าที่แสดงอยู่) --}}
-                        <div class="d-flex justify-content-end mb-3">
+                        <div class="d-flex justify-content-end mb-3 gap-2">
                             <button id="btn_export_excel" type="button" class="btn btn-success"
                                 title="Export Excel ตามเงื่อนไขค้นหาปัจจุบัน (ทุกหน้า)">
                                 <i class="ti ti-file-spreadsheet me-1"></i>Export Excel
+                            </button>
+                            <button id="btn_export_pdf" type="button" class="btn btn-danger"
+                                title="Export PDF ตามเงื่อนไขค้นหาปัจจุบัน (ทุกหน้า)">
+                                <i class="ti ti-file-type-pdf me-1"></i>Export PDF
                             </button>
                         </div>
                         <div class="row g-3 align-items-end">
@@ -226,6 +230,21 @@
         });
 
         window.location.href = '{{ route("production.semipigment.export-excel") }}?' + params;
+    });
+
+    // ---- Export PDF: เงื่อนไขชุดเดียวกับ Excel — เปิดไฟล์ PDF ในแท็บใหม่ (ผังคอลัมน์ตรงกับ Excel) ----
+    $(document).on('click', '#btn_export_pdf', function (e) {
+        e.preventDefault();
+
+        var params = $.param({
+            search:     $('#searchInput').val(),
+            status:     $('#searchStatus').val(),
+            date_field: $('#searchDateField').val(),
+            date_start: $('#searchDateStart').val(),
+            date_end:   $('#searchDateEnd').val()
+        });
+
+        window.open('{{ route("production.semipigment.export-pdf") }}?' + params, '_blank');
     });
 
     function getEditModal() {
