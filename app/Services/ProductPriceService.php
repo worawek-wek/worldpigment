@@ -63,6 +63,9 @@ class ProductPriceService
         $price1 = $base * $rule['mul'] / $rule['div'] + $rule['add'];
         $price2 = $price1 * (float) config('product_price.tier.price_2_from_price_1', 1);
         $price3 = $price2 * (float) config('product_price.tier.price_3_from_price_2', 1);
+        // ⚠ 2 ขั้นนี้ยังใช้ตัวคูณ "ค่าเดา" อยู่ (ดูหมายเหตุใน config/product_price.php)
+        $db34   = $price3 * (float) config('product_price.tier.db_3_4_from_price_3', 0);
+        $db12   = $db34   * (float) config('product_price.tier.db_1_2_from_db_3_4', 0);
 
         return [
             'found'      => true,
@@ -73,6 +76,8 @@ class ProductPriceService
                 'price_1' => round($price1, 2),
                 'price_2' => round($price2, 2),
                 'price_3' => round($price3, 2),
+                'db_3_4'  => $db34 ? round($db34, 2) : null,
+                'db_1_2'  => $db12 ? round($db12, 2) : null,
             ],
             'reason'     => null,
         ];

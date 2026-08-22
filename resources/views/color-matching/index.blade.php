@@ -258,7 +258,23 @@
 
         <div class="card-header border-bottom">
 
-            {{-- ปุ่มล้างตัวกรอง (มุมขวาบน) --}}
+            {{-- แถบหัว: ปุ่มพับ/กางตัวกรอง + ปุ่มล้างตัวกรอง (ชิดขวาทั้งคู่) — ค่าเริ่มต้นคือ "ซ่อนไว้" --}}
+            <div class="d-flex justify-content-end align-items-center gap-2">
+                {{-- รายละเอียดการค้นหา — สรุปเงื่อนไขที่กรองอยู่ โชว์เฉพาะตอนพับตัวกรอง --}}
+                <div id="filterSummary" class="d-flex flex-wrap align-items-center gap-1 me-auto"></div>
+                <button type="button" id="btnToggleFilters" class="btn btn-label-primary btn-sm"
+                    data-bs-toggle="collapse" data-bs-target="#cmFilterBox"
+                    aria-expanded="false" aria-controls="cmFilterBox">
+                    <i class="ti ti-filter me-1"></i>ตัวกรอง
+                    <i class="ti ti-chevron-down ms-1 toggle-caret"></i>
+                </button>
+                <button type="button" id="btnResetFilters" class="btn btn-label-secondary btn-sm" onclick="resetFilters()">
+                    <i class="ti ti-x me-1"></i>ล้างตัวกรอง<span class="filter-count ms-1"></span>
+                </button>
+            </div>
+
+            <div class="collapse" id="cmFilterBox">
+            <div class="pt-3">
 
             {{-- แถวตัวกรอง 1: ค้นหา + ช่วงวันที่ --}}
             <div class="row g-3 align-items-end">
@@ -325,7 +341,7 @@
                         oninput="loadData(page)">
                 </div>
             </div>
-            <div class="d-flex justify-content-center align-items-center my-3 position-relative">
+            <div class="d-flex justify-content-center align-items-center my-3">
                 {{-- ประเภทเอกสาร (อยู่ตรงกลาง) — กลุ่ม checkbox เลือกได้หลายอัน (ติ๊ก=แสดง) --}}
                 <div class="doc-filter d-flex align-items-center flex-wrap justify-content-center gap-3 py-2">
                     <div class="form-check mb-0">
@@ -343,10 +359,11 @@
                         </label>
                     </div>
                 </div>
-                <button type="button" id="btnResetFilters" class="btn btn-label-secondary position-absolute end-0" onclick="resetFilters()">
-                    <i class="ti ti-x me-1"></i>ล้างตัวกรอง<span class="filter-count ms-1"></span>
-                </button>
             </div>
+
+            </div>
+            </div>
+            {{-- /#cmFilterBox --}}
 
             {{-- เรียงข้อมูล (คลิกหัวตาราง) + จำนวนต่อหน้า (ขวา) --}}
             {{-- state การเรียง — เก็บไว้นอก #table-data เพื่อให้คงค่าเมื่อตารางโหลดใหม่ (default = id desc = ล่าสุด) --}}
@@ -446,6 +463,22 @@
         // กัน AJAX race (ต้องประกาศก่อนเรียก loadData ครั้งแรก — เลี่ยง hoisting ทำให้ dtSeq เป็น NaN)
         var dtXhr = null;
         var dtSeq = 0;
+
+        // ป้ายชื่อของแต่ละช่องกรอง — ใช้ประกอบแถบ "รายละเอียดการค้นหา" (#filterSummary)
+        // ⚠ ต้องประกาศตรงนี้ (ก่อน loadData ครั้งแรก) เพราะ renderFilterSummary() ถูกเรียกใน loadData
+        //   ถ้าไปประกาศท้ายไฟล์ ตัวแปรจะยังเป็น undefined ตอนโหลดหน้า → throw แล้ว spinner ค้าง
+        var FILTER_LABELS = {
+            search:         'ค้นหา',
+            test_date_from: 'วันที่ส่งเทียบสี ตั้งแต่',
+            test_date_to:   'ถึง',
+            job_type:       'ประเภทงาน',
+            revision:       'ปรับแก้ไข',
+            std:            'Standard',
+            color:          'สี',
+            resin:          'Resin',
+            lot:            'Lot No.'
+        };
+
         loadData(page);
 
         // ────────────────────────────────────────────────────────
@@ -545,7 +578,49 @@
                 $btn.removeClass('btn-danger').addClass('btn-label-secondary');
                 $btn.find('.filter-count').text('');
             }
+
+            renderFilterSummary();
         }
+
+        // ── รายละเอียดการค้นหา (โชว์ตอนพับตัวกรอง) — ป้ายชื่อ FILTER_LABELS ประกาศไว้ต้นสคริปต์ ──
+        // escape ค่าที่ผู้ใช้พิมพ์ก่อนยัดลง HTML (กัน XSS จากคำค้น)
+        function escHtml(s){ return $('<div>').text(s == null ? '' : s).html(); }
+
+        function renderFilterSummary(){
+            var chips = [];
+            $('.p_search:not([name="limit"]):not([name="sort_col"]):not([name="sort_dir"])').each(function(){
+                if ($(this).is(':checkbox')) return;   // ประเภทเอกสาร: สรุปแยกด้านล่าง
+                var label = FILTER_LABELS[$(this).attr('name')];
+                if (!label) return;
+                // ตัดสินว่า "ไม่ได้กรอง" จาก value เสมอ — ตัวเลือก "ทั้งหมด/ทุกประเภท" มี value ว่างแต่มีข้อความ
+                var raw = $(this).val();
+                if (raw === '' || raw === null) return;
+                // select: แสดงข้อความของตัวเลือก ไม่ใช่ value
+                var val = $(this).is('select') ? $(this).find('option:selected').text().trim() : raw;
+                chips.push('<span class="badge bg-label-primary fw-normal">'
+                    + '<span class="text-dark fw-medium">' + escHtml(label) + ':</span> '
+                    + escHtml(val) + '</span>');
+            });
+            // ประเภทเอกสาร: บอกเฉพาะเมื่อ "ไม่ได้ติ๊กครบ" (ติ๊กครบ = แสดงทั้งหมด = ไม่ได้กรอง)
+            var $cb = $('.p_search[type="checkbox"]');
+            if ($cb.length && $cb.filter(':checked').length !== $cb.length) {
+                var docs = $cb.filter(':checked').map(function(){
+                    return $('label[for="' + this.id + '"]').text().trim();
+                }).get();
+                chips.push('<span class="badge bg-label-primary fw-normal">'
+                    + '<span class="text-dark fw-medium">ประเภทเอกสาร:</span> '
+                    + escHtml(docs.length ? docs.join(', ') : 'ไม่เลือกเลย') + '</span>');
+            }
+            $('#filterSummary').html(chips.join(''));   // ไม่มีตัวกรอง = ปล่อยว่าง
+        }
+
+        // หมุนลูกศรตามสถานะพับ/กาง + ซ่อนแถบสรุปตอนกาง (ข้างในเห็นค่าจริงอยู่แล้ว)
+        $(document).on('show.bs.collapse hide.bs.collapse', '#cmFilterBox', function(e){
+            $('#btnToggleFilters .toggle-caret')
+                .toggleClass('ti-chevron-down', e.type === 'hide')
+                .toggleClass('ti-chevron-up',   e.type === 'show');
+            $('#filterSummary').toggleClass('d-none', e.type === 'show');
+        });
 
         // กัน AJAX race: ยกเลิก request เก่า + รับเฉพาะผลของ request ล่าสุด
         // (ช่องค้นหาเป็น oninput ยิงถี่ → ผลอาจกลับมาไม่เรียงลำดับ ทับกันเอง)

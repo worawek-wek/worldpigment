@@ -279,12 +279,7 @@
                             <i class="ti ti-search me-1"></i>
                             ค้นหาราคาสินค้า
                         </button>
-                        <button class="btn btn-label-secondary"
-                            data-bs-toggle="modal"
-                            data-bs-target="#priceRuleModal">
-                            <i class="ti ti-adjustments-alt me-1"></i>
-                            ตั้งค่าเงื่อนไขราคา
-                        </button>
+                        {{-- ปุ่ม "ตั้งค่าเงื่อนไขราคา" ปิดไปแล้ว — ใช้เมนู "ตั้งค่าเงื่อนไขราคา" (/price-rule) แทน 21/08/2569 --}}
                         <button class="btn btn-theme-saleinfo"
                             data-bs-toggle="modal"
                             data-bs-target="#saleinfoModal">
@@ -302,6 +297,24 @@
     <div class="card">
 
         <div class="card-header border-bottom">
+
+            {{-- แถบหัว: ปุ่มพับ/กางตัวกรอง + ปุ่มล้างตัวกรอง (ชิดขวาทั้งคู่) — ค่าเริ่มต้นคือ "ซ่อนไว้" --}}
+            <div class="d-flex justify-content-end align-items-center gap-2">
+                {{-- รายละเอียดการค้นหา — สรุปเงื่อนไขที่กรองอยู่ โชว์เฉพาะตอนพับตัวกรอง --}}
+                <div id="filterSummary" class="d-flex flex-wrap align-items-center gap-1 me-auto"></div>
+                <button type="button" id="btnToggleFilters" class="btn btn-label-primary btn-sm"
+                    data-bs-toggle="collapse" data-bs-target="#saleinfoFilterBox"
+                    aria-expanded="false" aria-controls="saleinfoFilterBox">
+                    <i class="ti ti-filter me-1"></i>ตัวกรอง
+                    <i class="ti ti-chevron-down ms-1 toggle-caret"></i>
+                </button>
+                <button type="button" id="btnResetFilters" class="btn btn-label-secondary btn-sm" onclick="resetFilters()">
+                    <i class="ti ti-x me-1"></i>ล้างตัวกรอง<span class="filter-count ms-1"></span>
+                </button>
+            </div>
+
+            <div class="collapse" id="saleinfoFilterBox">
+            <div class="pt-3">
 
             <div class="row g-3 align-items-end">
                 <div class="col-md-6">
@@ -326,10 +339,11 @@
                 </div>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
-                <button type="button" id="btnResetFilters" class="btn btn-label-secondary" onclick="resetFilters()">
-                    <i class="ti ti-x me-1"></i>ล้างตัวกรอง
-                </button>
+            </div>
+            </div>
+            {{-- /#saleinfoFilterBox --}}
+
+            <div class="d-flex justify-content-end align-items-center mt-3 pt-3 border-top">
                 <div class="d-flex align-items-center">
                     <label class="form-label small fw-medium mb-0 me-2">แสดง</label>
                     <select name="limit" class="form-select form-select-sm p_search"
@@ -453,7 +467,7 @@
     @include('saleinfo.modal-price')
     @include('saleinfo.modal-newprice')
     @include('saleinfo.modal-testprice')
-    @include('saleinfo.modal-pricerule')
+    {{-- modal-pricerule ถูกย้ายไปเป็นหน้า /price-rule (resources/views/pricerule/index.blade.php) — 21/08/2569 --}}
 
     @include('layout/inc_js')
 
@@ -462,6 +476,15 @@
     var searchData = {};
     var dtXhr = null;
     var dtSeq = 0;
+
+    // ป้ายชื่อของแต่ละช่องกรอง — ใช้ประกอบแถบ "รายละเอียดการค้นหา" (#filterSummary)
+    // ⚠ ต้องประกาศตรงนี้ (ก่อน loadData ครั้งแรก) เพราะ renderFilterSummary() ถูกเรียกใน loadData
+    //   ถ้าไปประกาศท้ายไฟล์ ตัวแปรจะยังเป็น undefined ตอนโหลดหน้า → throw แล้ว spinner ค้าง
+    var FILTER_LABELS = {
+        search:    'ค้นหา',
+        date_from: 'วันที่เริ่มราคาใหม่ ตั้งแต่',
+        date_to:   'ถึง'
+    };
 
     loadData(page);
 
@@ -493,8 +516,52 @@
         return data;
     }
 
+    // อัปเดตปุ่มล้างตัวกรองตามจำนวน filter ที่ใช้อยู่ (ไม่นับ limit)
+    function updateFilterButtonState() {
+        var count = 0;
+        $('.p_search:not([name="limit"])').each(function () {
+            var v = $(this).val();
+            if (v !== '' && v !== null) count++;
+        });
+        var $btn = $('#btnResetFilters');
+        if (count > 0) { $btn.removeClass('btn-label-secondary').addClass('btn-danger'); $btn.find('.filter-count').text('(' + count + ')'); }
+        else           { $btn.removeClass('btn-danger').addClass('btn-label-secondary'); $btn.find('.filter-count').text(''); }
+
+        renderFilterSummary();
+    }
+
+    // ── รายละเอียดการค้นหา (โชว์ตอนพับตัวกรอง) — ป้ายชื่อ FILTER_LABELS ประกาศไว้ต้นสคริปต์ ──
+    // escape ค่าที่ผู้ใช้พิมพ์ก่อนยัดลง HTML (กัน XSS จากคำค้น)
+    function escHtml(s){ return $('<div>').text(s == null ? '' : s).html(); }
+
+    function renderFilterSummary(){
+        var chips = [];
+        $('.p_search:not([name="limit"])').each(function () {
+            var label = FILTER_LABELS[$(this).attr('name')];
+            if (!label) return;
+            // ตัดสินว่า "ไม่ได้กรอง" จาก value เสมอ — ตัวเลือก "ทั้งหมด" มี value ว่างแต่มีข้อความ
+            var raw = $(this).val();
+            if (raw === '' || raw === null) return;
+            // select: แสดงข้อความของตัวเลือก ไม่ใช่ value
+            var val = $(this).is('select') ? $(this).find('option:selected').text().trim() : raw;
+            chips.push('<span class="badge bg-label-primary fw-normal">'
+                + '<span class="text-dark fw-medium">' + escHtml(label) + ':</span> '
+                + escHtml(val) + '</span>');
+        });
+        $('#filterSummary').html(chips.join(''));   // ไม่มีตัวกรอง = ปล่อยว่าง
+    }
+
+    // หมุนลูกศรตามสถานะพับ/กาง + ซ่อนแถบสรุปตอนกาง (ข้างในเห็นค่าจริงอยู่แล้ว)
+    $(document).on('show.bs.collapse hide.bs.collapse', '#saleinfoFilterBox', function (e) {
+        $('#btnToggleFilters .toggle-caret')
+            .toggleClass('ti-chevron-down', e.type === 'hide')
+            .toggleClass('ti-chevron-up',   e.type === 'show');
+        $('#filterSummary').toggleClass('d-none', e.type === 'show');
+    });
+
     // กัน AJAX race: ยกเลิก request เก่า + รับเฉพาะผลของ request ล่าสุด
     function loadData(pages) {
+        updateFilterButtonState();
         searchData = collectSearchData();
         page = pages;
 
@@ -1002,108 +1069,6 @@
         $('#tp_customer').focus();
     });
 
-    // ────────────────────────────────────────────────────────
-    //  ตั้งค่าเงื่อนไขราคา (modal "ตั้งค่าเงื่อนไขราคา") — 10/08/2569
-    //  แก้ได้เฉพาะ ×คูณ ÷หาร บวก+ ของแต่ละเงื่อนไข
-    //  ค่าที่แก้เก็บลง tb_price_rule (แถวที่ตรงกับค่าตั้งต้นจะถูกลบ = กลับไปใช้ค่า config)
-    // ────────────────────────────────────────────────────────
-    function prNum(v) {
-        // ตัดศูนย์ท้ายทศนิยมทิ้งเพื่อให้อ่านง่าย (110.0000 → 110)
-        return String(parseFloat(v));
-    }
-
-    function prRenderRows(rows) {
-        const $tbody = $('#pr_tbody').empty();
-
-        if (!rows.length) {
-            $tbody.append('<tr><td colspan="4" class="text-center text-muted py-4">ไม่มีเงื่อนไข</td></tr>');
-            return;
-        }
-
-        rows.forEach(function (r) {
-            // บรรทัดที่สองบอกวิธีจับคู่ ให้ผู้ใช้รู้ว่าแถวนี้ใช้กับรหัสแบบไหน (อ่านอย่างเดียว)
-            let cond = 'ขึ้นต้น ' + r.prefix;
-            if (r.suffix) {
-                cond += r.suffix_pos
-                    ? ' · ตัวที่ ' + r.suffix_pos + ' เป็นต้นไป = ' + r.suffix
-                    : ' · ลงท้าย ' + r.suffix;
-            }
-
-            const badge = r.is_custom
-                ? ' <span class="badge bg-label-warning">แก้แล้ว</span>'
-                : '';
-
-            const $tr = $(
-                '<tr data-key="' + r.key + '">' +
-                    '<td>' +
-                        '<div class="fw-semibold small">' + $('<div>').text(r.label).html() + badge + '</div>' +
-                        '<div class="text-muted" style="font-size: 0.75rem;">' + $('<div>').text(cond).html() + '</div>' +
-                    '</td>' +
-                    '<td><input type="number" step="any" class="form-control form-control-sm text-end pr_mul"></td>' +
-                    '<td><input type="number" step="any" class="form-control form-control-sm text-end pr_div"></td>' +
-                    '<td><input type="number" step="any" class="form-control form-control-sm text-end pr_add"></td>' +
-                '</tr>'
-            );
-
-            $tr.find('.pr_mul').val(prNum(r.mul));
-            $tr.find('.pr_div').val(prNum(r.div));
-            $tr.find('.pr_add').val(prNum(r.add));
-
-            $tbody.append($tr);
-        });
-    }
-
-    function prLoad() {
-        $('#pr_error').addClass('d-none').text('');
-        $('#pr_tbody').html('<tr><td colspan="4" class="text-center text-muted py-4">กำลังโหลด…</td></tr>');
-
-        $.getJSON("{{ $page_url }}/price-rules")
-            .done(function (res) { prRenderRows(res.rows || []); })
-            .fail(function () {
-                $('#pr_tbody').html('<tr><td colspan="4" class="text-center text-danger py-4">โหลดเงื่อนไขไม่สำเร็จ</td></tr>');
-            });
-    }
-
-    $('#priceRuleModal').on('show.bs.modal', prLoad);
-
-    $('#pr_save').on('click', function () {
-        const payload = { _token: "{{ csrf_token() }}" };
-
-        $('#pr_tbody tr[data-key]').each(function () {
-            const $tr = $(this);
-            const key = $tr.data('key');
-
-            payload['rules[' + key + '][mul]'] = $tr.find('.pr_mul').val();
-            payload['rules[' + key + '][div]'] = $tr.find('.pr_div').val();
-            payload['rules[' + key + '][add]'] = $tr.find('.pr_add').val();
-        });
-
-        const $btn = $(this).prop('disabled', true);
-        $('#pr_error').addClass('d-none').text('');
-
-        $.ajax({
-            type: "POST",
-            url: "{{ $page_url }}/price-rules/update",
-            data: payload,
-            success: function () {
-                $('#priceRuleModal').modal('hide');
-                Swal.fire({
-                    title: 'บันทึกเงื่อนไขราคาแล้ว',
-                    icon: 'success',
-                    timer: 1400,
-                    showConfirmButton: false,
-                    heightAuto: false
-                });
-            },
-            error: function (xhr) {
-                // 422 = กรอกผิด (เช่น ช่องหารเป็น 0) — โชว์ในกล่องแดงใต้ตารางให้แก้ต่อได้เลย
-                $('#pr_error')
-                    .text(xhr.responseJSON?.error ?? 'บันทึกไม่สำเร็จ')
-                    .removeClass('d-none');
-            },
-            complete: function () { $btn.prop('disabled', false); }
-        });
-    });
 </script>
 
 </body>

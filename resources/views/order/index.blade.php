@@ -50,14 +50,25 @@
     border-radius: .6rem;
     padding: .85rem 1rem;
 }
-.of-typebar-title {
-    font-weight: 700;
-    color: #4b3f8f;
-    margin-bottom: .5rem;
-}
-.of-typegrid { display: flex; flex-direction: column; gap: .25rem; }
-.of-typerow { display: flex; flex-wrap: wrap; gap: 1.4rem; }
+.of-typegrid { display: flex; flex-direction: column; gap: .35rem; }
+/* 1 แถว = 3 กลุ่ม (C / H / W) กลุ่มละ 2 ปุ่ม — เว้นช่องไฟระหว่างกลุ่มให้กว้างกว่าในกลุ่ม */
+.of-typerow { display: flex; flex-wrap: wrap; gap: 8rem; }
+.of-typepair { display: flex; gap: 1rem; }
+/* ตรึงความกว้างแต่ละปุ่ม เพื่อให้คอลัมน์ของแถวบน-ล่างตรงกัน */
+.of-typepair .form-check { min-width: 72px; margin-bottom: 0; }
 .of-typerow .form-check-label { font-weight: 600; letter-spacing: .3px; }
+/* ปุ่ม "เพิ่มใบสั่งซื้อใหม่" ในแถบม่วง — สีเข้มให้ตัดกับพื้นแถบ */
+.of-btn-new {
+    background-color: #5c4bb3;
+    border-color: #5c4bb3;
+    color: #fff;
+    font-weight: 600;
+}
+.of-btn-new:hover, .of-btn-new:focus {
+    background-color: #4b3f8f;
+    border-color: #4b3f8f;
+    color: #fff;
+}
 
 /* กล่อง section ในฟอร์ม */
 .of-sec {
@@ -96,10 +107,46 @@
 /* แถว checkbox ท้ายกล่องซ้าย */
 .of-checkrow { display: flex; flex-wrap: wrap; gap: 1.25rem; padding-top: .35rem; }
 
-/* ตารางรายการในใบสั่งซื้อ */
-#orderItemsTable th { white-space: nowrap; font-size: .82rem; vertical-align: middle; }
-#orderItemsTable td { font-size: .85rem; }
-#orderItemsTable input.form-control-sm { min-width: 90px; }
+/* ตารางรายการในใบสั่งซื้อ — ช่องกรอก (พื้นเหลืองอ่อนตามฟอร์ม Access เดิม) */
+#orderItemsTable { background: #fffdf0; }
+#orderItemsTable thead th {
+    background: #f5e6c8;
+    white-space: nowrap;
+    font-size: .8rem;
+    vertical-align: middle;
+    text-align: center;
+}
+#orderItemsTable tfoot th { background: #f5e6c8; font-size: .85rem; }
+#orderItemsTable td { font-size: .85rem; padding: .3rem .35rem; }
+#orderItemsTable .oi-input { min-width: 80px; }
+#orderItemsTable .oi-input:focus { background: #fffbe0; }
+
+/* ข้อความบอกที่มา/เหตุผลใต้กล่องราคา */
+.of-price-note {
+    font-size: .78rem;
+    color: #7a6a45;
+    line-height: 1.35;
+    margin-top: .35rem;
+    min-height: 1rem;
+}
+.of-price-note-warn {
+    color: #8a4b0f;
+    background: #fdf0e2;
+    border: 1px solid #f0d5b4;
+    border-radius: .375rem;
+    padding: .35rem .5rem;
+}
+
+/* แถบเตือน "ต้อง Match ใหม่" — แถบแดงเหมือนฟอร์มเดิม */
+.of-matchwarn {
+    background: #d32f2f;
+    color: #fff;
+    font-weight: 700;
+    text-align: center;
+    padding: .45rem .75rem;
+    border-radius: .375rem;
+    margin-bottom: .75rem;
+}
 
 /* ══ ฟอร์มขออนุมัติราคาพิเศษ — โทนฟ้าตามฟอร์ม Access เดิม ══ */
 .pa-body { background: #eef6fb; }
@@ -222,7 +269,7 @@
                             <i class="ti ti-discount-check me-1"></i>
                             ขออนุมัติราคาพิเศษ
                         </button>
-                        <button class="btn btn-primary" onclick="orderNew()">
+                        <button class="btn btn-primary" onclick="orderOpenNew()">
                             <i class="ti ti-plus me-1"></i>
                             เพิ่มใบสั่งซื้อใหม่
                         </button>
@@ -237,6 +284,24 @@
     <div class="card">
 
         <div class="card-header border-bottom">
+
+            {{-- แถบหัว: ปุ่มพับ/กางตัวกรอง + ปุ่มล้างตัวกรอง (ชิดขวาทั้งคู่) — ค่าเริ่มต้นคือ "ซ่อนไว้" --}}
+            <div class="d-flex justify-content-end align-items-center gap-2">
+                {{-- รายละเอียดการค้นหา — สรุปเงื่อนไขที่กรองอยู่ โชว์เฉพาะตอนพับตัวกรอง --}}
+                <div id="filterSummary" class="d-flex flex-wrap align-items-center gap-1 me-auto"></div>
+                <button type="button" id="btnToggleFilters" class="btn btn-label-primary btn-sm"
+                    data-bs-toggle="collapse" data-bs-target="#orderFilterBox"
+                    aria-expanded="false" aria-controls="orderFilterBox">
+                    <i class="ti ti-filter me-1"></i>ตัวกรอง
+                    <i class="ti ti-chevron-down ms-1 toggle-caret"></i>
+                </button>
+                <button type="button" id="btnResetFilters" class="btn btn-label-secondary btn-sm" onclick="resetFilters()">
+                    <i class="ti ti-x me-1"></i>ล้างตัวกรอง<span class="filter-count ms-1"></span>
+                </button>
+            </div>
+
+            <div class="collapse" id="orderFilterBox">
+            <div class="pt-3">
 
             {{-- แถวตัวกรอง 1: ค้นหา + ช่วงวันที่ --}}
             <div class="row g-3 align-items-end">
@@ -285,11 +350,9 @@
                 </div>
             </div>
 
-            <div class="d-flex justify-content-end my-3">
-                <button type="button" id="btnResetFilters" class="btn btn-label-secondary" onclick="resetFilters()">
-                    <i class="ti ti-x me-1"></i>ล้างตัวกรอง<span class="filter-count ms-1"></span>
-                </button>
             </div>
+            </div>
+            {{-- /#orderFilterBox --}}
 
             {{-- state การเรียง — เก็บนอก #table-data เพื่อคงค่าเมื่อตารางโหลดใหม่ (default = วันที่สั่งล่าสุด) --}}
             <input type="hidden" name="sort_col" value="Mdate" class="p_search">
@@ -426,6 +489,18 @@
     var searchData = {};
     // ต้องประกาศก่อน loadData ครั้งแรก — เลี่ยง hoisting ทำให้ dtSeq เป็น NaN (spinner ค้าง)
     var dtXhr = null, dtSeq = 0;
+
+    // ป้ายชื่อของแต่ละช่องกรอง — ใช้ประกอบแถบ "รายละเอียดการค้นหา" (#filterSummary)
+    // ⚠ ต้องประกาศตรงนี้ (ก่อน loadData ครั้งแรก) เพราะ renderFilterSummary() ถูกเรียกใน loadData
+    //   ถ้าไปประกาศท้ายไฟล์ ตัวแปรจะยังเป็น undefined ตอนโหลดหน้า → throw แล้ว spinner ค้าง
+    var FILTER_LABELS = {
+        search:     'ค้นหา',
+        date_from:  'วันที่สั่ง ตั้งแต่',
+        date_to:    'ถึง',
+        order_type: 'ประเภทใบสั่ง',
+        company:    'ผลิตที่'
+    };
+
     loadData(page);
 
     $(function () {
@@ -437,6 +512,15 @@
             onChange: function (_, __, instance) {
                 if (instance.input.classList.contains('p_search')) loadData(page);
             }
+        });
+        // ช่องวันที่ที่มีเวลาด้วย (วันที่เปิดใบสั่ง)
+        flatpickr('.flatpickr-datetime', {
+            dateFormat: 'd/m/Y H:i',
+            enableTime: true,
+            time_24hr: true,
+            allowInput: true,
+            static: true,
+            disableMobile: true
         });
         syncSortDropdown();
     });
@@ -496,6 +580,18 @@
     // หมายเหตุ: ช่องกรอกตัวเลขแบบใส่คอมมาอัตโนมัติ (class="js-comma") + ตัวช่วย
     // numVal() / commaFmt() / stripCommaFields() อยู่ที่ layout/inc_js.blade.php (ใช้ร่วมทุกหน้า)
 
+    // ตั้งค่าช่องวันที่+เวลา — ไม่ส่งค่ามา = ใช้วันเวลาปัจจุบัน (ค่าเริ่มต้นของใบใหม่)
+    function setFpDateTime(id, val){
+        var el = document.getElementById(id);
+        if (!el) return;
+        if (el._flatpickr){
+            if (val) el._flatpickr.setDate(String(val).substring(0, 19), false, 'Y-m-d H:i:S');
+            else     el._flatpickr.setDate(new Date());
+        } else {
+            $(el).val(val ? fmtDateTime(val) : '');
+        }
+    }
+
     // ตั้งค่าให้ flatpickr (รับ Y-m-d / datetime); ว่าง = เคลียร์
     function setFp(id, val){
         var el = document.getElementById(id);
@@ -516,29 +612,92 @@
     function orderOpen(orderno){
         $.getJSON("{{ $page_url }}/form", {orderno: orderno}, function(res){
             if (!res.found){
-                Swal.fire('ไม่พบใบสั่งซื้อ', 'เลขที่ ' + orderno + ' ไม่มีอยู่ในระบบ', 'warning');
+                // ไม่เจอ → อยู่โหมด idle ต่อ ให้ผู้ใช้พิมพ์เลขใหม่ได้เลย
+                Swal.fire('ไม่พบใบสั่งซื้อ', 'เลขที่ ' + orderno + ' ไม่มีอยู่ในระบบ', 'warning')
+                    .then(function(){ $('#o_Orderno').trigger('focus').trigger('select'); });
                 return;
             }
-            fillOrderForm(res);
+            fillOrderForm(res);              // fillOrderForm ตั้งโหมดเป็น edit ให้แล้ว
             $('#orderModal').modal('show');
         }).fail(function(){
             Swal.fire('โหลดข้อมูลไม่สำเร็จ', 'ลองใหม่อีกครั้ง', 'error');
         });
     }
 
-    // ใบใหม่ — ล้างฟอร์ม แล้วรอผู้ใช้เลือกประเภทเพื่อดึงเลขที่ถัดไป
-    function orderNew(){
-        clearOrderForm();
-        $('#orderModalTitle').text('บันทึกคำสั่งซื้อ — ใบใหม่');
-        $('#orderModal').modal('show');
+    // ────────────────────────────────────────────────────────
+    //  โหมดของฟอร์ม
+    //   idle = เพิ่งเปิดฟอร์ม — กรอกได้แค่ 2 อย่าง: ประเภทใบสั่ง (radio) กับ เลขที่ใบสั่ง
+    //          จากนั้นเลือกทางใดทางหนึ่ง: กด "เพิ่มใบสั่งซื้อใหม่" → โหมด new
+    //          หรือพิมพ์เลขที่ใบเดิมแล้วกด Enter → โหมด edit
+    //   new / edit = ปลดล็อกทุกช่อง (เลขที่ใบสั่งถูกกำหนดแล้ว จึงล็อกไว้)
+    // ────────────────────────────────────────────────────────
+    function setOrderFormMode(mode){
+        var idle = (mode === 'idle');
+        $('#orderModal').attr('data-mode', mode);
+
+        // ล็อกทุกช่อง ยกเว้นตัวที่ต้องใช้ตอน idle (radio ประเภท / เลขที่ใบสั่ง / ปุ่มเพิ่มใบใหม่ / ปุ่มปิด)
+        $('#orderModal').find('input, select, textarea, button')
+            .not('[name="order_type_form"]')
+            .not('#o_Orderno')
+            .not('.of-btn-new')
+            .not('[data-bs-dismiss="modal"], .btn-close')
+            .prop('disabled', idle);
+
+        // เลขที่ใบสั่ง — พิมพ์ได้เฉพาะตอน idle
+        $('#o_Orderno').prop('readonly', !idle);
+        $('#o_orderno_hint').toggleClass('d-none', !idle);
     }
 
-    // เปลี่ยนประเภทใบสั่ง → ดึงเลขรันถัดไปของประเภทนั้นมาโชว์ (ยังไม่เดินเลขจริง)
-    function onOrderTypeChange(type){
-        if ($('#o_Orderno').data('existing')) return;   // ใบเดิม — ห้ามเปลี่ยนเลขที่
+    // เปิดฟอร์มเปล่า (ปุ่มบนหัวหน้ารายการ) — เข้าโหมด idle
+    function orderOpenNew(){
+        clearOrderForm();
+        $('#orderModalTitle').text('บันทึกคำสั่งซื้อ');
+        setOrderFormMode('idle');
+        $('#orderModal').modal('show');
+        setTimeout(function(){ $('#o_Orderno').trigger('focus'); }, 300);
+    }
+
+    // กด Enter ที่ช่องเลขที่ใบสั่ง (ตอน idle) → เปิดใบนั้นขึ้นมาแก้ไขทันที
+    $(document).on('keydown', '#o_Orderno', function(e){
+        if (e.key !== 'Enter' && e.keyCode !== 13) return;
+        e.preventDefault();
+        if ($(this).prop('readonly')) return;          // ไม่ได้อยู่โหมด idle
+        var no = ($(this).val() || '').trim();
+        if (!no) return;
+        orderOpen(no);
+    });
+
+    // ปุ่ม "เพิ่มใบสั่งซื้อใหม่" ในฟอร์ม — จุดเดียวที่เจนเลขที่ใบสั่ง
+    function orderNew(){
+        var type = $('input[name="order_type_form"]:checked').val();
+        if (!type){
+            Swal.fire({
+                icon: 'warning',
+                title: 'ยังไม่ได้เลือกประเภทใบสั่ง',
+                text: 'เลือกประเภท (CM / CI / HM / …) ก่อน แล้วกดปุ่มนี้อีกครั้ง'
+            });
+            return;
+        }
+
+        clearOrderForm();                              // ล้างข้อมูลใบเดิมออกก่อน
+        $('#o_type_' + type).prop('checked', true);    // คงประเภทที่เลือกไว้
+        $('#orderModalTitle').text('บันทึกคำสั่งซื้อ — ใบใหม่');
+        setOrderFormMode('new');           // ปลดล็อกช่องที่เหลือ
+
         $.getJSON("{{ $page_url }}/next-orderno", {type: type}, function(res){
             if (res.found && res.orderno) $('#o_Orderno').val(res.orderno);
+            else Swal.fire('เจนเลขที่ใบสั่งไม่สำเร็จ', 'ไม่พบเลขรันของประเภท ' + type, 'error');
+        }).fail(function(){
+            Swal.fire('เจนเลขที่ใบสั่งไม่สำเร็จ', 'ลองใหม่อีกครั้ง', 'error');
         });
+    }
+
+    // เปลี่ยนประเภทใบสั่ง — ไม่เจนเลขที่ใหม่ (เจนเฉพาะตอนกดปุ่ม "เพิ่มใบสั่งซื้อใหม่")
+    // แต่ล้างเลขที่ที่ค้างอยู่ถ้าไม่ตรงกับประเภทที่เพิ่งเลือก กันเลขที่/ประเภทไม่ตรงกัน
+    function onOrderTypeChange(type){
+        if ($('#o_Orderno').data('existing')) return;   // ใบเดิม — ไม่แตะเลขที่
+        var cur = ($('#o_Orderno').val() || '').trim();
+        if (cur && cur.substring(0, 2).toUpperCase() !== type) $('#o_Orderno').val('');
     }
 
     function clearOrderForm(){
@@ -549,6 +708,10 @@
         $('#o_DVpoint').html('<option value="">— ไม่ระบุ —</option>');
         $('#o_Orderno').removeData('existing');
         setFp('o_sendend', '');
+        setFpDateTime('o_Mdate', null);   // ใบใหม่ = วันเวลาปัจจุบัน (ผู้ใช้แก้ได้)
+        $('#o_match_warn').addClass('d-none');
+        // ผู้บันทึก = พนักงานที่ล็อกอินอยู่
+        $('#o_Emp').val('{{ $current_emp }}');
         renderOrderItems([]);
     }
 
@@ -561,7 +724,7 @@
         // ประเภท (radio) + เลขที่ใบสั่ง
         if (o.type) $('#o_type_' + o.type).prop('checked', true);
         $('#o_Orderno').val(o.Orderno || '').data('existing', true);
-        $('#o_Mdate').val(fmtDateTime(o.Mdate));
+        setFpDateTime('o_Mdate', o.Mdate);
 
         $('#o_Company').val(o.Company || '');
         $('#o_PO').val(o.PO || '');
@@ -593,12 +756,13 @@
         $('#o_Cer').prop('checked', !!o.Cer);
         $('#o_MSDS').prop('checked', !!o.MSDS);
 
-        // สินค้า + ราคา
+        // สินค้า + ราคา (ราคาขายเป็นค่าที่ผู้ใช้พิมพ์ไว้เอง ไม่ได้มาจากกล่องราคา)
         $('#o_itemno').val(res.itemno || '');
-        $('#o_price').val(fmtNum(o.price, 2));
+        $('#o_price').val(commaFmt(o.price, 2));
         fillPriceBox(res.price);
 
         renderOrderItems(res.items || []);
+        setOrderFormMode('edit');   // เปิดใบเดิม → ปลดล็อกทุกช่อง (ยกเว้นเลขที่ใบสั่ง)
     }
 
     function fillDvpoints(list, selected){
@@ -613,42 +777,178 @@
         $('#o_DVpoint').html(html).val(selected || '');
     }
 
+    // กล่องราคา — ทุกช่องอ่านอย่างเดียว ยกเว้น "ราคาขาย" ที่ผู้ใช้พิมพ์เอง (ไม่แตะที่นี่)
     function fillPriceBox(p){
         p = p || {};
-        $('#o_fixed_price').val(fmtNum(p.fixed_price, 2));
+        $('#o_fixed_price').val(fmtNum(p.fixed_price, 2))
+            .attr('title', p.formula ? 'ราคาขาย 1 = ราคาทุน ' + p.formula : '');
         $('#o_price2').val(fmtNum(p.price2, 2));
-        // ราคาขั้นต่ำ = ราคาของกลุ่มที่ตรงกับน้ำหนักสั่ง (A ≥1,000 / B ≥500 / C ต่ำกว่า 500)
-        $('#o_min_price').val(fmtNum(p.min_price, 2));
+        $('#o_min_price').val(fmtNum(p.min_price, 2));       // = ราคาช่อง 2
         $('#o_price_group').val(p.group ? p.group + ' — ' + (p.group_label || '') : '');
         $('#o_appv_price').val(fmtNum(p.appv_price, 2));
         $('#o_valid_to').val(fmtDate(p.valid_to));
-    }
 
-    // ── ตารางรายการ (suborder) — เฟสนี้แสดงอย่างเดียว ──
-    function renderOrderItems(items){
-        var body = '', total = 0;
+        // ── ข้อความใต้กล่องราคา: บอกที่มาของราคา หรือบอกว่าทำไมคำนวณไม่ได้ ──
+        var $note = $('#o_price_note').removeClass('of-price-note-warn');
 
-        if (!items.length){
-            body = '<tr><td colspan="9" class="text-center py-3 text-muted">ยังไม่มีรายการ</td></tr>';
-        } else {
-            items.forEach(function(r, i){
-                total += parseFloat(r.Production || 0);
-                body += '<tr>'
-                     +  '<td class="text-center text-muted">' + (i + 1) + '</td>'
-                     +  '<td class="text-end">' + (fmtNum(r.Stock, 2) || '-') + '</td>'
-                     +  '<td class="text-end fw-semibold">' + (fmtNum(r.Production, 2) || '-') + '</td>'
-                     +  '<td class="text-center">' + (fmtDate(r.custwant) || '-') + '</td>'
-                     +  '<td class="text-center">' + (fmtDate(r.senddate) || '-') + '</td>'
-                     +  '<td class="text-center text-primary">' + (fmtDate(r.EndP) || '-') + '</td>'
-                     +  '<td class="text-center">' + (fmtDate(r.DVDate) || '-') + '</td>'
-                     +  '<td>' + esc(r.outno || '-') + '</td>'
-                     +  '<td>' + esc(r.Remark || '') + '</td>'
-                     +  '</tr>';
-            });
+        if (p.found){
+            // เหมือนหน้า "ค้นหาราคาสินค้า": ราคาทุน → เงื่อนไขที่เข้า → สูตร
+            var src = [];
+            if (p.cost_price != null) src.push('ราคาทุน ' + fmtNum(p.cost_price, 2));
+            if (p.rule_label)         src.push(p.rule_label);
+            if (p.formula)            src.push(p.formula);
+            $note.text(src.join('  ·  '));
+            return;
         }
 
-        $('#orderItems').html(body);
-        $('#o_total_prod').text(fmtNum(total, 2) || '0.00');
+        $note.addClass('of-price-note-warn').text(p.message || '');
+    }
+
+    // ════════════════════════════════════════════════════════
+    //  ตารางรายการ (suborder) — ช่องกรอก เพิ่ม/ลบแถวได้
+    //  อ่านค่าจาก DOM ตอนบันทึก (ไม่เก็บ model คู่ขนาน กันข้อมูลสองฝั่งไม่ตรงกัน)
+    // ════════════════════════════════════════════════════════
+
+    // 1 แถว = 1 suborder — Runno เก็บใน hidden เพื่อให้ฝั่ง server รู้ว่าแถวไหนของเดิม
+    function orderItemRow(r){
+        r = r || {};
+        var td = function(html, cls){ return '<td' + (cls ? ' class="' + cls + '"' : '') + '>' + html + '</td>'; };
+        var txt = function(field, val, extra){
+            return '<input type="text" class="form-control form-control-sm oi-input" data-f="' + field + '"'
+                 + ' value="' + esc(val == null ? '' : val) + '"' + (extra || '') + '>';
+        };
+        var num = function(field, val){
+            return '<input type="text" class="form-control form-control-sm text-end js-comma oi-input" data-f="' + field + '"'
+                 + ' inputmode="decimal" autocomplete="off" placeholder="0.00"'
+                 + ' value="' + esc(commaFmt(val, 2)) + '" oninput="recalcOrderTotals()">';
+        };
+        var dat = function(field, val){
+            return '<input type="text" class="form-control form-control-sm oi-date oi-input" data-f="' + field + '"'
+                 + ' autocomplete="off" placeholder="วว/ดด/ปปปป" value="' + esc(fmtDate(val, true)) + '">';
+        };
+
+        return '<tr>'
+            + '<input type="hidden" data-f="Runno" value="' + esc(r.Runno || '') + '">'
+            + td('<span class="oi-no"></span>', 'text-center text-muted')
+            + td(txt('Itemno', r.Itemno, ' oninput="onItemnoInput(this)"'))
+            + td(txt('nold', r.nold, ' list="noldList" maxlength="1"'))
+            + td(txt('prodname', r.prodname))
+            + td(txt('Lotno', r.Lotno))
+            + td(num('Stock', r.Stock))
+            + td(num('Production', r.Production))
+            + td(dat('custwant', r.custwant))
+            + td(dat('senddate', r.senddate))
+            + td(dat('EndP', r.EndP))
+            + td(dat('DVDate', r.DVDate))
+            + td(txt('outno', r.outno))
+            + td(txt('Remark', r.Remark, ' list="ordremList"'))
+            + td('<button type="button" class="btn btn-sm btn-icon btn-label-danger" title="ลบแถว"'
+                + ' onclick="removeOrderItem(this)"><i class="ti ti-trash"></i></button>', 'text-center')
+            + '</tr>';
+    }
+
+    function renderOrderItems(items){
+        items = (items && items.length) ? items : [{}];   // ใบใหม่เริ่มที่ 1 แถวเปล่า
+        $('#orderItems').html(items.map(orderItemRow).join(''));
+        initRowPickers('#orderItems');
+        renumberOrderItems();
+        recalcOrderTotals();
+    }
+
+    function addOrderItem(){
+        var $tr = $(orderItemRow({}));
+        $('#orderItems').append($tr);
+        initRowPickers($tr);
+        renumberOrderItems();
+    }
+
+    function removeOrderItem(btn){
+        $(btn).closest('tr').remove();
+        if (!$('#orderItems tr').length) addOrderItem();   // เหลืออย่างน้อย 1 แถวเสมอ
+        renumberOrderItems();
+        recalcOrderTotals();
+    }
+
+    // flatpickr ของช่องวันที่ในแถว — ต้องผูกทุกครั้งที่สร้างแถวใหม่
+    function initRowPickers(scope){
+        $(scope).find('.oi-date').each(function(){
+            if (this._flatpickr) return;
+            flatpickr(this, {dateFormat: 'd/m/Y', allowInput: true, static: true, disableMobile: true});
+        });
+    }
+
+    function renumberOrderItems(){
+        $('#orderItems tr').each(function(i){ $(this).find('.oi-no').text(i + 1); });
+    }
+
+    // ยอดรวม S / P ท้ายตาราง
+    function recalcOrderTotals(){
+        var s = 0, p = 0;
+        $('#orderItems tr').each(function(){
+            s += numOf($(this).find('[data-f="Stock"]').val());
+            p += numOf($(this).find('[data-f="Production"]').val());
+        });
+        $('#o_total_stock').text(commaFmt(s, 2));
+        $('#o_total_prod').text(commaFmt(p, 2));
+    }
+
+    // ── กรอกรหัสสินค้า → เติมชื่อสินค้า + ผูกกล่องราคา + เตือน Match ใหม่ ──
+    // ผู้ใช้กรอกรหัสเดียวทั้งใบ → ใช้รหัสของแถวแรกที่กรอกไว้เป็นตัวอ้างอิงของกล่องราคา
+    var itemLookupTimer = null;
+    function onItemnoInput(el){
+        clearTimeout(itemLookupTimer);
+        itemLookupTimer = setTimeout(function(){ applyItemLookup(el); }, 350);
+    }
+
+    function applyItemLookup(el){
+        var $row   = $(el).closest('tr');
+        var itemno = ($(el).val() || '').trim();
+
+        if (!itemno){ syncItemnoToPrice(); return; }
+
+        $.getJSON("{{ $page_url }}/item-lookup", {itemno: itemno}, function(res){
+            if (($(el).val() || '').trim() !== itemno) return;   // ผู้ใช้พิมพ์ต่อแล้ว
+            // เติมชื่อสินค้าให้เฉพาะตอนช่องยังว่าง (ไม่ทับที่ผู้ใช้พิมพ์เอง)
+            var $name = $row.find('[data-f="prodname"]');
+            if (res.prodname && !$name.val()) $name.val(res.prodname);
+            showMatchWarning(res);
+            syncItemnoToPrice();
+        }).fail(syncItemnoToPrice);
+    }
+
+    // แถบแดง "สีที่สั่งซื้อล่าสุดเกิน 3 ปี จะต้อง Match ใหม่"
+    function showMatchWarning(res){
+        if (res && res.need_match){
+            $('#o_match_detail').text(res.last_order_date
+                ? 'เบอร์ ' + res.itemno + ' — สั่งครั้งล่าสุด ' + fmtDate(res.last_order_date, true)
+                : 'เบอร์ ' + res.itemno + ' — ไม่เคยมีประวัติการสั่งซื้อ');
+            $('#o_match_warn').removeClass('d-none');
+        } else {
+            $('#o_match_warn').addClass('d-none');
+        }
+    }
+
+    // รหัสสินค้าในกล่องราคา = รหัสของแถวแรกที่กรอกไว้
+    function syncItemnoToPrice(){
+        var itemno = '';
+        $('#orderItems [data-f="Itemno"]').each(function(){
+            if (!itemno && ($(this).val() || '').trim()) itemno = $(this).val().trim();
+        });
+        $('#o_itemno').val(itemno);
+        refreshOrderPrice();
+    }
+
+    // ดึงกล่องราคาใหม่ตามคู่ (ลูกค้า, รหัสสินค้า) + น้ำหนักรวม (ใช้หากลุ่มราคา A/B/C)
+    var priceXhr = null;
+    function refreshOrderPrice(){
+        var custno = ($('#o_Custno').val() || '').trim();
+        var itemno = ($('#o_itemno').val() || '').trim();
+        if (!custno || !itemno){ fillPriceBox({}); return; }
+
+        if (priceXhr) priceXhr.abort();
+        priceXhr = $.getJSON("{{ $page_url }}/price-info", {
+            custno: custno, itemno: itemno, weight: numVal('#o_netqty')
+        }, function(res){ fillPriceBox(res); });
     }
 
     // ── ค้นลูกค้าจากรหัส (เติมชื่อ + สถานที่ส่ง + ค่าตั้งต้น RP/CER) ──
@@ -671,24 +971,112 @@
                 $('#o_Custname').val(c.name || '');
                 $('#o_itype').val(c.type ? c.type + ' — ' + (c.type_name || '') : '');
                 fillDvpoints(res.dvpoints, '');
-                // ค่าตั้งต้นจากข้อมูลลูกค้า — เฉพาะใบใหม่ (ใบเดิมใช้ค่าที่บันทึกไว้)
-                if (!$('#o_Orderno').data('existing')){
-                    $('#o_RP').prop('checked', !!c.RP);
-                    $('#o_Cer').prop('checked', !!c.CER);
-                    $('#o_MSDS').prop('checked', !!c.MSDS);
-                }
+
+                // ── ค่าที่ดึงจากข้อมูลลูกค้า ──
+                // ทำทุกครั้งที่ "ผู้ใช้เปลี่ยนรหัสลูกค้า" (ฟังก์ชันนี้ถูกเรียกจาก oninput เท่านั้น
+                // ไม่ถูกเรียกตอนโหลดใบเดิม ค่าที่บันทึกไว้จึงไม่โดนทับ)
+                $('#o_supno').val(c.sale || '');        // รหัสผู้ขายประจำลูกค้า
+                $('#o_RP').prop('checked', !!c.RP);
+                $('#o_Cer').prop('checked', !!c.CER);
+                $('#o_MSDS').prop('checked', !!c.MSDS);
+                // ส่งก่อนได้ (Send) / SPEC (Spec) ไม่มีค่าประจำลูกค้าใน customer — ผู้ใช้ติ๊กเอง
+
+                refreshOrderPrice();   // เปลี่ยนลูกค้า → ราคาของคู่ (ลูกค้า, สินค้า) เปลี่ยนตาม
             });
         }, 350);
     }
 
-    // การบันทึกยังไม่เปิดใช้งาน — รอยืนยันกติกาการเดินเลขที่ใบสั่ง + คอลัมน์ที่แก้ได้
-    function saveOrder(){
-        Swal.fire({
-            icon: 'info',
-            title: 'ยังไม่เปิดใช้งานการบันทึก',
-            html: 'หน้านี้เป็น UI + อ่านข้อมูลจริงเท่านั้น<br>' +
-                  'การบันทึกจะเปิดใช้หลังยืนยันกติกาการเดินเลขที่ใบสั่ง (ตาราง <code>orderrun</code>) และคอลัมน์ที่แก้ได้'
+    // ════════════════════════════════════════════════════════
+    //  บันทึกใบสั่งซื้อ
+    // ════════════════════════════════════════════════════════
+
+    // เก็บค่าจากตารางรายการ — ข้ามแถวที่ยังไม่กรอกรหัสสินค้า
+    function collectOrderItems(){
+        var items = [];
+        $('#orderItems tr').each(function(){
+            var $tr = $(this), row = {};
+            $tr.find('[data-f]').each(function(){
+                row[$(this).data('f')] = $(this).val();
+            });
+            // ช่องตัวเลขมีคอมมา → ถอดออกก่อนส่ง ไม่งั้น '1,000.00' จะลง DB เป็น 1.00
+            row.Stock      = numOf(row.Stock);
+            row.Production = numOf(row.Production);
+            if ((row.Itemno || '').trim() !== '') items.push(row);
         });
+        return items;
+    }
+
+    function saveOrder(){
+        var isEdit = !!$('#o_Orderno').data('existing');
+        var type   = $('input[name="order_type_form"]:checked').val() || '';
+        var items  = collectOrderItems();
+
+        // ── ตรวจก่อนส่ง ให้ผู้ใช้รู้ปัญหาทันทีโดยไม่ต้องรอ server ──
+        if (!isEdit && !type){
+            Swal.fire('ยังไม่ได้เลือกประเภทใบสั่ง', 'เลือกประเภทแล้วกด "เพิ่มใบสั่งซื้อใหม่" เพื่อรับเลขที่', 'warning');
+            return;
+        }
+        if (!($('#o_Custno').val() || '').trim()){
+            Swal.fire('ยังไม่ได้ระบุลูกค้า', 'กรอกรหัสลูกค้าก่อนบันทึก', 'warning');
+            return;
+        }
+        if (!items.length){
+            Swal.fire('ยังไม่มีรายการสินค้า', 'กรอกรหัสสินค้าในตารางอย่างน้อย 1 แถว', 'warning');
+            return;
+        }
+
+        // ถอดคอมมาออกจากช่องตัวเลขทั้งฟอร์มก่อนอ่านค่า (น้ำหนักรวม / นน.คลัง / ส่งมอบเดือนละ)
+        stripCommaFields('#orderModal');
+
+        var payload = {
+            _token:     '{{ csrf_token() }}',
+            mode:       isEdit ? 'update' : 'insert',
+            order_type: type,
+            Orderno:    $('#o_Orderno').val(),
+            Mdate:      $('#o_Mdate').val(),
+            Company:    $('#o_Company').val(),
+            PO:         $('#o_PO').val(),
+            Custno:     $('#o_Custno').val(),
+            Emp:        $('#o_Emp').val(),
+            supno:      $('#o_supno').val(),
+            DVpoint:    $('#o_DVpoint').val(),
+            RsvNo:      $('#o_RsvNo').val(),
+            netqty:     $('#o_netqty').val(),
+            price:      $('#o_price').val(),
+            sendend:    $('#o_sendend').val(),
+            SendCust:   $('#o_SendCust').val(),
+            HMStore:    $('#o_HMStore').val(),
+            sendmth:    $('#o_sendmth').val(),
+            Send:       $('#o_Send').is(':checked')  ? 1 : 0,
+            RP:         $('#o_RP').is(':checked')    ? 1 : 0,
+            Spec:       $('#o_Spec').is(':checked')  ? 1 : 0,
+            Cer:        $('#o_Cer').is(':checked')   ? 1 : 0,
+            MSDS:       $('#o_MSDS').is(':checked')  ? 1 : 0,
+            items:      items
+        };
+
+        var $btn = $('#btnSaveOrder').prop('disabled', true);
+
+        $.post("{{ $page_url }}/save", payload)
+            .done(function(res){
+                if (!res.status){
+                    Swal.fire('บันทึกไม่สำเร็จ', res.message || '', 'error');
+                    return;
+                }
+                Swal.fire({icon: 'success', title: res.message, text: 'เลขที่ใบสั่ง ' + res.orderno});
+                // ใบใหม่ → เปลี่ยนเป็นโหมดแก้ไขของใบที่เพิ่งบันทึก แล้วโหลดค่าจริงกลับมา
+                orderOpen(res.orderno);
+                loadData(page);
+            })
+            .fail(function(xhr){
+                var msg = (xhr.responseJSON && xhr.responseJSON.message) || 'เกิดข้อผิดพลาดในการบันทึก';
+                Swal.fire('บันทึกไม่สำเร็จ', msg, 'error');
+            })
+            .always(function(){
+                $btn.prop('disabled', false);
+                // ใส่คอมมากลับให้ช่องตัวเลขหลังส่งข้อมูลแล้ว
+                $('#orderModal .js-comma').trigger('blur');
+            });
     }
 
     // ════════════════════════════════════════════════════════
@@ -905,14 +1293,25 @@
         $('#a_sale').val(c.sale || '');
 
         var r = res.request || {};
-        $('#a_ReqDate').val(r.ReqDate ? fmtDateTime(r.ReqDate) : '');
-        $('#a_price1').val(fmtNum(r.price1, 2));
-        $('#a_price2').val(fmtNum(r.price2, 2));
-        $('#a_price3').val(fmtNum(r.price3, 2));
+        // เก็บ ReqDate ของใบเดิมไว้เป็นคีย์ตอนบันทึก/ลบ — ไม่มี = ยังไม่เคยขอราคาคู่นี้ (ใบใหม่)
+        $('#a_ReqDate').val(r.ReqDate ? fmtDateTime(r.ReqDate) : '').data('reqdate', r.ReqDate || '');
         $('#a_price').val(commaFmt(r.price, 2));
         $('#a_weight').val(commaFmt(r.weight, 2));
         $('#a_remark').val(r.remark || '');
+        $('#a_costup').prop('checked', !!r.costup);
         $('#a_Appv').prop('checked', !!r.Appv);
+
+        // ราคา 3 ช่อง — ใบเดิมใช้ค่าที่บันทึกไว้ ใบใหม่เติมจากระบบกำหนดราคาให้
+        var calc = (res.calc && res.calc.prices) ? res.calc.prices : null;
+        $('#a_price1').val(fmtNum(r.price1 != null ? r.price1 : (calc ? calc.price_1 : null), 2));
+        $('#a_price2').val(fmtNum(r.price2 != null ? r.price2 : (calc ? calc.price_2 : null), 2));
+        $('#a_price3').val(fmtNum(r.price3 != null ? r.price3 : (calc ? calc.price_3 : null), 2));
+        // DB 3-4 / 1-2 Kg. — คำนวณจากระบบกำหนดราคาเสมอ (appvreq ไม่มีที่เก็บ 2 ค่านี้)
+        $('#a_price_34').val(calc ? fmtNum(calc.db_3_4, 2) : '');
+        $('#a_price_12').val(calc ? fmtNum(calc.db_1_2, 2) : '');
+
+        // ลบได้เฉพาะใบที่มีอยู่จริง
+        $('#btnApprovalDelete').prop('disabled', !r.ReqDate);
 
         // ราคาที่ตกลงไว้ล่าสุด (uprice)
         var u = res.uprice || {};
@@ -1042,14 +1441,93 @@
     }
     function approvalRefresh(){ loadApprovalData(); }
 
-    // เพิ่ม/บันทึก, ลบรายการ, พิมพ์ — ยังไม่เปิดใช้งาน (รอยืนยันสิทธิ์อนุมัติ + คอลัมน์ที่แก้ได้)
+    // ── เพิ่ม / บันทึกใบขออนุมัติราคา ──
     function approvalSave(){
+        var custno = ($('#a_custno').val() || '').trim();
+        var itemno = $('#a_itemno').val() || '';
+
+        if (!custno){ Swal.fire('ยังไม่ได้ระบุลูกค้า', 'กรอกรหัสลูกค้าก่อนบันทึก', 'warning'); return; }
+        if (!itemno){ Swal.fire('ยังไม่ได้เลือกรหัสสินค้า', 'เลือกเบอร์สินค้าก่อนบันทึก', 'warning'); return; }
+
+        stripCommaFields('#approvalModal');
+        var approve = $('#a_Appv').is(':checked');
+
+        if (approve && !($('#a_mdpass').val() || '').trim()){
+            Swal.fire('ต้องกรอกรหัสผ่าน MD', 'การอนุมัติราคาต้องกรอกรหัสผ่าน MD', 'warning');
+            $('#approvalModal .js-comma').trigger('blur');
+            return;
+        }
+
+        var payload = {
+            _token:      '{{ csrf_token() }}',
+            custno:      custno,
+            itemno:      itemno,
+            ReqDate:     $('#a_ReqDate').data('reqdate') || '',   // ว่าง = ขึ้นใบใหม่ด้วยเวลาปัจจุบัน
+            price:       $('#a_price').val(),
+            weight:      $('#a_weight').val(),
+            price1:      $('#a_price1').val(),
+            price2:      $('#a_price2').val(),
+            price3:      $('#a_price3').val(),
+            remark:      $('#a_remark').val(),
+            costup:      $('#a_costup').is(':checked') ? 1 : 0,
+            Appv:        approve ? 1 : 0,
+            valid_to:    $('#a_validto').val(),
+            md_password: $('#a_mdpass').val()
+        };
+
+        var $btn = $('#btnApprovalSave').prop('disabled', true);
+
+        $.post(APPROVAL_URL + '/save', payload)
+            .done(function(res){
+                if (!res.status){ Swal.fire('บันทึกไม่สำเร็จ', res.message || '', 'error'); return; }
+                Swal.fire({icon: 'success', title: res.message});
+                $('#a_mdpass').val('');
+                loadApprovalData();     // โหลดค่าที่บันทึกจริงกลับมา
+            })
+            .fail(function(xhr){
+                var msg = (xhr.responseJSON && xhr.responseJSON.message) || 'เกิดข้อผิดพลาดในการบันทึก';
+                Swal.fire('บันทึกไม่สำเร็จ', msg, 'error');
+            })
+            .always(function(){
+                $btn.prop('disabled', false);
+                $('#approvalModal .js-comma').trigger('blur');   // ใส่คอมมากลับ
+            });
+    }
+
+    // ── ลบใบขออนุมัติราคาใบที่กำลังดูอยู่ ──
+    function approvalDelete(){
+        var reqdate = $('#a_ReqDate').data('reqdate') || '';
+        if (!reqdate){ Swal.fire('ไม่มีใบให้ลบ', 'คู่ลูกค้า/เบอร์นี้ยังไม่เคยมีใบขออนุมัติราคา', 'info'); return; }
+
         Swal.fire({
-            icon: 'info',
-            title: 'ยังไม่เปิดใช้งาน',
-            html: 'ฟอร์มนี้เป็น UI + อ่านข้อมูลจริงเท่านั้น<br>' +
-                  'การบันทึก/ลบ/พิมพ์ จะเปิดใช้หลังยืนยันวิธีตรวจรหัสผ่าน MD และคอลัมน์ที่แก้ได้'
+            icon: 'warning',
+            title: 'ลบใบขออนุมัติราคา?',
+            html: 'วันที่ขอราคา ' + fmtDateTime(reqdate) + '<br>ราคาที่ยืนไว้ (ตารางล่าง) จะไม่ถูกลบ',
+            showCancelButton: true,
+            confirmButtonText: 'ลบ',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#d33'
+        }).then(function(r){
+            if (!r.isConfirmed) return;
+            $.post(APPROVAL_URL + '/delete', {
+                _token:  '{{ csrf_token() }}',
+                custno:  ($('#a_custno').val() || '').trim(),
+                itemno:  $('#a_itemno').val() || '',
+                ReqDate: reqdate
+            }).done(function(res){
+                if (!res.status){ Swal.fire('ลบไม่สำเร็จ', res.message || '', 'error'); return; }
+                Swal.fire({icon: 'success', title: res.message});
+                loadApprovalData();
+            }).fail(function(xhr){
+                var msg = (xhr.responseJSON && xhr.responseJSON.message) || 'เกิดข้อผิดพลาดในการลบ';
+                Swal.fire('ลบไม่สำเร็จ', msg, 'error');
+            });
         });
+    }
+
+    // พิมพ์ — ยังไม่มีแบบฟอร์มกระดาษให้อ้างอิง จึงใช้พิมพ์หน้าจอไปก่อน
+    function approvalPrint(){
+        window.print();
     }
 
     // ────────────────────────────────────────────────────────
@@ -1073,7 +1551,38 @@
         var $btn = $('#btnResetFilters');
         if (count > 0) { $btn.removeClass('btn-label-secondary').addClass('btn-danger'); $btn.find('.filter-count').text('(' + count + ')'); }
         else           { $btn.removeClass('btn-danger').addClass('btn-label-secondary'); $btn.find('.filter-count').text(''); }
+
+        renderFilterSummary();
     }
+
+    // ── รายละเอียดการค้นหา (โชว์ตอนพับตัวกรอง) — ป้ายชื่อ FILTER_LABELS ประกาศไว้ต้นสคริปต์ ──
+    // escape ค่าที่ผู้ใช้พิมพ์ก่อนยัดลง HTML (กัน XSS จากคำค้น)
+    function escHtml(s){ return $('<div>').text(s == null ? '' : s).html(); }
+
+    function renderFilterSummary(){
+        var chips = [];
+        $('.p_search:not([name="limit"]):not([name="sort_col"]):not([name="sort_dir"])').each(function(){
+            var label = FILTER_LABELS[$(this).attr('name')];
+            if (!label) return;
+            // ตัดสินว่า "ไม่ได้กรอง" จาก value เสมอ — ตัวเลือก "ทั้งหมด" มี value ว่างแต่มีข้อความ
+            var raw = $(this).val();
+            if (raw === '' || raw === null) return;
+            // select: แสดงข้อความของตัวเลือก ไม่ใช่ value
+            var val = $(this).is('select') ? $(this).find('option:selected').text().trim() : raw;
+            chips.push('<span class="badge bg-label-primary fw-normal">'
+                + '<span class="text-dark fw-medium">' + escHtml(label) + ':</span> '
+                + escHtml(val) + '</span>');
+        });
+        $('#filterSummary').html(chips.join(''));   // ไม่มีตัวกรอง = ปล่อยว่าง
+    }
+
+    // หมุนลูกศรตามสถานะพับ/กาง + ซ่อนแถบสรุปตอนกาง (ข้างในเห็นค่าจริงอยู่แล้ว)
+    $(document).on('show.bs.collapse hide.bs.collapse', '#orderFilterBox', function(e){
+        $('#btnToggleFilters .toggle-caret')
+            .toggleClass('ti-chevron-down', e.type === 'hide')
+            .toggleClass('ti-chevron-up',   e.type === 'show');
+        $('#filterSummary').toggleClass('d-none', e.type === 'show');
+    });
 
     // กัน AJAX race: รับเฉพาะผลของ request ล่าสุด
     function loadData(pages){

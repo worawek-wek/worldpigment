@@ -18,6 +18,10 @@ Route::prefix('order')->group(function () {
     Route::get('/customer/{code}', [OrderController::class, 'customerLookup'])->name('order.customer_lookup');
     Route::get('/price-info',      [OrderController::class, 'priceInfo'])->name('order.price_info');
     Route::get('/next-orderno',    [OrderController::class, 'nextOrderno'])->name('order.next_orderno');
+    Route::get('/item-lookup',     [OrderController::class, 'itemLookup'])->name('order.item_lookup');
+
+    // ─── บันทึก (สร้างใหม่ / แก้ไข) ───────────────────────────────────
+    Route::post('/save', [OrderController::class, 'save'])->name('order.save');
 
     // ─── ฟอร์มขออนุมัติราคาพิเศษ (MD) — ฟอร์มลูกของเมนูนี้ ─────────────
     Route::prefix('price-approval')->group(function () {
@@ -27,6 +31,9 @@ Route::prefix('order')->group(function () {
         Route::get('/other-customers', [PriceApprovalController::class, 'otherCustomers'])->name('order.approval.other_customers');
         Route::get('/history',         [PriceApprovalController::class, 'history'])->name('order.approval.history');
         Route::get('/resin-history',   [PriceApprovalController::class, 'resinHistory'])->name('order.approval.resin_history');
+
+        Route::post('/save',   [PriceApprovalController::class, 'save'])->name('order.approval.save');
+        Route::post('/delete', [PriceApprovalController::class, 'destroy'])->name('order.approval.delete');
     });
 
     // ─── ฟอร์มอนุมัติราคาใบสั่งซื้อ (morderAPPV) ────────────────────────

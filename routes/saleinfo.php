@@ -13,9 +13,7 @@ Route::prefix('saleinfo')->group(function () {
     Route::get('/price-lookup',    [SaleinfoController::class, 'priceLookup'])->name('saleinfo.price_lookup'); // → JSON (ค้นหาราคาสินค้า)
     Route::get('/access-data',     [SaleinfoController::class, 'accessData'])->name('saleinfo.access_data');   // → HTML partial (ข้อมูลจากไฟล์ Access)
 
-    // ─── ตั้งค่าเงื่อนไขราคา (คูณ/หาร/บวก) — modal "ตั้งค่าเงื่อนไขราคา" 10/08/2569 ───
-    Route::get('/price-rules',         [SaleinfoController::class, 'priceRules'])->name('saleinfo.price_rules');              // → JSON (รายการเงื่อนไข)
-    Route::post('/price-rules/update', [SaleinfoController::class, 'priceRulesUpdate'])->name('saleinfo.price_rules_update'); // บันทึกค่าที่แก้
+    // ตั้งค่าเงื่อนไขราคา (คูณ/หาร/บวก) ย้ายไปเมนูของตัวเองแล้ว → routes/pricerule.php (21/08/2569)
 
     // ─── อ่าน ────────────────────────────────────────────────────────
     Route::get('/edit/{id}', [SaleinfoController::class, 'edit'])->name('saleinfo.edit');   // → JSON (เติมฟอร์ม)

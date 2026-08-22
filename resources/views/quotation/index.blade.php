@@ -176,6 +176,24 @@
 
         <div class="card-header border-bottom">
 
+            {{-- แถบหัว: ปุ่มพับ/กางตัวกรอง + ปุ่มล้างตัวกรอง (ชิดขวาทั้งคู่) — ค่าเริ่มต้นคือ "ซ่อนไว้" --}}
+            <div class="d-flex justify-content-end align-items-center gap-2">
+                {{-- รายละเอียดการค้นหา — สรุปเงื่อนไขที่กรองอยู่ โชว์เฉพาะตอนพับตัวกรอง --}}
+                <div id="filterSummary" class="d-flex flex-wrap align-items-center gap-1 me-auto"></div>
+                <button type="button" id="btnToggleFilters" class="btn btn-label-primary btn-sm"
+                    data-bs-toggle="collapse" data-bs-target="#quotationFilterBox"
+                    aria-expanded="false" aria-controls="quotationFilterBox">
+                    <i class="ti ti-filter me-1"></i>ตัวกรอง
+                    <i class="ti ti-chevron-down ms-1 toggle-caret"></i>
+                </button>
+                <button type="button" id="btnResetFilters" class="btn btn-label-secondary btn-sm" onclick="resetFilters()">
+                    <i class="ti ti-x me-1"></i>ล้างตัวกรอง<span class="filter-count ms-1"></span>
+                </button>
+            </div>
+
+            <div class="collapse" id="quotationFilterBox">
+            <div class="pt-3">
+
             {{-- แถวตัวกรอง 1: ค้นหา + ช่วงวันที่ --}}
             <div class="row g-3 align-items-end">
                 <div class="col-md-6">
@@ -210,11 +228,9 @@
                 </div>
             </div>
 
-            <div class="d-flex justify-content-end my-3">
-                <button type="button" id="btnResetFilters" class="btn btn-label-secondary" onclick="resetFilters()">
-                    <i class="ti ti-x me-1"></i>ล้างตัวกรอง<span class="filter-count ms-1"></span>
-                </button>
             </div>
+            </div>
+            {{-- /#quotationFilterBox --}}
 
             {{-- state การเรียง — เก็บนอก #table-data เพื่อคงค่าเมื่อตารางโหลดใหม่ (default = id desc = ล่าสุด) --}}
             <input type="hidden" name="sort_col" value="id" class="p_search">
@@ -610,6 +626,17 @@
         var searchData = {};
         // ต้องประกาศก่อน loadData ครั้งแรก — เลี่ยง hoisting ทำให้ dtSeq เป็น NaN (spinner ค้าง)
         var dtXhr = null, dtSeq = 0;
+
+        // ป้ายชื่อของแต่ละช่องกรอง — ใช้ประกอบแถบ "รายละเอียดการค้นหา" (#filterSummary)
+        // ⚠ ต้องประกาศตรงนี้ (ก่อน loadData ครั้งแรก) เพราะ renderFilterSummary() ถูกเรียกใน loadData
+        //   ถ้าไปประกาศท้ายไฟล์ ตัวแปรจะยังเป็น undefined ตอนโหลดหน้า → throw แล้ว spinner ค้าง
+        var FILTER_LABELS = {
+            search:       'ค้นหา',
+            date_from:    'วันที่เสนอราคา ตั้งแต่',
+            date_to:      'ถึง',
+            product_type: 'ชนิดสินค้า'
+        };
+
         loadData(page);
 
         // ── Flatpickr: ทุกช่องวันที่ใช้ flatpickr-date (รูปแบบ d/m/Y เหมือนทั้งระบบ) ──
@@ -1268,7 +1295,41 @@
             var $btn = $('#btnResetFilters');
             if (count > 0) { $btn.removeClass('btn-label-secondary').addClass('btn-danger'); $btn.find('.filter-count').text('('+count+')'); }
             else           { $btn.removeClass('btn-danger').addClass('btn-label-secondary'); $btn.find('.filter-count').text(''); }
+
+            renderFilterSummary();
         }
+
+        // ── รายละเอียดการค้นหา (โชว์ตอนพับตัวกรอง) — ป้ายชื่อ FILTER_LABELS ประกาศไว้ต้นสคริปต์ ──
+        // escape ค่าที่ผู้ใช้พิมพ์ก่อนยัดลง HTML (กัน XSS จากคำค้น)
+        function escHtml(s){ return $('<div>').text(s == null ? '' : s).html(); }
+
+        function renderFilterSummary(){
+            var chips = [];
+            $('.p_search:not([name="limit"]):not([name="sort_col"]):not([name="sort_dir"])').each(function(){
+                var label = FILTER_LABELS[$(this).attr('name')];
+                if (!label) return;
+                // ตัดสินว่า "ไม่ได้กรอง" จาก value เสมอ — ตัวเลือก "ทั้งหมด" มี value ว่างแต่มีข้อความ
+                var raw = $(this).val();
+                if (raw === '' || raw === null) return;
+                // select: แสดงข้อความของตัวเลือก ไม่ใช่ value
+                var val = $(this).is('select') ? $(this).find('option:selected').text().trim() : raw;
+                chips.push('<span class="badge bg-label-primary fw-normal">'
+                    + '<span class="text-dark fw-medium">' + escHtml(label) + ':</span> '
+                    + escHtml(val) + '</span>');
+            });
+            $('#filterSummary').html(chips.join(''));   // ไม่มีตัวกรอง = ปล่อยว่าง
+        }
+
+        // หมุนลูกศรตามสถานะพับ/กาง + ซ่อนแถบสรุปตอนกาง (ข้างในเห็นค่าจริงอยู่แล้ว)
+        $(document).on('show.bs.collapse hide.bs.collapse', '#quotationFilterBox', function(e){
+            $('#btnToggleFilters .toggle-caret')
+                .toggleClass('ti-chevron-down', e.type === 'hide')
+                .toggleClass('ti-chevron-up',   e.type === 'show');
+            $('#filterSummary').toggleClass('d-none', e.type === 'show');
+        });
+        $(document).on('shown.bs.collapse', '#quotationFilterBox', function(){
+            refreshPickers('#quotationFilterBox');
+        });
 
         // กัน AJAX race: รับเฉพาะผลของ request ล่าสุด (dtXhr/dtSeq ประกาศด้านบนแล้ว)
         function loadData(pages){
