@@ -47,16 +47,30 @@ class ProductPriceService
             return $this->fail($code, null, 'ไม่พบรหัสสินค้านี้ในตารางราคาทุน');
         }
 
-        $base = (float) $row->Price;
-        $rule = $this->match($row->PdCode);
+        return $this->quote($row->PdCode, (float) $row->Price);
+    }
+
+    /**
+     * คำนวณราคาขายจาก "ราคาทุนที่ส่งมาเอง" (ไม่ต้องมีรหัสใน `access_pdprice`)
+     *
+     * ใช้กับจอที่รู้ต้นทุนอยู่แล้ว — เช่น Test Price ที่ต้นทุนของสูตรที่เพิ่งเทส
+     * อยู่ในคอลัมน์ `access_testmai.TNet` (เบอร์ที่เพิ่งตั้งใหม่ยังไม่มีในตารางราคาทุน)
+     *
+     * รหัสสินค้ายังจำเป็นอยู่ เพราะใช้เลือก "เงื่อนไข" (คูณ/หาร/บวก) ตามตัวขึ้นต้น/ลงท้าย
+     * คืน array โครงเดียวกับ lookup() ทุกประการ
+     */
+    public function quote(string $code, float $base): array
+    {
+        $code = trim($code);
+        $rule = $this->match($code);
 
         if (!$rule) {
-            return $this->fail($row->PdCode, $base, 'ไม่มีเงื่อนไขราคารองรับรหัสที่ขึ้นต้นด้วยนี้');
+            return $this->fail($code, $base, 'ไม่มีเงื่อนไขราคารองรับรหัสที่ขึ้นต้นด้วยนี้');
         }
 
         // แถวที่ลูกค้าตั้งไว้ 0/0/0 (เช่นกลุ่ม "1") = ยังไม่ได้กำหนดสูตร — หารด้วย 0 ไม่ได้
         if ((float) $rule['div'] == 0.0) {
-            return $this->fail($row->PdCode, $base, 'เงื่อนไข "' . $rule['label'] . '" ยังไม่ได้กำหนดสูตรราคา (ตั้งไว้ 0)', $rule);
+            return $this->fail($code, $base, 'เงื่อนไข "' . $rule['label'] . '" ยังไม่ได้กำหนดสูตรราคา (ตั้งไว้ 0)', $rule);
         }
 
         // ไล่ขั้นจากค่าที่ยังไม่ปัดเศษ แล้วค่อยปัดตอนแสดงผล — ปัดทีละขั้นจะเพี้ยนสะสม
@@ -69,7 +83,7 @@ class ProductPriceService
 
         return [
             'found'      => true,
-            'code'       => $row->PdCode,
+            'code'       => $code,
             'base_price' => round($base, 2),
             'rule'       => $rule,
             'prices'     => [

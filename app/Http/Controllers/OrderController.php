@@ -758,7 +758,8 @@ class OrderController extends Controller
     /** ค่าที่จะเขียนลง morder (ใช้ร่วมทั้ง insert / update) */
     private function headerPayload(Request $request, string $custno, $cust): array
     {
-        return [
+        // ตัดข้อความให้พอดีคอลัมน์ก่อนเขียน (ตาราง legacy คอลัมน์สั้น + MySQL strict mode)
+        return $this->clampToColumns('morder', [
             // วันที่เปิดใบ — ฟอร์มตั้งค่าปัจจุบันให้ แต่ผู้ใช้แก้ได้ (ว่าง/รูปแบบผิด = ใช้เวลาปัจจุบัน)
             'Mdate'    => $this->parseDateTime($request->input('Mdate')) ?? now(),
             'Company'  => $this->nullIfBlank($request->input('Company')),
@@ -782,7 +783,40 @@ class OrderController extends Controller
             'Spec'     => $this->flag($request->input('Spec')),
             'Cer'      => $this->flag($request->input('Cer')),
             'MSDS'     => $this->flag($request->input('MSDS')),
-        ];
+        ]);
+    }
+
+    /**
+     * ตัดข้อความให้พอดีความยาวคอลัมน์ก่อนเขียน DB
+     *
+     * ตาราง legacy หลายคอลัมน์สั้นมาก (เช่น `suborder.prodname` = varchar(20)) แต่ค่าที่
+     * ระบบเติมให้อัตโนมัติมาจากคอลัมน์ที่ยาวกว่า (`uprice.Label` = varchar(85) — ยาวเกิน 20
+     * อยู่ 15.5% ของข้อมูลจริง) และ MySQL เปิด `STRICT_TRANS_TABLES` ⇒ ยาวเกินจะได้
+     * **error 1406 Data too long** ทิ้งไปเลย ไม่ใช่ตัดให้เงียบ ๆ แบบระบบ Access เดิม
+     *
+     * อ่านความยาวจริงจาก schema (ไม่ hardcode) แล้วตัดด้วย `mb_substr` เพื่อไม่ให้ตัวอักษรไทย
+     * ขาดกลางตัว — คอลัมน์ text / ตัวเลข / วันที่ ไม่แตะ
+     */
+    private function clampToColumns(string $table, array $data): array
+    {
+        static $limits = [];
+
+        if (!isset($limits[$table])) {
+            $limits[$table] = [];
+            foreach (DB::select('SHOW COLUMNS FROM ' . $table) as $col) {
+                if (preg_match('/^(?:var)?char\((\d+)\)/i', $col->Type, $m)) {
+                    $limits[$table][$col->Field] = (int) $m[1];
+                }
+            }
+        }
+
+        foreach ($data as $field => $value) {
+            if (is_string($value) && isset($limits[$table][$field])) {
+                $data[$field] = mb_substr($value, 0, $limits[$table][$field]);
+            }
+        }
+
+        return $data;
     }
 
     /**
@@ -809,6 +843,9 @@ class OrderController extends Controller
                 'outno'      => $this->nullIfBlank($row['outno'] ?? null),
                 'Remark'     => $this->nullIfBlank($row['Remark'] ?? null),
             ];
+
+            // prodname = varchar(20) แต่ชื่อที่เติมอัตโนมัติจาก uprice.Label ยาวกว่านั้นได้
+            $data = $this->clampToColumns('suborder', $data);
 
             $runno = (int) ($row['Runno'] ?? 0);
             $isOld = $runno > 0 && DB::table('suborder')

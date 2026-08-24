@@ -482,41 +482,18 @@
         loadData(page);
 
         // ────────────────────────────────────────────────────────
-        //  Select2 + Flatpickr init
-        //  ⚠ ลำดับสำคัญ: select2 ก่อน flatpickr — เพื่อให้ flatpickr สร้าง <select> เดือน
-        //  ทีหลัง select2 จะไม่จับ (กันปัญหา UI flatpickr พังเหมือนรอบก่อน)
+        //  ยกระดับ select + Flatpickr init
+        //  ⚠ ลำดับสำคัญ: ยกระดับ select ก่อน flatpickr — เพื่อให้ flatpickr สร้าง <select> เดือน
+        //  ทีหลัง (กันปัญหา UI flatpickr พังเหมือนรอบก่อน)
         // ────────────────────────────────────────────────────────
         $(function() {
-            // ── Select2 ── ทุก select ใน modal + filter (ยกเว้น name="limit" = ปุ่มเลือกจำนวนต่อหน้า)
-            // dropdownParent = .modal-content (position:relative) ไม่ใช่ .modal (position:fixed + scroll)
-            // เพื่อกันบั๊กตำแหน่ง dropdown เพี้ยนตอนเปิดขึ้นบน/ตอน modal scroll
-            // tags: true → ทุก select เลือกจาก list หรือพิมพ์ค่าใหม่ที่ไม่มีในตัวเลือกเองได้ (กันค่าใน DB หาย)
-            // ประเภท (TestType) = ค่าตายตัว 1-4 → tags:false (ห้ามพิมพ์ค่าใหม่), ที่เหลือ tags:true (เลือกค่าที่ไม่มีในรายการได้)
-            $('#colorMatchingModal select:not([name="TestType"])').select2({
-                width: '100%',
-                tags: true,
-                dropdownParent: $('#colorMatchingModal .modal-content')
-            });
-            $('#colorMatchingModal select[name="TestType"]').select2({
-                width: '100%',
-                tags: false,
-                dropdownParent: $('#colorMatchingModal .modal-content')
-            });
-            // ประเภท (TestType) = ค่าตายตัว 1-4 → tags:false, ที่เหลือ tags:true (เหมือนฟอร์ม CM)
-            $('#sampleDeliveryModal select:not([name="TestType"])').select2({
-                width: '100%',
-                tags: true,
-                dropdownParent: $('#sampleDeliveryModal .modal-content')
-            });
-            $('#sampleDeliveryModal select[name="TestType"]').select2({
-                width: '100%',
-                tags: false,
-                dropdownParent: $('#sampleDeliveryModal .modal-content')
-            });
-            // filter ของหน้าหลัก (ไม่อยู่ใน modal) → ไม่ต้องมี dropdownParent
-            $('.card-header select[name]:not([name="limit"]):not([name="sort"])').select2({
-                width: '100%'
-            });
+            // ── select ทั้งหน้า (ตัวกรอง + modal) ──
+            // ตัวช่วยกลางใน layout/inc_js เลือกให้เองตามจำนวนตัวเลือก:
+            //   ตั้งแต่ 10 ตัวขึ้นไป → select2 (พิมพ์ค้นหาได้)  ต่ำกว่านั้น → bootstrap-select
+            // ช่องในฟอร์ม CM/SD ที่ติด class select2-tags = พิมพ์ค่านอกรายการเองได้
+            //   (= ช่อง "อื่นๆ ระบุ" ในฟอร์มกระดาษ + กันค่าเดิมใน DB หาย) จึงบังคับเป็น select2 เสมอ
+            //   ยกเว้นประเภท (TestType) ที่เป็นค่าตายตัว 1-4 → ห้ามพิมพ์ค่าใหม่
+            enhanceSelects();
 
             // ── Flatpickr ── หลัง select2 ──
             flatpickr('.flatpickr-date', {

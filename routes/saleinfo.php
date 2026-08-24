@@ -12,6 +12,7 @@ Route::prefix('saleinfo')->group(function () {
     Route::get('/customer/{code}', [SaleinfoController::class, 'customerLookup'])->name('saleinfo.customer_lookup');
     Route::get('/price-lookup',    [SaleinfoController::class, 'priceLookup'])->name('saleinfo.price_lookup'); // → JSON (ค้นหาราคาสินค้า)
     Route::get('/access-data',     [SaleinfoController::class, 'accessData'])->name('saleinfo.access_data');   // → HTML partial (ข้อมูลจากไฟล์ Access)
+    Route::get('/test-price',      [SaleinfoController::class, 'testPrice'])->name('saleinfo.test_price');   // → JSON (Test Price — ข้อมูลใบเทส + ราคา)
 
     // ตั้งค่าเงื่อนไขราคา (คูณ/หาร/บวก) ย้ายไปเมนูของตัวเองแล้ว → routes/pricerule.php (21/08/2569)
 
@@ -24,6 +25,7 @@ Route::prefix('saleinfo')->group(function () {
     Route::post('/update', [SaleinfoController::class, 'update'])->name('saleinfo.update');
     Route::post('/delete', [SaleinfoController::class, 'destroy'])->name('saleinfo.delete');
 
-    // TODO: ราคา 1/2/3 (DB tier) + ค่าสี/%สี — รอสรุปสูตร/ที่มาข้อมูลกับลูกค้า
+    // ราคา 1/2/3 + DB 3-4 / 1-2 Kg. ในฟอร์มกำหนดราคา ใช้ /price-lookup ตัวเดียวกับจอค้นหาราคาสินค้าแล้ว (25/08/2569)
+    // TODO: ค่าสีทั้งสิ้น / %สี — รอสรุปสูตร/ที่มาข้อมูลกับลูกค้า
 
 });

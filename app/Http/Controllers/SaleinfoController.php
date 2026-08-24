@@ -151,6 +151,133 @@ class SaleinfoController extends Controller
     }
 
     /**
+     * GET — Test Price (JSON) : ข้อมูลของใบเทส 1 ใบ + ราคาที่คำนวณได้ (25/08/2569)
+     *
+     * คีย์ค้น = **Test No. หรือ Lot Test** (กรอกช่องไหนก็ได้ ทั้งคู่ไม่ซ้ำกันในทางปฏิบัติ)
+     * ส่วน Customer เป็นตัวกรองเสริม — ช่องที่ผู้ใช้ไม่ได้กรอก จอจะเติมให้เองจากใบที่ค้นเจอ
+     *
+     * จอนี้อ่านอย่างเดียว ไม่มีการบันทึก — ประกอบจาก 3 ตาราง:
+     *   `access_testmai` (สำเนา TestMai ของไฟล์ Access)  = ตัวใบเทส (ลูกค้า / Lot / Sample / Resin / ต้นทุนสูตร)
+     *   `access_compo`   (สำเนา Compo)                    = เบอร์ที่ตั้งให้สูตรนี้ (PdCode) → ช่อง "ตั้งเบอร์เป็น"
+     *   `customer`                                        = ชื่อลูกค้าภาษาไทย (`access_testmai.CName` เป็น "?" ถาวร)
+     *
+     * ราคา 1/2/3 + DB ใช้เครื่องคิดราคาตัวเดียวกับทั้งระบบ (ProductPriceService)
+     * โดย **ต้นทุน = `access_testmai.TNet`** (= ผลรวม CNet ของสูตรในใบนั้น ตรวจกับข้อมูลจริงแล้ว)
+     * ส่วนรหัสที่ใช้เลือก "เงื่อนไข" คือเบอร์ที่ตั้งไว้ — เบอร์ใหม่ที่ยังไม่มีใน `access_pdprice`
+     * จึงยังคิดราคาได้ (ต่างจากจอค้นหาราคาสินค้าที่ต้องมีรหัสในตารางราคาทุนก่อน)
+     */
+    public function testPrice(Request $request, ProductPriceService $prices)
+    {
+        $custno  = trim((string) $request->query('customer'));
+        $testno  = trim((string) $request->query('testno'));
+        $lottest = trim((string) $request->query('lottest'));
+
+        // ชื่อลูกค้าโชว์ได้ตั้งแต่ยังไม่ระบุใบเทส (ผู้ใช้กรอกรหัสลูกค้าก่อนเป็นปกติ)
+        $customer = $custno === ''
+            ? null
+            : DB::table('customer')->select('code', 'name')->where('code', $custno)->first();
+
+        if ($testno === '' && $lottest === '') {
+            return response()->json([
+                'found'    => false,
+                'customer' => $customer,
+                'reason'   => 'ระบุ Test No. หรือ Lot Test เพื่อค้นข้อมูลใบเทส',
+            ]);
+        }
+
+        // Test No. กับ Lot Test เป็น "คีย์ค้น" เท่าเทียมกัน — กรอกช่องไหนก็ได้ (Customer เป็นตัวกรองเสริม)
+        // ค้นแบบตรงตัวก่อน ไม่เจอค่อยค้นแบบใกล้เคียง (LIKE) — จอนี้อ่านอย่างเดียว
+        // และผู้ใช้มักพิมพ์เลขที่/Lot มาไม่ครบท่อน จึงยอมให้หลวมได้
+        $build = function (bool $loose) use ($testno, $lottest, $custno) {
+            $q = DB::table('access_testmai');
+
+            if ($testno !== '') {
+                $loose
+                    ? $q->where('TestNo', 'LIKE', '%' . $testno . '%')
+                    : $q->whereRaw('TRIM(TestNo) = ?', [$testno]);
+            }
+            if ($lottest !== '') {
+                $loose
+                    ? $q->where('Lotno', 'LIKE', '%' . $lottest . '%')
+                    : $q->whereRaw('TRIM(Lotno) = ?', [$lottest]);
+            }
+            if ($custno !== '') {
+                $q->whereRaw('TRIM(CCode) = ?', [$custno]);
+            }
+
+            return $q;
+        };
+
+        $query = $build(false);
+        $loose = false;
+
+        if (!(clone $query)->exists()) {
+            $query = $build(true);
+            $loose = true;
+        }
+
+        // Lot เดียวมีได้หลายใบเทส → เอาใบล่าสุด แล้วส่งรายการที่เหลือไปให้จอบอกผู้ใช้ด้วย
+        $rows    = (clone $query)->orderByDesc('Tdate')->orderByDesc('id')->limit(20)->get();
+        $matches = (clone $query)->count();
+        $row     = $rows->first();
+
+        if (!$row) {
+            return response()->json([
+                'found'    => false,
+                'customer' => $customer,
+                'reason'   => 'ไม่พบใบเทสที่ตรงกับที่ค้น',
+            ]);
+        }
+
+        // ชื่อลูกค้าของใบที่เจอ (กรณีผู้ใช้ไม่ได้กรอกรหัสลูกค้ามา)
+        if (!$customer) {
+            $customer = DB::table('customer')->select('code', 'name')
+                ->whereRaw('TRIM(code) = ?', [trim((string) $row->CCode)])->first();
+        }
+
+        // "ตั้งเบอร์เป็น" = เบอร์ที่ผูกกับสูตรของใบเทสนี้ (1 ใบอาจตั้งได้หลายเบอร์ → คั่นด้วย ", ")
+        $codes = DB::table('access_compo')
+            ->whereRaw('TRIM(TestNo) = ?', [trim((string) $row->TestNo)])
+            ->distinct()->orderBy('PdCode')->pluck('PdCode')
+            ->map(fn ($c) => trim((string) $c))->filter()->values();
+
+        $setcode = $codes->implode(', ');
+        $base    = (float) $row->TNet;
+
+        // คิดราคาจากเบอร์แรก (ปกติมีเบอร์เดียว) — ยังไม่ตั้งเบอร์ = เลือกเงื่อนไขไม่ได้
+        if ($codes->isEmpty()) {
+            $calc = [
+                'found' => false, 'code' => null, 'base_price' => round($base, 2),
+                'rule'  => null,  'prices' => null,
+                'reason' => 'ใบเทสนี้ยังไม่ได้ตั้งเบอร์ — เลือกเงื่อนไขราคาไม่ได้',
+            ];
+        } else {
+            $calc = $prices->quote($codes->first(), $base);
+        }
+
+        return response()->json([
+            'found'    => true,
+            'matches'  => $matches,
+            // Test No. ทุกใบที่เข้าเงื่อนไข (ใบแรก = ใบที่กำลังแสดง) ให้จอเลือกดูใบอื่นต่อได้
+            'testnos'  => $rows->map(fn ($r) => trim((string) $r->TestNo))->values(),
+            'loose'    => $loose,   // true = ไม่เจอ Lot แบบตรงตัว เลยค้นแบบใกล้เคียงให้
+            'customer' => $customer ?: ['code' => $row->CCode, 'name' => $row->CName],
+            'setcode'  => $setcode,
+            'test'     => [
+                'testno'      => trim((string) $row->TestNo),
+                'testdate'    => $row->Tdate ? Carbon::parse($row->Tdate)->format('d/m/Y') : '',
+                'lotno'       => trim((string) $row->Lotno),
+                'sample'      => $row->TDecs,      // รายละเอียดตัวอย่างที่เทส
+                'cust_resin'  => $row->CResin,     // Resin ที่ลูกค้าใช้
+                'resin_match' => $row->Resin,      // Resin ที่ใช้ตอน match
+                'tnet'        => round($base, 2),  // ต้นทุนสูตร (= ผลรวม CNet ของ access_compo)
+                'matcher'     => $row->Matcher,
+            ],
+            'calc'     => $calc,
+            'reason'   => null,
+        ]);
+    }
+    /**
      * GET — อ่านราคา 1 รายการ (JSON) สำหรับเติมฟอร์มโหมดแก้ไข
      */
     public function edit($id)

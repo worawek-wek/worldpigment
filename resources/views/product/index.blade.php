@@ -135,6 +135,7 @@
             data: { id: null },
             success: function(response) {
                 $('#result_detail').html(response.data);
+                enhanceSelects('#result_detail');   // ฟอร์มเพิ่งเข้า DOM → ยกระดับ select (Temp มี ~180 รายการ จึงกลายเป็นช่องค้นหาได้)
                 $('#productModal').modal('show');
             }
         });
@@ -149,6 +150,7 @@
             data: { id: id },
             success: function(response) {
                 $('#result_detail').html(response.data);
+                enhanceSelects('#result_detail');   // ฟอร์มเพิ่งเข้า DOM → ยกระดับ select (Temp มี ~180 รายการ จึงกลายเป็นช่องค้นหาได้)
                 $('#productModal').modal('show');
             }
         });

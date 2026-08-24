@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Validator;
  *                 price1/2/3 = ราคาตามกลุ่มปริมาณสั่ง A/B/C, price = ราคาขายครั้งนี้, Appv = อนุมัติแล้ว
  *   zcustprice    ราคาที่ยืนไว้กับลูกค้า (PK = custno + colorno) → ตารางล่างของฟอร์ม
  *   uprice        ราคาที่ตกลงไว้ล่าสุด (ใช้เป็นรายการเบอร์สินค้าของลูกค้ารายนั้น)
+ *   tb_saleinfo   ราคาที่ตั้งในเมนู "กำหนดราคา" — รวมเป็นตัวเลือกเบอร์สินค้าด้วย (25/08/2569)
  *   cp_itemprice  ประวัติราคาเม็ด CP รายใบสั่ง (ปุ่ม "ประวัติ ราคาเม็ด CP")
  *   customer      ชื่อลูกค้า + รหัสพนักงานขาย (เลข "# 15" ข้างรหัสลูกค้าบนฟอร์ม)
  */
@@ -72,8 +73,12 @@ class PriceApprovalController extends Controller
             return response()->json(['items' => []]);
         }
 
-        // รวมเบอร์จากทั้ง uprice (ราคาที่ตกลงไว้) และ zcustprice (ราคาที่ยืนไว้)
-        // — บางเบอร์มีอยู่ในตารางเดียว ถ้าดึงตารางเดียวจะหาย
+        // รวมเบอร์จาก 3 ที่ — บางเบอร์มีอยู่ที่เดียว ถ้าดึงที่เดียวจะหาย
+        //   1) uprice      ราคาที่ตกลงไว้ล่าสุด (ยกมาจากระบบเก่า ไม่มีหน้าจอเขียน)
+        //   2) zcustprice  ราคาที่ยืนไว้กับลูกค้า (เขียนตอนอนุมัติในฟอร์มนี้เอง)
+        //   3) tb_saleinfo ราคาที่ตั้งไว้ในเมนู "กำหนดราคา" (/saleinfo) — 25/08/2569
+        //      เพิ่มเข้ามาเพราะเป็นหน้าจอเดียวที่ผู้ใช้เพิ่มราคาให้เบอร์ใหม่ได้เอง
+        //      ถ้าไม่รวมไว้ เบอร์ที่เพิ่งตั้งราคาจะเลือกขออนุมัติราคาพิเศษไม่ได้เลย
         $items = DB::table('uprice')
             ->where('CustNo', $custno)
             ->whereRaw("TRIM(COALESCE(ITEMNO, '')) <> ''")
@@ -83,6 +88,12 @@ class PriceApprovalController extends Controller
                     ->where('custno', $custno)
                     ->whereRaw("TRIM(COALESCE(colorno, '')) <> ''")
                     ->selectRaw('TRIM(colorno) as itemno')
+            )
+            ->union(
+                DB::table('tb_saleinfo')
+                    ->where('CustNo', $custno)
+                    ->whereRaw("TRIM(COALESCE(ITEMNO, '')) <> ''")
+                    ->selectRaw('TRIM(ITEMNO) as itemno')
             )
             ->pluck('itemno')
             ->unique()

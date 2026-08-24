@@ -3,10 +3,64 @@
     คิว = ใบที่ยังไม่อนุมัติ ไม่รวมใบสั่งทำสต๊อก และไม่รวมใบจอง R (ดู OrderApprovalController)
     ค่าทั้งหมดเติมด้วย JS (ดู fillOrderApproval ใน order/index.blade.php)
 
+    2 มุมมองใน modal เดียว (25/08/2569):
+      #oaListView    รายการใบที่รออนุมัติ — เปิดฟอร์มมาเจอหน้านี้ก่อน คลิกแถวเพื่อเข้าใบนั้น
+      #oaDetailView  ฟอร์มอนุมัติของใบที่เลือก (ผังเดิมจาก Access + ตัวเดินระเบียน)
+
     ติ๊ก "อนุมัติ" = ถามยืนยันแล้วเขียน morder.appv (-1) + morder.appvDT (เวลาปัจจุบัน)
-    ใบที่อนุมัติแล้วจะหลุดจากคิว ฟอร์มจึงเลื่อนไปใบถัดไปให้เอง
+    ใบที่อนุมัติแล้วจะหลุดจากคิว → กลับมาหน้ารายการที่โหลดใหม่แล้ว
 --}}
 <div class="modal-body px-4 py-4 oa-body">
+
+    {{-- ════════ มุมมอง 1: รายการใบที่รออนุมัติ ════════ --}}
+    <div id="oaListView">
+
+        <div class="row g-2 align-items-end mb-3">
+            <div class="col-md-6">
+                <label class="form-label">ค้นหา</label>
+                <input type="search" id="oa_search" class="form-control"
+                    oninput="oaRenderQueue()" autocomplete="off">
+                <div class="form-text">เลขที่ใบสั่ง · รหัส/ชื่อลูกค้า · แผนก</div>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <span class="me-2">รออนุมัติ <span id="oa_queue_count" class="fw-bold text-danger">0</span> ใบ</span>
+                <button type="button" class="btn btn-label-secondary" onclick="orderApprovalRefresh()">
+                    <i class="ti ti-refresh me-1"></i>Refresh
+                </button>
+            </div>
+        </div>
+
+        <div class="table-responsive oa-grid">
+            <table class="table table-sm table-bordered align-middle mb-0" id="oaQueueTable">
+                <thead>
+                    <tr>
+                        <th style="width:50px;" class="text-center">#</th>
+                        <th style="width:120px;">เลขที่ใบสั่ง</th>
+                        <th style="width:140px;">วัน-เวลา</th>
+                        <th style="width:90px;" class="text-center">แผนก</th>
+                        <th style="width:90px;">รหัสลูกค้า</th>
+                        <th>ชื่อลูกค้า</th>
+                        <th style="width:110px;" class="text-end">ราคาขาย</th>
+                        <th style="width:90px;" class="text-center">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody id="oaQueueRows"></tbody>
+            </table>
+        </div>
+        <div class="form-text mt-1">
+            <i class="ti ti-info-circle me-1"></i>คลิกที่ใบสั่งซื้อเพื่อเปิดฟอร์มอนุมัติ
+        </div>
+
+    </div>
+
+    {{-- ════════ มุมมอง 2: ฟอร์มอนุมัติของใบที่เลือก ════════ --}}
+    <div id="oaDetailView" class="d-none">
+
+    <div class="mb-3">
+        <button type="button" class="btn btn-label-secondary" onclick="oaShowList()">
+            <i class="ti ti-arrow-left me-1"></i>กลับไปรายการที่รออนุมัติ
+        </button>
+    </div>
 
     {{-- ── แถว 1: เอกสาร ── --}}
     <div class="row g-3 align-items-end">
@@ -195,5 +249,7 @@
         </button>
         <span class="ms-2">จาก <span id="oa_total" class="fw-bold">0</span></span>
     </div>
+
+    </div>{{-- /#oaDetailView --}}
 
 </div>

@@ -232,6 +232,24 @@
     color: #55350a;
     font-variant-numeric: tabular-nums;
 }
+/* บรรทัดบอกที่มาของราคา (ราคาทุน · เงื่อนไข · สูตร) ใต้กล่องคำนวณราคา */
+.saleinfo-price-note {
+    font-size: 0.8rem;
+    color: #8a6d3b;
+    min-height: 1.1rem;
+}
+/* ช่องที่ระบบเติมให้เอง (Test No. ที่หาได้จาก Customer + Lot Test) */
+.tp-autofill {
+    background-color: #fff8e1 !important;
+    border-color: #ffd08a !important;
+}
+.saleinfo-price-note.saleinfo-price-note-warn {
+    color: #b02a37;
+    background-color: #fdecea;
+    border: 1px solid #f5c2c7;
+    border-radius: 0.4rem;
+    padding: 0.4rem 0.6rem;
+}
 </style>
 
 <body>
@@ -489,6 +507,10 @@
     loadData(page);
 
     $(function () {
+        // ยกระดับ select ทั้งหน้า — ตัวช่วยกลางใน layout/inc_js เลือกให้เองตามจำนวนตัวเลือก
+        // หน้านี้มีแต่ช่อง "รายการ/หน้า" (3 ตัวเลือก) จึงเป็น bootstrap-select ทั้งคู่
+        // ⚠ ต้องมาก่อน flatpickr เพื่อไม่ให้ไปจับ <select> เดือน/ปี ที่ flatpickr สร้าง
+        enhanceSelects();
         flatpickr('.flatpickr-date', {
             dateFormat: 'd/m/Y',
             allowInput: true,
@@ -686,7 +708,93 @@
         $('#btn_delete_saleinfo').addClass('d-none').removeData('id');
         setCustomerPanel(null);
         clearSaleinfoHistory();
+        clearSaleinfoCalc();
     }
+
+    // ────────────────────────────────────────────────────────
+    //  คำนวณราคา (ราคา 1/2/3 + DB 3-4 / 1-2 Kg.) — 25/08/2569
+    //  ใช้ endpoint เดียวกับจอ "ค้นหาราคาสินค้า" (saleinfo/price-lookup)
+    //  → ProductPriceService::lookup(รหัสสินค้า)
+    //
+    //  ราคา 1 = ราคาทุน (access_pdprice) × คูณ ÷ หาร + บวก ตามเงื่อนไขที่จับคู่ได้
+    //  ราคา 2 = ราคา 1 × ตัวคูณขั้น  |  ราคา 3 = ราคา 2 × ตัวคูณขั้น
+    //  DB 3-4 / 1-2 Kg. คูณต่อจากราคา 3 (ตัวคูณอยู่ที่ config/product_price.php → tier)
+    //
+    //  ⚠ ค่าสีทั้งสิ้น / % สี ยังไม่รู้สูตร — ยังคงเว้นไว้ (กล่องนั้นยังเป็น wip)
+    // ────────────────────────────────────────────────────────
+    const SALEINFO_CALC_FIELDS = ['db_price_1', 'db_price_2', 'db_price_3', 'db_price_3_4', 'db_price_1_2'];
+    let saleinfoCalcTimer = null, saleinfoCalcXhr = null;
+
+    // ช่องคำนวณเป็น input อ่านอย่างเดียว — ว่าง = ยังไม่มีค่า (placeholder "—" ขึ้นเอง)
+    function setCalcField(name, value) {
+        $('#form_saleinfo [name="' + name + '"]')
+            .val(value === null || value === undefined || value === '' ? '' : commaFmt(value, 2));
+    }
+
+    function clearSaleinfoCalc() {
+        if (saleinfoCalcXhr) { saleinfoCalcXhr.abort(); saleinfoCalcXhr = null; }
+        clearTimeout(saleinfoCalcTimer);
+        SALEINFO_CALC_FIELDS.forEach(function (name) { setCalcField(name, ''); });
+        $('#saleinfo_price_note').text('').removeClass('saleinfo-price-note-warn');
+    }
+
+    // แสดงผลจาก endpoint — คำนวณไม่ได้ก็บอกเหตุผล ไม่โชว์ 0 ให้เข้าใจผิด
+    function showSaleinfoCalc(res) {
+        res = res || {};
+        const p = res.prices || null;
+        const $note = $('#saleinfo_price_note').removeClass('saleinfo-price-note-warn');
+
+        if (p) {
+            setCalcField('db_price_1', p.price_1);
+            setCalcField('db_price_2', p.price_2);
+            setCalcField('db_price_3', p.price_3);
+            setCalcField('db_price_3_4', p.db_3_4);
+            setCalcField('db_price_1_2', p.db_1_2);
+
+            // ที่มาของราคา: ราคาทุน → เงื่อนไขที่จับคู่ได้ → สูตรคูณ/หาร/บวก
+            const src = [];
+            if (res.base_price !== null && res.base_price !== undefined) src.push('ราคาทุน ' + fmtNum(res.base_price));
+            if (res.rule && res.rule.label) src.push(res.rule.label);
+            if (res.rule) src.push('× ' + res.rule.mul + ' ÷ ' + res.rule.div + ' + ' + res.rule.add);
+            $note.text(src.join('  ·  '));
+            return;
+        }
+
+        SALEINFO_CALC_FIELDS.forEach(function (name) { setCalcField(name, ''); });
+        const msg = res.reason || '';
+        $note.text(msg);
+        if (msg) $note.addClass('saleinfo-price-note-warn');
+    }
+
+    // รหัสสินค้า (ITEMNO) เป็นตัวหลัก — ยังไม่กรอกก็ใช้ชื่อสินค้า (st_code) แทน
+    // เหมือนตอนบันทึก (SaleinfoController::extractForm) ที่ ITEMNO ว่าง = ใช้ st_code
+    function saleinfoCalcCode() {
+        const itemno = ($('#form_saleinfo [name="ITEMNO"]').val() || '').trim();
+        return itemno || ($('#form_saleinfo [name="st_code"]').val() || '').trim();
+    }
+
+    function refreshSaleinfoCalc() {
+        const code = saleinfoCalcCode();
+        if (!code) {
+            clearSaleinfoCalc();
+            return;
+        }
+
+        if (saleinfoCalcXhr) saleinfoCalcXhr.abort();   // พิมพ์ต่อระหว่างรอผล → ทิ้งคำขอเก่า กันผลเก่ามาทับ
+        saleinfoCalcXhr = $.getJSON("{{ $page_url }}/price-lookup", { code: code })
+            .done(showSaleinfoCalc)
+            .fail(function (xhr) {
+                if (xhr.statusText === 'abort') return;
+                showSaleinfoCalc(xhr.responseJSON || { prices: null, reason: 'เรียกข้อมูลราคาไม่สำเร็จ' });
+            })
+            .always(function () { saleinfoCalcXhr = null; });
+    }
+
+    // หน่วง 400ms กันยิงรัวตอนพิมพ์ (เหมือนจอค้นหาราคาสินค้า)
+    $('#form_saleinfo [name="ITEMNO"], #form_saleinfo [name="st_code"]').on('input', function () {
+        clearTimeout(saleinfoCalcTimer);
+        saleinfoCalcTimer = setTimeout(refreshSaleinfoCalc, 400);
+    });
 
     // ────────────────────────────────────────────────────────
     //  ประวัติการปรับราคา — โชว์เมื่อรหัสลูกค้า + รหัสสินค้า ตรงกับที่เคยบันทึกไว้
@@ -787,9 +895,17 @@
         loadSaleinfoHistory($('#form_saleinfo [name="_pk"]').val());
     });
 
-    // รหัสสินค้าเปลี่ยน → โหลดประวัติของคู่ลูกค้า/สินค้านี้
+    // รหัสสินค้าเปลี่ยน → โหลดประวัติของคู่ลูกค้า/สินค้านี้ + คำนวณราคาใหม่
     $('#form_saleinfo [name="ITEMNO"]').on('change', function () {
         loadSaleinfoHistory($('#form_saleinfo [name="_pk"]').val());
+        clearTimeout(saleinfoCalcTimer);
+        refreshSaleinfoCalc();
+    });
+
+    // ชื่อสินค้าเปลี่ยน → คำนวณใหม่เฉพาะตอนที่ยังไม่ได้กรอกรหัสสินค้า (ใช้ st_code แทน)
+    $('#form_saleinfo [name="st_code"]').on('change', function () {
+        clearTimeout(saleinfoCalcTimer);
+        refreshSaleinfoCalc();
     });
 
     // แก้ไขราคา — ดึงข้อมูลจริงมาเติมฟอร์มแล้วเปิด modal โหมดแก้ไข
@@ -821,6 +937,7 @@
                 lookupCustomer(d.CustNo);
                 // แก้ไขอยู่ → โชว์ประวัติของคู่นี้ แต่ไม่รวมแถวที่กำลังแก้เอง
                 loadSaleinfoHistory(id);
+                refreshSaleinfoCalc();
                 $('#saleinfoModal').modal('show');
             },
             error: function () {
@@ -1005,40 +1122,159 @@
     });
 
     // ────────────────────────────────────────────────────────
-    //  Test Price — อ่านอย่างเดียว ไม่มีบันทึก
+    //  Test Price — อ่านอย่างเดียว ไม่มีบันทึก (ต่อข้อมูลแล้ว 25/08/2569)
     //  กรอกได้แค่ Customer / Test No. / Lot Test → ที่เหลือขึ้นเอง
-    //  ⚠ ยังไม่ต่อ DB — ยังไม่รู้ว่าจอนี้ดึงจากตารางไหน (รอลูกค้า)
+    //
+    //  GET saleinfo/test-price → SaleinfoController::testPrice
+    //    ใบเทส         = access_testmai — คีย์ค้นคือ Test No. หรือ Lot Test (กรอกช่องไหนก็ได้)
+    //                    ช่องที่ไม่ได้กรอก ระบบเติมให้จากใบที่ค้นเจอ · Customer เป็นตัวกรองเสริม
+    //    ตั้งเบอร์เป็น = access_compo.PdCode ของ TestNo นั้น
+    //    ราคา 1/2/3 + DB = คิดจากต้นทุนสูตร (TNet) ด้วย ProductPriceService ตัวเดียวกับทั้งระบบ
+    //
+    //  ⚠ ช่อง Price Quotation ยังไม่ทำ (การ์ดนั้นยังเป็น wip) — ไม่มีการเติมค่าให้
     // ────────────────────────────────────────────────────────
-    const TP_KEYS   = ['#tp_customer', '#tp_testno', '#tp_lottest'];   // ช่องที่กรอกได้
-    const TP_RESULT = ['#tp_sample', '#tp_resin_cust', '#tp_resin_match', '#tp_quotation',
-                       '#tp_price_1', '#tp_price_2', '#tp_price_3', '#tp_db_3_4', '#tp_db_1_2'];
-    let tpTimer = null;
+    const TP_KEYS  = ['#tp_customer', '#tp_testno', '#tp_lottest'];   // ช่องที่กรอกได้
+    const TP_TEXT  = ['#tp_sample', '#tp_resin_cust', '#tp_resin_match'];
+    const TP_PRICE = ['#tp_price_1', '#tp_price_2', '#tp_price_3', '#tp_db_3_4', '#tp_db_1_2'];
+    let tpTimer = null, tpXhr = null;
 
-    function clearTestPrice() {
-        TP_RESULT.forEach(function (sel) { $(sel).val(''); });
-        $('#tp_cust_name').text('—');
-        $('#tp_setcode').text('—');
+    // ช่องที่ "ระบบเติมให้เอง" จากใบที่ค้นเจอ (Test No. / Lot Test — ค้นด้วยช่องไหนก็เติมอีกช่องให้)
+    // — ต้องแยกจากที่ผู้ใช้พิมพ์เอง ไม่งั้นค่าที่เติมไว้จะกลายเป็นเงื่อนไขค้นรอบถัดไป
+    //   แล้วพอผู้ใช้แก้อีกช่อง ผลจะค้างอยู่ใบเดิม
+    const TP_AUTO_SEL = { testno: '#tp_testno', lottest: '#tp_lottest' };
+    const tpAuto = { testno: false, lottest: false };
+
+    function tpClearAuto(field) {
+        if (!tpAuto[field]) return;
+        $(TP_AUTO_SEL[field]).val('').removeClass('tp-autofill').removeAttr('title');
+        tpAuto[field] = false;
     }
 
-    // TODO: ต่อ endpoint จริง (saleinfo/test-price?customer=&testno=&lottest=)
-    //       แล้วเติมผลลง TP_RESULT + ชื่อลูกค้า + "ตั้งเบอร์เป็น"
-    //       ตอนนี้แค่โชว์ว่ายังไม่มีข้อมูล เพื่อไม่ให้เข้าใจผิดว่าราคาเป็น 0
+    function tpSetAuto(field, value) {
+        if (!value) return;
+        $(TP_AUTO_SEL[field]).val(value).addClass('tp-autofill')
+            .attr('title', 'ระบบเติมให้จากใบเทสที่ค้นเจอ');
+        tpAuto[field] = true;
+    }
+
+    // ผู้ใช้พิมพ์ช่องไหน = ช่องนั้นเป็นของผู้ใช้ ส่วนช่องที่ระบบเติมไว้ให้ทิ้งไป
+    function tpUserTyped(field) {
+        if (field) {
+            tpAuto[field] = false;
+            $(TP_AUTO_SEL[field]).removeClass('tp-autofill').removeAttr('title');
+        }
+        Object.keys(TP_AUTO_SEL).forEach(function (f) {
+            if (f !== field) tpClearAuto(f);
+        });
+    }
+
+    function clearTestPrice() {
+        TP_TEXT.concat(TP_PRICE).forEach(function (sel) { $(sel).val(''); });
+        $('#tp_cust_name').text('—');
+        $('#tp_setcode').text('—');
+        $('#tp_meta').text('');
+        $('#tp_price_note').text('').removeClass('saleinfo-price-note-warn');
+    }
+
+    // แสดงผลจาก endpoint — ไม่เจอใบเทสก็บอกเหตุผล ไม่โชว์ 0 ให้เข้าใจผิด
+    function showTestPrice(res) {
+        res = res || {};
+        clearTestPrice();
+
+        // ชื่อลูกค้าโชว์ได้แม้ยังไม่ระบุใบเทส (กรอกรหัสลูกค้าอย่างเดียวก็ขึ้นชื่อ)
+        if (res.customer) {
+            $('#tp_cust_name').text(res.customer.name || res.customer.code || '—');
+        }
+
+        const $note = $('#tp_price_note');
+
+        if (!res.found) {
+            // ที่เติมไว้รอบก่อนใช้ไม่ได้แล้ว
+            tpClearAuto('testno');
+            tpClearAuto('lottest');
+            if (res.reason) $note.text(res.reason).addClass('saleinfo-price-note-warn');
+            return;
+        }
+
+        const t = res.test || {};
+
+        // ค้นด้วยช่องไหน ก็เติมอีกช่องให้จากใบที่เจอ (ผู้ใช้ยังพิมพ์ทับได้)
+        if ($('#tp_testno').val().trim() === '')  tpSetAuto('testno', t.testno);
+        if ($('#tp_lottest').val().trim() === '') tpSetAuto('lottest', t.lotno);
+        $('#tp_sample').val(t.sample || '');
+        $('#tp_resin_cust').val(t.cust_resin || '');
+        $('#tp_resin_match').val(t.resin_match || '');
+        $('#tp_setcode').text(res.setcode || '—');
+
+        // หัวการ์ด: ใบที่หยิบมาแสดง + เตือนเมื่อ Lot เดียวมีหลายใบ
+        const meta = [];
+        if (t.testno) meta.push('Test No. ' + t.testno);
+        if (t.testdate) meta.push('วันที่ ' + t.testdate);
+        if (res.loose) meta.push('ไม่พบ Lot ตรงตัว — ค้นแบบใกล้เคียง');
+        if (res.matches > 1) {
+            // บอกเลขใบอื่นไปด้วย จะได้พิมพ์ Test No. เจาะจงใบที่ต้องการได้
+            const others = (res.testnos || []).slice(1, 5).join(', ');
+            meta.push('พบ ' + res.matches + ' ใบ — แสดงใบล่าสุด'
+                + (others ? ' (ใบอื่น: ' + others + (res.matches > 5 ? ', …' : '') + ')' : ''));
+        }
+        $('#tp_meta').text(meta.join('  ·  '));
+
+        const calc = res.calc || {};
+        const p = calc.prices || null;
+
+        if (p) {
+            $('#tp_price_1').val(commaFmt(p.price_1, 2));
+            $('#tp_price_2').val(commaFmt(p.price_2, 2));
+            $('#tp_price_3').val(commaFmt(p.price_3, 2));
+            $('#tp_db_3_4').val(commaFmt(p.db_3_4, 2));
+            $('#tp_db_1_2').val(commaFmt(p.db_1_2, 2));
+
+            // ที่มาของราคา: ต้นทุนสูตรของใบเทส → เบอร์ที่ตั้ง → เงื่อนไข → สูตรคูณ/หาร/บวก
+            const src = [];
+            if (calc.base_price !== null && calc.base_price !== undefined) src.push('ต้นทุนสูตร ' + fmtNum(calc.base_price));
+            if (calc.code) src.push('เบอร์ ' + calc.code);
+            if (calc.rule && calc.rule.label) src.push(calc.rule.label);
+            if (calc.rule) src.push('× ' + calc.rule.mul + ' ÷ ' + calc.rule.div + ' + ' + calc.rule.add);
+            $note.text(src.join('  ·  '));
+            return;
+        }
+
+        if (calc.reason) $note.text(calc.reason).addClass('saleinfo-price-note-warn');
+    }
+
     function lookupTestPrice() {
         const hasKey = TP_KEYS.some(function (sel) { return $(sel).val().trim() !== ''; });
         if (!hasKey) {
+            if (tpXhr) { tpXhr.abort(); tpXhr = null; }
             clearTestPrice();
             return;
         }
-        TP_RESULT.forEach(function (sel) { $(sel).val('รอต่อข้อมูล'); });
-        $('#tp_cust_name').text('รอต่อข้อมูล');
-        $('#tp_setcode').text('รอต่อข้อมูล');
+
+        if (tpXhr) tpXhr.abort();   // พิมพ์ต่อระหว่างรอผล → ทิ้งคำขอเก่า กันผลเก่ามาทับ
+        tpXhr = $.getJSON("{{ $page_url }}/test-price", {
+            customer: $('#tp_customer').val().trim(),
+            // ค่าที่ระบบเติมเอง ไม่นับเป็นเงื่อนไข — ไม่งั้นแก้อีกช่องแล้วจะค้างอยู่ใบเดิม
+            testno:   tpAuto.testno  ? '' : $('#tp_testno').val().trim(),
+            lottest:  tpAuto.lottest ? '' : $('#tp_lottest').val().trim()
+        })
+            .done(showTestPrice)
+            .fail(function (xhr) {
+                if (xhr.statusText === 'abort') return;
+                showTestPrice(xhr.responseJSON || { found: false, reason: 'เรียกข้อมูลใบเทสไม่สำเร็จ' });
+            })
+            .always(function () { tpXhr = null; });
     }
 
     // หน่วง 400ms กันยิงรัวตอนพิมพ์
-    $(TP_KEYS.join(', ')).on('input', function () {
+    // พิมพ์ช่องไหน = ช่องนั้นเป็นเงื่อนไขของผู้ใช้ ส่วนช่องที่ระบบเติมไว้ให้ทิ้งแล้วค้นใหม่
+    $('#tp_testno').on('input',   function () { tpUserTyped('testno');  tpQueueLookup(); });
+    $('#tp_lottest').on('input',  function () { tpUserTyped('lottest'); tpQueueLookup(); });
+    $('#tp_customer').on('input', function () { tpUserTyped(null);      tpQueueLookup(); });
+
+    function tpQueueLookup() {
         clearTimeout(tpTimer);
         tpTimer = setTimeout(lookupTestPrice, 400);
-    });
+    }
 
     // ฟอร์มนี้ไม่มี submit — กด Enter = ค้นเลย ไม่ใช่รีโหลดหน้า
     $(TP_KEYS.join(', ')).on('keydown', function (e) {
@@ -1056,12 +1292,20 @@
 
     // Refresh — ล้างทุกช่องแล้วเริ่มใหม่
     $('#tp_refresh').on('click', function () {
+        clearTimeout(tpTimer);
+        if (tpXhr) { tpXhr.abort(); tpXhr = null; }
+        tpClearAuto('testno');
+        tpClearAuto('lottest');
         TP_KEYS.forEach(function (sel) { $(sel).val(''); });
         clearTestPrice();
         $('#tp_customer').focus();
     });
 
     $('#testPriceModal').on('show.bs.modal', function () {
+        clearTimeout(tpTimer);
+        if (tpXhr) { tpXhr.abort(); tpXhr = null; }
+        tpClearAuto('testno');
+        tpClearAuto('lottest');
         TP_KEYS.forEach(function (sel) { $(sel).val(''); });
         clearTestPrice();
     });

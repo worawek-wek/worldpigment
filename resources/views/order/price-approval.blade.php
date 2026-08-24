@@ -107,7 +107,9 @@
             <div class="row g-3 mt-1">
                 <div class="col-md-6">
                     <label class="form-label">รหัสสินค้า</label>
-                    <select id="a_itemno" class="form-select" onchange="loadApprovalData()">
+                    {{-- force-select2: รายการรหัสสินค้าของลูกค้ารายหนึ่งมักยาว (uprice + zcustprice + tb_saleinfo)
+                         จึงบังคับให้เป็นช่องค้นหาตั้งแต่แรก ไม่ต้องรอสลับชนิดตอนโหลดตัวเลือกเสร็จ --}}
+                    <select id="a_itemno" class="form-select force-select2" onchange="loadApprovalData()">
                         <option value="">— เลือกลูกค้าก่อน —</option>
                     </select>
                 </div>

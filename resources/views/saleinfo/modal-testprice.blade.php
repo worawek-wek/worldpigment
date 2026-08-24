@@ -2,8 +2,12 @@
 {{-- Modal: Test Price (จอเก่าชื่อ "TEST PRICE 27.03.2013")                --}}
 {{-- Trigger: data-bs-target="#testPriceModal"                            --}}
 {{-- กรอกได้แค่ Customer / Test No. / Lot Test — ที่เหลืออ่านอย่างเดียว     --}}
-{{-- ⚠ ยังไม่ต่อ DB — หา 25/0077/4 กับ CP8F247B ใน testmain ไม่เจอ         --}}
-{{--   และรูปแบบ Testno ใน DB เป็น '53709-MB' คนละแบบกับจอนี้ (รอลูกค้า)   --}}
+{{-- ต่อข้อมูลแล้ว 25/08/2569 → GET saleinfo/test-price                     --}}
+{{--   ใบเทส = access_testmai (TestNo / Lotno / TDecs / CResin / Resin / TNet) --}}
+{{--   "ตั้งเบอร์เป็น" = access_compo.PdCode ของ TestNo นั้น                 --}}
+{{--   ชื่อลูกค้า = customer.name (CName ในไฟล์ Access เป็น "?" ถาวร)        --}}
+{{--   ราคา 1/2/3 + DB = ProductPriceService::quote(เบอร์ที่ตั้ง, TNet)      --}}
+{{-- ⚠ section Price Quotation ยังไม่ทำ (ยังคง wip)                         --}}
 {{-- ═══════════════════════════════════════════════════════════════════ --}}
 <div class="modal modalHeadDecor fade" id="testPriceModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -68,15 +72,15 @@
                 </div>
 
                 {{-- ─── กลุ่ม: ผลที่ค้นได้ (อ่านอย่างเดียว) ─── --}}
-                {{-- wip: ยังไม่ต่อ DB — ยังไม่รู้ว่าจอนี้ดึงจากตารางไหน --}}
-                <div class="card shadow-sm mb-3 wip" style="border: 1px solid #e3e5ea;">
+                <div class="card shadow-sm mb-3" style="border: 1px solid #e3e5ea;">
                     <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between"
                         style="background-color: #f4f5f7; border-bottom: 2px solid #b6b9c2; border-radius: 0.375rem 0.375rem 0 0;">
                         <h6 class="mb-0 fw-semibold text-body">
                             <i class="ti ti-file-description me-1"></i>
                             ข้อมูลเทส
                         </h6>
-                        <span class="badge bg-label-warning">รอที่มาของข้อมูลจากลูกค้า</span>
+                        {{-- ใบที่ค้นเจอ: Test No. + วันที่เทส (เติมด้วย JS) --}}
+                        <span class="small text-muted" id="tp_meta"></span>
                     </div>
 
                     <div class="card-body p-3">
@@ -120,8 +124,8 @@
                 </div>
 
                 {{-- ─── Price 1/2/3 + DB tier ─── --}}
-                {{-- wip: ตัวเลขยังไม่ต่อ DB — ยังไม่รู้ที่มา/สูตร --}}
-                <div class="card shadow-sm mb-3 wip" style="border: 1px solid #e3d3c4;">
+                {{-- คิดจากต้นทุนสูตรของใบเทส (TNet) ด้วยเครื่องคิดราคาตัวเดียวกับทั้งระบบ --}}
+                <div class="card shadow-sm mb-3" style="border: 1px solid #e3d3c4;">
                     <div class="card-body p-3" style="background-color: #f6e6dc;">
 
                         <div class="row g-3">
@@ -157,6 +161,10 @@
                                 <span class="badge bg-label-success w-100 mt-1 py-1">DB 1 - 2 Kg.</span>
                             </div>
                         </div>
+
+                        {{-- ที่มาของราคา: ต้นทุนสูตร · เงื่อนไขที่เข้า · สูตรคูณ/หาร/บวก
+                             คิดราคาไม่ได้ก็บอกเหตุผลตรงนี้ ไม่ปล่อยช่องว่างเงียบ ๆ --}}
+                        <div class="saleinfo-price-note mt-3" id="tp_price_note"></div>
 
                     </div>
                 </div>

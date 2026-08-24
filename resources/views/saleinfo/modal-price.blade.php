@@ -222,14 +222,17 @@
                         </div>
                     </div>
 
-                    {{-- ─── ราคาตามขนาดบรรจุ (DB) + ค่าสี — ยังไม่รู้ที่มาของสูตร/ตาราง จึงยังไม่คำนวณ ─── --}}
-                    <div class="card shadow-sm mb-0 saleinfo-dbprice wip">
+                    {{-- ─── ราคาตามขนาดบรรจุ (DB) — คำนวณชุดเดียวกับจอ "ค้นหาราคาสินค้า" (25/08/2569) ─── --}}
+                    {{-- ดึงจาก saleinfo/price-lookup → ProductPriceService::lookup(รหัสสินค้า)          --}}
+                    {{-- ราคา 1 = ราคาทุน × คูณ ÷ หาร + บวก · ราคา 2/3 และ DB คูณต่อกันเป็นขั้น ๆ       --}}
+                    {{-- ⚠ ค่าสีทั้งสิ้น / % สี ยังไม่รู้สูตร — คง wip ไว้เฉพาะกล่องนั้น                --}}
+                    <div class="card shadow-sm mb-0 saleinfo-dbprice">
                         <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between">
                             <h6 class="mb-0 fw-semibold d-flex align-items-center" style="color: #7a4d05;">
                                 <i class="ti ti-calculator me-1"></i>
                                 คำนวนราคา
                             </h6>
-                            <span class="badge bg-label-warning">รอสูตรคำนวณจากลูกค้า</span>
+                            <span class="small text-muted">คำนวณจากรหัสสินค้า</span>
                         </div>
 
                         <div class="card-body p-4">
@@ -239,40 +242,41 @@
                                     <div class="dbprice-tier-label">ราคา 1</div>
                                     <div class="dbprice-value">
                                         <span class="dbprice-unit">฿</span>
-                                        <input type="number" step="0.01" name="db_price_1" class="dbprice-input" placeholder="—" readonly>
+                                        <input type="text" name="db_price_1" class="dbprice-input" placeholder="—" readonly tabindex="-1">
                                     </div>
                                 </div>
                                 <div class="dbprice-tier">
                                     <div class="dbprice-tier-label">ราคา 2</div>
                                     <div class="dbprice-value">
                                         <span class="dbprice-unit">฿</span>
-                                        <input type="number" step="0.01" name="db_price_2" class="dbprice-input" placeholder="—" readonly>
+                                        <input type="text" name="db_price_2" class="dbprice-input" placeholder="—" readonly tabindex="-1">
                                     </div>
                                 </div>
                                 <div class="dbprice-tier">
                                     <div class="dbprice-tier-label">ราคา 3</div>
                                     <div class="dbprice-value">
                                         <span class="dbprice-unit">฿</span>
-                                        <input type="number" step="0.01" name="db_price_3" class="dbprice-input" placeholder="—" readonly>
+                                        <input type="text" name="db_price_3" class="dbprice-input" placeholder="—" readonly tabindex="-1">
                                     </div>
                                 </div>
                                 <div class="dbprice-tier">
                                     <div class="dbprice-tier-label">DB 3 - 4 Kg.</div>
                                     <div class="dbprice-value">
                                         <span class="dbprice-unit">฿</span>
-                                        <input type="number" step="0.01" name="db_price_3_4" class="dbprice-input" placeholder="—" readonly>
+                                        <input type="text" name="db_price_3_4" class="dbprice-input" placeholder="—" readonly tabindex="-1">
                                     </div>
                                 </div>
                                 <div class="dbprice-tier">
                                     <div class="dbprice-tier-label">DB 1 - 2 Kg.</div>
                                     <div class="dbprice-value">
                                         <span class="dbprice-unit">฿</span>
-                                        <input type="number" step="0.01" name="db_price_1_2" class="dbprice-input" placeholder="—" readonly>
+                                        <input type="text" name="db_price_1_2" class="dbprice-input" placeholder="—" readonly tabindex="-1">
                                     </div>
                                 </div>
 
-                                {{-- กล่องค่าสี — วางขวา span 2 แถว (คุมด้วย CSS .dbprice-colorbox) --}}
-                                <div class="dbprice-colorbox">
+                                {{-- กล่องค่าสี — วางขวา span 2 แถว (คุมด้วย CSS .dbprice-colorbox)
+                                     ยังเป็น wip: ยังไม่รู้สูตร/ที่มาของ "ค่าสีทั้งสิ้น" กับ "% สี" --}}
+                                <div class="dbprice-colorbox wip">
                                     <div class="dbprice-colorcell">
                                         <div class="dbprice-colorlabel">ค่าสีทั้งสิ้น</div>
                                         <div class="dbprice-colorval text-danger" id="saleinfo_color_cost">—</div>
@@ -283,6 +287,10 @@
                                     </div>
                                 </div>
                             </div>
+
+                            {{-- ที่มาของราคา: ราคาทุน · เงื่อนไขที่จับคู่ได้ · สูตรคูณ/หาร/บวก
+                                 คำนวณไม่ได้ก็บอกเหตุผลตรงนี้ ไม่ปล่อยช่องว่างเงียบ ๆ --}}
+                            <div class="saleinfo-price-note mt-3" id="saleinfo_price_note"></div>
                         </div>
                     </div>
 

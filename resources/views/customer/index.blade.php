@@ -302,6 +302,10 @@
     loadData(page);
 
     $(function () {
+        // ยกระดับ select ของตัวกรอง — ตัวช่วยกลางใน layout/inc_js เลือกให้เองตามจำนวนตัวเลือก
+        // (ตั้งแต่ 10 ตัวขึ้นไป → select2 พิมพ์ค้นหาได้ · ต่ำกว่านั้น → bootstrap-select)
+        // ช่องในฟอร์มลูกค้าโหลดทีหลังผ่าน AJAX → เรียกซ้ำใน loadCustomerForm()
+        enhanceSelects();
         syncSortDropdown();
     });
 
@@ -353,6 +357,7 @@
                 return;
             }
             $('#customerFormBody').html(res.data);
+            enhanceSelects('#customerFormBody');   // ฟอร์มเพิ่งถูกใส่เข้า DOM → ยกระดับ select ในฟอร์ม
             $('#customerModalTitle').html(code
                 ? '<i class="ti ti-address-book me-1"></i>ข้อมูลลูกค้า ' + escHtml(code)
                 : '<i class="ti ti-user-plus me-1"></i>เพิ่มลูกค้าใหม่');

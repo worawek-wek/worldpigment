@@ -93,7 +93,7 @@
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">ประเภทงาน</label>
-                                        <select name="Type_Work" class="form-select">
+                                        <select name="Type_Work" class="form-select select2-tags">
                                             <option value="">-- เลือก --</option>
                                             @foreach ($options['Type_Work'] as $opt)
                                                 <option>{{ $opt }}</option>
@@ -105,7 +105,7 @@
                                             <i class="ti ti-asterisk-simple"></i>
                                             ปรับแก้ไขครั้งที่
                                         </label>
-                                        <select name="Adj" class="form-select">
+                                        <select name="Adj" class="form-select select2-tags">
                                             @foreach ($options['Adj'] as $opt)
                                                 <option>{{ $opt }}</option>
                                             @endforeach
@@ -132,7 +132,7 @@
                                     <div class="col-md-2">
                                         <label class="form-label small mb-1">ลักษณะสี</label>
                                         @php $colorCharFixed = ['ทึบ', 'ใส', 'กึ่งทึบ', 'ตาม ตย.']; @endphp
-                                        <select name="ColorChar" class="form-select">
+                                        <select name="ColorChar" class="form-select select2-tags">
                                             <option value="">-- เลือก --</option>
                                             {{-- ตัวเลือกตายตัว (บนสุด) --}}
                                             @foreach ($colorCharFixed as $opt)
@@ -177,7 +177,7 @@
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">นำไปทำชิ้นงาน (Model)</label>
-                                        <select name="Model" class="form-select">
+                                        <select name="Model" class="form-select select2-tags">
                                             <option value="">-- เลือก --</option>
                                             @foreach ($options['Model'] as $opt)
                                                 <option>{{ $opt }}</option>
@@ -207,7 +207,7 @@
                                             'EU 2002/72/EC',
                                             'RoHS2 (EU2011/65/EU)',
                                         ]; @endphp
-                                        <select name="ChemSafety" class="form-select">
+                                        <select name="ChemSafety" class="form-select select2-tags">
                                             <option value="">-- เลือก --</option>
                                             {{-- ตัวเลือกตายตัวตามฟอร์มกระดาษ (บนสุด) --}}
                                             @foreach ($chemSafetyFixed as $opt)

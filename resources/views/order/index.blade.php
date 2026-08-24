@@ -204,6 +204,12 @@
 #oaItemsTable tbody tr.oa-selected { background: #ffe082; font-weight: 600; }
 #oaItemsTable td { font-size: .85rem; }
 
+/* ตารางคิวรออนุมัติ (หน้าแรกของฟอร์ม) — คลิกทั้งแถวเพื่อเข้าใบนั้น */
+#oaQueueTable thead th { background: #e8e8d0; white-space: nowrap; font-size: .8rem; }
+#oaQueueTable tbody tr { cursor: pointer; }
+#oaQueueTable tbody tr:hover { background: #fff9a8; }
+#oaQueueTable td { font-size: .85rem; }
+
 .oa-hl-blue  { background-color: #cfe9fb !important; }
 .oa-hl-green { background-color: #ccffcc !important; }
 .oa-sell     { background-color: #ffcdd2 !important; color: #c62828; font-size: 1.15rem; }
@@ -504,6 +510,13 @@
     loadData(page);
 
     $(function () {
+        // ยกระดับ select ทั้งหน้า (ตัวกรอง + modal ใบสั่งซื้อ/ขออนุมัติราคา/อนุมัติใบสั่งซื้อ)
+        // ตัวช่วยกลางใน layout/inc_js เลือกให้เองตามจำนวนตัวเลือก:
+        //   ตั้งแต่ 10 ตัวขึ้นไป → select2 (พิมพ์ค้นหาได้) · ต่ำกว่านั้น → bootstrap-select
+        // ช่องที่เติมตัวเลือกทีหลังด้วย JS (สถานที่ส่ง / รหัสสินค้าในใบขออนุมัติราคา)
+        // ไม่ต้องเรียกซ้ำเอง — ตัวช่วยกลางเฝ้าดู option แล้วสลับชนิดให้เมื่อรายการยาวขึ้น
+        // ⚠ ต้องมาก่อน flatpickr เพื่อไม่ให้ไปจับ <select> เดือน/ปี ที่ flatpickr สร้าง
+        enhanceSelects();
         flatpickr('.flatpickr-date', {
             dateFormat: 'd/m/Y',
             allowInput: true,
@@ -830,17 +843,17 @@
         return '<tr>'
             + '<input type="hidden" data-f="Runno" value="' + esc(r.Runno || '') + '">'
             + td('<span class="oi-no"></span>', 'text-center text-muted')
-            + td(txt('Itemno', r.Itemno, ' oninput="onItemnoInput(this)"'))
+            + td(txt('Itemno', r.Itemno, ' maxlength="20" oninput="onItemnoInput(this)"'))
             + td(txt('nold', r.nold, ' list="noldList" maxlength="1"'))
-            + td(txt('prodname', r.prodname))
-            + td(txt('Lotno', r.Lotno))
+            + td(txt('prodname', r.prodname, ' maxlength="20"'))   // suborder.prodname = varchar(20)
+            + td(txt('Lotno', r.Lotno, ' maxlength="20"'))
             + td(num('Stock', r.Stock))
             + td(num('Production', r.Production))
             + td(dat('custwant', r.custwant))
             + td(dat('senddate', r.senddate))
             + td(dat('EndP', r.EndP))
             + td(dat('DVDate', r.DVDate))
-            + td(txt('outno', r.outno))
+            + td(txt('outno', r.outno, ' maxlength="20"'))
             + td(txt('Remark', r.Remark, ' list="ordremList"'))
             + td('<button type="button" class="btn btn-sm btn-icon btn-label-danger" title="ลบแถว"'
                 + ' onclick="removeOrderItem(this)"><i class="ti ti-trash"></i></button>', 'text-center')
@@ -910,7 +923,8 @@
             if (($(el).val() || '').trim() !== itemno) return;   // ผู้ใช้พิมพ์ต่อแล้ว
             // เติมชื่อสินค้าให้เฉพาะตอนช่องยังว่าง (ไม่ทับที่ผู้ใช้พิมพ์เอง)
             var $name = $row.find('[data-f="prodname"]');
-            if (res.prodname && !$name.val()) $name.val(res.prodname);
+            // ชื่อที่ได้จาก uprice.Label ยาวเกิน 20 ตัวได้ แต่คอลัมน์รับได้แค่ 20 — ตัดให้พอดี
+            if (res.prodname && !$name.val()) $name.val(String(res.prodname).substring(0, 20));
             showMatchWarning(res);
             syncItemnoToPrice();
         }).fail(syncItemnoToPrice);
@@ -1102,7 +1116,8 @@
 
     // ════════════════════════════════════════════════════════
     //  ฟอร์มอนุมัติใบสั่งซื้อ (morderAPPV)
-    //  — คิวเดินทีละใบเหมือนฟอร์ม Access (ระเบียน N จาก M)
+    //  — เปิดมาเจอ "รายการใบที่รออนุมัติ" ก่อน คลิกใบไหนถึงเข้าฟอร์มอนุมัติใบนั้น (25/08/2569)
+    //    ในฟอร์มยังมีตัวเดินระเบียนของ Access เดิม (ระเบียน N จาก M) ไว้ไล่ใบต่อกันได้
     // ════════════════════════════════════════════════════════
     var OA_URL    = "{{ $page_url }}/order-approval";
     var oaQueue   = [];      // รายการใบที่รออนุมัติ
@@ -1111,25 +1126,101 @@
     var oaCurrent = null;    // ระเบียนที่โหลดมาแสดงอยู่ — ใช้ตัดสินว่าปุ่มอนุมัติจะทำอะไร
 
     // นับคิวรออนุมัติตั้งแต่เปิดหน้า → โชว์เป็น badge บนปุ่ม
-    $(function(){ oaLoadQueue(false); });
+    $(function(){ oaLoadQueue(); });
 
-    function oaLoadQueue(openAfter){
+    // โหลดคิว + วาดรายการ + อัปเดต badge (ไม่เปิดใบไหนให้เอง — ผู้ใช้เป็นคนเลือก)
+    function oaLoadQueue(){
         return $.getJSON(OA_URL + '/queue', function(res){
             oaQueue = res.rows || [];
             $('#oa_total').text(oaQueue.length);
+            $('#oa_queue_count').text(oaQueue.length);
             var $badge = $('#oaQueueBadge');
             if (oaQueue.length) $badge.text(oaQueue.length).removeClass('d-none');
             else                $badge.addClass('d-none');
-            if (openAfter) oaGo(0);
+            oaRenderQueue();
         });
+    }
+
+    // ── สลับมุมมอง: รายการ ⇄ ฟอร์มอนุมัติ ──
+    function oaShowList(){
+        $('#oaListView').removeClass('d-none');
+        $('#oaDetailView').addClass('d-none');
+    }
+    function oaShowDetail(){
+        $('#oaListView').addClass('d-none');
+        $('#oaDetailView').removeClass('d-none');
+    }
+
+    // วาดตารางคิว (กรองด้วยช่องค้นหาฝั่งจอ — คิวไม่ยาวพอที่จะต้องค้นที่ server)
+    function oaRenderQueue(){
+        var kw = ($('#oa_search').val() || '').trim().toLowerCase();
+        var body = '';
+
+        oaQueue.forEach(function(r, i){
+            if (kw){
+                var hay = [r.Orderno, r.Custno, r.custname, r.Company].join(' ').toLowerCase();
+                if (hay.indexOf(kw) === -1) return;
+            }
+            // escHtml (ไม่ใช่ esc) — ชื่อลูกค้ามาจาก DB ต้อง escape ก่อนยัดลง HTML
+            body += '<tr onclick="oaOpenOrder(' + i + ')">'
+                 +  '<td class="text-center text-muted">' + (i + 1) + '</td>'
+                 +  '<td class="fw-bold text-primary">' + escHtml(r.Orderno || '-') + '</td>'
+                 +  '<td>' + (fmtDateTime(r.Mdate) || '-') + '</td>'
+                 +  '<td class="text-center">' + escHtml(r.Company || '-') + '</td>'
+                 +  '<td>' + escHtml(r.Custno || '-') + '</td>'
+                 +  '<td>' + escHtml(r.custname || '-') + '</td>'
+                 +  '<td class="text-end">' + (fmtNum(r.price, 2) || '—') + '</td>'
+                 +  '<td class="text-center">'
+                 +    '<span class="btn btn-sm btn-label-warning border">'
+                 +      '<i class="ti ti-gavel me-1"></i>อนุมัติ</span>'
+                 +  '</td>'
+                 +  '</tr>';
+        });
+
+        if (!body){
+            body = '<tr><td colspan="8" class="text-center py-4 text-muted">'
+                 + (oaQueue.length ? 'ไม่พบใบสั่งซื้อที่ตรงกับคำค้น' : 'ไม่มีใบสั่งซื้อที่รออนุมัติ')
+                 + '</td></tr>';
+        }
+        $('#oaQueueRows').html(body);
+    }
+
+    // คลิกใบในรายการ → เข้าฟอร์มอนุมัติของใบนั้น
+    function oaOpenOrder(i){
+        oaShowDetail();
+        oaGo(i);
     }
 
     function orderApprovalOpen(){
         $('#orderApprovalModal').modal('show');
-        oaLoadQueue(true);
+        $('#oa_search').val('');
+        oaShowList();
+        oaLoadQueue();
     }
 
-    function orderApprovalRefresh(){ oaLoadQueue(true); }
+    // Refresh — อยู่หน้ารายการก็โหลดรายการใหม่, อยู่ในฟอร์มก็โหลดใบที่ค้างอยู่ใหม่ด้วย
+    function orderApprovalRefresh(){
+        var inDetail = !$('#oaDetailView').hasClass('d-none');
+        var at       = (oaCurrent && oaCurrent.Orderno) || null;
+
+        oaLoadQueue().done(function(){
+            if (!inDetail) return;
+
+            // ใบเดิมยังอยู่ในคิวไหม — หลุดไปแล้ว (มีคนอนุมัติก่อน) ให้กลับหน้ารายการ
+            var i = oaIndexOf(at);
+            if (i === -1){ oaShowList(); oaClear(); return; }
+            oaGo(i);
+        });
+    }
+
+    /** ตำแหน่งของใบในคิว (-1 = ไม่อยู่ในคิวแล้ว) */
+    function oaIndexOf(orderno){
+        if (!orderno) return -1;
+        for (var i = 0; i < oaQueue.length; i++){
+            if (oaQueue[i].Orderno === orderno) return i;
+        }
+        return -1;
+    }
 
     // ไปยังระเบียนที่ i (i = -1 หมายถึงท้ายสุด)
     function oaGo(i){
@@ -1286,12 +1377,12 @@
         });
     }
 
-    // ใบที่เพิ่งอนุมัติจะหลุดจากคิว → โหลดคิวใหม่แล้วอยู่ที่ตำแหน่งเดิม (ซึ่งกลายเป็นใบถัดไป)
+    // ใบที่เพิ่งอนุมัติจะหลุดจากคิว → โหลดคิวใหม่แล้วกลับไปหน้ารายการ
+    // (ผู้ใช้จะได้เห็นว่าเหลือกี่ใบ แล้วเลือกใบถัดไปเอง — ตรงกับ flow "เลือกจากรายการ")
     function oaAfterApprove(){
-        var at = oaIndex;
-        oaLoadQueue(false).done(function(){
-            if (!oaQueue.length){ oaClear(); return; }
-            oaGo(Math.min(at, oaQueue.length - 1));
+        oaLoadQueue().done(function(){
+            oaClear();
+            oaShowList();
         });
     }
 

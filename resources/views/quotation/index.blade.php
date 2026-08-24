@@ -219,7 +219,7 @@
             <div class="row g-3 align-items-end mt-1">
                 <div class="col-md-4">
                     <label class="form-label small fw-medium mb-1">ชนิดสินค้า</label>
-                    <select name="product_type" class="selectpicker w-100 p_search" data-style="btn-default" onchange="loadData(page)">
+                    <select name="product_type" class="form-select w-100 p_search" onchange="loadData(page)">
                         <option value="">ทั้งหมด</option>
                         @foreach ($pdtypes as $pt)
                             <option value="{{ $pt->PDType }}">{{ $pt->PDType }} — {{ $pt->PDHead1 }}</option>
@@ -322,7 +322,7 @@
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <label class="form-label">หัวกระดาษ <span class="text-muted fw-normal">(หัวเอกสารที่พิมพ์)</span></label>
-                                <select name="letterhead" id="q_letterhead" class="selectpicker w-100" data-style="btn-default" onchange="onLetterheadChange()">
+                                <select name="letterhead" id="q_letterhead" class="form-select w-100" onchange="onLetterheadChange()">
                                     <option value="WPI">WPI</option>
                                     <option value="WPC">WPC</option>
                                     <option value="WH">WH</option>
@@ -348,7 +348,7 @@
                         <div class="row g-3 mt-1">
                             <div class="col-md-4">
                                 <label class="form-label">ชนิดสินค้า</label>
-                                <select name="PDtype" id="q_PDtype" class="selectpicker w-100" data-style="btn-default">
+                                <select name="PDtype" id="q_PDtype" class="form-select w-100">
                                     @foreach ($pdtypes as $pt)
                                         @php
                                             // CP: แสดงเป็น "Compound" ในฟอร์ม (เข้าใจง่ายกว่า)
@@ -401,7 +401,7 @@
                         <div class="row g-3 align-items-end mb-3">
                             <div class="col-md-6">
                                 <label class="form-label small fw-medium mb-1" for="q_col_format">รูปแบบตารางรายการ</label>
-                                <select name="col_format" id="q_col_format" class="selectpicker w-100" data-style="btn-default" onchange="onColFormatChange()">
+                                <select name="col_format" id="q_col_format" class="form-select w-100" onchange="onColFormatChange()">
                                     <option value="">อัตโนมัติ — โชว์ทุกคอลัมน์</option>
                                     <optgroup label="1. ใบเสนอราคา">
                                         @foreach ($formatLabels as $code => $label)
@@ -641,6 +641,10 @@
 
         // ── Flatpickr: ทุกช่องวันที่ใช้ flatpickr-date (รูปแบบ d/m/Y เหมือนทั้งระบบ) ──
         $(function () {
+            // ยกระดับ select ทั้งหน้า — ตัวช่วยกลางใน layout/inc_js เลือกให้เองตามจำนวนตัวเลือก
+            // (ตั้งแต่ 10 ตัวขึ้นไป → select2 พิมพ์ค้นหาได้ · ต่ำกว่านั้น → bootstrap-select)
+            // ⚠ ต้องมาก่อน flatpickr เพื่อไม่ให้ไปจับ <select> เดือน/ปี ที่ flatpickr สร้าง
+            enhanceSelects();
             flatpickr('.flatpickr-date', {
                 dateFormat: 'd/m/Y',
                 allowInput: true,
@@ -687,13 +691,12 @@
             setSort(col, dir);
         });
 
-        // bootstrap-select (.selectpicker) ไม่รู้ตัวเมื่อ JS เปลี่ยนค่าด้วย .val() หรือ form.reset()
-        // → ต้องสั่งให้วาดหน้าปุ่มใหม่ ไม่งั้นโชว์ค่าเดิมค้าง
-        // ⚠ ใช้ 'render' ไม่ใช่ 'refresh': refresh = สร้าง option list ใหม่ทั้งชุด ซึ่ง bootstrap-select
-        // เวอร์ชันนี้ (เขียนมาสำหรับ Bootstrap 4 แต่เรารันบน 5.3) วาดซ้อนกัน ทำให้ข้อความ option ต่อกันมั่ว
-        // render = อัปเดตแค่หน้าปุ่มให้ตรงกับค่าที่เลือกอยู่ ซึ่งเป็นสิ่งที่เราต้องการจริง ๆ
+        // วาดหน้าปุ่ม/กล่องของ select ที่ยกระดับแล้วใหม่ ให้ตรงกับค่าที่เพิ่งเปลี่ยนด้วย JS
+        // ตอนนี้ทั้งหน้าใช้ตัวช่วยกลาง (enhanceSelects) แล้ว — select ตัวเดียวกันอาจเป็น select2
+        // หรือ bootstrap-select ก็ได้ ขึ้นกับจำนวนตัวเลือก จึงส่งต่อให้ refreshSelects ตัดสินแทน
+        // (คงชื่อ refreshPickers ไว้เพราะถูกเรียกจากหลายจุดในหน้านี้)
         function refreshPickers(scope){
-            $(scope || document).find('.selectpicker').selectpicker('render');
+            refreshSelects(scope);
         }
 
         // ตั้งค่าวันที่ให้ flatpickr (รับ Y-m-d / datetime → แสดง d/m/Y); ว่าง = เคลียร์
