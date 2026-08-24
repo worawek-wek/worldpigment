@@ -12,6 +12,10 @@
         table.data th { background-color: #e9ecef; text-align: center; }
         .group-row td { background-color: #f1f3f5; font-weight: bold; }
         .step-row td { background-color: #f8f9fa; font-style: italic; }
+        /* เส้นแนวนอนภายในงานเดียวกัน (ระหว่างขั้นตอน และระหว่างขั้นตอนกับแถว planning) ให้บาง+จาง
+           เพื่อให้อ่านว่าเป็นกลุ่มเดียวกัน — เส้นขอบนอก/แนวตั้งยังเป็น 1px ดำเหมือนเดิม */
+        .step-row td { border-top: 0.4px solid #c7ccd1; border-bottom: 0.4px solid #c7ccd1; }
+        .prod-row.grouped td { border-top: 0.4px solid #c7ccd1; }
         .sum-row td { font-weight: bold; }
         .text-center { text-align: center; }
         .text-end { text-align: right; }
@@ -50,7 +54,7 @@
                     <td colspan="16">เครื่องจักร: {{ $machineLabel }}@if(!empty($group['speed_rpm'])) (Speed RPM: {{ $group['speed_rpm'] }})@endif</td>
                 </tr>
                 @foreach($group['items'] as $it)
-                    @php $groupSum += (float) ($it->quantity ?? 0); @endphp
+                    @php $groupSum += (float) ($it->quantity ?? 0); $hasSteps = count($it->steps) > 0; @endphp
                     {{-- แถวขั้นตอน "สถานะวิธีการผลิต / การล้าง" (แสดงก่อนแถวผลิต) --}}
                     @foreach($it->steps as $s)
                         <tr class="step-row">
@@ -63,7 +67,7 @@
                         </tr>
                     @endforeach
                     {{-- แถวผลิตสินค้า --}}
-                    <tr>
+                    <tr class="prod-row {{ $hasSteps ? 'grouped' : '' }}">
                         <td class="text-center">{{ ++$rownum }}</td>
                         <td class="text-center">{{ $it->inplan ? \Carbon\Carbon::parse($it->inplan)->format('d/m/Y') : '-' }}</td>
                         <td class="text-center">{{ $it->senddate ? \Carbon\Carbon::parse($it->senddate)->format('d/m/Y') : '' }}</td> {{-- Revise = senddate (กำหนดส่งทบทวน) --}}

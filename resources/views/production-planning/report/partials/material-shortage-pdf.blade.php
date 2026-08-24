@@ -26,7 +26,7 @@
                 <th style="width: 6%;">แผนก</th>
                 <th style="width: 6%;">เลขที่ใบแดง</th>
                 <th style="width: 7%;">MACHINE No.</th>
-                <th style="width: 5%;">IN PLAN</th>
+                <th style="width: 5%; background-color: #cfe2ff;">IN PLAN</th>
                 <th style="width: 5%;">Revise</th>
                 <th style="width: 6%;">สถานะปัจจุบัน</th>
                 <th style="width: 12%;">ขาด semi</th>
@@ -55,7 +55,7 @@
                     <td>{{ $dept ?: '-' }}</td>
                     <td class="text-center">{{ $it->red_bill_code ?: '-' }}</td>
                     <td>{{ $it->machine_no ?: '-' }}</td>
-                    <td class="text-center">{{ $it->inplan ? \Carbon\Carbon::parse($it->inplan)->format('d/m/y') : '-' }}</td>
+                    <td class="text-center" style="background-color: #cfe2ff;">{{ $it->inplan ? \Carbon\Carbon::parse($it->inplan)->format('d/m/y') : '-' }}</td>
                     <td class="text-center">{{ $it->senddate ? \Carbon\Carbon::parse($it->senddate)->format('d/m/y') : '' }}</td> {{-- Revise = senddate (กำหนดส่งทบทวน) --}}
                     <td class="status">{{ $it->planning_status ?: '' }}</td>
                     <td class="status">{{ $it->lack_semi ?: '' }}</td>

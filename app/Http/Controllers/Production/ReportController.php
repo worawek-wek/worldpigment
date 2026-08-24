@@ -698,6 +698,14 @@ class ReportController extends Controller
             $r++;
         }
 
+        // พื้นน้ำเงินคอลัมน์ IN PLAN (E) ทั้งหัวตารางและทุกแถวข้อมูล — ให้ตรงกับตารางบนเว็บ/PDF
+        // $r ชี้แถวถัดจากข้อมูลสุดท้ายหลังลูป → แถวสุดท้าย = $r - 1 (ไม่มีข้อมูล = แถวหัว 4)
+        $inplanLastRow = $r - 1;
+        $sheet->getStyle("E4:E{$inplanLastRow}")->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('CFE2FF');
+        $sheet->getStyle("E4:E{$inplanLastRow}")->getFont()->getColor()->setRGB('084298');
+
         if ($total === 0) {
             $sheet->setCellValue("A{$r}", 'ไม่พบข้อมูลตามเงื่อนไขที่เลือก');
             $sheet->mergeCells("A{$r}:{$lastCol}{$r}");

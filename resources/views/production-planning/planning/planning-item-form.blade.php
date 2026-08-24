@@ -151,7 +151,7 @@
             </div>
         </div>
 
-        <div class="row my-2"><hr /></div>
+        <div class="row mt-2"><hr /></div>
 
 
         <div class="row p-3 rounded" style="background-color: #e5f4ff; border: 1px dashed #3f50e2;">
@@ -204,9 +204,9 @@
             </div>
         </div>
 
-        <div class="row my-2"><hr /></div>
+        {{-- <div class="row mt-2"><hr /></div> --}}
 
-        <div class="row p-3 rounded" style="background-color: #fff1ca; border: 1px dashed #ffc107;">
+        <div class="row p-3 rounded mt-2" style="background-color: #fff1ca; border: 1px dashed #ffc107;">
             <div class="row">
                 <div class="col-md-3 mb-3">
                     <label class="form-label">วันที่วางแผนผลิต (Inplan)</label>
@@ -245,8 +245,7 @@
             </div>
         </div>
 
-        <div class="row my-2"><hr /></div>
-
+        {{-- <div class="row mt-2"><hr /></div> --}}
 
         {{-- ── การ์ดสีน้ำเงิน: สถานะวิธีการผลิต (บันทึกลง tb_planning_prod_method) ── --}}
         <div class="row p-3 rounded mt-2" style="background-color: rgb(211, 250, 160); border: 1px dashed #33cc05;">
@@ -312,9 +311,9 @@
             </div>
         </div>
 
-        <div class="row my-2"><hr /></div>
+        {{-- <div class="row mt-2"><hr /></div> --}}
 
-        <div class="row p-3 rounded" style="background-color: rgb(241, 211, 250);  border: 1px dashed #9e05bd;">
+        <div class="row p-3 rounded mt-2" style="background-color: rgb(241, 211, 250);  border: 1px dashed #9e05bd;">
             <div class="row">
                 <div class="col-md-3 mb-3">
                     <label class="form-label">วันที่เริ่มผลิต (Start Date)</label>
@@ -343,9 +342,9 @@
             </div>
         </div>
 
-        <div class="row my-2"><hr /></div>
+        {{-- <div class="row my-2"><hr /></div> --}}
 
-        <div class="row p-3 rounded" >
+        <div class="row p-3 rounded mt-2" >
             <div class="row">
                 <div class="col-md-4 mb-3">
                     <label class="form-label">วันที่ส่ง Qc (QC Date)</label>
@@ -712,8 +711,10 @@
 // ── helper กลางสำหรับ flatpickr (ใช้ร่วมทั้ง IIFE ของ Semi และ Pigment) ──
 // altInput: ช่องที่เห็นแสดง d/m/Y เหมือนกันทุกเครื่อง แต่ค่าจริงใน input (ตาม name/id) ยังเป็น Y-m-d
 // → serialize/.val() ส่ง Y-m-d ผ่าน validation 'nullable|date' ของ server เหมือนเดิม ไม่ต้องแก้ PHP
+// static: true → ฝังปฏิทินไว้ติด input ในฟอร์ม (ไม่ append ไป <body>) — กันปฏิทินพลิกเด้งขึ้นบน
+//   เวลาช่องอยู่ค่อนล่างของ modal (flatpickr คำนวณตำแหน่งจาก viewport แล้วพลิกขึ้น)
 window.wpFpDateOptions = {
-    dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true, disableMobile: true
+    dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', allowInput: true, disableMobile: true, static: true
 };
 // ── option สำหรับช่องวันที่ "แบบมีเวลา" (เช่น วันเวลาที่บรรจุเสร็จ) ──
 // ช่องที่เห็นแสดง d/m/Y H:i แต่ค่าจริงเป็น Y-m-d H:i (Carbon ฝั่ง server parse ได้เหมือนเดิม)

@@ -1,3 +1,10 @@
+<style>
+    /* คอลัมน์ Inplan พื้นน้ำเงิน — ใช้ !important เพื่อไม่ให้ table-striped/table-hover ทับ (ให้เหมือนหน้ารายการ) */
+    .col-inplan {
+        background-color: #cfe2ff !important;
+        color: #084298 !important;
+    }
+</style>
 <div class="modal-header" style="background-color: #54BAB9; padding: 1rem 1.5rem;">
     <h5 class="modal-title text-white mb-0">
         <i class="ti ti-calendar-stats me-1"></i>
@@ -158,7 +165,7 @@
                         {{-- <th class="text-center">Quantity</th> --}}
                         {{-- <th class="text-center">Lot</th> --}}
                         <th class="text-center">Weight</th>
-                        <th class="text-center">Inplan</th>
+                        <th class="text-center col-inplan">Inplan</th>
                         <th class="text-center">วันที่ส่งสินค้า</th>
                         <th class="text-center">Machine No.</th>
                         <th class="text-center">สถานะ</th>
@@ -175,7 +182,7 @@
                         {{-- <td class="text-center">{{ $item->quantity ?? '-' }}</td> --}}
                         {{-- <td class="text-center">{{ $item->lot ?? '-' }}</td> --}}
                         <td class="text-center">{{ number_format($item->weight,2) ?? '-' }}</td>
-                        <td class="text-center">{{ $item->inplan ? \Carbon\Carbon::parse($item->inplan)->format('d/m/Y') : '-' }}</td>
+                        <td class="text-center col-inplan">{{ $item->inplan ? \Carbon\Carbon::parse($item->inplan)->format('d/m/Y') : '-' }}</td>
                         <td class="text-center">{{ $item->senddate ? \Carbon\Carbon::parse($item->senddate)->format('d/m/Y') : '-' }}</td>
                         <td class="text-center">{{ $item->machine_no ?? '-' }}</td>
                         <td class="text-center">

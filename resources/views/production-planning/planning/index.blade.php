@@ -2,6 +2,19 @@
 
 
 @section('content')
+    <style>
+        /* สีพื้นหลังคอลัมน์ Inplan (น้ำเงิน) และ Custwant (แดง) — ทั้งหัวตารางและช่องข้อมูล */
+        #dataTable th.col-inplan,
+        #dataTable td.col-inplan {
+            background-color: #cfe2ff !important;
+            color: #084298 !important;
+        }
+        #dataTable th.col-custwant,
+        #dataTable td.col-custwant {
+            background-color: #f8d7da !important;
+            color: #842029 !important;
+        }
+    </style>
     <div class="container-xxl flex-grow-1 container-p-y">
         <div class="row mb-4">
 
@@ -127,8 +140,8 @@
                                         <th class="col-1">Orderno</th>
                                         <th class="col-1">เลขที่ใบเบิก</th>
                                         <th class="col-1">Company</th>
-                                        <th class="col-1">Inplan</th>
-                                        <th class="col-1">Custwant</th>
+                                        <th class="col-1 col-inplan">Inplan</th>
+                                        <th class="col-1 col-custwant">Custwant</th>
                                         <th class="col-1">วันเวลาบรรจุเสร็จ</th>
                                         <th class="col-1">Itemno</th>
                                         {{-- <th class="col-1">Quantity</th> --}}
@@ -264,8 +277,8 @@
                 { 'className': "text-center", data: 'red_bill_code', name: 'tb_planning.red_bill_code', orderable: true, searchable: false },
                 // แผนก: sort ตามแผนกจริง COALESCE(item, header) — map ไว้ด้วย ->orderColumn('company', ...) ใน controller
                 { 'className': "text-center", data: 'company', name: 'company', orderable: true },
-                { 'className': "text-center", data: 'inplan', name: 'tb_planning.inplan', orderable: true },
-                { 'className': "text-center", data: 'custwant', name: 'tb_planning.custwant', orderable: true },
+                { 'className': "text-center col-inplan", data: 'inplan', name: 'tb_planning.inplan', orderable: true },
+                { 'className': "text-center col-custwant", data: 'custwant', name: 'tb_planning.custwant', orderable: true },
                 { 'className': "text-center", data: 'packing_datetie', name: 'tb_planning.packing_datetie', orderable: true, searchable: false },
                 { 'className': "text-left", data: 'itemno', name: 'tb_planning.itemno', orderable: true },
                 // { 'className': "text-left", data: 'quantity', name: 'quantity', orderable: false },
@@ -527,14 +540,28 @@
         openPlanningItemModal(planning_id, planning_header_id);
     });
 
-    // เมื่อ Modal 2 ปิด ให้ Modal 1 ยังคงแสดงอยู่
+    // เมื่อ Modal 2 ปิด: ถ้า Modal 1 ยังเปิดอยู่ให้คืน backdrop ให้ Modal 1
+    // แต่ถ้า Modal 1 ปิดไปแล้ว ต้องเก็บกวาด backdrop/scroll-lock ที่อาจค้าง
+    // (เดิมสร้าง backdrop ใหม่เสมอ → เป็นสาเหตุพื้นดำค้างต้องรีเฟรชหน้า)
     document.getElementById('planningItemModal').addEventListener('hidden.bs.modal', function () {
-        document.body.classList.add('modal-open');
-        var backdrop = document.querySelector('.modal-backdrop');
-        if (!backdrop) {
-            var newBackdrop = document.createElement('div');
-            newBackdrop.className = 'modal-backdrop fade show';
-            document.body.appendChild(newBackdrop);
+        var planningModalEl = document.getElementById('planningModal');
+        var planningModalOpen = planningModalEl && planningModalEl.classList.contains('show');
+
+        if (planningModalOpen) {
+            // Modal 1 ยังเปิดอยู่ → คืน backdrop ถ้ายังไม่มี
+            document.body.classList.add('modal-open');
+            var backdrop = document.querySelector('.modal-backdrop');
+            if (!backdrop) {
+                var newBackdrop = document.createElement('div');
+                newBackdrop.className = 'modal-backdrop fade show';
+                document.body.appendChild(newBackdrop);
+            }
+        } else {
+            // Modal 1 ไม่ได้เปิดแล้ว → ล้าง backdrop/scroll-lock ที่ค้างทั้งหมด
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+            document.querySelectorAll('.modal-backdrop').forEach(function (b) { b.remove(); });
         }
     });
 

@@ -2,6 +2,19 @@
 
 
 @section('content')
+    <style>
+        /* สีพื้นหลังคอลัมน์ Inplan (น้ำเงิน) และ Custwant (แดง) — ทั้งหัวตารางและช่องข้อมูล */
+        #dataTable th.col-inplan,
+        #dataTable td.col-inplan {
+            background-color: #cfe2ff !important;
+            color: #084298 !important;
+        }
+        #dataTable th.col-custwant,
+        #dataTable td.col-custwant {
+            background-color: #f8d7da !important;
+            color: #842029 !important;
+        }
+    </style>
     <div class="container-xxl flex-grow-1 container-p-y">
         <div class="row mb-4">
 
@@ -90,8 +103,8 @@
                                         <th class="col-1">#</th>
                                         <th class="col-1">Orderno</th>
                                         <th class="col-1">Company</th>
-                                        <th class="col-1">Inplan</th>
-                                        <th class="col-1">Custwant</th>
+                                        <th class="col-1 col-inplan">Inplan</th>
+                                        <th class="col-1 col-custwant">Custwant</th>
                                         <th class="col-1">Custno</th>
                                         <th class="col-2">ชื่อลูกค้า</th>
                                         <th class="col-2">Item No</th>
@@ -162,8 +175,8 @@
                 { 'className': "text-center", data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
                 { 'className': "text-center", data: 'orderno', name: 'orderno' },
                 { 'className': "text-center", data: 'company', name: 'company' },
-                { 'className': "text-center", data: 'inplan', name: 'inplan', searchable: false },
-                { 'className': "text-center", data: 'custwant', name: 'custwant' },
+                { 'className': "text-center col-inplan", data: 'inplan', name: 'inplan', searchable: false },
+                { 'className': "text-center col-custwant", data: 'custwant', name: 'custwant' },
                 { 'className': "text-left", data: 'custno', name: 'custno' },
                 { 'className': "text-left", data: 'custname', name: 'custname', searchable: false },
                 { 'className': "text-left", data: 'itemno_list', name: 'itemno_list', orderable: false, searchable: false },
@@ -235,7 +248,8 @@
             success: function(response) {
                 if (response.status == 200) {
                     $('#result_detail').html(response.data);
-                    var modal = new bootstrap.Modal(document.getElementById('orderPlanModal'));
+                    // ใช้ getOrCreateInstance กันสร้าง instance/backdrop ซ้อนเมื่อกดเปิดรัว ๆ (พื้นดำค้าง)
+                    var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('orderPlanModal'));
                     modal.show();
                 }
             },

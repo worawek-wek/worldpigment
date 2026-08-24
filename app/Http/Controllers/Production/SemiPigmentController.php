@@ -807,6 +807,7 @@ class SemiPigmentController extends Controller
             'weight'             => $sp->weight_production,
             'mdate'              => $sp->order_date,
             'custwant'           => $sp->want_date,
+            'red_bill_code'      => $sp->red_bill_code, // นำเลขใบเบิก (Red Bill) ของ semi มาใส่ให้แผนที่สร้าง (24/08/2569)
         ]);
     }
 }

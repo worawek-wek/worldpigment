@@ -1,6 +1,30 @@
 @extends('./layout/main')
 
 @section('content')
+    {{-- ตรึงหัวตารางไว้เมื่อเลื่อนดูรายการ (24/08/2569) --}}
+    <style>
+        /* ให้กล่องผลลัพธ์เลื่อนแนวตั้งภายในตัวเอง หัวตารางจึงตรึงอยู่ได้ */
+        #reportResult {
+            max-height: calc(100vh - 260px);
+            overflow-y: auto;
+        }
+        #materialShortageTable thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            /* ใช้สีพื้นหลัง/เส้นขอบเดิมของ table-light จากตัวแปรธีม */
+            background-color: var(--bs-table-bg);
+            /* border-collapse ทำให้เส้นขอบหายตอน sticky → วาดเส้นด้วย box-shadow แทน */
+            box-shadow: inset 0 1px 0 var(--bs-table-border-color), inset 0 -1px 0 var(--bs-table-border-color);
+        }
+        /* คอลัมน์ IN PLAN พื้นน้ำเงิน — !important เพื่อทับทั้งหัวตาราง sticky และ table-hover */
+        #materialShortageTable th.col-inplan,
+        #materialShortageTable td.col-inplan {
+            background-color: #cfe2ff !important;
+            color: #084298 !important;
+        }
+    </style>
+
     <div class="container-xxl flex-grow-1 container-p-y">
 
         {{-- หัวข้อหน้า --}}

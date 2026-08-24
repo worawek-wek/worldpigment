@@ -10,7 +10,7 @@
             <th>แผนก</th>
             <th>เลขที่ใบแดง</th>
             <th>เครื่องจักร</th>
-            <th>IN PLAN</th>
+            <th class="col-inplan">IN PLAN</th>
             <th>รหัสลูกค้า</th>
             <th>ชื่อลูกค้า</th>
             <th>Order No</th>
@@ -27,7 +27,7 @@
                 <td>{{ ($it->item_company ?: $it->header_company) ?: '-' }}</td>
                 <td class="text-center">{{ $it->red_bill_code ?: '-' }}</td>
                 <td>{{ $it->machine_no ?: '-' }}</td>
-                <td class="text-center">{{ $it->inplan ? \Carbon\Carbon::parse($it->inplan)->format('d/m/Y') : '-' }}</td>
+                <td class="text-center col-inplan">{{ $it->inplan ? \Carbon\Carbon::parse($it->inplan)->format('d/m/Y') : '-' }}</td>
                 <td class="text-center">{{ $it->custno ?: '-' }}</td>
                 <td>{{ $it->cust_name ?: '-' }}</td>
                 <td class="text-center">{{ $it->orderno ?: '-' }}</td>
