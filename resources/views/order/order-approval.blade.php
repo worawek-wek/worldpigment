@@ -1,8 +1,10 @@
 {{--
-    อนุมัติราคาใบสั่งซื้อ — แปลงผังมาจากฟอร์ม Access "morderAPPV"
+    อนุมัติใบสั่งซื้อ — แปลงผังมาจากฟอร์ม Access "morderAPPV"
     คิว = ใบที่ยังไม่อนุมัติ ไม่รวมใบสั่งทำสต๊อก และไม่รวมใบจอง R (ดู OrderApprovalController)
     ค่าทั้งหมดเติมด้วย JS (ดู fillOrderApproval ใน order/index.blade.php)
-    เฟสนี้อ่านอย่างเดียว — ปุ่ม "อนุมัติ" ยังไม่เขียนลง morder.appv / appvDT
+
+    ติ๊ก "อนุมัติ" = ถามยืนยันแล้วเขียน morder.appv (-1) + morder.appvDT (เวลาปัจจุบัน)
+    ใบที่อนุมัติแล้วจะหลุดจากคิว ฟอร์มจึงเลื่อนไปใบถัดไปให้เอง
 --}}
 <div class="modal-body px-4 py-4 oa-body">
 
@@ -124,9 +126,9 @@
             </div>
             <div class="d-flex align-items-center gap-2">
                 <label class="form-label mb-0 text-danger" style="width:60px;">ผู้บริหาร:</label>
+                {{-- ⚠ ยังไม่มีคอลัมน์เก็บใน morder — พิมพ์ได้แต่ยังไม่บันทึก (รอผู้ใช้ระบุที่เก็บ) --}}
                 <input type="text" id="oa_mdnote" class="form-control form-control-sm oa-hl-green"
-                    placeholder="หมายเหตุจากผู้บริหาร"
-                    title="ยังไม่ยืนยันคอลัมน์ที่เก็บ — รอผู้ใช้ระบุ">
+                    title="ยังไม่ยืนยันคอลัมน์ที่เก็บ — ค่าที่พิมพ์ยังไม่ถูกบันทึก">
             </div>
         </div>
         <div class="col-lg-4">

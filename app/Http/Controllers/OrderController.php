@@ -551,7 +551,7 @@ class OrderController extends Controller
      * POST — บันทึกใบสั่งซื้อ (สร้างใหม่ / แก้ไขใบเดิม)
      *
      * insert: จองเลขที่ใบสั่งจาก orderrun ในทรานแซกชันเดียวกับการบันทึก
-     *         และปล่อย appv ว่างไว้ → ใบจะไปเข้าคิวอนุมัติราคาเอง (ดู OrderApprovalController)
+     *         และปล่อย appv ว่างไว้ → ใบจะไปเข้าคิวอนุมัติเอง (ดู OrderApprovalController)
      * update: ไม่แตะเลขที่ใบสั่ง, วันที่เปิดใบ และสถานะอนุมัติ (appv / appvDT)
      */
     public function save(Request $request)
@@ -596,6 +596,12 @@ class OrderController extends Controller
             return response()->json(['status' => false, 'message' => 'ประเภทใบสั่งไม่ถูกต้อง'], 422);
         }
 
+        // ด่านราคา — บังคับทั้งตอนสร้างใหม่และตอนแก้ไขใบเดิม
+        $blocked = $this->checkPriceFloor($custno, $items, $this->numOrNull($request->input('price')));
+        if ($blocked) {
+            return response()->json($blocked, 422);
+        }
+
         try {
             $orderno = DB::transaction(function () use ($request, $mode, $type, $custno, $cust, $items) {
                 if ($mode === 'insert') {
@@ -628,6 +634,125 @@ class OrderController extends Controller
             'message' => $mode === 'insert' ? 'บันทึกใบสั่งซื้อใหม่เรียบร้อย' : 'แก้ไขใบสั่งซื้อเรียบร้อย',
             'orderno' => $orderno,
         ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  ด่านราคา: ราคาขายต้องไม่ต่ำกว่าราคาช่อง 2
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * ตรวจว่า "ราคาขาย" (morder.price) ผ่านเกณฑ์ขั้นต่ำหรือยัง
+     *
+     * ขั้นตอนของงานจริง:
+     *   1. ราคาขาย >= ราคาช่อง 2                        → บันทึกได้เลย
+     *   2. ต่ำกว่า แต่มีราคาอนุมัติพิเศษที่ยังไม่หมดอายุรองรับ → บันทึกได้
+     *   3. ต่ำกว่า และไม่มีราคาอนุมัติรองรับ                 → บันทึกไม่ได้
+     *      พนักงานต้องไปทำใบ "ขออนุมัติราคาพิเศษ" ให้ผ่านก่อน (ดู PriceApprovalController)
+     *   จากนั้นใบจึงไหลเข้าคิว "อนุมัติใบสั่งซื้อ" ต่อ (ดู OrderApprovalController)
+     *
+     * เกณฑ์ = ราคาช่อง 2 จาก `ProductPriceService` — ตัวเดียวกับที่กล่องราคาบนฟอร์มโชว์ในช่อง
+     * "ราคาต้องไม่ต่ำกว่า" (ดู priceData()) จึงเทียบกับตัวเลขที่ผู้ใช้เห็นตรงหน้าเสมอ
+     *
+     * ⚠ **คำนวณราคาช่อง 2 ไม่ได้ = ปล่อยผ่าน** — รหัสสินค้าที่ใช้จริงในใบสั่ง 98.6%
+     *   ไม่มีอยู่ใน `access_pdprice` (ตารางราคาทุน) ระบบจึงไม่มีเพดานให้เทียบ
+     *   ถ้าบล็อกไว้จะบันทึกใบสั่งแทบไม่ได้เลย — ด่านนี้จึงทำงานเฉพาะรหัสที่คำนวณราคาได้
+     *
+     * ⚠ ตรวจกับ **รหัสสินค้าแถวแรกที่กรอก** เท่านั้น — ให้ตรงกับกล่องราคาบนฟอร์ม
+     *   (ผู้ใช้กรอกรหัสเบอร์เดียวทั้งใบอยู่แล้ว ดู syncItemnoToPrice ใน order/index.blade.php)
+     *   ไม่งั้นจะขึ้นเตือนด้วยตัวเลขที่ผู้ใช้ไม่เห็นบนจอ
+     *
+     * @return array|null  null = ผ่าน · array = ไม่ผ่าน (ใช้เป็น response body ได้เลย)
+     */
+    private function checkPriceFloor(string $custno, array $items, $price): ?array
+    {
+        $itemno = trim((string) ($items[0]['Itemno'] ?? ''));
+        if ($itemno === '') {
+            return null;
+        }
+
+        $floor = app(ProductPriceService::class)->lookup($itemno)['prices']['price_2'] ?? null;
+        if ($floor === null) {
+            return null;   // ไม่มีเพดานให้เทียบ
+        }
+
+        $floor = (float) $floor;
+        $price = $price === null ? null : (float) $price;
+
+        // เทียบด้วย epsilon กันเศษทศนิยมของ float ทำให้ราคาที่เท่ากันพอดีถูกตีว่าต่ำกว่า
+        if ($price !== null && $price + 0.001 >= $floor) {
+            return null;
+        }
+
+        // ต่ำกว่าเกณฑ์ → ยังรอดได้ถ้ามีราคาอนุมัติพิเศษที่ยังไม่หมดอายุรองรับ
+        $approved = $this->activeApprovedPrice($custno, $itemno);
+        if ($price !== null && $approved && $price + 0.001 >= (float) $approved->exprice) {
+            return null;
+        }
+
+        return [
+            'status'        => false,
+            'price_blocked' => true,
+            'itemno'        => $itemno,
+            'custno'        => $custno,
+            'min_price'     => round($floor, 2),
+            'price'         => $price,
+            'approved'      => $approved ? [
+                'exprice' => round((float) $approved->exprice, 2),
+                'enddate' => $approved->enddate,
+            ] : null,
+            'message'       => $this->priceBlockedMessage($price, $floor, $custno, $itemno, $approved),
+        ];
+    }
+
+    /**
+     * ราคาอนุมัติพิเศษของคู่ (ลูกค้า, เบอร์) ที่ยังใช้ได้อยู่
+     *
+     * อ่านจาก `zcustprice` = "ราคาที่ยืนไว้กับลูกค้าถึงวันที่ ..." ซึ่ง
+     * `PriceApprovalController::save()` เขียนให้ตอนที่ MD กดอนุมัติ
+     *
+     * เงื่อนไข: มี `exprice` (ไม่ใช่ 0) และ **ยังไม่เลย `enddate`**
+     * — `enddate` ว่างถือว่าไม่กำหนดวันหมดอายุ (ข้อมูลจริงตอนนี้ไม่มีแถวไหนว่าง)
+     */
+    private function activeApprovedPrice(string $custno, string $itemno)
+    {
+        if ($custno === '') {
+            return null;
+        }
+
+        return DB::table('zcustprice')
+            ->where('custno', $custno)
+            ->where('colorno', $itemno)
+            ->whereNotNull('exprice')
+            ->where('exprice', '<>', 0)
+            ->where(function ($q) {
+                $q->whereNull('enddate')
+                    ->orWhereDate('enddate', '>=', now()->toDateString());
+            })
+            ->orderByDesc('enddate')
+            ->first(['exprice', 'enddate']);
+    }
+
+    /** ข้อความบอกสาเหตุที่บันทึกไม่ได้ — แยกกรณีให้ผู้ใช้รู้ว่าต้องทำอะไรต่อ */
+    private function priceBlockedMessage($price, float $floor, string $custno, string $itemno, $approved): string
+    {
+        if ($price === null) {
+            return 'ต้องกรอกราคาขาย และต้องไม่ต่ำกว่า ' . number_format($floor, 2) . ' บาท (ราคาช่อง 2 ของ ' . $itemno . ')';
+        }
+
+        $msg = 'ราคาขาย ' . number_format($price, 2) . ' บาท ต่ำกว่าราคาช่อง 2 ('
+             . number_format($floor, 2) . ' บาท) ของรหัส ' . $itemno;
+
+        // มีราคาอนุมัติอยู่ แต่ยังไม่พอ — บอกไปเลยว่าติดตรงไหน จะได้ไม่ต้องเดา
+        if ($approved) {
+            $msg .= ' — มีราคาอนุมัติพิเศษ ' . number_format((float) $approved->exprice, 2) . ' บาท'
+                  . ($approved->enddate ? ' (ยืนราคาถึง ' . Carbon::parse($approved->enddate)->format('d/m/Y') . ')' : '')
+                  . ' แต่ราคาขายยังต่ำกว่าราคาที่อนุมัติไว้';
+        } else {
+            $msg .= ' — ยังไม่มีราคาอนุมัติพิเศษที่ใช้ได้ของลูกค้า ' . $custno
+                  . ' (ไม่เคยขอ หรือใบที่อนุมัติไว้หมดอายุแล้ว)';
+        }
+
+        return $msg;
     }
 
     /** ค่าที่จะเขียนลง morder (ใช้ร่วมทั้ง insert / update) */

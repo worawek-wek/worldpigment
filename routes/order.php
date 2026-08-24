@@ -32,14 +32,22 @@ Route::prefix('order')->group(function () {
         Route::get('/history',         [PriceApprovalController::class, 'history'])->name('order.approval.history');
         Route::get('/resin-history',   [PriceApprovalController::class, 'resinHistory'])->name('order.approval.resin_history');
 
+        // โหมดอนุมัติ (MD) — ปลดล็อกด้วยรหัสผ่านก่อนจึงจะติ๊ก "อนุมัติ" ได้
+        Route::get('/md-state', [PriceApprovalController::class, 'mdState'])->name('order.approval.md_state');
+        Route::post('/unlock',  [PriceApprovalController::class, 'unlock'])->name('order.approval.unlock');
+        Route::post('/lock',    [PriceApprovalController::class, 'lock'])->name('order.approval.lock');
+
         Route::post('/save',   [PriceApprovalController::class, 'save'])->name('order.approval.save');
         Route::post('/delete', [PriceApprovalController::class, 'destroy'])->name('order.approval.delete');
     });
 
-    // ─── ฟอร์มอนุมัติราคาใบสั่งซื้อ (morderAPPV) ────────────────────────
+    // ─── ฟอร์มอนุมัติใบสั่งซื้อ (morderAPPV) ────────────────────────
     Route::prefix('order-approval')->group(function () {
         Route::get('/queue',  [OrderApprovalController::class, 'queue'])->name('order.orderappv.queue');
         Route::get('/record', [OrderApprovalController::class, 'record'])->name('order.orderappv.record');
+
+        // กดอนุมัติ / ยกเลิกอนุมัติ — เขียน morder.appv + morder.appvDT
+        Route::post('/approve', [OrderApprovalController::class, 'approve'])->name('order.orderappv.approve');
     });
 
 });

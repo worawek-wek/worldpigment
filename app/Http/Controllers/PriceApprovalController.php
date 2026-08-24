@@ -33,6 +33,12 @@ class PriceApprovalController extends Controller
         ['key' => 'price3', 'group' => 'C', 'label' => 'กลุ่ม C = under 500 kg.', 'min' => 0],
     ];
 
+    /** session ที่บอกว่า "โหมดอนุมัติ (MD)" ถูกปลดล็อกไว้ถึงเมื่อไหร่ */
+    private const MD_SESSION_KEY = 'price_approval_md_until';
+
+    /** โหมดอนุมัติอยู่ได้กี่นาทีหลังปลดล็อก — หมดอายุแล้วต้องกรอกรหัสใหม่ */
+    private const MD_UNLOCK_MINUTES = 30;
+
     /** คอลัมน์ checkbox ของ Access เก็บ -1 = ติ๊ก */
     private static function checked($value): bool
     {
@@ -146,6 +152,8 @@ class PriceApprovalController extends Controller
             'uprice'   => $uprice,
             // ตารางล่าง — ราคาที่ยืนไว้ของเบอร์ที่เลือก
             'rows'     => $this->zcustRows($custno, $itemno),
+            // ยังอยู่ใน "โหมดอนุมัติ" ไหม — ให้ฟอร์มล็อก/ปลดล็อกช่องอนุมัติตามจริงทุกครั้งที่โหลด
+            'md_unlocked' => $this->mdUnlocked(),
         ]);
     }
 
@@ -239,7 +247,14 @@ class PriceApprovalController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────
-    //  บันทึก / ลบ ใบขออนุมัติราคา
+    //  โหมดอนุมัติ (MD) — ปลดล็อกด้วยรหัสผ่าน
+    //
+    //  ฟอร์มนี้ทำงาน 2 ขั้นตอน:
+    //    1) โหมดขอราคา (MK)  — ค่าเริ่มต้น กรอกใบขอราคาได้ แต่ช่อง "อนุมัติ" ถูกล็อก
+    //    2) โหมดอนุมัติ (MD) — กรอกรหัสผ่าน MD แล้วกดปุ่มปลดล็อก จึงจะติ๊กอนุมัติได้
+    //
+    //  การปลดล็อกเก็บที่ session ฝั่ง server (ไม่ใช่แค่ซ่อน/โชว์ปุ่มฝั่ง JS)
+    //  → save() ตรวจจาก session เสมอ เปิด devtools ปลดปุ่มเองก็อนุมัติไม่ได้
     // ─────────────────────────────────────────────────────────────
 
     /**
@@ -256,13 +271,58 @@ class PriceApprovalController extends Controller
         return $expected !== '' && hash_equals($expected, (string) $input);
     }
 
+    /** ตอนนี้อยู่ในโหมดอนุมัติอยู่ไหม (ปลดล็อกไว้แล้วและยังไม่หมดอายุ) */
+    private function mdUnlocked(): bool
+    {
+        $until = session(self::MD_SESSION_KEY);
+
+        return $until && Carbon::parse($until)->isFuture();
+    }
+
+    /** GET — ฟอร์มถามตอนเปิดว่าตอนนี้ปลดล็อกโหมดอนุมัติค้างไว้อยู่ไหม */
+    public function mdState()
+    {
+        return response()->json(['unlocked' => $this->mdUnlocked()]);
+    }
+
+    /** POST — กรอกรหัสผ่าน MD เพื่อเข้าสู่โหมดอนุมัติ */
+    public function unlock(Request $request)
+    {
+        if (!$this->checkMdPassword($request->input('md_password'))) {
+            return response()->json(['status' => false, 'message' => 'รหัสผ่านไม่ถูกต้อง'], 422);
+        }
+
+        $until = now()->addMinutes(self::MD_UNLOCK_MINUTES);
+        session([self::MD_SESSION_KEY => $until->format('Y-m-d H:i:s')]);
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'เข้าสู่โหมดอนุมัติแล้ว (' . self::MD_UNLOCK_MINUTES . ' นาที)',
+            'minutes' => self::MD_UNLOCK_MINUTES,
+        ]);
+    }
+
+    /** POST — ออกจากโหมดอนุมัติ (ปุ่มบนฟอร์ม / ทำงานให้เสร็จแล้วล็อกกลับ) */
+    public function lock()
+    {
+        session()->forget(self::MD_SESSION_KEY);
+
+        return response()->json(['status' => true, 'message' => 'ออกจากโหมดอนุมัติแล้ว']);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  บันทึก / ลบ ใบขออนุมัติราคา
+    // ─────────────────────────────────────────────────────────────
+
     /**
      * POST — เพิ่ม / บันทึกใบขออนุมัติราคา
      *
-     * เขียนลง `appvreq` (PK = ReqDate + custno + itemno)
-     *   - ส่ง ReqDate มา = แก้ใบเดิม, ไม่ส่ง = ขึ้นใบใหม่ด้วยเวลาปัจจุบัน
-     *   - ติ๊ก "อนุมัติ" ต้องกรอกรหัสผ่าน MD ให้ถูก
-     *   - เมื่ออนุมัติแล้วจะเขียนราคาที่ยืนไว้ลง `zcustprice` ด้วย (ราคาขายครั้งนี้ + อนุมัติราคาถึง)
+     * เขียนลง `appvreq` (PK = ReqDate + custno + itemno) — **1 คู่ (ลูกค้า, เบอร์) = 1 ใบที่แก้ได้**
+     *   - คู่ที่ยังไม่เคยขอ  → ขึ้นใบใหม่ด้วยเวลาปัจจุบัน
+     *   - คู่ที่เคยขอแล้ว    → แก้ทับ "ใบล่าสุด" เสมอ (หา ReqDate ของใบล่าสุดที่ server เอง
+     *                          ไม่เชื่อค่าที่ client ส่งมา กันเผลอสร้างใบซ้ำ/ใบผิดวัน)
+     *   - ติ๊ก "อนุมัติ" ต้องอยู่ในโหมดอนุมัติ (ปลดล็อกด้วยรหัสผ่าน MD แล้ว) — ดู unlock()
+     *   - การอนุมัติจะเขียนราคาที่ยืนไว้ลง `zcustprice` ด้วย (ราคาขายครั้งนี้ + อนุมัติราคาถึง)
      *     ตามที่ฟอร์มเดิมโชว์ทั้งสองที่คู่กัน
      */
     public function save(Request $request)
@@ -293,13 +353,33 @@ class PriceApprovalController extends Controller
             return response()->json(['status' => false, 'message' => 'ไม่พบรหัสลูกค้า ' . $custno], 422);
         }
 
-        // ติ๊กอนุมัติ = ต้องผ่านรหัสผ่าน MD
-        if ($appv && !$this->checkMdPassword($request->input('md_password'))) {
-            return response()->json(['status' => false, 'message' => 'รหัสผ่าน MD ไม่ถูกต้อง'], 422);
+        // ใบล่าสุดของคู่นี้ — มีอยู่ = แก้ทับใบเดิม, ไม่มี = ขึ้นใบใหม่
+        $existing = DB::table('appvreq')
+            ->where('custno', $custno)
+            ->where('itemno', $itemno)
+            ->orderByDesc('ReqDate')
+            ->first(['ReqDate', 'Appv']);
+
+        $alreadyApproved = $existing ? self::checked($existing->Appv) : false;
+        $mdMode          = $this->mdUnlocked();
+
+        // ติ๊กอนุมัติ = ต้องอยู่ในโหมดอนุมัติ
+        // ยกเว้นใบที่ "อนุมัติไปแล้ว" — ฝั่ง MK แก้หมายเหตุ/ราคาต่อได้โดยไม่ต้องปลดล็อก
+        // (ช่องอนุมัติถูก disabled อยู่ ค่าที่ส่งมาจึงเป็นสถานะเดิม ไม่ใช่การอนุมัติใหม่)
+        if ($appv && !$alreadyApproved && !$mdMode) {
+            return response()->json([
+                'status'    => false,
+                'md_locked' => true,
+                'message'   => 'ต้องเข้าสู่โหมดอนุมัติก่อน (กรอกรหัสแล้วกดปุ่มปลดล็อก) — หรือโหมดอนุมัติหมดอายุแล้ว',
+            ], 422);
         }
 
-        $reqDate = $this->parseDateTime($request->input('ReqDate')) ?? now()->format('Y-m-d H:i:s');
+        $reqDate = $existing->ReqDate ?? now()->format('Y-m-d H:i:s');
         $validTo = $this->parseDate($request->input('valid_to'));
+
+        // เขียน zcustprice เฉพาะตอนที่เป็น "การอนุมัติจริง ๆ" (อยู่ในโหมด MD)
+        // — ไม่งั้น MK ที่แก้ใบซึ่งอนุมัติไปแล้วจะเผลอทับ enddate ด้วยช่องที่ถูกล็อกไว้ (ค่าว่าง)
+        $writeZcust = $appv && $mdMode;
 
         $row = [
             'weight'  => $this->numOrNull($request->input('weight')),
@@ -313,7 +393,7 @@ class PriceApprovalController extends Controller
         ];
 
         try {
-            DB::transaction(function () use ($custno, $itemno, $reqDate, $row, $appv, $validTo, $request) {
+            DB::transaction(function () use ($custno, $itemno, $reqDate, $row, $writeZcust, $validTo, $request) {
                 $key = ['ReqDate' => $reqDate, 'custno' => $custno, 'itemno' => $itemno];
 
                 if (DB::table('appvreq')->where($key)->exists()) {
@@ -323,7 +403,7 @@ class PriceApprovalController extends Controller
                 }
 
                 // อนุมัติแล้ว → บันทึกราคาที่ยืนไว้ให้ลูกค้ารายนี้ (ตารางล่างของฟอร์ม)
-                if ($appv) {
+                if ($writeZcust) {
                     $zkey = ['custno' => $custno, 'colorno' => $itemno];
                     $zrow = [
                         'exprice' => $this->numOrNull($request->input('price')),
@@ -344,7 +424,9 @@ class PriceApprovalController extends Controller
 
         return response()->json([
             'status'  => true,
-            'message' => $appv ? 'บันทึกและอนุมัติราคาเรียบร้อย' : 'บันทึกใบขออนุมัติราคาเรียบร้อย',
+            'message' => $writeZcust
+                ? 'บันทึกและอนุมัติราคาเรียบร้อย'
+                : ($existing ? 'แก้ไขใบขออนุมัติราคาเรียบร้อย' : 'สร้างใบขออนุมัติราคาเรียบร้อย'),
             'ReqDate' => $reqDate,
         ]);
     }

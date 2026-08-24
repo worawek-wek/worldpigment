@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * อนุมัติราคาใบสั่งซื้อ — แปลงมาจากฟอร์ม Access "morderAPPV"
+ * อนุมัติใบสั่งซื้อ — แปลงมาจากฟอร์ม Access "morderAPPV"
  * (หัวฟอร์มเดิมเขียนกำกับว่า "ไม่รวมทำ STOCK + ไม่รวมใบจอง R" = เงื่อนไขของคิว)
  * เป็นฟอร์มลูกของเมนู O-Order (ดู OrderController)
  *
@@ -24,11 +24,13 @@ class OrderApprovalController extends Controller
         return (int) $value !== 0 && $value !== null;
     }
 
-    /** คิวรออนุมัติตามเงื่อนไขบนหัวฟอร์มเดิม */
-    private function queueQuery()
+    /**
+     * ใบที่ "ต้องผ่านการอนุมัติ" ตามเงื่อนไขบนหัวฟอร์มเดิม
+     * (ยังไม่ดูว่าอนุมัติไปหรือยัง — ใช้ทั้งตอนสร้างคิวและตอนตรวจสิทธิ์ก่อนกดอนุมัติ)
+     */
+    private function approvableQuery()
     {
         return DB::table('morder')
-            ->whereNull('appv')
             // ไม่รวมใบจอง R (CR / HR / WR)
             ->whereRaw('SUBSTRING(Orderno, 2, 1) <> ?', ['R'])
             // ไม่รวมใบสั่งทำสต๊อก
@@ -37,6 +39,12 @@ class OrderApprovalController extends Controller
                     ->whereRaw('COALESCE(SendCust, 0) = 0')
                     ->whereRaw('COALESCE(sendmth, 0) = 0');
             });
+    }
+
+    /** คิวรออนุมัติ = ใบที่ต้องอนุมัติ และยังไม่ได้อนุมัติ */
+    private function queueQuery()
+    {
+        return $this->approvableQuery()->whereNull('appv');
     }
 
     /**
@@ -116,6 +124,66 @@ class OrderApprovalController extends Controller
             ],
             'items'  => $items,
             'prices' => $prices,
+            // ใบนี้อยู่ในขอบเขตที่ฟอร์มนี้อนุมัติได้ไหม (ไม่ใช่ใบจอง R / ใบสั่งทำสต๊อก)
+            'approvable' => $this->approvableQuery()->where('Orderno', $orderno)->exists(),
+        ]);
+    }
+
+    /**
+     * POST — กดอนุมัติ / ยกเลิกการอนุมัติใบสั่งซื้อ 1 ใบ
+     *   orderno = เลขที่ใบสั่ง
+     *   appv    = 1 อนุมัติ, 0 ยกเลิกการอนุมัติ
+     *
+     * เขียน `morder.appv` + `morder.appvDT` เท่านั้น
+     * — ตาราง `morder` ไม่มีคอลัมน์เก็บ "ใครเป็นคนอนุมัติ" และไม่มีที่เก็บหมายเหตุผู้บริหาร
+     *   (ช่องกล่องเขียวบนฟอร์มจึงยังไม่ผูกข้อมูล ดูหมายเหตุใน CLAUDE.md)
+     */
+    public function approve(Request $request)
+    {
+        $orderno = trim((string) $request->input('orderno', ''));
+        $appv    = $request->boolean('appv');
+
+        if ($orderno === '') {
+            return response()->json(['status' => false, 'message' => 'ไม่ได้ระบุเลขที่ใบสั่ง'], 422);
+        }
+
+        $order = DB::table('morder')->where('Orderno', $orderno)->first(['Orderno', 'appv']);
+        if (!$order) {
+            return response()->json(['status' => false, 'message' => 'ไม่พบใบสั่งซื้อ ' . $orderno], 422);
+        }
+
+        // ใบจอง R / ใบสั่งทำสต๊อก ไม่ต้องผ่านการอนุมัติ — กันเรียก endpoint ตรง ๆ
+        if (!$this->approvableQuery()->where('Orderno', $orderno)->exists()) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'ใบสั่งนี้ไม่ต้องผ่านการอนุมัติ (ใบจอง R หรือใบสั่งทำสต๊อก)',
+            ], 422);
+        }
+
+        // สถานะตรงกับที่ขอมาอยู่แล้ว = ไม่มีอะไรต้องทำ (เช่นเปิดฟอร์มค้างไว้แล้วมีคนอนุมัติไปก่อน)
+        if (self::checked($order->appv) === $appv) {
+            return response()->json([
+                'status'  => false,
+                'message' => $appv ? 'ใบสั่งนี้อนุมัติไปแล้ว' : 'ใบสั่งนี้ยังไม่ได้อนุมัติ',
+            ], 422);
+        }
+
+        // ข้อมูลจริงมีแค่ 2 สถานะ: -1 = อนุมัติแล้ว (มี appvDT เสมอ) / NULL = รออนุมัติ
+        // ไม่มีแถวไหนเก็บ 0 เลย → ยกเลิกอนุมัติจึงคืนเป็น NULL ให้ใบไหลกลับเข้าคิว
+        $now = now()->format('Y-m-d H:i:s');
+
+        DB::table('morder')->where('Orderno', $orderno)->update([
+            'appv'   => $appv ? -1 : null,
+            'appvDT' => $appv ? $now : null,
+        ]);
+
+        return response()->json([
+            'status'  => true,
+            'message' => $appv
+                ? 'อนุมัติใบสั่งซื้อ ' . $orderno . ' เรียบร้อย'
+                : 'ยกเลิกการอนุมัติใบสั่งซื้อ ' . $orderno . ' เรียบร้อย',
+            'appv'    => $appv,
+            'appvDT'  => $appv ? $now : null,
         ]);
     }
 

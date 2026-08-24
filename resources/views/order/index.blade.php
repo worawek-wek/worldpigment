@@ -191,7 +191,7 @@
 #approvalGridTable th { white-space: nowrap; font-size: .8rem; }
 #approvalGridTable td { font-size: .85rem; }
 
-/* ══ ฟอร์มอนุมัติราคาใบสั่งซื้อ (morderAPPV) — โทนเทาอ่อนตามฟอร์มเดิม ══ */
+/* ══ ฟอร์มอนุมัติใบสั่งซื้อ (morderAPPV) — โทนเทาอ่อนตามฟอร์มเดิม ══ */
 .oa-body { background: #f4f4f0; }
 .oa-body .form-label { margin-bottom: .25rem; font-size: .85rem; font-weight: 600; }
 .oa-checkrow { display: flex; flex-wrap: wrap; gap: 1.25rem; padding: .45rem .75rem; background: #fff; border: 1px solid #d9d9d2; border-radius: .375rem; }
@@ -262,7 +262,7 @@
                     <div class="d-flex gap-2 flex-wrap">
                         <button class="btn btn-label-warning border" onclick="orderApprovalOpen()">
                             <i class="ti ti-gavel me-1"></i>
-                            อนุมัติราคาใบสั่งซื้อ
+                            อนุมัติใบสั่งซื้อ
                             <span class="badge bg-danger ms-1 d-none" id="oaQueueBadge">0</span>
                         </button>
                         <button class="btn btn-label-primary border" style="color: #1f158e;" onclick="approvalOpen()">
@@ -436,7 +436,7 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
-<!-- Modal: อนุมัติราคาใบสั่งซื้อ (morderAPPV) — ผังตามฟอร์ม Access เดิม -->
+<!-- Modal: อนุมัติใบสั่งซื้อ (morderAPPV) — ผังตามฟอร์ม Access เดิม -->
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <div class="modal modalHeadDecor fade" id="orderApprovalModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
@@ -444,7 +444,7 @@
 
             <div class="modal-header">
                 <h5 class="modal-title">
-                    อนุมัติราคาใบสั่งซื้อ
+                    อนุมัติใบสั่งซื้อ
                     <span class="fw-normal" style="font-size:.8rem;">(ไม่รวมทำ STOCK + ไม่รวมใบจอง R)</span>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -1069,8 +1069,10 @@
                 loadData(page);
             })
             .fail(function(xhr){
-                var msg = (xhr.responseJSON && xhr.responseJSON.message) || 'เกิดข้อผิดพลาดในการบันทึก';
-                Swal.fire('บันทึกไม่สำเร็จ', msg, 'error');
+                var body = xhr.responseJSON || {};
+                // ติดด่านราคา → เสนอทางไปต่อ (ทำใบขออนุมัติราคาพิเศษ) แทนที่จะบอกแค่ว่าบันทึกไม่ได้
+                if (body.price_blocked){ showPriceBlocked(body); return; }
+                Swal.fire('บันทึกไม่สำเร็จ', body.message || 'เกิดข้อผิดพลาดในการบันทึก', 'error');
             })
             .always(function(){
                 $btn.prop('disabled', false);
@@ -1079,14 +1081,34 @@
             });
     }
 
+    // ราคาขายต่ำกว่าราคาช่อง 2 และไม่มีราคาอนุมัติพิเศษรองรับ
+    // → พาไปทำใบขออนุมัติราคาพิเศษของคู่ (ลูกค้า, เบอร์) นั้นได้เลย
+    function showPriceBlocked(body){
+        Swal.fire({
+            icon: 'warning',
+            title: 'ราคาขายต่ำกว่าเกณฑ์',
+            html: esc(body.message || ''),
+            showCancelButton: true,
+            confirmButtonText: '<i class="ti ti-file-dollar me-1"></i>ขออนุมัติราคาพิเศษ',
+            cancelButtonText: 'กลับไปแก้ราคา',
+            reverseButtons: true
+        }).then(function(r){
+            if (!r.isConfirmed) return;
+            // ปิดฟอร์มใบสั่งซื้อก่อน แล้วค่อยเปิดฟอร์มขออนุมัติ — modal ซ้อนกันจะปิดยาก
+            $('#orderModal').modal('hide');
+            approvalOpen(body.custno || '', body.itemno || '');
+        });
+    }
+
     // ════════════════════════════════════════════════════════
-    //  ฟอร์มอนุมัติราคาใบสั่งซื้อ (morderAPPV)
+    //  ฟอร์มอนุมัติใบสั่งซื้อ (morderAPPV)
     //  — คิวเดินทีละใบเหมือนฟอร์ม Access (ระเบียน N จาก M)
     // ════════════════════════════════════════════════════════
-    var OA_URL   = "{{ $page_url }}/order-approval";
-    var oaQueue  = [];    // รายการใบที่รออนุมัติ
-    var oaIndex  = 0;     // ระเบียนที่กำลังแสดง (0-based)
-    var oaPrices = {};    // ราคาอ้างอิงของแต่ละเบอร์ในใบปัจจุบัน
+    var OA_URL    = "{{ $page_url }}/order-approval";
+    var oaQueue   = [];      // รายการใบที่รออนุมัติ
+    var oaIndex   = 0;       // ระเบียนที่กำลังแสดง (0-based)
+    var oaPrices  = {};      // ราคาอ้างอิงของแต่ละเบอร์ในใบปัจจุบัน
+    var oaCurrent = null;    // ระเบียนที่โหลดมาแสดงอยู่ — ใช้ตัดสินว่าปุ่มอนุมัติจะทำอะไร
 
     // นับคิวรออนุมัติตั้งแต่เปิดหน้า → โชว์เป็น badge บนปุ่ม
     $(function(){ oaLoadQueue(false); });
@@ -1132,7 +1154,9 @@
         $('#orderApprovalModal input[type="checkbox"]').prop('checked', false);
         $('#oa_pos').val('');
         $('#oaItems').html('<tr><td colspan="7" class="text-center py-3 text-muted">ไม่มีใบสั่งซื้อที่รออนุมัติ</td></tr>');
-        oaPrices = {};
+        $('#oa_appv').prop('disabled', true);
+        oaPrices  = {};
+        oaCurrent = null;
     }
 
     function oaLoadRecord(orderno){
@@ -1144,6 +1168,7 @@
 
     function fillOrderApproval(res){
         var o = res.order || {};
+        oaCurrent = o;
         $('#oa_Mdate').val(fmtDateTime(o.Mdate));
         $('#oa_Orderno').val(o.Orderno || '');
         $('#oa_Company').val(o.Company || '');
@@ -1162,7 +1187,11 @@
         $('#oa_Cer').prop('checked', !!o.Cer);
 
         $('#oa_price').val(fmtNum(o.price, 2));
-        $('#oa_appv').prop('checked', !!o.appv);
+        $('#oa_appv').prop('checked', !!o.appv)
+            // ใบจอง R / ใบสั่งทำสต๊อก ไม่ต้องผ่านการอนุมัติ — ล็อกช่องไว้
+            .prop('disabled', res.approvable === false)
+            .closest('.form-check')
+            .attr('title', res.approvable === false ? 'ใบสั่งนี้ไม่ต้องผ่านการอนุมัติ' : '');
         $('#oa_appvDT').val(o.appvDT ? fmtDateTime(o.appvDT) : '');
         // ท้ายฟอร์มเดิม: "(<เทอม> - <ส่วนลดเงินสด>%)"
         $('#oa_term').val(o.term ? '(' + o.term + ' - ' + (o.cashdisc || 0) + '%)' : '');
@@ -1209,15 +1238,60 @@
         $('#oa_price3').val(fmtNum(p.price3, 2));
     }
 
-    // ปุ่มอนุมัติ — ยังไม่เขียนลง morder.appv / appvDT
+    // ── ปุ่มอนุมัติ — เขียน morder.appv + morder.appvDT ──
+    // ติ๊ก checkbox เองไม่มีผล: กันการติ๊กไว้ก่อน ถามยืนยัน แล้วค่อยโหลดสถานะจริงกลับมา
     function orderApprovalApprove(e){
         e.preventDefault();
+
+        var o = oaCurrent;
+        if (!o || !o.Orderno) return;
+
+        // อ่านสถานะจากระเบียนที่โหลดมา ไม่พึ่งค่า checked ตอนคลิก (ขึ้นกับจังหวะ toggle ของเบราว์เซอร์)
+        var approve = !o.appv;
+
+        var html = 'เลขที่ใบสั่ง <b>' + esc(o.Orderno) + '</b><br>'
+                 + 'ลูกค้า ' + esc(o.Custname || o.Custno || '-') + '<br>'
+                 + 'ราคาขายครั้งนี้ <b>' + (fmtNum(o.price, 2) || '—') + '</b>';
+        if (approve && (o.price === null || o.price === undefined || o.price === '')){
+            html += '<br><span class="text-danger">ใบนี้ยังไม่ได้กรอกราคาขาย</span>';
+        }
+
         Swal.fire({
-            icon: 'info',
-            title: 'ยังไม่เปิดใช้งานการอนุมัติ',
-            html: 'ฟอร์มนี้เป็น UI + อ่านข้อมูลจริงเท่านั้น<br>' +
-                  'การกดอนุมัติจะเขียน <code>morder.appv</code> + <code>morder.appvDT</code> — ' +
-                  'รอยืนยันว่าใครมีสิทธิ์อนุมัติ และต้องบันทึกอะไรเพิ่มบ้าง'
+            icon: approve ? 'question' : 'warning',
+            title: approve ? 'อนุมัติใบสั่งซื้อนี้?' : 'ยกเลิกการอนุมัติ?',
+            html: html,
+            showCancelButton: true,
+            confirmButtonText: approve ? 'อนุมัติ' : 'ยกเลิกการอนุมัติ',
+            cancelButtonText: 'ปิด',
+            confirmButtonColor: approve ? '#28a745' : '#d33'
+        }).then(function(r){
+            if (!r.isConfirmed) return;
+
+            $('#oa_appv').prop('disabled', true);
+            $.post(OA_URL + '/approve', {
+                _token:  '{{ csrf_token() }}',
+                orderno: o.Orderno,
+                appv:    approve ? 1 : 0
+            })
+                .done(function(res){
+                    if (!res.status){ Swal.fire('ทำรายการไม่สำเร็จ', res.message || '', 'error'); return; }
+                    Swal.fire({icon: 'success', title: res.message, timer: 1800, showConfirmButton: false});
+                    oaAfterApprove();
+                })
+                .fail(function(xhr){
+                    var msg = (xhr.responseJSON && xhr.responseJSON.message) || 'เกิดข้อผิดพลาดในการบันทึก';
+                    Swal.fire('ทำรายการไม่สำเร็จ', msg, 'error');
+                })
+                .always(function(){ $('#oa_appv').prop('disabled', false); });
+        });
+    }
+
+    // ใบที่เพิ่งอนุมัติจะหลุดจากคิว → โหลดคิวใหม่แล้วอยู่ที่ตำแหน่งเดิม (ซึ่งกลายเป็นใบถัดไป)
+    function oaAfterApprove(){
+        var at = oaIndex;
+        oaLoadQueue(false).done(function(){
+            if (!oaQueue.length){ oaClear(); return; }
+            oaGo(Math.min(at, oaQueue.length - 1));
         });
     }
 
@@ -1226,10 +1300,65 @@
     // ════════════════════════════════════════════════════════
     var APPROVAL_URL = "{{ $page_url }}/price-approval";
 
+    // ── 2 โหมดของฟอร์ม ──────────────────────────────────────────
+    //   ขอราคา   = ค่าเริ่มต้น — กรอก/แก้ใบขอราคาได้ แต่ช่องอนุมัติถูกล็อก
+    //   อนุมัติ  = กรอกรหัสผ่านแล้วกดปลดล็อกก่อน จึงจะติ๊กอนุมัติได้
+    // ⚠ ยังไม่ยืนยันว่ารหัสนี้เป็นของ MD โดยเฉพาะ — บนจอจึงเรียกแค่ "รหัส" ไม่ผูกกับตำแหน่ง
+    // ตัวแปรนี้เป็นแค่สถานะฝั่งจอ — ตัวตัดสินจริงอยู่ที่ session ฝั่ง server (save() ตรวจซ้ำเสมอ)
+    var apvMdUnlocked = false;
+
+    function setApprovalMdMode(unlocked){
+        unlocked = !!unlocked;
+        // ล้างรหัสที่พิมพ์ไว้เฉพาะตอนเพิ่งเข้าโหมด — ไม่งั้นจะไปลบรหัสที่ผู้ใช้กำลังพิมพ์อยู่
+        if (unlocked && !apvMdUnlocked) $('#a_mdpass').val('');
+        apvMdUnlocked = unlocked;
+
+        $('#a_mdLockBox').toggleClass('d-none', unlocked);
+        $('#a_mdUnlockedBox').toggleClass('d-none', !unlocked);
+
+        // ช่องที่แตะได้เฉพาะโหมดอนุมัติ
+        $('#a_Appv, #a_validto').prop('disabled', !unlocked);
+        $('#a_Appv').closest('.form-check')
+            .attr('title', unlocked ? '' : 'ต้องกรอกรหัสเพื่อเข้าสู่โหมดอนุมัติก่อน');
+    }
+
+    function approvalUnlock(){
+        var pass = ($('#a_mdpass').val() || '').trim();
+        if (!pass){
+            Swal.fire('ยังไม่ได้กรอกรหัสผ่าน', 'กรอกรหัสก่อนเข้าสู่โหมดอนุมัติ', 'warning');
+            return;
+        }
+        $.post(APPROVAL_URL + '/unlock', {_token: '{{ csrf_token() }}', md_password: pass})
+            .done(function(res){
+                if (!res.status){ Swal.fire('เข้าสู่โหมดอนุมัติไม่สำเร็จ', res.message || '', 'error'); return; }
+                setApprovalMdMode(true);
+                Swal.fire({icon: 'success', title: res.message, timer: 1600, showConfirmButton: false});
+            })
+            .fail(function(xhr){
+                var msg = (xhr.responseJSON && xhr.responseJSON.message) || 'รหัสผ่านไม่ถูกต้อง';
+                Swal.fire('เข้าสู่โหมดอนุมัติไม่สำเร็จ', msg, 'error');
+                $('#a_mdpass').val('').trigger('focus');
+            });
+    }
+
+    function approvalLock(){
+        $.post(APPROVAL_URL + '/lock', {_token: '{{ csrf_token() }}'})
+            .always(function(){ setApprovalMdMode(false); });
+    }
+
+    // กด Enter ในช่องรหัสผ่าน = กดปุ่มปลดล็อก
+    $(document).on('keydown', '#a_mdpass', function(e){
+        if (e.key === 'Enter'){ e.preventDefault(); approvalUnlock(); }
+    });
+
     // เปิดฟอร์ม — ระบุลูกค้า/เบอร์สินค้ามาด้วยก็ได้ (เช่นเรียกจากใบสั่งซื้อในอนาคต)
     function approvalOpen(custno, itemno){
         clearApprovalForm();
         $('#approvalModal').modal('show');
+        // เริ่มที่โหมดขอราคาไว้ก่อน แล้วค่อยถาม server ว่าปลดล็อกค้างไว้จากรอบก่อนหรือเปล่า
+        // (ล็อกไว้ระหว่างรอผลดีกว่าปล่อยช่องอนุมัติเปิดค้างชั่วขณะ)
+        setApprovalMdMode(false);
+        $.getJSON(APPROVAL_URL + '/md-state', function(res){ setApprovalMdMode(res.unlocked); });
         if (custno){
             $('#a_custno').val(custno);
             onApprovalCustChange(custno, itemno);
@@ -1243,7 +1372,31 @@
         $('#a_itemno').html('<option value="">— เลือกลูกค้าก่อน —</option>');
         setFp('a_validto', '');
         highlightPriceGroup();
+        renderApprovalReqState(null);
         renderApprovalGrid('ราคาที่ยืนไว้ของเบอร์นี้', ZCUST_COLS, []);
+    }
+
+    // แถบบอกขั้นตอนของคู่ (ลูกค้า, เบอร์) — 1 คู่ = 1 ใบที่แก้ได้ (ใบล่าสุด)
+    function renderApprovalReqState(r){
+        var $box = $('#a_reqState').removeClass('alert-secondary alert-warning alert-success');
+
+        if (!r || !r.ReqDate){
+            $box.addClass('alert-secondary')
+                .html('<i class="ti ti-file-plus me-1"></i>ยังไม่เคยขอราคาของคู่ลูกค้า/เบอร์นี้ — '
+                    + 'กด "เพิ่ม / บันทึก" จะขึ้นใบขอราคาใบใหม่');
+            return;
+        }
+
+        var when = esc(fmtDateTime(r.ReqDate));
+        if (r.Appv){
+            $box.addClass('alert-success')
+                .html('<i class="ti ti-circle-check me-1"></i>ใบขอราคาเมื่อ <b>' + when + '</b> — '
+                    + '<b>อนุมัติแล้ว</b> · กดบันทึกจะแก้ทับใบเดิม');
+        } else {
+            $box.addClass('alert-warning')
+                .html('<i class="ti ti-clock-hour-4 me-1"></i>ใบขอราคาเมื่อ <b>' + when + '</b> — '
+                    + '<b>รออนุมัติ</b> · กดบันทึกจะแก้ทับใบเดิม');
+        }
     }
 
     // เปลี่ยนรหัสลูกค้า → โหลดรายการเบอร์สินค้าของลูกค้ารายนั้น
@@ -1293,25 +1446,27 @@
         $('#a_sale').val(c.sale || '');
 
         var r = res.request || {};
-        // เก็บ ReqDate ของใบเดิมไว้เป็นคีย์ตอนบันทึก/ลบ — ไม่มี = ยังไม่เคยขอราคาคู่นี้ (ใบใหม่)
-        $('#a_ReqDate').val(r.ReqDate ? fmtDateTime(r.ReqDate) : '').data('reqdate', r.ReqDate || '');
+        // เก็บ ReqDate ของใบเดิมไว้ให้ปุ่มลบใช้ — ไม่มี = ยังไม่เคยขอราคาคู่นี้ (ใบใหม่)
+        // เก็บสถานะอนุมัติเดิมไว้ด้วย เพื่อแยก "อนุมัติใหม่" (ต้องอยู่ในโหมด MD) ออกจาก "ใบที่อนุมัติไปแล้ว"
+        $('#a_ReqDate').val(r.ReqDate ? fmtDateTime(r.ReqDate) : '')
+            .data('reqdate', r.ReqDate || '')
+            .data('appv', r.Appv ? 1 : 0);
         $('#a_price').val(commaFmt(r.price, 2));
         $('#a_weight').val(commaFmt(r.weight, 2));
         $('#a_remark').val(r.remark || '');
         $('#a_costup').prop('checked', !!r.costup);
         $('#a_Appv').prop('checked', !!r.Appv);
 
-        // ราคา 3 ช่อง — ใบเดิมใช้ค่าที่บันทึกไว้ ใบใหม่เติมจากระบบกำหนดราคาให้
-        var calc = (res.calc && res.calc.prices) ? res.calc.prices : null;
-        $('#a_price1').val(fmtNum(r.price1 != null ? r.price1 : (calc ? calc.price_1 : null), 2));
-        $('#a_price2').val(fmtNum(r.price2 != null ? r.price2 : (calc ? calc.price_2 : null), 2));
-        $('#a_price3').val(fmtNum(r.price3 != null ? r.price3 : (calc ? calc.price_3 : null), 2));
-        // DB 3-4 / 1-2 Kg. — คำนวณจากระบบกำหนดราคาเสมอ (appvreq ไม่มีที่เก็บ 2 ค่านี้)
-        $('#a_price_34').val(calc ? fmtNum(calc.db_3_4, 2) : '');
-        $('#a_price_12').val(calc ? fmtNum(calc.db_1_2, 2) : '');
+        // ราคา 3 ช่อง = ราคาขาย 1/2/3 จากเมนู "กำหนดราคา" — คำนวณสด ๆ จากรหัสสินค้าเสมอ
+        // (ค่าที่เคยบันทึกใน appvreq ใช้เป็นค่าสำรองเฉพาะตอนคำนวณไม่ได้ จะได้ไม่โชว์ช่องว่างเปล่า)
+        fillApprovalPrices(res.calc, r);
 
         // ลบได้เฉพาะใบที่มีอยู่จริง
         $('#btnApprovalDelete').prop('disabled', !r.ReqDate);
+
+        // ขั้นตอนของคู่นี้ + สถานะโหมดอนุมัติล่าสุดจาก server (session อาจหมดอายุระหว่างเปิดฟอร์มค้างไว้)
+        renderApprovalReqState(r);
+        setApprovalMdMode(res.md_unlocked);
 
         // ราคาที่ตกลงไว้ล่าสุด (uprice)
         var u = res.uprice || {};
@@ -1326,6 +1481,47 @@
 
         highlightPriceGroup();
         renderApprovalGrid('ราคาที่ยืนไว้ของเบอร์นี้', ZCUST_COLS, res.rows || []);
+    }
+
+    // ราคา 3 ช่อง + DB 3-4 / 1-2 Kg. — มาจากระบบกำหนดราคา (ProductPriceService.lookup)
+    //   calc = payload จาก /price-approval/data → key `calc`
+    //   req  = ใบขออนุมัติเดิม (ใช้เป็นค่าสำรองเมื่อคำนวณไม่ได้เท่านั้น)
+    function fillApprovalPrices(calc, req){
+        calc = calc || {};
+        req  = req  || {};
+        var p = calc.prices || null;
+        var $note = $('#a_price_note').removeClass('of-price-note-warn');
+
+        if (p){
+            $('#a_price1').val(fmtNum(p.price_1, 2));
+            $('#a_price2').val(fmtNum(p.price_2, 2));
+            $('#a_price3').val(fmtNum(p.price_3, 2));
+            $('#a_price_34').val(fmtNum(p.db_3_4, 2));
+            $('#a_price_12').val(fmtNum(p.db_1_2, 2));
+
+            // ที่มาของราคา: ราคาทุน → เงื่อนไขที่จับคู่ได้ → สูตรคูณ/หาร/บวก
+            var src = [];
+            if (calc.base_price != null) src.push('ราคาทุน ' + fmtNum(calc.base_price, 2));
+            if (calc.rule && calc.rule.label) src.push(calc.rule.label);
+            if (calc.rule) src.push('× ' + calc.rule.mul + ' ÷ ' + calc.rule.div + ' + ' + calc.rule.add);
+            $note.text(src.join('  ·  '));
+            return;
+        }
+
+        // คำนวณไม่ได้ (ไม่มีรหัสในตารางราคาทุน / ไม่มีเงื่อนไขรองรับ) — บอกเหตุผลไว้ ไม่ปล่อยว่างเงียบ ๆ
+        $('#a_price1').val(fmtNum(req.price1, 2));
+        $('#a_price2').val(fmtNum(req.price2, 2));
+        $('#a_price3').val(fmtNum(req.price3, 2));
+        $('#a_price_34').val('');
+        $('#a_price_12').val('');
+
+        var msg = calc.reason || '';
+        if (msg && (req.price1 != null || req.price2 != null || req.price3 != null)){
+            msg += ' — แสดงราคาที่บันทึกไว้ในใบเดิมแทน';
+        }
+        // ยังไม่ได้เลือกรหัสสินค้า = ไม่มีเหตุผลให้บอก ปล่อยว่างไว้ อย่าขึ้นกรอบเตือนเปล่า ๆ
+        $note.text(msg);
+        if (msg) $note.addClass('of-price-note-warn');
     }
 
     // เน้นช่องราคาที่ตรงกับจำนวนสั่งซื้อ (A ≥1,000 / B ≥500 / C ต่ำกว่า 500)
@@ -1451,9 +1647,12 @@
 
         stripCommaFields('#approvalModal');
         var approve = $('#a_Appv').is(':checked');
+        var wasApproved = !!($('#a_ReqDate').data('appv'));   // ใบนี้อนุมัติไปแล้วก่อนหน้านี้
 
-        if (approve && !($('#a_mdpass').val() || '').trim()){
-            Swal.fire('ต้องกรอกรหัสผ่าน MD', 'การอนุมัติราคาต้องกรอกรหัสผ่าน MD', 'warning');
+        // ติ๊กอนุมัติใหม่ = ต้องอยู่ในโหมดอนุมัติก่อน (ใบที่อนุมัติไปแล้ว MK แก้ต่อได้)
+        if (approve && !wasApproved && !apvMdUnlocked){
+            Swal.fire('ยังไม่ได้เข้าสู่โหมดอนุมัติ',
+                'กรอกรหัสด้านบนแล้วกด "เข้าสู่โหมดอนุมัติ" ก่อนอนุมัติราคา', 'warning');
             $('#approvalModal .js-comma').trigger('blur');
             return;
         }
@@ -1462,7 +1661,6 @@
             _token:      '{{ csrf_token() }}',
             custno:      custno,
             itemno:      itemno,
-            ReqDate:     $('#a_ReqDate').data('reqdate') || '',   // ว่าง = ขึ้นใบใหม่ด้วยเวลาปัจจุบัน
             price:       $('#a_price').val(),
             weight:      $('#a_weight').val(),
             price1:      $('#a_price1').val(),
@@ -1471,9 +1669,9 @@
             remark:      $('#a_remark').val(),
             costup:      $('#a_costup').is(':checked') ? 1 : 0,
             Appv:        approve ? 1 : 0,
-            valid_to:    $('#a_validto').val(),
-            md_password: $('#a_mdpass').val()
+            valid_to:    $('#a_validto').val()
         };
+        // หมายเหตุ: ไม่ต้องส่ง ReqDate — server หาใบล่าสุดของคู่นี้เอง (มี = แก้ทับ, ไม่มี = ใบใหม่)
 
         var $btn = $('#btnApprovalSave').prop('disabled', true);
 
@@ -1481,12 +1679,13 @@
             .done(function(res){
                 if (!res.status){ Swal.fire('บันทึกไม่สำเร็จ', res.message || '', 'error'); return; }
                 Swal.fire({icon: 'success', title: res.message});
-                $('#a_mdpass').val('');
                 loadApprovalData();     // โหลดค่าที่บันทึกจริงกลับมา
             })
             .fail(function(xhr){
-                var msg = (xhr.responseJSON && xhr.responseJSON.message) || 'เกิดข้อผิดพลาดในการบันทึก';
-                Swal.fire('บันทึกไม่สำเร็จ', msg, 'error');
+                var body = xhr.responseJSON || {};
+                // โหมดอนุมัติหมดอายุระหว่างกรอก — ล็อกจอกลับให้ตรงกับ server แล้วให้กรอกรหัสใหม่
+                if (body.md_locked) setApprovalMdMode(false);
+                Swal.fire('บันทึกไม่สำเร็จ', body.message || 'เกิดข้อผิดพลาดในการบันทึก', 'error');
             })
             .always(function(){
                 $btn.prop('disabled', false);
