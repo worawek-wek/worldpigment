@@ -84,11 +84,10 @@ class ProductController extends Controller
 
         $product = $id ? Product::find($id) : null;
 
-        // ตัวเลือก Temp (เฉพาะที่เปิดใช้งาน) สำหรับ dropdown ในฟอร์ม
+        // ตัวเลือก Temp (เฉพาะที่เปิดใช้งาน) สำหรับ dropdown ในฟอร์ม — เรียงตามชื่อ (25/08/2569)
         $temps = Temp::select(['id', 'Temp1'])
             ->where('is_active', 'Y')
-            ->orderBy('sort', 'asc')
-            ->orderBy('id', 'asc')
+            ->orderBy('Temp1', 'asc')
             ->get();
 
         $html = view('product.product-form', [

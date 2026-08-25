@@ -17,7 +17,7 @@
                 value="{{ $product?->resin }}" placeholder="กรอกเรซิน">
         </div>
 
-        <div class="col-md-6 mb-3">
+        <div class="col-md-12 mb-3">
             <label class="form-label" for="product_temp_id">Temp</label>
             <select class="form-select" id="product_temp_id" name="temp_id">
                 <option value="">- ไม่ระบุ -</option>
