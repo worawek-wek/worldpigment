@@ -298,25 +298,6 @@ class SemiPigmentController extends Controller
     }
 
     /**
-     * รายละเอียดรายการ Semi/Pigment (สำหรับ modal)
-     */
-    public function detail()
-    {
-        $sp = SemiPigment::find(request('id'));
-
-        if (!$sp) {
-            return response()->json(['status' => 404, 'message' => 'ไม่พบรายการ']);
-        }
-
-        $html = view('production-planning.semi-pigment.detail', compact('sp'))->render();
-
-        return response()->json([
-            'status' => 200,
-            'data'   => $html
-        ]);
-    }
-
-    /**
      * นำข้อมูลที่อนุมัติแล้ว → สร้างแผนการผลิต (กดจากหน้าอนุมัติแล้ว)
      */
     public function convertplanning(Request $request)
@@ -759,7 +740,9 @@ class SemiPigmentController extends Controller
     private function actionButtons(SemiPigment $row): string
     {
         if ($row->status === SemiPigment::STATUS_APPROVED) {
-            $btn_view = '<button class="btn btn-sm btn-icon btn-label-primary me-2 btn_view" data-id="'.$row->id.'" title="ดูรายละเอียด">
+            // ใช้ modal "แก้ไข Semi" ตัวเดียวกัน (เปิดแบบอ่านอย่างเดียวตามสถานะ) แทน detail modal เดิม
+            // — modal จะล็อกช่อง + ซ่อนปุ่มไม่อนุมัติ/อนุมัติ/บันทึก และแสดงผู้อนุมัติให้เองตามสถานะ
+            $btn_view = '<button class="btn btn-sm btn-icon btn-label-primary me-2 btn_edit" data-id="'.$row->id.'" title="ดูรายละเอียด">
                             <i class="ti ti-eye ti-sm"></i>
                         </button>';
 

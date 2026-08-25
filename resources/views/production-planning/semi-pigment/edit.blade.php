@@ -97,6 +97,35 @@
             <input type="number" step="any" class="form-control" name="weight_production" value="{{ $sp->weight_production }}" {{ $ro }}>
         </div>
     </div>
+
+    {{-- ── ข้อมูลการอนุมัติ (แสดงเฉพาะรายการที่ดำเนินการแล้ว — ย้ายมาจาก detail modal เดิม) ── --}}
+    @unless($isRequest)
+        <hr class="my-2">
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle mb-2">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-center">สถานะ</th>
+                        <th class="text-center">ผู้อนุมัติ</th>
+                        <th class="text-center">วันที่อนุมัติ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="text-center">{{ $sp->statusLabel() }}</td>
+                        <td class="text-center">{{ $sp->approver?->name ?? '-' }}</td>
+                        <td class="text-center">{{ $sp->approve_date ? date('d/m/Y H:i', strtotime($sp->approve_date)) : '-' }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        @if($sp->result_planning_id)
+            <div class="alert alert-success mb-0 py-2">
+                <i class="ti ti-checks me-1"></i>สร้างแผนการผลิตแล้ว (Planning ID: {{ $sp->result_planning_id }})
+            </div>
+        @endif
+    @endunless
 </form>
 
 <div class="d-flex justify-content-end gap-2 pt-2 border-top">

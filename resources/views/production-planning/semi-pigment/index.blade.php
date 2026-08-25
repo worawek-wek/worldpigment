@@ -107,7 +107,7 @@
 
     <!-- Edit / Detail Modal -->
     <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header" style="padding: 1rem 1.5rem; color: white; background-color: #3A8EBA;">
                     <h5 class="modal-title text-white mb-0">
@@ -120,20 +120,6 @@
         </div>
     </div>
 
-    <!-- Detail Modal (รายการที่อนุมัติแล้ว) -->
-    <div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content">
-                <div class="modal-header" style="padding: 1.25rem 1.5rem; color: white; background-color: #54BAB9;">
-                    <h5 class="modal-title text-white mb-0">
-                        <i class="ti ti-file-description me-1"></i>รายละเอียด Semi
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body" id="result_detail"></div>
-            </div>
-        </div>
-    </div>
 @endsection
 
 @section('script')
@@ -404,29 +390,6 @@
                     Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: msg });
                 }
             });
-        });
-    });
-
-    // ---- ดูรายละเอียด (รายการที่อนุมัติแล้ว) ----
-    $(document).on('click', '.btn_view', function () {
-        var id = $(this).data('id');
-        $.ajax({
-            type: 'GET',
-            url: '{{ route("production.semipigment.detail") }}',
-            dataType: 'json',
-            cache: false,
-            data: { id: id },
-            success: function (response) {
-                if (response.status == 200) {
-                    $('#result_detail').html(response.data);
-                    new bootstrap.Modal(document.getElementById('detailModal')).show();
-                } else {
-                    Swal.fire({ icon: 'warning', title: 'ผิดพลาด', text: response.message });
-                }
-            },
-            error: function (response) {
-                console.log(response.responseJSON);
-            }
         });
     });
 
