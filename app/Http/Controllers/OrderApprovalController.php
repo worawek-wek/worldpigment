@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\DB;
  * เป็นฟอร์มลูกของเมนู O-Order (ดู OrderController)
  *
  * คิวรออนุมัติ = `morder` ที่ยังไม่อนุมัติ (`appv` ว่าง) โดย
- *   - ตัดใบสั่งทำสต๊อกออก  → มีค่าใน HMStore / SendCust / sendmth
- *   - ตัดใบจอง R ออก       → ตัวอักษรที่ 2 ของ Orderno = 'R' (CR / HR / WR)
+ *   - ตัดใบจอง R ออก → ตัวอักษรที่ 2 ของ Orderno = 'R' (CR / HR / WR)
+ *   - ⚠ เงื่อนไข "ไม่รวมใบสั่งทำสต๊อก" **ปิดไว้ชั่วคราว** (25/08/2569) — ดู approvableQuery()
  * เมื่ออนุมัติ ระบบเดิมจะเขียน `morder.appv` (-1) + `morder.appvDT` (วัน-เวลาอนุมัติ)
  */
 class OrderApprovalController extends Controller
@@ -25,20 +25,30 @@ class OrderApprovalController extends Controller
     }
 
     /**
-     * ใบที่ "ต้องผ่านการอนุมัติ" ตามเงื่อนไขบนหัวฟอร์มเดิม
+     * ใบที่ "ต้องผ่านการอนุมัติ"
      * (ยังไม่ดูว่าอนุมัติไปหรือยัง — ใช้ทั้งตอนสร้างคิวและตอนตรวจสิทธิ์ก่อนกดอนุมัติ)
+     *
+     * ⚠ **ปิดเงื่อนไข "ไม่รวมใบสั่งทำสต๊อก" ไว้ชั่วคราว** (25/08/2569 ตามที่ผู้ใช้สั่ง
+     *   "ยังไม่ต้องสนเรื่องสต็อก") — ใบสั่งทำสต๊อกจึงเข้าคิวอนุมัติเหมือนใบปกติ
+     *
+     *   หัวฟอร์ม Access เดิมเขียนกำกับว่า "ไม่รวมทำ STOCK + ไม่รวมใบจอง R" แต่ข้อมูลจริง
+     *   สวนทาง: ใบสั่งทำสต๊อก 98 ใบ **อนุมัติไปแล้ว 96 ใบ** ⇒ ของเดิมก็อนุมัติใบสต๊อกเหมือนกัน
+     *   (แค่คงไม่ได้ทำผ่านฟอร์มนี้) — รอลูกค้ายืนยันว่าสรุปแล้วใบสต๊อกต้องอนุมัติที่ไหน
+     *
+     *   จะเปิดคืน: ย้าย `;` ออกจากบรรทัด whereRaw แล้วปลดคอมเมนต์บล็อก where ด้านล่าง
      */
     private function approvableQuery()
     {
         return DB::table('morder')
             // ไม่รวมใบจอง R (CR / HR / WR)
-            ->whereRaw('SUBSTRING(Orderno, 2, 1) <> ?', ['R'])
-            // ไม่รวมใบสั่งทำสต๊อก
-            ->where(function ($q) {
-                $q->whereRaw('COALESCE(HMStore, 0) = 0')
-                    ->whereRaw('COALESCE(SendCust, 0) = 0')
-                    ->whereRaw('COALESCE(sendmth, 0) = 0');
-            });
+            ->whereRaw('SUBSTRING(Orderno, 2, 1) <> ?', ['R']);
+
+        // ── ปิดไว้ชั่วคราว: ไม่รวมใบสั่งทำสต๊อก ──
+        // ->where(function ($q) {
+        //     $q->whereRaw('COALESCE(HMStore, 0) = 0')
+        //         ->whereRaw('COALESCE(SendCust, 0) = 0')
+        //         ->whereRaw('COALESCE(sendmth, 0) = 0');
+        // });
     }
 
     /** คิวรออนุมัติ = ใบที่ต้องอนุมัติ และยังไม่ได้อนุมัติ */
@@ -152,11 +162,11 @@ class OrderApprovalController extends Controller
             return response()->json(['status' => false, 'message' => 'ไม่พบใบสั่งซื้อ ' . $orderno], 422);
         }
 
-        // ใบจอง R / ใบสั่งทำสต๊อก ไม่ต้องผ่านการอนุมัติ — กันเรียก endpoint ตรง ๆ
+        // ใบจอง R ไม่ต้องผ่านการอนุมัติ — กันเรียก endpoint ตรง ๆ
         if (!$this->approvableQuery()->where('Orderno', $orderno)->exists()) {
             return response()->json([
                 'status'  => false,
-                'message' => 'ใบสั่งนี้ไม่ต้องผ่านการอนุมัติ (ใบจอง R หรือใบสั่งทำสต๊อก)',
+                'message' => 'ใบสั่งนี้ไม่ต้องผ่านการอนุมัติ (ใบจอง R)',
             ], 422);
         }
 
