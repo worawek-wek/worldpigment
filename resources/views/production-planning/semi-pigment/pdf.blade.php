@@ -28,7 +28,7 @@
                 <th style="width: 5%;">วันที่ต้องการ</th>
                 <th style="width: 4%;">แผนกที่สั่ง</th>
                 <th style="width: 7%;">ใช้กับ</th>
-                <th style="width: 6%;">แม่สี</th>
+                <th style="width: 6%;">แม่สีหลัก</th>
                 <th style="width: 5%;">ยอดคงเหลือ</th>
                 <th style="width: 5%;">Lot No.</th>
                 <th style="width: 6%;">ยอดใช้ย้อนหลัง 2 เดือน</th>
