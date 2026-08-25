@@ -55,10 +55,11 @@
         </div>
         <div class="col-md-4 mb-3">
             <label class="form-label">ขาด Semi Code</label>
-            <input type="text" class="form-control" name="semi_code" value="{{ $sp->semi_code }}" {{ $ro }}>
+            <input type="text" class="form-control" name="semi_code" value="{{ $sp->semi_code }}" {{ $ro }}
+            placeholder="รหัสกึ่งสำเร็จรูป (ปิดชั่วคราว)" disabled>
         </div>
         <div class="col-md-4 mb-3">
-            <label class="form-label">ขาด แม่สี (Primary Color)</label>
+            <label class="form-label">แม่สีหลัก (Primary Color)</label>
             <input type="text" class="form-control" name="primary_color" value="{{ $sp->primary_color }}" {{ $ro }}>
         </div>
         <div class="col-md-4 mb-3">
@@ -67,7 +68,8 @@
         </div>
         <div class="col-md-4 mb-3">
             <label class="form-label">เลขที่ใบเบิกออกใบแดง (Red Bill)</label>
-            <input type="text" class="form-control" name="red_bill_code" value="{{ $sp->red_bill_code }}" {{ $ro }}>
+            <input type="text" class="form-control" name="red_bill_code" value="{{ $sp->red_bill_code }}" {{ $ro }}
+            placeholder="เลขที่ใบเบิก (ปิดชั่วคราว)" disabled>
         </div>
     </div>
 
