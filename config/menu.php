@@ -52,13 +52,13 @@ return [
                 'route_name' => 'production.semipigment.index',
                 'permission' => 'productionplanning read',
             ],
-            'PigmentApproval' => [
-                'title' => 'อนุมัติ Pigment',
-                'icon' => '',
-                'menu_parent' => 'Production',
-                'route_name' => 'production.pigment.index',
-                'permission' => 'productionplanning read',
-            ],
+            // 'PigmentApproval' => [ ลูกค้ายกเลิก 2026-08-25
+            //     'title' => 'อนุมัติ Pigment',
+            //     'icon' => '',
+            //     'menu_parent' => 'Production',
+            //     'route_name' => 'production.pigment.index',
+            //     'permission' => 'productionplanning read',
+            // ],
             'ProductionPlanning' => [
                 'title' => 'วางแผนการผลิต',
                 'icon' => '',

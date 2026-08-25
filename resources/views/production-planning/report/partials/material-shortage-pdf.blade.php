@@ -30,7 +30,7 @@
                 <th style="width: 5%;">Revise</th>
                 <th style="width: 6%;">สถานะปัจจุบัน</th>
                 <th style="width: 12%;">ขาด semi</th>
-                <th style="width: 10%;">ขาด Pigment</th>
+                <th style="width: 10%;">ขาดวัตถุดิบ</th>
                 <th style="width: 5%;">Cust Due</th>
                 <th style="width: 4%;">Cust no</th>
                 <th style="width: 12%;">Cust Name</th>

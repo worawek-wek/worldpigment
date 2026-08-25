@@ -282,22 +282,6 @@ class PigmentController extends Controller
     }
 
     /**
-     * รายละเอียดรายการ Pigment (สำหรับ modal)
-     */
-    public function detail()
-    {
-        $pigment = Pigment::find(request('id'));
-
-        if (!$pigment) {
-            return response()->json(['status' => 404, 'message' => 'ไม่พบรายการ']);
-        }
-
-        $html = view('production-planning.pigment.detail', compact('pigment'))->render();
-
-        return response()->json(['status' => 200, 'data' => $html]);
-    }
-
-    /**
      * อนุมัติรายการ Pigment (บันทึกข้อมูลฟอร์ม + เปลี่ยนสถานะเป็นอนุมัติ)
      */
     public function approve(Request $request)
@@ -351,39 +335,6 @@ class PigmentController extends Controller
         ]);
 
         return response()->json(['status' => 200, 'message' => 'ไม่อนุมัติรายการ Pigment สำเร็จ']);
-    }
-
-    /**
-     * นำข้อมูลที่อนุมัติแล้ว → สร้างแผนการผลิต (กดจากหน้าอนุมัติแล้ว)
-     */
-    public function convertplanning(Request $request)
-    {
-        $pigment = Pigment::find($request->id);
-
-        if (!$pigment) {
-            return response()->json(['status' => 404, 'message' => 'ไม่พบรายการ']);
-        }
-
-        if ($pigment->status !== Pigment::STATUS_APPROVED) {
-            return response()->json(['status' => 500, 'message' => 'รายการนี้ยังไม่ได้อนุมัติ']);
-        }
-
-        if ($pigment->result_planning_id) {
-            return response()->json(['status' => 500, 'message' => 'มีการสร้างแผนการผลิตแล้ว']);
-        }
-
-        DB::beginTransaction();
-        try {
-            $planning = $this->createPlanningFromPigment($pigment);
-            $pigment->update(['result_planning_id' => $planning->id]);
-
-            DB::commit();
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['status' => 500, 'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage()]);
-        }
-
-        return response()->json(['status' => 200, 'message' => 'สร้างแผนการผลิตสำเร็จ']);
     }
 
     /**
@@ -552,79 +503,24 @@ class PigmentController extends Controller
             Pigment::STATUS_REJECT   => 'bg-label-danger',
         ][$row->status] ?? 'bg-label-secondary';
 
-        $badge = '<span class="badge '.$cls.'">'.$row->statusLabel().'</span>';
-
-        // อนุมัติแล้ว → แสดงสถานะการสร้างแผนการผลิตต่อท้าย
-        if ($row->status === Pigment::STATUS_APPROVED) {
-            $badge .= '<div class="mt-1">'.$this->planBadge($row).'</div>';
-        }
-
-        return $badge;
-    }
-
-    private function planBadge(Pigment $row): string
-    {
-        if ($row->result_planning_id) {
-            return '<span class="badge bg-label-success">สร้างแล้ว</span>';
-        }
-        return '<span class="badge bg-label-secondary">ยังไม่สร้าง</span>';
+        return '<span class="badge '.$cls.'">'.$row->statusLabel().'</span>';
     }
 
     /**
-     * ปุ่มในคอลัมน์ "จัดการ" — กำหนดตามสถานะของรายการ
-     * - อนุมัติแล้ว: ดูรายละเอียด + สร้างแผนการผลิต
-     * - รออนุมัติ / ไม่อนุมัติ: แก้ไข / รายละเอียด
+     * ปุ่มในคอลัมน์ "จัดการ" — เปิด modal เดียวกันทุกสถานะ (.btn_edit → editForm)
+     * modal จะล็อกช่อง/ซ่อนปุ่มเองตามสถานะ เพื่อให้แก้ไขข้อมูลได้ที่จุดเดียว
+     * (รออนุมัติ = แก้ได้, อนุมัติ/ไม่อนุมัติ = อ่านอย่างเดียว)
      */
     private function actionButtons(Pigment $row): string
     {
         if ($row->status === Pigment::STATUS_APPROVED) {
-            $btn_view = '<button class="btn btn-sm btn-icon btn-label-primary me-2 btn_view" data-id="'.$row->id.'" title="ดูรายละเอียด">
-                            <i class="ti ti-eye ti-sm"></i>
-                        </button>';
-
-            if ($row->result_planning_id) {
-                $btn_plan = '<button class="btn btn-sm btn-icon btn-label-secondary btn_create_plan" data-id="'.$row->id.'" title="สร้างแผนการผลิตแล้ว" disabled>
-                                <i class="ti ti-checks ti-sm"></i>
-                            </button>';
-            } else {
-                $btn_plan = '<button class="btn btn-sm btn-icon btn-label-warning btn_create_plan" data-id="'.$row->id.'" title="สร้างแผนการผลิต">
-                                <i class="ti ti-download ti-sm"></i>
-                            </button>';
-            }
-
-            return $btn_view.$btn_plan;
+            return '<button class="btn btn-sm btn-icon btn-label-primary btn_edit" data-id="'.$row->id.'" title="ดูรายละเอียด">
+                        <i class="ti ti-eye ti-sm"></i>
+                    </button>';
         }
 
         return '<button class="btn btn-sm btn-icon btn-warning btn_edit" data-id="'.$row->id.'" title="แก้ไข / รายละเอียด">
                     <i class="ti ti-pencil ti-sm"></i>
                 </button>';
-    }
-
-    /**
-     * นำข้อมูล Pigment ที่อนุมัติแล้ว → สร้าง PlanningHeader + Planning (แผนการผลิต)
-     */
-    private function createPlanningFromPigment(Pigment $pigment): Planning
-    {
-        $header = PlanningHeader::create([
-            'planning_code'      => ($pigment->orderno ?: 'PG') . '-PIGMENT-' . $pigment->id,
-            'plan_type'          => 'pigment',
-            'parent_planning_id' => $pigment->planning_id,
-            'mdate'              => $pigment->order_date,
-            'custwant'           => $pigment->want_date,
-            'custno'             => $pigment->custno,
-            'orderno'            => $pigment->orderno,
-            'netqty'             => $pigment->weight_production,
-        ]);
-
-        return Planning::create([
-            'planning_header_id' => $header->id,
-            'parent_planning_id' => $pigment->planning_id,
-            'plan_type'          => 'pigment',
-            'itemno'             => $pigment->itemno,
-            'quantity'           => $pigment->weight_production,
-            'weight'             => $pigment->weight_production,
-            'mdate'              => $pigment->order_date,
-            'custwant'           => $pigment->want_date,
-        ]);
     }
 }

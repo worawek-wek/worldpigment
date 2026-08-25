@@ -144,10 +144,16 @@
         </div>
         <div class="row">
             <div class="col-md-6 mb-3">
-                <label class="form-label">หมายเหตุ (Remark)</label>
+                <label class="form-label">หมายเหตุ MK (Remark)</label>
                 <input type="text" name="remark"
                        value="{{ $planning_item?->remark ?? '' }}"
                        class="form-control" placeholder="หมายเหตุ">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">ขาดวัตถุดิบ (Shortage Remark)</label>
+                <input type="text" name="shortage_remark"
+                       value="{{ $planning_item?->shortage_remark ?? '' }}"
+                       class="form-control" placeholder="รายละเอียดวัตถุดิบที่ขาด">
             </div>
         </div>
 
@@ -510,6 +516,10 @@
             </table>
         </div>
 
+        {{-- ── Pigment: ยกเลิกชั่วคราว 25/08/2569 — ครอบด้วย @if(false) เพื่อซ่อนทั้งส่วน (เส้นคั่น + ตาราง)
+             เปิดคืน: เปลี่ยน @if(false) เป็น @if(true) หรือถอด @if(false)/@endif ออก
+             backend (tb_pigment / PigmentController / routes) ไม่ถูกแตะ --}}
+        @if(false)
         <hr class="my-3">
 
         {{-- ── Pigment ── --}}
@@ -572,6 +582,7 @@
                 </tbody>
             </table>
         </div>
+        @endif {{-- /Pigment (ยกเลิกชั่วคราว 25/08/2569) --}}
 
     </form>
 </div>
@@ -658,6 +669,8 @@
     </div>
 </div>
 
+{{-- ── Modal เพิ่ม / แก้ไข Pigment: ยกเลิกชั่วคราว 25/08/2569 (ครอบด้วย @if(false)) ── --}}
+@if(false)
 {{-- ── Modal เพิ่ม / แก้ไข Pigment (แยกจาก Semi, อ้างอิงตาราง tb_pigment) ── --}}
 {{-- backdrop=static + keyboard=false: ปิด modal ได้เฉพาะปุ่ม ยกเลิก / กากบาท (กันคลิกนอก+ESC) --}}
 <div class="modal fade" id="pigment_entry_modal" tabindex="-1" aria-hidden="true"
@@ -687,6 +700,7 @@
         </div>
     </div>
 </div>
+@endif {{-- /Modal Pigment (ยกเลิกชั่วคราว 25/08/2569) --}}
 
 {{-- ── Modal แสดงสถานะแผนการผลิตที่สร้างจาก Semi (recursive tree) ── --}}
 <div class="modal fade" id="plan_tree_modal" tabindex="-1" aria-hidden="true">
@@ -1221,6 +1235,7 @@ window.wpSetDateField = function (sel, val) {
         });
 })();
 
+@if(false) {{-- Pigment JS: ยกเลิกชั่วคราว 25/08/2569 — เปิดคืนโดยเปลี่ยนเป็น @if(true) หรือถอด @if(false)/@endif ออก --}}
 // ══════════════════════════════════════════════════════════════════════
 //  Pigment — แยกจาก Semi โดยสมบูรณ์ (อ้างอิงตาราง tb_pigment ผ่าน PigmentController)
 //  ตัดฟิลด์ที่ไม่ใช้ออก: Company, Semi Code, Primary Color, Lot No., Red Bill, Increase
@@ -1511,6 +1526,7 @@ window.wpSetDateField = function (sel, val) {
         });
     });
 })();
+@endif {{-- /Pigment JS (ยกเลิกชั่วคราว 25/08/2569) --}}
 
 // ══════════════════════════════════════════════════════════════════════
 //  Semi → ต้นไม้สถานะแผนการผลิต (recursive)

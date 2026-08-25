@@ -65,6 +65,41 @@
             <input type="number" step="any" class="form-control" name="weight_production" value="{{ $pigment->weight_production }}" {{ $ro }}>
         </div>
     </div>
+
+    {{-- ── ผลการอนุมัติ (แสดงเฉพาะรายการที่อนุมัติแล้ว/ไม่อนุมัติ — อ่านอย่างเดียว) ── --}}
+    @unless($isRequest)
+        <hr class="my-2">
+        <div class="row">
+            <div class="col-12">
+                <table class="table table-bordered table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-center">สถานะ</th>
+                            <th class="text-center">ผู้อนุมัติ</th>
+                            <th class="text-center">วันที่อนุมัติ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="text-center"><span class="badge {{ $statusCls }}">{{ $pigment->statusLabel() }}</span></td>
+                            <td class="text-center">{{ $pigment->approver?->name ?? '-' }}</td>
+                            <td class="text-center">{{ $pigment->approve_date ? date('d/m/Y H:i', strtotime($pigment->approve_date)) : '-' }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        @if($pigment->result_planning_id)
+            <div class="row mt-2">
+                <div class="col-12">
+                    <div class="alert alert-success mb-0 py-2">
+                        <i class="ti ti-checks me-1"></i>สร้างแผนการผลิตแล้ว (Planning ID: {{ $pigment->result_planning_id }})
+                    </div>
+                </div>
+            </div>
+        @endif
+    @endunless
 </form>
 
 <div class="d-flex justify-content-end gap-2 pt-2 border-top">
@@ -85,6 +120,20 @@
 </div>
 
 <script>
+    // ปรับหัว modal ตามสถานะ — รออนุมัติ = "แก้ไข" (เขียว), อนุมัติแล้ว = "รายละเอียด" (เขียว),
+    // ไม่อนุมัติ = "รายละเอียด" (แดง) เพื่อสื่อว่ารายการอ่านอย่างเดียว ไม่ใช่แก้ได้
+    (function () {
+        var header = {
+            'request':  { title: '<i class="ti ti-pencil me-1"></i>แก้ไข Pigment',              bg: '#28a745' },
+            'approved': { title: '<i class="ti ti-file-description me-1"></i>รายละเอียด Pigment (อนุมัติแล้ว)', bg: '#28a745' },
+            'reject':   { title: '<i class="ti ti-file-description me-1"></i>รายละเอียด Pigment (ไม่อนุมัติ)',  bg: '#dc3545' }
+        }['{{ $pigment->status }}'] || { title: '<i class="ti ti-pencil me-1"></i>แก้ไข Pigment', bg: '#28a745' };
+
+        var $mh = $('#editModal .modal-header');
+        $mh.css('background-color', header.bg);
+        $mh.find('.modal-title').html(header.title);
+    })();
+
     // flatpickr: แสดง d/m/Y เหมือนกันทุกเครื่อง แต่ค่าจริง (input.value) ยังเป็น Y-m-d
     // → $('#pg_edit_form').serialize() ส่ง Y-m-d ให้ server เหมือนเดิม ไม่ต้องแก้ฝั่ง PHP
     // (partial ถูกฉีดด้วย .html() → script นี้รันตอนถูกฉีด)

@@ -8,7 +8,6 @@ use App\Models\Department;
 use App\Models\Machine;
 use App\Models\Planning;
 use App\Models\SemiPigment;
-use App\Models\Pigment;
 
 /**
  * รายงานการผลิต — เพิ่ม 2026-07-31
@@ -499,6 +498,7 @@ class ReportController extends Controller
                 'tb_planning.qc_status',  // สถานะ QC
                 'tb_planning.red_bill_code', // เลขที่ใบแดง
                 'tb_planning.senddate',      // กำหนดส่งทบทวน → แสดงในคอลัมน์ Revise (PDF)
+                'tb_planning.shortage_remark', // ขาดวัตถุดิบ (พิมพ์เองในฟอร์ม planning item) → คอลัมน์ "ขาดวัตถุดิบ"
             ])
             // แกนของรายงาน: เฉพาะงานที่ยังไม่ปิดงาน (นับ NULL ด้วย)
             ->where(function ($q) {
@@ -561,26 +561,9 @@ class ReportController extends Controller
                 ->all();
         };
 
-        // ── ขาด Pigment: ดึงคำร้องขอ pigment ที่ทำไว้กับ "แผนการผลิตนี้" — 20/08/2569
-        //    ต่างจาก semi ตรงที่คำขอ pigment อยู่ตาราง tb_pigment (Model Pigment) แยกต่างหาก
-        //    ไม่ใช่ tb_semi_pigment; และ tb_pigment ไม่มี semi_code/primary_color → แสดงได้แค่ itemno
-        //    เฉพาะสถานะ request/approved จับคู่ด้วย planning_id = tb_planning.id
-        //    กรอง pigment ที่ปิดออเดอร์แล้วออก (tb_planning_header.end_order != 'Y' รวม NULL)
-        $pigmentByPlanning = collect();
-        if ($planningIds->isNotEmpty()) {
-            $pigmentByPlanning = Pigment::query()
-                ->leftJoin('tb_planning_header as ph', 'ph.id', '=', 'tb_pigment.planning_header_id')
-                ->whereIn('tb_pigment.status', [Pigment::STATUS_REQUEST, Pigment::STATUS_APPROVED])
-                ->whereIn('tb_pigment.planning_id', $planningIds)
-                ->where(function ($q) {
-                    $q->where('ph.end_order', '!=', 'Y')->orWhereNull('ph.end_order');
-                })
-                ->get([
-                    'tb_pigment.planning_id',
-                    'tb_pigment.itemno',
-                ])
-                ->groupBy('planning_id');
-        }
+        // ── ขาดวัตถุดิบ: ใช้ข้อความอิสระจาก tb_planning.shortage_remark ของงานแถวนั้นตรง ๆ — 25/08/2569
+        //    (เดิมประกอบจาก itemno ของคำขอ pigment ในตาราง tb_pigment — เปลี่ยนมาใช้ค่าที่ผู้ใช้
+        //     พิมพ์เองในช่อง "ขาดวัตถุดิบ (Shortage Remark)" ของฟอร์มแก้ไข planning item แทน)
 
         foreach ($rows as $row) {
             $group = $semiByPlanning->get($row->id) ?? collect();
@@ -597,11 +580,8 @@ class ReportController extends Controller
                 $row->lack_semi = implode(', ', $parts);
             }
 
-            // ขาด Pigment: itemno ของทุกคำขอ pigment ของงานนี้ (ไม่ซ้ำ/ไม่ว่าง) คั่นด้วย ", "
-            $pgGroup = $pigmentByPlanning->get($row->id) ?? collect();
-            $row->lack_pigment = $pgGroup->isEmpty()
-                ? ''
-                : implode(', ', $distinctValues($pgGroup, 'itemno'));
+            // ขาดวัตถุดิบ: ข้อความจาก tb_planning.shortage_remark (พิมพ์เอง) ของงานแถวนี้
+            $row->lack_pigment = trim((string) $row->shortage_remark);
         }
 
         return [
@@ -634,7 +614,7 @@ class ReportController extends Controller
 
         // คอลัมน์ตามผังฟอร์ม Access เดิม (Revise / น้ำ / ส่งชั่งสี ยังไม่มีฟิลด์ใน DB → เว้นว่าง)
         $headers = [
-            '#', 'แผนก', 'เลขที่ใบแดง', 'MACHINE No.', 'IN PLAN', 'Revise', 'สถานะปัจจุบัน', 'ขาด semi', 'ขาด Pigment', 'Cust Due',
+            '#', 'แผนก', 'เลขที่ใบแดง', 'MACHINE No.', 'IN PLAN', 'Revise', 'สถานะปัจจุบัน', 'ขาด semi', 'ขาดวัตถุดิบ', 'Cust Due',
             'Cust no', 'Cust Name', 'SaleNo', 'Order Date', 'Order No', 'PRODUCT NO',
             'LOT', 'น้ำหนัก', 'ส่งชั่งสี', 'เริ่มผลิต', 'วันที่ส่ง QC', 'เวลาที่ส่ง QC', 'สถานะ QC',
         ];
@@ -680,7 +660,7 @@ class ReportController extends Controller
             $sheet->setCellValue("F{$r}", $it->senddate ? \Carbon\Carbon::parse($it->senddate)->format('d/m/Y') : '');  // Revise = senddate (กำหนดส่งทบทวน)
             $sheet->setCellValue("G{$r}", $it->planning_status ?: '-');
             $sheet->setCellValue("H{$r}", $it->lack_semi ?: '');  // ขาด semi (itemno+semi_code+primary_color ของ semi)
-            $sheet->setCellValue("I{$r}", $it->lack_pigment ?: '');  // ขาด Pigment (itemno ของ pigment ที่ขอ) — 20/08/2569
+            $sheet->setCellValue("I{$r}", $it->lack_pigment ?: '');  // ขาดวัตถุดิบ (tb_planning.shortage_remark) — 25/08/2569
             $sheet->setCellValue("J{$r}", $custDue ? \Carbon\Carbon::parse($custDue)->format('d/m/Y') : '-');
             $sheet->setCellValueExplicit("K{$r}", $it->custno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
             $sheet->setCellValue("L{$r}", $it->cust_name ?: '-');

@@ -85,10 +85,8 @@ Route::prefix('production-planning')->group(function () {
     // Export PDF "ใบขอสั่ง PIGMENT" — ผังคอลัมน์ตรงกับไฟล์ Excel (เงื่อนไขค้นหาชุดเดียวกัน ทุกหน้า)
     Route::get('/pigment/export-pdf', [Production\PigmentController::class, 'exportPdf'])->name('production.pigment.export-pdf');
     Route::get('/pigment/edit', [Production\PigmentController::class, 'editForm'])->name('production.pigment.edit');
-    Route::get('/pigment/detail', [Production\PigmentController::class, 'detail'])->name('production.pigment.detail');
     Route::post('/pigment/approve', [Production\PigmentController::class, 'approve'])->name('production.pigment.approve');
     Route::post('/pigment/reject', [Production\PigmentController::class, 'reject'])->name('production.pigment.reject');
-    Route::post('/pigment/convertplanning', [Production\PigmentController::class, 'convertplanning'])->name('production.pigment.convertplanning');
 
     // Semi & Pigment (รออนุมัติ)
     Route::get('/semi-pigment', [Production\SemiPigmentController::class, 'index'])->name('production.semipigment.index');
