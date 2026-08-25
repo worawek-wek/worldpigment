@@ -4,6 +4,16 @@
         background-color: #cfe2ff !important;
         color: #084298 !important;
     }
+    /* กล่องค่า Custwant (วันที่ลูกค้าต้องการ) พื้นแดง — ให้เหมือนคอลัมน์ Custwant หน้ารายการ
+       ⚠ ใช้ชื่อ pf-custwant (ไม่ใช่ col-custwant) เพื่อไม่ให้ style นี้ (โดยเฉพาะ display:inline-block)
+       รั่วไปชนคอลัมน์ col-custwant ของตารางหลักตอน modal ถูกฉีดเข้า DOM */
+    .pf-custwant {
+        background-color: #f8d7da !important;
+        color: #842029 !important;
+        display: inline-block;
+        padding: 0 .4rem;
+        border-radius: .25rem;
+    }
 </style>
 <div class="modal-header" style="background-color: #54BAB9; padding: 1rem 1.5rem;">
     <h5 class="modal-title text-white mb-0">
@@ -66,7 +76,7 @@
                     </div>
                     <div class="col-md-3 mb-2">
                         <div class="text-muted small">วันที่ลูกค้าต้องการ</div>
-                        <div class="fw-semibold">{{ $planning_header->custwant ? \Carbon\Carbon::parse($planning_header->custwant)->format('d/m/Y') : '-' }}</div>
+                        <div class="fw-semibold pf-custwant">{{ $planning_header->custwant ? \Carbon\Carbon::parse($planning_header->custwant)->format('d/m/Y') : '-' }}</div>
                     </div>
                     <div class="col-md-3 mb-2">
                         <div class="text-muted small">วันที่ส่ง</div>

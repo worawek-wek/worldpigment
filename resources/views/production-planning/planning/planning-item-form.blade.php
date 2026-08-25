@@ -1,3 +1,24 @@
+{{-- สีพื้นหลังคอลัมน์ "วันที่ต้องการรับ" (custwant) ในตารางย่อย Semi/Pigment — ชุดสีเดียวกับหน้ารายการวางแผน --}}
+<style>
+    #table_semi .sp-custwant,
+    #table_pigment .sp-custwant {
+        background-color: #f8d7da !important;
+        color: #842029 !important;
+    }
+    /* พื้นหลังช่องกรอกวันที่ต้องการรับ (custwant) แดง / วันที่วางแผนผลิต (inplan) น้ำเงิน
+       flatpickr ใช้ altInput:true → ช่องที่ผู้ใช้เห็นคือ altInput (sibling ถัดจาก input ตัวจริง ไม่มี name)
+       จึงต้องระบายทั้ง input ตัวจริง (ถูกซ่อน) และ altInput ที่ตามมา; ใช้ !important สู้ CSS ของธีม */
+    #planning_item_form input[name="custwant"],
+    #planning_item_form input[name="custwant"] + input {
+        background-color: #f8d7da !important;
+        color: #842029 !important;
+    }
+    #planning_item_form input[name="inplan"],
+    #planning_item_form input[name="inplan"] + input {
+        background-color: #cfe2ff !important;
+        color: #084298 !important;
+    }
+</style>
 @php
     // plan_type: ใช้ของ planning item ก่อน ถ้าไม่มีดึงจาก parent header
     $default_plan_type = $planning_item?->plan_type ?? $parent_header?->plan_type ?? '';
@@ -453,7 +474,7 @@
                         <th class="text-center" style="width:36px">#</th>
                         <th style="min-width:110px">Company</th>
                         <th style="min-width:120px">วันที่สั่ง</th>
-                        <th style="min-width:120px">วันที่ต้องการรับ</th>
+                        <th style="min-width:120px" class="sp-custwant">วันที่ต้องการรับ</th>
                         <th style="min-width:100px">Cust No.</th>
                         <th style="min-width:130px">Item No.</th>
                         <th style="min-width:80px">Quantity</th>
@@ -474,7 +495,7 @@
                             <td class="text-center"><span class="row-num">{{ $i + 1 }}</span></td>
                             <td>{{ $row['company'] ?? '-' }}</td>
                             <td>{{ !empty($row['mdate'])    ? \Carbon\Carbon::parse($row['mdate'])->format('d/m/Y')    : '-' }}</td>
-                            <td>{{ !empty($row['custwant']) ? \Carbon\Carbon::parse($row['custwant'])->format('d/m/Y') : '-' }}</td>
+                            <td class="sp-custwant">{{ !empty($row['custwant']) ? \Carbon\Carbon::parse($row['custwant'])->format('d/m/Y') : '-' }}</td>
                             <td>{{ $row['custno']   ?? '-' }}</td>
                             <td>{{ $row['itemno']   ?? '-' }}</td>
                             <td>{{ $row['weight_request'] ?? '-' }}</td>
@@ -544,7 +565,7 @@
                     <tr>
                         <th class="text-center" style="width:36px">#</th>
                         <th style="min-width:120px">วันที่สั่ง</th>
-                        <th style="min-width:120px">วันที่ต้องการรับ</th>
+                        <th style="min-width:120px" class="sp-custwant">วันที่ต้องการรับ</th>
                         <th style="min-width:100px">Cust No.</th>
                         <th style="min-width:130px">Item No.</th>
                         <th style="min-width:80px">Quantity</th>
@@ -564,7 +585,7 @@
                         <tr class="locked-row table-light">
                             <td class="text-center"><span class="row-num">{{ $i + 1 }}</span></td>
                             <td>{{ !empty($row['mdate'])    ? \Carbon\Carbon::parse($row['mdate'])->format('d/m/Y')    : '-' }}</td>
-                            <td>{{ !empty($row['custwant']) ? \Carbon\Carbon::parse($row['custwant'])->format('d/m/Y') : '-' }}</td>
+                            <td class="sp-custwant">{{ !empty($row['custwant']) ? \Carbon\Carbon::parse($row['custwant'])->format('d/m/Y') : '-' }}</td>
                             <td>{{ $row['custno']   ?? '-' }}</td>
                             <td>{{ $row['itemno']   ?? '-' }}</td>
                             <td>{{ $row['weight_request'] ?? '-' }}</td>
@@ -913,7 +934,9 @@ window.wpSetDateField = function (sel, val) {
     // แถวแสดงผล (อ่านอย่างเดียว) + เก็บค่าจริงไว้ใน hidden input เพื่อให้ readRow อ่านได้
     function displayRow(d) {
         function cell(field, text) {
-            return '<td>' + (text === '' ? '-' : esc(text)) +
+            // คอลัมน์ custwant ให้พื้นหลังแดงเหมือนหน้ารายการวางแผน
+            var cls = field === 'custwant' ? ' class="sp-custwant"' : '';
+            return '<td' + cls + '>' + (text === '' ? '-' : esc(text)) +
                 '<input type="hidden" data-field="' + field + '" value="' + esc(d[field] || '') + '"></td>';
         }
         function hid(field) {
@@ -1283,7 +1306,9 @@ window.wpSetDateField = function (sel, val) {
     // แถวแสดงผล (อ่านอย่างเดียว) + เก็บค่าจริงไว้ใน hidden input เพื่อให้ readRow อ่านได้
     function displayRow(d) {
         function cell(field, text) {
-            return '<td>' + (text === '' ? '-' : esc(text)) +
+            // คอลัมน์ custwant ให้พื้นหลังแดงเหมือนหน้ารายการวางแผน
+            var cls = field === 'custwant' ? ' class="sp-custwant"' : '';
+            return '<td' + cls + '>' + (text === '' ? '-' : esc(text)) +
                 '<input type="hidden" data-field="' + field + '" value="' + esc(d[field] || '') + '"></td>';
         }
         function hid(field) {

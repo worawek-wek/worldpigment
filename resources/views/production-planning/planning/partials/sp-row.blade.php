@@ -28,7 +28,7 @@
     </td>
     <td>{{ $r_company !== '' ? $r_company : '-' }}<input type="hidden" data-field="company" value="{{ $r_company }}"></td>
     <td>{{ $r_mdate_disp !== '' ? $r_mdate_disp : '-' }}<input type="hidden" data-field="mdate" value="{{ $r_mdate }}"></td>
-    <td>{{ $r_custwant_disp !== '' ? $r_custwant_disp : '-' }}<input type="hidden" data-field="custwant" value="{{ $r_custwant }}"></td>
+    <td class="sp-custwant">{{ $r_custwant_disp !== '' ? $r_custwant_disp : '-' }}<input type="hidden" data-field="custwant" value="{{ $r_custwant }}"></td>
     <td>{{ $r_custno !== '' ? $r_custno : '-' }}<input type="hidden" data-field="custno" value="{{ $r_custno }}"></td>
     <td>{{ $r_itemno !== '' ? $r_itemno : '-' }}<input type="hidden" data-field="itemno" value="{{ $r_itemno }}"></td>
     <td>{{ $r_weight_req !== '' ? $r_weight_req : '-' }}<input type="hidden" data-field="weight_request" value="{{ $r_weight_req }}"></td>
