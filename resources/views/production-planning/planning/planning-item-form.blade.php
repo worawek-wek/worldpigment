@@ -1604,6 +1604,55 @@ window.wpSetDateField = function (sel, val) {
         });
 })();
 
+// ══════════════════════════════════════════════════════════════════════
+//  จัดลำดับการ Tab ในฟอร์มแก้ไข Planning Item ให้ "เรียงลงมาตามลำดับบนจอ"
+//  ปัญหาเดิม: ช่องวันที่ใช้ flatpickr (altInput + static) → input จริงถูกซ่อน
+//  เป็น type=hidden แล้วห่อด้วย .flatpickr-wrapper ทำให้ลำดับ Tab ของเบราว์เซอร์
+//  เพี้ยน/ข้ามบางช่อง (โดยเฉพาะช่องวันที่ที่อยู่ถัดจากช่องเวลา type=time)
+//  วิธีแก้: ดัก Tab/Shift+Tab เอง แล้วย้าย focus ไปยัง control ถัดไป/ก่อนหน้า
+//  "ตามลำดับใน DOM จริง" (ซึ่งตรงกับลำดับที่เห็นบนจอ) → ไม่มีการข้าม
+// ══════════════════════════════════════════════════════════════════════
+(function () {
+    var $form = $('#planning_item_form');
+    if (!$form.length) return;
+
+    // เก็บเฉพาะ input ที่ไม่ใช่ hidden, select, textarea, button (ปุ่มก็อยู่ในลำดับตามปกติ)
+    var FOCUS_SEL = 'input:not([type=hidden]), select, textarea, button';
+
+    // control ที่ "มองเห็น + ใช้งานได้" เท่านั้น (ตัดช่องที่ disabled / ถูกซ่อน / อยู่ในปฏิทิน flatpickr)
+    function isTabbable(el) {
+        if (el.disabled) return false;
+        // มองเห็นจริง (flatpickr ซ่อน input ตัวจริงไว้ → offsetParent เป็น null)
+        if (el.offsetParent === null && el.getClientRects().length === 0) return false;
+        // ข้าม element ภายในปฏิทิน flatpickr (ปุ่มเดือน/ช่องเวลาในปฏิทิน)
+        if (el.closest('.flatpickr-calendar')) return false;
+        return true;
+    }
+
+    function tabbableList() {
+        return $form.find(FOCUS_SEL).toArray().filter(isTabbable);
+    }
+
+    $form.on('keydown', function (e) {
+        // เฉพาะปุ่ม Tab ล้วน ๆ (ไม่รวม Ctrl/Alt/Meta) — Shift ใช้ถอยหลัง
+        if ((e.key !== 'Tab' && e.keyCode !== 9) || e.ctrlKey || e.altKey || e.metaKey) return;
+
+        var active = document.activeElement;
+        if (!active) return;
+
+        var list = tabbableList();
+        var idx  = list.indexOf(active);
+        if (idx === -1) return; // focus ไม่ได้อยู่ในฟอร์ม → ปล่อยตามปกติ
+
+        var nextIdx = e.shiftKey ? idx - 1 : idx + 1;
+        // สุดรายการแล้ว → ปล่อยให้ Tab ออกไปยังปุ่ม footer (บันทึก/ยกเลิก) ตามปกติ
+        if (nextIdx < 0 || nextIdx >= list.length) return;
+
+        e.preventDefault();
+        list[nextIdx].focus();
+    });
+})();
+
 @if($order_closed)
 // ══════════════════════════════════════════════════════════════════════
 //  ออเดอร์ถูกปิดแล้ว (end_order = Y) → โหมดอ่านอย่างเดียว
