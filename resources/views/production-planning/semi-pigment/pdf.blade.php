@@ -10,6 +10,9 @@
         table.data { width: 100%; border-collapse: collapse; }
         table.data th, table.data td { border: 1px solid #000; padding: 1px 3px; font-size: 6.8px; }
         table.data th { background-color: #d9e1f2; text-align: center; vertical-align: middle; }
+        /* คอลัมน์ "งาน" (จาก tb_planning) เน้นพื้นสีเหลืองให้ต่างจากคอลัมน์อื่น */
+        table.data th.col-job { background-color: #ffe699; }
+        table.data td.col-job { background-color: #fff2cc; }
         .text-center { text-align: center; }
         .text-end { text-align: right; }
     </style>
@@ -38,8 +41,8 @@
                 <th style="width: 5%;">น้ำหนักที่จะผลิต</th>
                 <th style="width: 6%;">เลขที่ออกใบแดง</th>
                 <th style="width: 5%;">ผลการอนุมัติ</th>
-                <th style="width: 6%;">เลขที่ใบเบิก Red Bill (งาน)</th>
-                <th style="width: 7%;">รหัสสินค้า Item No. (งาน)</th>
+                <th class="col-job" style="width: 6%;">เลขที่ใบเบิก Red Bill (งาน)</th>
+                <th class="col-job" style="width: 7%;">รหัสสินค้า Item No. (งาน)</th>
             </tr>
         </thead>
         <tbody>
@@ -62,8 +65,8 @@
                     <td class="text-end">{{ $row->weight_production !== null ? number_format($row->weight_production, 2) : '' }}</td>
                     <td class="text-center">{{ $row->red_bill_code ?: '' }}</td>
                     <td class="text-center">{{ $row->statusLabel() }}</td>
-                    <td class="text-center">{{ optional($row->planning)->red_bill_code ?: '' }}</td>
-                    <td>{{ optional($row->planning)->itemno ?: '' }}</td>
+                    <td class="text-center col-job">{{ optional($row->planning)->red_bill_code ?: '' }}</td>
+                    <td class="col-job">{{ optional($row->planning)->itemno ?: '' }}</td>
                 </tr>
             @empty
                 <tr>

@@ -130,6 +130,11 @@ class SemiPigmentController extends Controller
             ->setVertical(Alignment::VERTICAL_CENTER)
             ->setWrapText(true);
 
+        // 2 คอลัมน์ท้าย (Q,R = ค่าจาก "งานผลิต") เน้นพื้นสีเหลืองให้ต่างจากคอลัมน์อื่น (ตรงกับ PDF)
+        $sheet->getStyle('Q'.$headerRow.':R'.$headerRow)->getFill()
+            ->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FFFFE699');
+
         // แถวข้อมูล
         $rowIndex = $headerRow + 1;
         foreach ($rows as $row) {
@@ -179,6 +184,11 @@ class SemiPigmentController extends Controller
                 $sheet->getStyle($range)->getNumberFormat()->setFormatCode('#,##0.00');
                 $sheet->getStyle($range)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
             }
+
+            // 2 คอลัมน์ท้าย (Q,R = ค่าจาก "งานผลิต") พื้นสีเหลืองอ่อนในแถวข้อมูล (ตรงกับ PDF)
+            $sheet->getStyle('Q'.($headerRow + 1).':R'.$lastRow)->getFill()
+                ->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FFFFF2CC');
         } else {
             $sheet->getStyle('A'.$headerRow.':'.$lastCol.$headerRow)->getBorders()->getAllBorders()
                 ->setBorderStyle(Border::BORDER_THIN);
