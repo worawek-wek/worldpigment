@@ -13,6 +13,14 @@
         #machineReportTable tbody.machine-head .small {
             color: #dbeafe !important;
         }
+        /* คอลัมน์ Inplan พื้นน้ำเงิน — ให้เหมือนหน้ารายการวางแผนการผลิต
+           ใช้ !important + box-shadow:none กันลาย striped/hover ของ Bootstrap 5 ทับ */
+        #machineReportTable th.col-inplan,
+        #machineReportTable td.col-inplan {
+            background-color: #cfe2ff !important;
+            color: #084298 !important;
+            box-shadow: none !important;
+        }
     </style>
     <div class="container-xxl flex-grow-1 container-p-y">
 

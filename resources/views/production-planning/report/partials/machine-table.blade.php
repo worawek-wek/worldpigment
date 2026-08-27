@@ -11,7 +11,7 @@
             <th style="width:36px;"></th>
             <th class="text-center" style="width:60px;">#</th>
             <th>รหัสเครื่องจักร</th>
-            <th class="text-center">วัน Inplan</th>
+            <th class="text-center col-inplan">วัน Inplan</th>
             <th>Cust Name</th>
             <th class="text-center">เลขที่ใบแดง</th>
             <th>Item No</th>
@@ -58,7 +58,7 @@
                     </td>
                     <td class="text-center qnum">{{ ++$rownum }}</td>
                     <td>{{ $it->machine_no ?: '-' }}</td>
-                    <td class="text-center">{{ $it->inplan ? \Carbon\Carbon::parse($it->inplan)->format('d/m/Y') : '-' }}</td>
+                    <td class="text-center col-inplan">{{ $it->inplan ? \Carbon\Carbon::parse($it->inplan)->format('d/m/Y') : '-' }}</td>
                     <td>{{ $it->cust_name ?: '-' }}</td>
                     <td class="text-center">{{ $it->red_bill_code ?: '-' }}</td>
                     <td>{{ $it->itemno ?: '-' }}</td>

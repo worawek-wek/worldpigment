@@ -10,6 +10,8 @@
         table.data { width: 100%; border-collapse: collapse; }
         table.data th, table.data td { border: 1px solid #000; padding: 2px 3px; font-size: 8px; }
         table.data th { background-color: #e9ecef; text-align: center; }
+        /* คอลัมน์ วันที่ลงแผน (inplan) พื้นน้ำเงิน — ให้เหมือนฝั่งเว็บ */
+        table.data th.col-inplan, table.data td.col-inplan { background-color: #cfe2ff; color: #084298; }
         .group-row td { background-color: #f1f3f5; font-weight: bold; }
         .step-row td { background-color: #f8f9fa; font-style: italic; }
         /* เส้นแนวนอนภายในงานเดียวกัน (ระหว่างขั้นตอน และระหว่างขั้นตอนกับแถว planning) ให้บาง+จาง
@@ -29,7 +31,7 @@
         <thead>
             <tr>
                 <th style="width: 3%;">#</th>
-                <th style="width: 7%;">วันที่ลงแผน</th>
+                <th class="col-inplan" style="width: 7%;">วันที่ลงแผน</th>
                 <th style="width: 7%;">Revise</th>
                 <th style="width: 13%;">Cust Name</th>
                 <th style="width: 7%;">เลขที่ใบเบิก</th>
@@ -69,7 +71,7 @@
                     {{-- แถวผลิตสินค้า --}}
                     <tr class="prod-row {{ $hasSteps ? 'grouped' : '' }}">
                         <td class="text-center">{{ ++$rownum }}</td>
-                        <td class="text-center">{{ $it->inplan ? \Carbon\Carbon::parse($it->inplan)->format('d/m/Y') : '-' }}</td>
+                        <td class="text-center col-inplan">{{ $it->inplan ? \Carbon\Carbon::parse($it->inplan)->format('d/m/Y') : '-' }}</td>
                         <td class="text-center">{{ $it->senddate ? \Carbon\Carbon::parse($it->senddate)->format('d/m/Y') : '' }}</td> {{-- Revise = senddate (กำหนดส่งทบทวน) --}}
                         <td>{{ $it->cust_name ?: '-' }}</td>
                         <td class="text-center">{{ $it->red_bill_code ?: '-' }}</td>

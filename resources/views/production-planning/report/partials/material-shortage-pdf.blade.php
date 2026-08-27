@@ -31,7 +31,7 @@
                 <th style="width: 6%;">สถานะปัจจุบัน</th>
                 <th style="width: 12%;">ขาด semi</th>
                 <th style="width: 10%;">ขาดวัตถุดิบ</th>
-                <th style="width: 5%;">Cust Due</th>
+                <th style="width: 5%; background-color: #f8d7da; color: #842029;">Cust Due</th>
                 <th style="width: 4%;">Cust no</th>
                 <th style="width: 12%;">Cust Name</th>
                 <th style="width: 4%;">SaleNo</th>
@@ -60,7 +60,7 @@
                     <td class="status">{{ $it->planning_status ?: '' }}</td>
                     <td class="status">{{ $it->lack_semi ?: '' }}</td>
                     <td class="status">{{ $it->lack_pigment ?: '' }}</td>
-                    <td class="text-center">{{ $custDue ? \Carbon\Carbon::parse($custDue)->format('d/m/y') : '-' }}</td>
+                    <td class="text-center" style="background-color: #f8d7da; color: #842029;">{{ $custDue ? \Carbon\Carbon::parse($custDue)->format('d/m/y') : '-' }}</td>
                     <td class="text-center">{{ $it->custno ?: '-' }}</td>
                     <td>{{ $it->cust_name ?: '-' }}</td>
                     <td class="text-center">{{ $it->saleno ?: '' }}</td>

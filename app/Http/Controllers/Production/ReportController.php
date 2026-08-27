@@ -303,6 +303,11 @@ class ReportController extends Controller
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
             ->getStartColor()->setRGB('E9ECEF');
         $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getAlignment()->setWrapText(true);
+        // คอลัมน์ วันที่ลงแผน (B) พื้นน้ำเงิน — ให้เหมือนฝั่งเว็บ/PDF
+        $sheet->getStyle("B{$r}")->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('CFE2FF');
+        $sheet->getStyle("B{$r}")->getFont()->getColor()->setRGB('084298');
 
         $rownum = 0;
         $r++;
@@ -342,6 +347,11 @@ class ReportController extends Controller
                 // แถวผลิตสินค้า
                 $sheet->setCellValue("A{$r}", ++$rownum);
                 $sheet->setCellValue("B{$r}", $it->inplan ? \Carbon\Carbon::parse($it->inplan)->format('d/m/Y') : '-');
+                // คอลัมน์ วันที่ลงแผน (B) พื้นน้ำเงิน — ให้เหมือนฝั่งเว็บ/PDF
+                $sheet->getStyle("B{$r}")->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setRGB('CFE2FF');
+                $sheet->getStyle("B{$r}")->getFont()->getColor()->setRGB('084298');
                 $sheet->setCellValue("C{$r}", $it->senddate ? \Carbon\Carbon::parse($it->senddate)->format('d/m/Y') : '');  // Revise = senddate (กำหนดส่งทบทวน)
                 $sheet->setCellValue("D{$r}", $it->cust_name ?: '-');
                 $sheet->setCellValue("E{$r}", $it->red_bill_code ?: '-');
@@ -685,6 +695,12 @@ class ReportController extends Controller
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
             ->getStartColor()->setRGB('CFE2FF');
         $sheet->getStyle("E4:E{$inplanLastRow}")->getFont()->getColor()->setRGB('084298');
+
+        // พื้นแดงคอลัมน์ Cust Due (J) ทั้งหัวตารางและทุกแถวข้อมูล — ให้ตรงกับ Custwant บนเว็บ/PDF
+        $sheet->getStyle("J4:J{$inplanLastRow}")->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('F8D7DA');
+        $sheet->getStyle("J4:J{$inplanLastRow}")->getFont()->getColor()->setRGB('842029');
 
         if ($total === 0) {
             $sheet->setCellValue("A{$r}", 'ไม่พบข้อมูลตามเงื่อนไขที่เลือก');
