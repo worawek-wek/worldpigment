@@ -29,7 +29,7 @@
 
     <div class="row">
         <div class="col-md-4 mb-3">
-            <label class="form-label">Company</label>
+            <label class="form-label">แผนกผลิต (Company)</label>
             <select class="form-select" name="company" {{ $ro }}>
                 <option value="">-- เลือก --</option>
                 @foreach($companies as $c)
@@ -38,11 +38,11 @@
             </select>
         </div>
         <div class="col-md-4 mb-3">
-            <label class="form-label">Cust No.</label>
+            <label class="form-label">แผนกที่ใช้ (Cust No.)</label>
             <input type="text" class="form-control" name="custno" value="{{ $sp->custno }}" {{ $ro }}>
         </div>
         <div class="col-md-4 mb-3">
-            <label class="form-label">Item No. <span class="text-danger">*</span></label>
+            <label class="form-label">Semi No. (Item No) <span class="text-danger">*</span></label>
             <input type="text" class="form-control" name="itemno" value="{{ $sp->itemno }}" {{ $ro }}>
         </div>
         <div class="col-md-4 mb-3">

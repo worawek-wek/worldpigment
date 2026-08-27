@@ -26,11 +26,11 @@
             <tr>
                 <th style="width: 3%;">#</th>
                 <th style="width: 5%;">วันที่ขอ</th>
-                <th style="width: 6%;">Semi No.</th>
+                {{-- <th style="width: 6%;">Semi No.</th> --}}
                 <th style="width: 5%;">วันที่สั่ง</th>
                 <th style="width: 5%;">วันที่ต้องการ</th>
-                <th style="width: 4%;">แผนกที่สั่ง</th>
-                <th style="width: 7%;">ใช้กับ</th>
+                <th style="width: 4%;">แผนกที่ผลิต</th>
+                <th style="width: 7%;">Semi No.</th>
                 <th style="width: 6%;">แม่สีหลัก</th>
                 <th style="width: 5%;">ยอดคงเหลือ</th>
                 <th style="width: 5%;">Lot No.</th>
@@ -50,7 +50,7 @@
                 <tr>
                     <td class="text-center">{{ $loop->iteration }}</td>
                     <td class="text-center">{{ $row->created_at ? \Carbon\Carbon::parse($row->created_at)->format('d/m/Y') : '' }}</td>
-                    <td>{{ $row->semi_code ?: '' }}</td>
+                    {{-- <td>{{ $row->semi_code ?: '' }}</td> --}}
                     <td class="text-center">{{ $row->order_date ? \Carbon\Carbon::parse($row->order_date)->format('d/m/Y') : '' }}</td>
                     <td class="text-center">{{ $row->want_date ? \Carbon\Carbon::parse($row->want_date)->format('d/m/Y') : '' }}</td>
                     <td class="text-center">{{ $row->company ?: '' }}</td>

@@ -23,7 +23,7 @@
         </select>
     </div>
     <div class="col-md-4 mb-3">
-        <label class="form-label">แผนกที่สั่ง (Cust No.)</label>
+        <label class="form-label">แผนกที่ใช้ (Cust No.)</label>
         <input type="text" class="form-control{{ $custnoReadonly ? ' bg-light' : '' }}"
                id="{{ $prefix }}_custno" placeholder="รหัสลูกค้า" {{ $custnoReadonly ? 'readonly' : '' }}>
     </div>
@@ -36,7 +36,7 @@
         <input type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" id="{{ $prefix }}_custwant">
     </div>
     <div class="col-md-4 mb-3">
-        <label class="form-label">รหัสสินค้า (Item No.) <span class="text-danger">*</span></label>
+        <label class="form-label">Semi No. (Item No) <span class="text-danger">*</span></label>
         <input type="text" class="form-control" id="{{ $prefix }}_itemno" placeholder="Item No.">
     </div>
     <div class="col-md-4 mb-3">
