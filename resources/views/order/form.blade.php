@@ -6,7 +6,9 @@
 <div class="modal-body px-4 py-4">
 
     {{-- ── แถบประเภทใบสั่งซื้อ (radio) — 2 ตัวอักษรหน้าเลขที่ใบสั่ง ── --}}
-    <div class="of-typebar">
+    {{-- of-narrow = จำกัดความกว้างส่วนหัวฟอร์มไม่ให้ยืดตาม modal ที่กว้าง 95vw
+         (ตารางรายการด้านล่างไม่ใส่ class นี้ จึงยังกว้างเต็ม modal) --}}
+    <div class="of-typebar of-narrow">
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
             <div>
                 {{-- จัดปุ่มเป็นกลุ่มละ 2 (C / H / W) แล้วเว้นช่องไฟระหว่างกลุ่ม --}}
@@ -35,7 +37,7 @@
         </div>
     </div>
 
-    <div class="row g-3 mt-1">
+    <div class="row g-3 mt-1 of-narrow">
 
         {{-- ═══════════ คอลัมน์ซ้าย: ข้อมูลใบสั่งซื้อ ═══════════ --}}
         <div class="col-xl-5">

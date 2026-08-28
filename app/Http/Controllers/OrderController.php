@@ -396,7 +396,7 @@ class OrderController extends Controller
             'price1'      => null, 'price2' => null, 'price3' => null,
             'appv_price'  => null, 'appv'   => null, 'valid_to' => null,
             'cost_price'  => null, 'remark' => null,
-            'group'       => null, 'min_price' => null,
+            'group'       => null, 'min_price' => null, 'min_from' => null,
         ];
 
         // ต้องมีรหัสสินค้าเป็นอย่างน้อย — ราคา 1/2/3 คำนวณจากรหัสสินค้าล้วน ไม่ต้องรู้ลูกค้า
@@ -434,16 +434,23 @@ class OrderController extends Controller
         // คำนวณไม่ได้ → บอกเหตุผลที่ระบบกำหนดราคาให้มา (ไม่พบราคาทุน / ไม่มีเงื่อนไขรองรับ ฯลฯ)
         $message = $prices ? null : ($calc['reason'] ?? 'คำนวณราคาไม่ได้');
 
+        /* "ราคาต้องไม่ต่ำกว่า" ต้องเป็นตัวเดียวกับที่ checkPriceFloor() ใช้จริงตอนบันทึก (28/08/2569)
+           มีราคาอนุมัติที่ยังไม่เลยวันยืนราคา → ใช้ราคาอนุมัติ · ไม่มี → ราคาช่อง 2 */
+        $approvedFloor = $this->approvedFloor($custno, $itemno);
+        $minPrice      = $approvedFloor ? round($approvedFloor->price, 2) : ($prices['price_2'] ?? null);
+
         return [
             'found'       => (bool) $prices,
             'message'     => $message,
             'others'      => [],
             'group'       => $group ? $group['group'] : null,
             'group_label' => $group ? $group['label'] : null,
-            // ราคาที่กำหนดไว้ = ราคาขาย 1 · ราคาช่อง 2 / ราคาต้องไม่ต่ำกว่า = ราคาขาย 2
+            // ราคาที่กำหนดไว้ = ราคาขาย 1 · ราคาช่อง 2 = ราคาขาย 2
             'fixed_price' => $prices['price_1'] ?? null,
             'price2'      => $prices['price_2'] ?? null,
-            'min_price'   => $prices['price_2'] ?? null,
+            // ราคาต้องไม่ต่ำกว่า = ราคาอนุมัติ (ถ้ายังยืนราคาอยู่) ไม่งั้นราคาช่อง 2
+            'min_price'   => $minPrice,
+            'min_from'    => $approvedFloor ? 'approved' : 'price_2',
             'price1'      => $prices['price_1'] ?? null,
             'price3'      => $prices['price_3'] ?? null,
             // ที่มาของราคา — ราคาทุน + เงื่อนไขที่จับคู่ได้ + สูตร (โชว์ใต้กล่องราคา)
@@ -670,22 +677,29 @@ class OrderController extends Controller
             return null;
         }
 
-        $floor = app(ProductPriceService::class)->lookup($itemno)['prices']['price_2'] ?? null;
-        if ($floor === null) {
-            return null;   // ไม่มีเพดานให้เทียบ
+        /* เกณฑ์ที่ใช้เทียบ (28/08/2569 — เปลี่ยนตามที่ผู้ใช้สั่ง):
+             มีราคาอนุมัติที่ยังไม่เลยวันยืนราคา → ใช้ "ราคาอนุมัติ" เป็นเกณฑ์แทนเสมอ
+             ไม่มี                              → ใช้ราคาช่อง 2 เหมือนเดิม
+           เดิมใช้ราคาช่อง 2 เป็นหลักแล้วให้ราคาอนุมัติเป็นทางรอดสำรอง — ต่างกันตรงกรณีที่
+           ราคาอนุมัติ "สูงกว่า" ราคาช่อง 2 ซึ่งตอนนี้จะยึดราคาอนุมัติ (เกณฑ์เข้มขึ้น) */
+        $approved = $this->approvedFloor($custno, $itemno);
+
+        if ($approved) {
+            $floor     = (float) $approved->price;
+            $floorFrom = 'approved';
+        } else {
+            $calc = app(ProductPriceService::class)->lookup($itemno)['prices']['price_2'] ?? null;
+            if ($calc === null) {
+                return null;   // ไม่มีเพดานให้เทียบ
+            }
+            $floor     = (float) $calc;
+            $floorFrom = 'price_2';
         }
 
-        $floor = (float) $floor;
         $price = $price === null ? null : (float) $price;
 
         // เทียบด้วย epsilon กันเศษทศนิยมของ float ทำให้ราคาที่เท่ากันพอดีถูกตีว่าต่ำกว่า
         if ($price !== null && $price + 0.001 >= $floor) {
-            return null;
-        }
-
-        // ต่ำกว่าเกณฑ์ → ยังรอดได้ถ้ามีราคาอนุมัติพิเศษที่ยังไม่หมดอายุรองรับ
-        $approved = $this->activeApprovedPrice($custno, $itemno);
-        if ($price !== null && $approved && $price + 0.001 >= (float) $approved->exprice) {
             return null;
         }
 
@@ -695,12 +709,13 @@ class OrderController extends Controller
             'itemno'        => $itemno,
             'custno'        => $custno,
             'min_price'     => round($floor, 2),
+            'floor_from'    => $floorFrom,          // 'approved' = เทียบกับราคาอนุมัติ · 'price_2' = ราคาช่อง 2
             'price'         => $price,
             'approved'      => $approved ? [
-                'exprice' => round((float) $approved->exprice, 2),
+                'exprice' => round((float) $approved->price, 2),
                 'enddate' => $approved->enddate,
             ] : null,
-            'message'       => $this->priceBlockedMessage($price, $floor, $custno, $itemno, $approved),
+            'message'       => $this->priceBlockedMessage($price, $floor, $custno, $itemno, $approved, $floorFrom),
         ];
     }
 
@@ -732,24 +747,80 @@ class OrderController extends Controller
             ->first(['exprice', 'enddate']);
     }
 
-    /** ข้อความบอกสาเหตุที่บันทึกไม่ได้ — แยกกรณีให้ผู้ใช้รู้ว่าต้องทำอะไรต่อ */
-    private function priceBlockedMessage($price, float $floor, string $custno, string $itemno, $approved): string
+    /**
+     * ราคาอนุมัติที่ใช้เป็น "ราคาต้องไม่ต่ำกว่า" ได้ — ตรงกับ 2 ช่องที่ผู้ใช้เห็นในกล่องราคา
+     *
+     *   ราคาอนุมัติ  = `appvreq.price` ของใบล่าสุดของคู่ (ลูกค้า, เบอร์) ที่ **อนุมัติแล้ว**
+     *   ยืนราคาถึง   = `zcustprice.enddate` ของคู่เดียวกัน
+     *
+     * ใช้ได้ก็ต่อเมื่อ **ยังไม่เลยวันยืนราคา** — `enddate` ว่าง = ไม่กำหนดวันหมดอายุ (ตาม
+     * convention เดิมของ activeApprovedPrice) ส่วนคู่ที่ไม่มีแถวใน `zcustprice` เลย
+     * ถือว่ายังไม่ได้ยืนราคา จึงใช้ไม่ได้
+     *
+     * ⚠ กรอง `Appv` ด้วยเสมอ — ไม่งั้นแค่ "ขอ" ราคาต่ำ ๆ ก็ปลดล็อกด่านได้เองโดยไม่ต้องผ่าน MD
+     *
+     * คืน object {price, enddate} หรือ null
+     */
+    private function approvedFloor(string $custno, string $itemno)
     {
-        if ($price === null) {
-            return 'ต้องกรอกราคาขาย และต้องไม่ต่ำกว่า ' . number_format($floor, 2) . ' บาท (ราคาช่อง 2 ของ ' . $itemno . ')';
+        if ($custno === '' || $itemno === '') {
+            return null;
         }
 
-        $msg = 'ราคาขาย ' . number_format($price, 2) . ' บาท ต่ำกว่าราคาช่อง 2 ('
+        $appv = DB::table('appvreq')
+            ->where('custno', $custno)
+            ->where('itemno', $itemno)
+            ->whereNotNull('price')
+            ->where('price', '<>', 0)
+            ->where('Appv', '<>', 0)->whereNotNull('Appv')   // Access เก็บ -1 = ติ๊ก
+            ->orderByDesc('ReqDate')
+            ->first(['price']);
+
+        if (!$appv) {
+            return null;
+        }
+
+        $zcust = DB::table('zcustprice')
+            ->where('custno', $custno)
+            ->where('colorno', $itemno)
+            ->orderByDesc('enddate')
+            ->first(['enddate']);
+
+        if (!$zcust) {
+            return null;                                     // ยังไม่เคยยืนราคา
+        }
+
+        if ($zcust->enddate !== null
+            && Carbon::parse($zcust->enddate)->startOfDay()->lt(now()->startOfDay())) {
+            return null;                                     // เลยวันยืนราคาแล้ว
+        }
+
+        return (object) ['price' => (float) $appv->price, 'enddate' => $zcust->enddate];
+    }
+
+    /** ข้อความบอกสาเหตุที่บันทึกไม่ได้ — แยกกรณีให้ผู้ใช้รู้ว่าต้องทำอะไรต่อ */
+    private function priceBlockedMessage($price, float $floor, string $custno, string $itemno, $approved, string $floorFrom = 'price_2'): string
+    {
+        // ชื่อเกณฑ์ที่ใช้เทียบ — ต้องตรงกับช่องที่ผู้ใช้เห็นในกล่องราคา จะได้ไม่งงว่าตัวเลขมาจากไหน
+        $label = $floorFrom === 'approved'
+            ? 'ราคาอนุมัติ'
+            : 'ราคาช่อง 2';
+
+        if ($price === null) {
+            return 'ต้องกรอกราคาขาย และต้องไม่ต่ำกว่า ' . number_format($floor, 2)
+                 . ' บาท (' . $label . ' ของ ' . $itemno . ')';
+        }
+
+        $msg = 'ราคาขาย ' . number_format($price, 2) . ' บาท ต่ำกว่า' . $label . ' ('
              . number_format($floor, 2) . ' บาท) ของรหัส ' . $itemno;
 
-        // มีราคาอนุมัติอยู่ แต่ยังไม่พอ — บอกไปเลยว่าติดตรงไหน จะได้ไม่ต้องเดา
-        if ($approved) {
-            $msg .= ' — มีราคาอนุมัติพิเศษ ' . number_format((float) $approved->exprice, 2) . ' บาท'
-                  . ($approved->enddate ? ' (ยืนราคาถึง ' . Carbon::parse($approved->enddate)->format('d/m/Y') . ')' : '')
-                  . ' แต่ราคาขายยังต่ำกว่าราคาที่อนุมัติไว้';
+        if ($floorFrom === 'approved' && $approved) {
+            $msg .= $approved->enddate
+                ? ' — ราคาที่อนุมัติไว้ยืนราคาถึง ' . Carbon::parse($approved->enddate)->format('d/m/Y')
+                : ' — ราคาที่อนุมัติไว้ไม่กำหนดวันหมดอายุ';
         } else {
-            $msg .= ' — ยังไม่มีราคาอนุมัติพิเศษที่ใช้ได้ของลูกค้า ' . $custno
-                  . ' (ไม่เคยขอ หรือใบที่อนุมัติไว้หมดอายุแล้ว)';
+            $msg .= ' — ยังไม่มีราคาอนุมัติที่ใช้ได้ของลูกค้า ' . $custno
+                  . ' (ไม่เคยขอ ยังไม่อนุมัติ หรือเลยวันยืนราคาแล้ว)';
         }
 
         return $msg;
