@@ -507,16 +507,34 @@ class OrderController extends Controller
 
     /**
      * GET — ค้นข้อมูลสินค้าจากรหัสที่กรอกในตารางรายการ
-     *   ?itemno=CP8F247B
+     *   ?itemno=CP8F247B&custno=40028
      *
-     * คืนชื่อสินค้าไว้เติมให้อัตโนมัติ + คำเตือน "ต้อง Match ใหม่"
+     * คืนชื่อสินค้า + หมายเหตุ (uprice.Label) ไว้เติมให้อัตโนมัติ + คำเตือน "ต้อง Match ใหม่"
      * (ฟอร์มเดิมขึ้นแถบแดง "สีที่สั่งซื้อล่าสุดเกิน 3 ปี จะต้อง Match ใหม่")
      */
     public function itemLookup(Request $request)
     {
         $itemno = trim((string) $request->query('itemno', ''));
+        $custno = trim((string) $request->query('custno', ''));
         if ($itemno === '') {
             return response()->json(['found' => false]);
+        }
+
+        // แถวราคาที่ใช้อ้างอิง — เบอร์เดียวกันของคนละลูกค้า Label ต่างกันได้ (1,177 จาก 36,432 เบอร์)
+        // จึงเอาแถวของลูกค้ารายนี้ก่อน ไม่มีค่อยใช้แถวล่าสุดของลูกค้าใดก็ได้
+        $up = null;
+        if ($custno !== '') {
+            $up = DB::table('uprice')
+                ->where('ITEMNO', $itemno)
+                ->where('CustNo', $custno)
+                ->orderByDesc('DATE')
+                ->first(['Label', 'PackRem', 'st_code']);
+        }
+        if (!$up) {
+            $up = DB::table('uprice')
+                ->where('ITEMNO', $itemno)
+                ->orderByDesc('DATE')
+                ->first(['Label', 'PackRem', 'st_code']);
         }
 
         // ชื่อสินค้า — ใช้ชื่อที่เคยบันทึกไว้ในใบสั่งก่อนหน้าเป็นหลัก ไม่มีค่อยดูจากตารางราคา
@@ -527,12 +545,11 @@ class OrderController extends Controller
             ->value('prodname');
 
         if (!$prodname) {
-            $up = DB::table('uprice')
-                ->where('ITEMNO', $itemno)
-                ->orderByDesc('DATE')
-                ->first(['Label', 'PackRem', 'st_code']);
             $prodname = $up->Label ?? $up->PackRem ?? $up->st_code ?? null;
         }
+
+        // หมายเหตุของรายการ (suborder.Remark) — เติมจาก uprice.Label ให้เป็นค่าตั้งต้น
+        $remark = trim((string) ($up->Label ?? ''));
 
         // วันที่สั่งซื้อล่าสุดของเบอร์นี้ (ทุกลูกค้า — การ Match เป็นเรื่องของสูตรสี ไม่ผูกกับลูกค้า)
         $lastDate = DB::table('suborder')
@@ -544,6 +561,7 @@ class OrderController extends Controller
             'found'           => (bool) ($prodname || $lastDate),
             'itemno'          => $itemno,
             'prodname'        => $prodname,
+            'remark'          => $remark !== '' ? $remark : null,
             'last_order_date' => $lastDate,
             // เกิน 3 ปี (หรือไม่เคยสั่งเลย) → ต้อง Match ใหม่
             'need_match'      => !$lastDate || Carbon::parse($lastDate)->lt(Carbon::now()->subYears(3)),
@@ -584,7 +602,7 @@ class OrderController extends Controller
         }
 
         $custno = trim((string) $request->input('Custno'));
-        $cust   = DB::table('customer')->where('code', $custno)->first(['code', 'name']);
+        $cust   = DB::table('customer')->where('code', $custno)->first(['code', 'name', 'type']);
         if (!$cust) {
             return response()->json(['status' => false, 'message' => 'ไม่พบรหัสลูกค้า ' . $custno], 422);
         }
@@ -602,6 +620,32 @@ class OrderController extends Controller
         if ($mode === 'insert' && !isset(self::ORDER_TYPES[$type])) {
             return response()->json(['status' => false, 'message' => 'ประเภทใบสั่งไม่ถูกต้อง'], 422);
         }
+
+        /* ── ด่าน itype: ใบที่ขึ้นต้นด้วย W ต้องมี itype — ปิดไว้ชั่วคราว (29/08/2569) ──
+         *
+         * โค้ดข้างล่างตรวจกับ customer.type (ประเภทอุตสาหกรรมของลูกค้า) ซึ่งเป็นความหมาย
+         * "เดิม" ของช่อง itype. ตอนนี้ช่อง itype บนฟอร์มเปลี่ยนเป็น "ประเภทสินค้าที่สั่ง"
+         * ที่ผู้ใช้ติ๊กเลือกเองรายใบ (ตัวเลือกอยู่ที่ config/order.php → itypes) และ
+         * **ยังไม่มีที่เก็บใน DB** ⇒ ค่านั้นไม่ได้ถูกส่งมาที่นี่เลย
+         *
+         * ถ้าเปิดด่านนี้ทิ้งไว้ ผู้ใช้จะโดน 422 เพราะค่าที่มองไม่เห็นและแก้ในฟอร์มนี้ไม่ได้
+         * ⇒ ตอนนี้บังคับ "ต้องเลือก itype" ที่ฝั่งจอเท่านั้น (saveOrder() ใน order/index.blade.php)
+         *
+         * เปิดคืนเมื่อได้ที่เก็บ itype แล้ว โดยเปลี่ยนไปตรวจค่าที่ส่งมาจากฟอร์มแทน customer.type
+         */
+        // $orderPrefix = strtoupper(substr(
+        //     $mode === 'insert' ? $type : trim((string) $request->input('Orderno')),
+        //     0,
+        //     1
+        // ));
+        // if ($orderPrefix === 'W' && trim((string) $cust->type) === '') {
+        //     return response()->json([
+        //         'status'        => false,
+        //         'itype_missing' => true,
+        //         'custno'        => $custno,
+        //         'message'       => 'ใบสั่งซื้อที่ขึ้นต้นด้วย W ต้องระบุ itype',
+        //     ], 422);
+        // }
 
         // ด่านราคา — บังคับทั้งตอนสร้างใหม่และตอนแก้ไขใบเดิม
         $blocked = $this->checkPriceFloor($custno, $items, $this->numOrNull($request->input('price')));

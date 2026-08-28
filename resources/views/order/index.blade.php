@@ -224,6 +224,8 @@
 #oaQueueTable tbody tr { cursor: pointer; }
 #oaQueueTable tbody tr:hover { background: #fff9a8; }
 #oaQueueTable td { font-size: .85rem; }
+/* ปุ่มคอลัมน์ "จัดการ" — กันคำว่า "รออนุมัติ" ตกบรรทัดเมื่อคอลัมน์แคบ */
+#oaQueueTable td .btn { white-space: nowrap; }
 
 .oa-hl-blue  { background-color: #cfe9fb !important; }
 .oa-hl-green { background-color: #ccffcc !important; }
@@ -621,6 +623,15 @@
     }
 
     // ตั้งค่าให้ flatpickr (รับ Y-m-d / datetime); ว่าง = เคลียร์
+    // ค่าเริ่มต้นของช่อง "อนุมัติราคาถึง" = พรุ่งนี้ (Y-m-d)
+    // ต้องตรงกับ PriceApprovalController::defaultValidTo() ที่ server เติมให้เมื่อช่องถูกส่งมาว่าง
+    function tomorrowYmd(){
+        var d = new Date();
+        d.setDate(d.getDate() + 1);
+        var p = function(n){ return (n < 10 ? '0' : '') + n; };
+        return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+    }
+
     function setFp(id, val){
         var el = document.getElementById(id);
         if (!el) return;
@@ -713,11 +724,45 @@
         setOrderFormMode('new');           // ปลดล็อกช่องที่เหลือ
 
         $.getJSON("{{ $page_url }}/next-orderno", {type: type}, function(res){
-            if (res.found && res.orderno) $('#o_Orderno').val(res.orderno);
+            if (res.found && res.orderno){ $('#o_Orderno').val(res.orderno); syncItypeRequired(); }
             else Swal.fire('เจนเลขที่ใบสั่งไม่สำเร็จ', 'ไม่พบเลขรันของประเภท ' + type, 'error');
         }).fail(function(){
             Swal.fire('เจนเลขที่ใบสั่งไม่สำเร็จ', 'ลองใหม่อีกครั้ง', 'error');
         });
+    }
+
+    // ── itype: ใบสั่งที่เลขที่ขึ้นต้นด้วย W ต้องมี itype ──
+    // ตรงกับด่านฝั่ง server ใน OrderController::save() — ที่นี่แค่บอกผู้ใช้ก่อนกดบันทึก
+    // itype เป็นช่องอ่านอย่างเดียว ค่ามาจาก customer.type ⇒ ว่าง = ต้องไปกำหนดประเภทให้ลูกค้าก่อน
+    function orderPrefix(){
+        var no = ($('#o_Orderno').val() || '').trim();
+        if (no) return no.charAt(0).toUpperCase();
+        return ($('input[name="order_type_form"]:checked').val() || '').charAt(0).toUpperCase();
+    }
+
+    function itypeRequired(){ return orderPrefix() === 'W'; }
+
+    // ── itype = ประเภทสินค้าที่สั่ง (ตัวเลือกจาก config/order.php → itypes) ──
+    // เลือกได้ข้อเดียว: ติ๊กข้อใหม่ → ปลดข้อเก่าให้เอง (ใช้ checkbox ตามที่ผู้ใช้กำหนดหน้าตาไว้)
+    // ⚠ ยังไม่มีที่เก็บใน DB → ค่าที่เลือกไม่ได้ถูกส่งไปบันทึก (ดู config/order.php)
+    $(document).on('change', '.o-itype-opt', function(){
+        if (this.checked) $('.o-itype-opt').not(this).prop('checked', false);
+        syncItypeText();
+    });
+
+    // เอาข้อที่ติ๊กไว้มาโชว์ในช่อง (ไม่ติ๊กเลย = ช่องว่าง)
+    function syncItypeText(){
+        var $on = $('.o-itype-opt:checked').first();
+        $('#o_itype').val($on.length ? ($on.data('label') || '') : '');
+        syncItypeRequired();
+    }
+
+    // โชว์ * ข้างป้าย itype + ขึ้นกรอบแดงเมื่อจำเป็นแต่ยังว่าง
+    function syncItypeRequired(){
+        var need  = itypeRequired();
+        var empty = !($('#o_itype').val() || '').trim();
+        $('#o_itype_req').toggleClass('d-none', !need);
+        $('#o_itype').toggleClass('is-invalid', need && empty);
     }
 
     // เปลี่ยนประเภทใบสั่ง — ไม่เจนเลขที่ใหม่ (เจนเฉพาะตอนกดปุ่ม "เพิ่มใบสั่งซื้อใหม่")
@@ -726,6 +771,7 @@
         if ($('#o_Orderno').data('existing')) return;   // ใบเดิม — ไม่แตะเลขที่
         var cur = ($('#o_Orderno').val() || '').trim();
         if (cur && cur.substring(0, 2).toUpperCase() !== type) $('#o_Orderno').val('');
+        syncItypeRequired();
     }
 
     function clearOrderForm(){
@@ -741,6 +787,7 @@
         // ผู้บันทึก = พนักงานที่ล็อกอินอยู่
         $('#o_Emp').val('{{ $current_emp }}');
         renderOrderItems([]);
+        syncItypeRequired();
     }
 
     function fillOrderForm(res){
@@ -763,10 +810,8 @@
         $('#o_RsvNo').val(o.RsvNo || '');
         $('#o_netqty').val(commaFmt(o.netqty, 2));
 
-        // ประเภทอุตสาหกรรมของลูกค้า (ปุ่ม itype เดิม)
-        $('#o_itype').val(res.customer && res.customer.type
-            ? res.customer.type + ' — ' + (res.customer.type_name || '')
-            : '');
+        // itype ไม่ได้เติมจากข้อมูลลูกค้าแล้ว — เปลี่ยนเป็น "ประเภทสินค้าที่สั่ง" ที่ผู้ใช้เลือกเอง
+        // (ยังไม่มีที่เก็บใน DB → เปิดใบเดิมขึ้นมาช่องนี้จะว่างเสมอ)
 
         // สถานที่ส่ง — รายการของลูกค้ารายนี้
         fillDvpoints(res.dvpoints, o.DVpoint);
@@ -790,6 +835,7 @@
         fillPriceBox(res.price);
 
         renderOrderItems(res.items || []);
+        syncItypeRequired();        // ใบ W ที่ลูกค้ายังไม่มี itype → ขึ้นกรอบแดงให้เห็นตั้งแต่เปิดใบ
         setOrderFormMode('edit');   // เปิดใบเดิม → ปลดล็อกทุกช่อง (ยกเว้นเลขที่ใบสั่ง)
     }
 
@@ -1043,7 +1089,10 @@
         // ไม่วนซ้ำ เพราะ refreshItemContext() เลือกเฉพาะช่องที่ "มีค่า" เท่านั้น
         if (!itemno){ refreshItemContext(); return; }
 
-        $.getJSON("{{ $page_url }}/item-lookup", {itemno: itemno}, function(res){
+        $.getJSON("{{ $page_url }}/item-lookup", {
+            itemno: itemno,
+            custno: ($('#o_Custno').val() || '').trim()   // Label ของเบอร์เดียวกันต่างกันได้ตามลูกค้า
+        }, function(res){
             if (($(el).val() || '').trim() !== itemno) return;   // ผู้ใช้พิมพ์ต่อแล้ว
 
             /* เติมชื่อสินค้าให้ทุกครั้งที่เปลี่ยนรหัสสินค้า — แต่ยังต้องไม่ทับชื่อที่ "ผู้ใช้พิมพ์เอง"
@@ -1060,6 +1109,17 @@
                 $name.val(name).attr('data-autofill', name);
                 oiAutoGrow($name[0]);                    // เติมค่าด้วย .val() ไม่ยิง event ต้องสั่งขยายเอง
             }
+
+            // หมายเหตุ — เติมจาก uprice.Label ด้วยกติกา data-autofill ชุดเดียวกับชื่อสินค้า
+            // (suborder.Remark เป็น text จึงไม่ต้องตัดความยาว)
+            var $rem   = $row.find('[data-f="Remark"]');
+            var curRem = $rem.val() || '';
+            var autoRem = $rem.attr('data-autofill');
+            if (res.remark && (curRem === '' || (autoRem !== undefined && curRem === autoRem))){
+                $rem.val(res.remark).attr('data-autofill', res.remark);
+                oiAutoGrow($rem[0]);
+            }
+
             showMatchWarning(res);
             syncItemnoToPrice();
         }).fail(syncItemnoToPrice);
@@ -1105,21 +1165,20 @@
     function lookupOrderCustomer(code){
         code = (code || '').trim();
         clearTimeout(custLookupTimer);
-        if (!code){ $('#o_Custname').val(''); $('#o_itype').val(''); fillDvpoints([], ''); return; }
+        if (!code){ $('#o_Custname').val(''); fillDvpoints([], ''); return; }
         custLookupTimer = setTimeout(function(){
             if (custLookupXhr) custLookupXhr.abort();
             custLookupXhr = $.getJSON("{{ $page_url }}/customer/" + encodeURIComponent(code), function(res){
                 if ($('#o_Custno').val().trim() !== code) return;   // กันผลเก่ามาทับ
                 if (!res.found){
                     $('#o_Custname').val('');
-                    $('#o_itype').val('');
                     fillDvpoints([], '');
                     return;
                 }
                 var c = res.customer;
                 $('#o_Custname').val(c.name || '');
-                $('#o_itype').val(c.type ? c.type + ' — ' + (c.type_name || '') : '');
                 fillDvpoints(res.dvpoints, '');
+                // itype ไม่ได้ผูกกับลูกค้าแล้ว (เป็นประเภทสินค้าที่สั่ง ผู้ใช้เลือกเอง) จึงไม่แตะที่นี่
 
                 // ── ค่าที่ดึงจากข้อมูลลูกค้า ──
                 // ทำทุกครั้งที่ "ผู้ใช้เปลี่ยนรหัสลูกค้า" (ฟังก์ชันนี้ถูกเรียกจาก oninput เท่านั้น
@@ -1171,6 +1230,18 @@
         }
         if (!items.length){
             Swal.fire('ยังไม่มีรายการสินค้า', 'กรอกรหัสสินค้าในตารางอย่างน้อย 1 แถว', 'warning');
+            return;
+        }
+        // ใบที่เลขที่ขึ้นต้นด้วย W ต้องเลือก itype
+        // ⚠ ตอนนี้กันได้แค่ฝั่งจอ — itype ยังไม่มีที่เก็บใน DB จึงไม่ได้ส่งไปให้ server ตรวจ
+        //   (ด่านฝั่ง server ใน OrderController::save() ถูกคอมเมนต์ไว้ รอที่เก็บ)
+        if (itypeRequired() && !$('.o-itype-opt:checked').length){
+            syncItypeRequired();
+            Swal.fire({
+                icon:  'warning',
+                title: 'ใบสั่งที่ขึ้นต้นด้วย W ต้องระบุ itype',
+                text:  'กดที่ช่อง itype แล้วเลือกประเภทสินค้า 1 ข้อ ก่อนบันทึก'
+            });
             return;
         }
 
@@ -1307,7 +1378,7 @@
                  +  '<td class="text-end">' + (fmtNum(r.price, 2) || '—') + '</td>'
                  +  '<td class="text-center">'
                  +    '<span class="btn btn-sm btn-label-warning border">'
-                 +      '<i class="ti ti-gavel me-1"></i>อนุมัติ</span>'
+                 +      '<i class="ti ti-gavel me-1"></i>รออนุมัติ</span>'
                  +  '</td>'
                  +  '</tr>';
         });
@@ -1596,7 +1667,7 @@
         $('#approvalModal textarea').val('');
         $('#approvalModal input[type="checkbox"]').prop('checked', false);
         $('#a_itemno').html('<option value="">— เลือกลูกค้าก่อน —</option>');
-        setFp('a_validto', '');
+        setFp('a_validto', tomorrowYmd());   // ค่าเริ่มต้น "อนุมัติราคาถึง" = พรุ่งนี้
         highlightPriceGroup();
         renderApprovalReqState(null);
         renderApprovalGrid('ราคาที่ยืนไว้ของเบอร์นี้', ZCUST_COLS, []);
@@ -1702,8 +1773,9 @@
         $('#a_uprice_rem2').val(u.REM2 || '');
 
         // "อนุมัติราคาถึง" = วันที่ยืนราคาของเบอร์ที่เลือก (zcustprice.enddate)
+        // ยังไม่เคยยืนราคาให้เบอร์นี้ → ค่าเริ่มต้นเป็นพรุ่งนี้ (ตรงกับที่ server เติมให้ถ้าปล่อยว่าง)
         var first = (res.rows || [])[0];
-        setFp('a_validto', first ? first.enddate : '');
+        setFp('a_validto', (first && first.enddate) ? first.enddate : tomorrowYmd());
 
         highlightPriceGroup();
         renderApprovalGrid('ราคาที่ยืนไว้ของเบอร์นี้', ZCUST_COLS, res.rows || []);

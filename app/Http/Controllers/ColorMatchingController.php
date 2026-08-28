@@ -38,7 +38,8 @@ class ColorMatchingController extends Controller
             'pop'       => $this->distinctOptions('pop'),
             'Adj'       => $this->distinctOptions('Adj'),
             'ColorChar'  => $this->distinctOptions('ColorChar'),
-            'ChemSafety' => $this->distinctOptions('ChemSafety'),
+            // ChemSafety เก็บได้หลายค่าในคอลัมน์เดียว → แตกออกเป็นตัวเลือกรายตัว (29/08/2569)
+            'ChemSafety' => $this->distinctMultiOptions('ChemSafety'),
         ];
         return view('color-matching.index', $data);
     }
@@ -55,6 +56,62 @@ class ColorMatchingController extends Controller
             ->orderBy($column)
             ->pluck($column)
             ->all();
+    }
+
+    /**
+     * เหมือน distinctOptions() แต่ใช้กับคอลัมน์ที่เก็บ "หลายค่าในช่องเดียว" (คั่นด้วย , )
+     * — แตกออกเป็นตัวเลือกรายตัว ไม่งั้นดรอปดาวน์จะได้ option ที่เป็นค่ารวม (29/08/2569)
+     */
+    private function distinctMultiOptions(string $column): array
+    {
+        $values = [];
+        foreach ($this->distinctOptions($column) as $stored) {
+            foreach (self::splitMulti($stored) as $one) {
+                $values[$one] = true;
+            }
+        }
+        $values = array_keys($values);
+        sort($values, SORT_NATURAL | SORT_FLAG_CASE);
+
+        return $values;
+    }
+
+    /**
+     * แตกค่าที่เก็บรวมกัน (", ") ออกเป็น array — ตัดค่าว่าง/ซ้ำทิ้ง
+     */
+    public static function splitMulti(?string $stored): array
+    {
+        if ($stored === null || trim($stored) === '') {
+            return [];
+        }
+
+        $parts = array_map('trim', explode(',', $stored));
+
+        return array_values(array_unique(array_filter($parts, fn ($v) => $v !== '')));
+    }
+
+    /**
+     * รวมค่าหลายตัวจาก select multiple → string เดียวสำหรับคอลัมน์ legacy (คั่นด้วย ", ")
+     *
+     * - ตัดคอมมาในแต่ละค่าทิ้ง (ผู้ใช้พิมพ์ tag เองได้) ไม่งั้นตอนอ่านกลับจะแตกผิดตำแหน่ง
+     * - ตัดความยาวให้พอดีคอลัมน์ (ChemSafety = varchar(255))
+     */
+    private function joinMulti($input, int $maxLen = 255): string
+    {
+        $values = is_array($input) ? $input : [$input];
+        $clean  = [];
+
+        foreach ($values as $v) {
+            $v = trim(str_replace(',', ' ', (string) $v));
+            $v = preg_replace('/\s+/u', ' ', $v);
+            if ($v !== '' && !in_array($v, $clean, true)) {
+                $clean[] = $v;
+            }
+        }
+
+        $joined = implode(', ', $clean);
+
+        return mb_strlen($joined) > $maxLen ? rtrim(mb_substr($joined, 0, $maxLen)) : $joined;
     }
 
     public function datatable(Request $request)
@@ -364,6 +421,13 @@ class ColorMatchingController extends Controller
 
         // checkbox cancel → 0/1
         $payload['cancel'] = $request->has('cancel') && $request->cancel ? 1 : 0;
+
+        // ChemSafety = select multiple (ส่งมาเป็น array) → เก็บรวมในคอลัมน์เดียวคั่นด้วย ", " (29/08/2569)
+        // เซ็ตหลัง reject ค่าว่าง เพราะช่องนี้ต้อง "ล้างค่า" ได้ด้วย (ฟอร์มส่ง key มาเสมอผ่าน hidden)
+        // ฟอร์มที่ไม่มีช่องนี้ (modal-sd) จะไม่ส่ง key มา → ไม่แตะค่าเดิม
+        if ($request->has('ChemSafety')) {
+            $payload['ChemSafety'] = $this->joinMulti($request->input('ChemSafety'));
+        }
 
         // ถ้ามี powder_color จาก modal-sd แต่ไม่มี color (เพราะ user กรอกใน SD) → ใช้ powder_color
         if ($request->filled('powder_color') && empty($payload['color'])) {

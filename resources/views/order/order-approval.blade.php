@@ -41,7 +41,7 @@
                         <th style="width:90px;">รหัสลูกค้า</th>
                         <th>ชื่อลูกค้า</th>
                         <th style="width:110px;" class="text-end">ราคาขาย</th>
-                        <th style="width:90px;" class="text-center">จัดการ</th>
+                        <th style="width:120px;" class="text-center">จัดการ</th>
                     </tr>
                 </thead>
                 <tbody id="oaQueueRows"></tbody>

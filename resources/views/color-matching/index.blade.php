@@ -718,7 +718,12 @@
         function resetColorMatchingForm() {
             $('#form_color_matching')[0].reset();
             // select2 ต้อง trigger change เพื่อ refresh UI ไม่ให้ค้างค่าเดิม
-            $('#form_color_matching select').val('').trigger('change.select2');
+            // multiple ต้องล้างด้วย [] (ไม่ใช่ '') และทิ้ง option ที่เป็น tag พิมพ์เอง กันสะสมข้ามใบ
+            $('#form_color_matching select').each(function () {
+                const $sel = $(this);
+                $sel.find('option[data-select2-tag]').remove();
+                $sel.val($sel.prop('multiple') ? [] : '').trigger('change.select2');
+            });
             $('#form_color_matching [name="custname"], #form_color_matching [name="custnameEN"]').prop('readonly', false);
             $('#form_color_matching [name="_mode"]').val('create');
             $('#form_color_matching [name="_pk"]').val('');
@@ -1105,7 +1110,9 @@
         // เติม field ของ form ด้วย JSON record
         function fillForm(formSelector, row) {
             Object.keys(row).forEach(function(col) {
-                const $input = $(formSelector + ' [name="' + col + '"]');
+                // select multiple ใช้ชื่อแบบ array ("ChemSafety[]") — หาแบบตรงตัวก่อน ไม่เจอค่อยหาแบบ array
+                let $input = $(formSelector + ' [name="' + col + '"]');
+                if ($input.length === 0) $input = $(formSelector + ' select[name="' + col + '[]"]');
                 if ($input.length === 0) return;
 
                 const val = row[col];
@@ -1131,6 +1138,20 @@
 
                 // select (รวม select2 ที่ต้อง trigger change เพื่อ refresh UI)
                 if ($input.is('select')) {
+                    // เลือกได้หลายค่า (เช่น ChemSafety) — DB เก็บรวมในคอลัมน์เดียวคั่นด้วย ", " (29/08/2569)
+                    if ($input.prop('multiple')) {
+                        const vals = String(val ?? '').split(',')
+                            .map(function (s) { return s.trim(); })
+                            .filter(function (s) { return s !== ''; });
+                        // ค่าที่ผู้ใช้เคยพิมพ์เอง (tag) ยังไม่มีใน option → เพิ่มให้ กันค่าหาย
+                        vals.forEach(function (v) {
+                            const exists = $input.find('option').filter(function () { return this.value === v; }).length > 0;
+                            if (!exists) $input.append($('<option>', { value: v, text: v, 'data-select2-tag': 'true' }));
+                        });
+                        $input.val(vals).trigger('change.select2');
+                        return;
+                    }
+
                     const sv = val ?? '';
                     // ถ้าค่าใน DB ไม่มีใน option (เช่น variant ของ pop) → เพิ่ม option ชั่วคราว กันค่าหาย
                     if (sv !== '' && $input.find('option').filter(function () { return this.value === String(sv); }).length === 0) {
