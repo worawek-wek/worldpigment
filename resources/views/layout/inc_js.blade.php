@@ -245,14 +245,30 @@
             $el.removeData('enhanced');
         }
 
-        // ยกระดับ select ตัวเดียว — เรียกซ้ำได้ (ชนิดเดิม = แค่ sync ค่า)
+        // ลายเซ็นของชุด option ที่มีอยู่ตอนนี้ — ใช้ดูว่ารายการเปลี่ยนไปจากตอน init แล้วหรือยัง
+        function optionsSig(el){
+            var opts = el.getElementsByTagName('option'), out = [];
+            for (var i = 0; i < opts.length; i++) out.push(opts[i].value + ' => ' + opts[i].text);
+            return opts.length + ' :: ' + out.join(' || ');
+        }
+
+        // ยกระดับ select ตัวเดียว — เรียกซ้ำได้ (ชนิดเดิม + option ชุดเดิม = แค่ sync ค่า)
         function enhanceSelect(el){
             var $el = $(el);
             if (selectSkipped($el)) return;
+            el = $el[0];                       // รับได้ทั้ง element และ jQuery
 
             var want = selectWantsSearch($el) ? 'select2' : 'picker';
             var cur  = $el.data('enhanced');
-            if (cur === want) { syncSelect($el); return; }
+
+            /* ⚠ bootstrap-select อ่าน <option> เข้าไปทำรายการของตัวเองแค่ "ตอน init ครั้งเดียว"
+                 — ในไลบรารีไม่มี MutationObserver เลย และ 'render' อัปเดตแค่ข้อความบนปุ่ม
+                   ตัวที่สร้างรายการใหม่คือ buildList ซึ่งเรียกจาก 'refresh' ที่ห้ามใช้ (วาดซ้อนบน BS 5.3)
+                 ⇒ option ที่ JS เติมทีหลังจะไม่โผล่ในดรอปดาวน์ ต้อง init ใหม่ทั้งตัว
+               เทียบด้วยลายเซ็นจึงไม่วนซ้ำ: init เสร็จลายเซ็นตรงแล้ว mutation ที่เกิดจากตัว init เองไม่ทำอะไรต่อ
+               (select2 อ่าน <option> สด ๆ ทุกครั้งที่กางอยู่แล้ว จึงไม่ต้อง init ใหม่) */
+            var stale = (want === 'picker' && el._selOptSig !== optionsSig(el));
+            if (cur === want && !stale) { syncSelect($el); return; }
 
             _selBusy = true;
             try {
@@ -265,6 +281,8 @@
                     $el.select2({
                         width: selectWidthOf($el),
                         tags: $el.hasClass('select2-tags'),
+                        // ข้อความ hint ตอนยังไม่ได้เลือก — สำคัญกับ multiple ที่ไม่มี option "-- เลือก --"
+                        placeholder: $el.attr('data-placeholder') || null,
                         dropdownParent: $mc.length ? $mc : $(document.body)
                     });
                 } else {
@@ -279,7 +297,8 @@
                     $el.selectpicker();
                 }
                 $el.data('enhanced', want);
-                observeSelectOptions($el[0]);
+                el._selOptSig = optionsSig(el);   // จำชุด option ที่ init ไปด้วย เอาไว้เทียบรอบหน้า
+                observeSelectOptions(el);
             } finally {
                 _selBusy = false;
             }

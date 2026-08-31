@@ -386,7 +386,8 @@ class PriceApprovalController extends Controller
         }
 
         $reqDate = $existing->ReqDate ?? now()->format('Y-m-d H:i:s');
-        $validTo = $this->parseDate($request->input('valid_to'));
+        // ช่อง "อนุมัติราคาถึง" ว่าง (เผลอลบวันที่ทิ้ง) → ยืนราคาถึงพรุ่งนี้ ไม่ปล่อยให้ enddate ว่าง
+        $validTo = $this->parseDate($request->input('valid_to')) ?? self::defaultValidTo();
 
         // เขียน zcustprice เฉพาะตอนที่เป็น "การอนุมัติจริง ๆ" (อยู่ในโหมด MD)
         // — ไม่งั้น MK ที่แก้ใบซึ่งอนุมัติไปแล้วจะเผลอทับ enddate ด้วยช่องที่ถูกล็อกไว้ (ค่าว่าง)
@@ -481,6 +482,20 @@ class PriceApprovalController extends Controller
         $value = str_replace(',', '', trim((string) $value));
 
         return ($value === '' || !is_numeric($value)) ? null : (float) $value;
+    }
+
+    /**
+     * ค่าเริ่มต้นของช่อง "อนุมัติราคาถึง" (zcustprice.enddate) = พรุ่งนี้
+     *
+     * ใช้ 2 ที่ให้ตรงกัน: ฟอร์มเติมให้ตอนเปิด (tomorrowYmd() ใน order/index.blade.php)
+     * และ save() เติมให้เองเมื่อช่องถูกส่งมาว่าง (เผลอลบวันที่ทิ้ง)
+     *
+     * ⚠ ห้ามปล่อย enddate เป็น null — activeApprovedPrice() ถือว่า "ว่าง = ไม่กำหนดวันหมดอายุ"
+     *   ราคาพิเศษใบนั้นจะปลดล็อกด่านราคาใน OrderController::checkPriceFloor() ได้ตลอดไป
+     */
+    private static function defaultValidTo(): string
+    {
+        return now()->addDay()->format('Y-m-d');
     }
 
     /** d/m/Y → Y-m-d (ว่าง/รูปแบบผิด = null) */

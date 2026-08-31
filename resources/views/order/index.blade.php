@@ -118,6 +118,21 @@
 }
 #orderItemsTable tfoot th { background: #f5e6c8; font-size: .85rem; }
 #orderItemsTable td { font-size: .85rem; padding: .3rem .35rem; }
+/* ตารางรายการมี 13 คอลัมน์ ความกว้างรวมเกิน modal-xl (1140px) อยู่มาก ต้องเลื่อนแนวนอนตลอด
+   → ขยาย modal ใบสั่งซื้อให้เกือบเต็มจอ (เฉพาะ #orderModal — modal ฟอร์มลูกยังเป็น modal-xl เท่าเดิม) */
+#orderModal .modal-dialog { max-width: 95vw; }
+
+/* modal กว้าง 95vw เพื่อตารางรายการ แต่ส่วนหัวฟอร์มไม่ควรยืดตามจนอ่านยาก
+   → จำกัดไว้ที่ 1200px แล้วจัดกึ่งกลาง (ตารางรายการไม่มี class นี้ จึงยังกว้างเต็ม modal)
+   ⚠ ระวัง .row ที่มี margin ติดลบของ bootstrap — ใส่ max-width ตรง ๆ ได้ ไม่ต้องหักลบเพิ่ม */
+#orderModal .of-narrow { max-width: 1200px; margin-left: auto; margin-right: auto; }
+
+/* ปฏิทินของช่องวันที่ในตารางรายการถูกย้ายไปไว้ที่ <body> (static:false — ดู initRowPickers)
+   flatpickr.css ของ theme ตั้ง z-index ไว้ 999 ซึ่งต่ำกว่า modal (--bs-modal-zindex: 1090)
+   ปฏิทินจึงจมอยู่ใต้ modal — ยกขึ้นมาเหนือ modal แต่ยังต่ำกว่า toast (1095) / tooltip (1099) */
+.flatpickr-calendar { z-index: 1092; }
+
+/* min-width เป็นค่าเริ่มต้นตอนช่องว่าง — oiAutoGrow() จะตั้ง min-width แบบ inline ทับให้โตตามข้อความ */
 #orderItemsTable .oi-input { min-width: 80px; }
 #orderItemsTable .oi-input:focus { background: #fffbe0; }
 
@@ -209,6 +224,8 @@
 #oaQueueTable tbody tr { cursor: pointer; }
 #oaQueueTable tbody tr:hover { background: #fff9a8; }
 #oaQueueTable td { font-size: .85rem; }
+/* ปุ่มคอลัมน์ "จัดการ" — กันคำว่า "รออนุมัติ" ตกบรรทัดเมื่อคอลัมน์แคบ */
+#oaQueueTable td .btn { white-space: nowrap; }
 
 .oa-hl-blue  { background-color: #cfe9fb !important; }
 .oa-hl-green { background-color: #ccffcc !important; }
@@ -606,6 +623,15 @@
     }
 
     // ตั้งค่าให้ flatpickr (รับ Y-m-d / datetime); ว่าง = เคลียร์
+    // ค่าเริ่มต้นของช่อง "อนุมัติราคาถึง" = พรุ่งนี้ (Y-m-d)
+    // ต้องตรงกับ PriceApprovalController::defaultValidTo() ที่ server เติมให้เมื่อช่องถูกส่งมาว่าง
+    function tomorrowYmd(){
+        var d = new Date();
+        d.setDate(d.getDate() + 1);
+        var p = function(n){ return (n < 10 ? '0' : '') + n; };
+        return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+    }
+
     function setFp(id, val){
         var el = document.getElementById(id);
         if (!el) return;
@@ -698,11 +724,45 @@
         setOrderFormMode('new');           // ปลดล็อกช่องที่เหลือ
 
         $.getJSON("{{ $page_url }}/next-orderno", {type: type}, function(res){
-            if (res.found && res.orderno) $('#o_Orderno').val(res.orderno);
+            if (res.found && res.orderno){ $('#o_Orderno').val(res.orderno); syncItypeRequired(); }
             else Swal.fire('เจนเลขที่ใบสั่งไม่สำเร็จ', 'ไม่พบเลขรันของประเภท ' + type, 'error');
         }).fail(function(){
             Swal.fire('เจนเลขที่ใบสั่งไม่สำเร็จ', 'ลองใหม่อีกครั้ง', 'error');
         });
+    }
+
+    // ── itype: ใบสั่งที่เลขที่ขึ้นต้นด้วย W ต้องมี itype ──
+    // ตรงกับด่านฝั่ง server ใน OrderController::save() — ที่นี่แค่บอกผู้ใช้ก่อนกดบันทึก
+    // itype เป็นช่องอ่านอย่างเดียว ค่ามาจาก customer.type ⇒ ว่าง = ต้องไปกำหนดประเภทให้ลูกค้าก่อน
+    function orderPrefix(){
+        var no = ($('#o_Orderno').val() || '').trim();
+        if (no) return no.charAt(0).toUpperCase();
+        return ($('input[name="order_type_form"]:checked').val() || '').charAt(0).toUpperCase();
+    }
+
+    function itypeRequired(){ return orderPrefix() === 'W'; }
+
+    // ── itype = ประเภทสินค้าที่สั่ง (ตัวเลือกจาก config/order.php → itypes) ──
+    // เลือกได้ข้อเดียว: ติ๊กข้อใหม่ → ปลดข้อเก่าให้เอง (ใช้ checkbox ตามที่ผู้ใช้กำหนดหน้าตาไว้)
+    // ⚠ ยังไม่มีที่เก็บใน DB → ค่าที่เลือกไม่ได้ถูกส่งไปบันทึก (ดู config/order.php)
+    $(document).on('change', '.o-itype-opt', function(){
+        if (this.checked) $('.o-itype-opt').not(this).prop('checked', false);
+        syncItypeText();
+    });
+
+    // เอาข้อที่ติ๊กไว้มาโชว์ในช่อง (ไม่ติ๊กเลย = ช่องว่าง)
+    function syncItypeText(){
+        var $on = $('.o-itype-opt:checked').first();
+        $('#o_itype').val($on.length ? ($on.data('label') || '') : '');
+        syncItypeRequired();
+    }
+
+    // โชว์ * ข้างป้าย itype + ขึ้นกรอบแดงเมื่อจำเป็นแต่ยังว่าง
+    function syncItypeRequired(){
+        var need  = itypeRequired();
+        var empty = !($('#o_itype').val() || '').trim();
+        $('#o_itype_req').toggleClass('d-none', !need);
+        $('#o_itype').toggleClass('is-invalid', need && empty);
     }
 
     // เปลี่ยนประเภทใบสั่ง — ไม่เจนเลขที่ใหม่ (เจนเฉพาะตอนกดปุ่ม "เพิ่มใบสั่งซื้อใหม่")
@@ -711,6 +771,7 @@
         if ($('#o_Orderno').data('existing')) return;   // ใบเดิม — ไม่แตะเลขที่
         var cur = ($('#o_Orderno').val() || '').trim();
         if (cur && cur.substring(0, 2).toUpperCase() !== type) $('#o_Orderno').val('');
+        syncItypeRequired();
     }
 
     function clearOrderForm(){
@@ -726,6 +787,7 @@
         // ผู้บันทึก = พนักงานที่ล็อกอินอยู่
         $('#o_Emp').val('{{ $current_emp }}');
         renderOrderItems([]);
+        syncItypeRequired();
     }
 
     function fillOrderForm(res){
@@ -748,10 +810,8 @@
         $('#o_RsvNo').val(o.RsvNo || '');
         $('#o_netqty').val(commaFmt(o.netqty, 2));
 
-        // ประเภทอุตสาหกรรมของลูกค้า (ปุ่ม itype เดิม)
-        $('#o_itype').val(res.customer && res.customer.type
-            ? res.customer.type + ' — ' + (res.customer.type_name || '')
-            : '');
+        // itype ไม่ได้เติมจากข้อมูลลูกค้าแล้ว — เปลี่ยนเป็น "ประเภทสินค้าที่สั่ง" ที่ผู้ใช้เลือกเอง
+        // (ยังไม่มีที่เก็บใน DB → เปิดใบเดิมขึ้นมาช่องนี้จะว่างเสมอ)
 
         // สถานที่ส่ง — รายการของลูกค้ารายนี้
         fillDvpoints(res.dvpoints, o.DVpoint);
@@ -775,6 +835,7 @@
         fillPriceBox(res.price);
 
         renderOrderItems(res.items || []);
+        syncItypeRequired();        // ใบ W ที่ลูกค้ายังไม่มี itype → ขึ้นกรอบแดงให้เห็นตั้งแต่เปิดใบ
         setOrderFormMode('edit');   // เปิดใบเดิม → ปลดล็อกทุกช่อง (ยกเว้นเลขที่ใบสั่ง)
     }
 
@@ -796,7 +857,12 @@
         $('#o_fixed_price').val(fmtNum(p.fixed_price, 2))
             .attr('title', p.formula ? 'ราคาขาย 1 = ราคาทุน ' + p.formula : '');
         $('#o_price2').val(fmtNum(p.price2, 2));
-        $('#o_min_price').val(fmtNum(p.min_price, 2));       // = ราคาช่อง 2
+        // "ราคาต้องไม่ต่ำกว่า" = ราคาอนุมัติ (ถ้ายังยืนราคาอยู่) ไม่งั้นราคาช่อง 2
+        // ตัวเลขนี้ต้องเป็นตัวเดียวกับที่ checkPriceFloor() ใช้ตอนบันทึก ผู้ใช้จะได้ไม่โดนบล็อกด้วยเลขที่ไม่เห็น
+        $('#o_min_price').val(fmtNum(p.min_price, 2))
+            .attr('title', p.min_from === 'approved'
+                ? 'เทียบกับราคาอนุมัติของลูกค้ารายนี้ (ยังไม่เลยวันยืนราคา)'
+                : 'เทียบกับราคาช่อง 2');
         $('#o_price_group').val(p.group ? p.group + ' — ' + (p.group_label || '') : '');
         $('#o_appv_price').val(fmtNum(p.appv_price, 2));
         $('#o_valid_to').val(fmtDate(p.valid_to));
@@ -810,6 +876,11 @@
             if (p.cost_price != null) src.push('ราคาทุน ' + fmtNum(p.cost_price, 2));
             if (p.rule_label)         src.push(p.rule_label);
             if (p.formula)            src.push(p.formula);
+            // เกณฑ์ขั้นต่ำเปลี่ยนไปใช้ราคาอนุมัติ → บอกให้เห็นชัด ไม่งั้นผู้ใช้จะงงว่าทำไมไม่ใช่ราคาช่อง 2
+            if (p.min_from === 'approved'){
+                src.push('ราคาต้องไม่ต่ำกว่า = ราคาอนุมัติ ' + fmtNum(p.min_price, 2)
+                    + (p.valid_to ? ' (ยืนราคาถึง ' + fmtDate(p.valid_to) + ')' : ''));
+            }
             $note.text(src.join('  ·  '));
             return;
         }
@@ -823,6 +894,54 @@
     // ════════════════════════════════════════════════════════
 
     // 1 แถว = 1 suborder — Runno เก็บใน hidden เพื่อให้ฝั่ง server รู้ว่าแถวไหนของเดิม
+    /* ── ช่องในตารางรายการโตตามข้อความที่พิมพ์ (auto-grow) ─────────────────────
+       input ของ bootstrap เป็น width:100% ของช่องตาราง จึงไม่ยืดตามเนื้อหาเอง
+       วิธีแก้: วัดความกว้างข้อความจริงด้วย canvas แล้วตั้ง **min-width** แบบ inline
+       (ตั้ง min-width ไม่ใช่ width เพื่อให้ input ยังเต็มความกว้างช่องเหมือนเดิม
+        ส่วน <td> จะถูกบังคับให้กว้างอย่างน้อยเท่านั้น ตารางจึงขยายตาม
+        — table-layout เป็น auto อยู่แล้ว และตารางอยู่ใน .table-responsive ที่เลื่อนแนวนอนได้) */
+    var OI_MIN_W = 80,          // ความกว้างขั้นต่ำตอนช่องว่าง (เท่าค่าเดิมใน CSS)
+        OI_MAX_W = 420,         // กันช่องเดียวบานจนตารางอ่านไม่ไหว
+        _oiCanvas = null;
+
+    function oiTextWidth(el, text){
+        if (!_oiCanvas) _oiCanvas = document.createElement('canvas').getContext('2d');
+        var cs = getComputedStyle(el);
+        _oiCanvas.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+        return _oiCanvas.measureText(text).width;
+    }
+
+    function oiAutoGrow(el){
+        if (!el || !el.classList || !el.classList.contains('oi-input')) return;
+
+        var cs = getComputedStyle(el);
+        if (!cs.fontSize || parseFloat(cs.fontSize) === 0) return;   // modal ยังซ่อนอยู่ วัดไม่ได้
+
+        var pad = parseFloat(cs.paddingLeft)     + parseFloat(cs.paddingRight)
+                + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
+
+        // ใช้ placeholder ตอนช่องว่าง เพื่อไม่ให้ช่องหดจนอ่าน placeholder ไม่ออก
+        var text = el.value || el.placeholder || '';
+        var w    = oiTextWidth(el, text) + pad + 14;                 // 14 = เผื่อ caret ไม่ให้ตัวอักษรชนขอบ
+
+        el.style.minWidth = Math.min(Math.max(Math.ceil(w), OI_MIN_W), OI_MAX_W) + 'px';
+    }
+
+    function oiAutoGrowAll(scope){
+        $(scope || '#orderItems').find('.oi-input').each(function(){ oiAutoGrow(this); });
+    }
+
+    // input = พิมพ์เอง · change = flatpickr เลือกวันที่ · blur = js-comma จัดรูปแบบตัวเลขใหม่
+    $(document).on('input change blur', '#orderItems .oi-input', function(){ oiAutoGrow(this); });
+
+    // ผู้ใช้แก้ชื่อสินค้าเอง → เลิกถือว่าเป็นค่าที่ระบบเติม จะได้ไม่ถูกทับตอนเปลี่ยนรหัสสินค้ารอบหน้า
+    $(document).on('input', '#orderItems [data-f="prodname"]', function(){
+        $(this).removeAttr('data-autofill');
+    });
+
+    // ตอน modal ยังซ่อนอยู่วัดความกว้างไม่ได้ — วัดใหม่ตอนเปิด (ทั้งใบเดิมและใบใหม่)
+    $(function(){ $('#orderModal').on('shown.bs.modal', function(){ oiAutoGrowAll(); }); });
+
     function orderItemRow(r){
         r = r || {};
         var td = function(html, cls){ return '<td' + (cls ? ' class="' + cls + '"' : '') + '>' + html + '</td>'; };
@@ -866,6 +985,7 @@
         initRowPickers('#orderItems');
         renumberOrderItems();
         recalcOrderTotals();
+        oiAutoGrowAll();                 // ค่าที่โหลดมาจากใบเดิมต้องขยายช่องให้พอดีด้วย
     }
 
     function addOrderItem(){
@@ -873,6 +993,7 @@
         $('#orderItems').append($tr);
         initRowPickers($tr);
         renumberOrderItems();
+        oiAutoGrowAll($tr);
     }
 
     function removeOrderItem(btn){
@@ -880,13 +1001,59 @@
         if (!$('#orderItems tr').length) addOrderItem();   // เหลืออย่างน้อย 1 แถวเสมอ
         renumberOrderItems();
         recalcOrderTotals();
+        refreshItemContext();   // รหัสที่แถบเตือน/กล่องราคาอ้างอิงอยู่อาจเพิ่งถูกลบไป
+    }
+
+    /* เช็คแถบเตือน "ต้อง Match ใหม่" + กล่องราคา ใหม่จากรหัสสินค้าที่ยังเหลืออยู่ในตาราง
+       ใช้ตอนที่รหัสอ้างอิงอาจหายไป — กดลบแถว หรือลบข้อความในช่องรหัสจนว่าง
+       ไม่งั้นแถบแดงกับกล่องราคาจะค้างเป็นของเบอร์ที่ไม่มีอยู่ในใบแล้ว */
+    function refreshItemContext(){
+        var el = null;
+        $('#orderItems [data-f="Itemno"]').each(function(){
+            if (!el && ($(this).val() || '').trim()) el = this;
+        });
+
+        // ยังมีรหัสเหลืออยู่ → ดึงข้อมูลของรหัสนั้นมาแสดงแทน (จัดการแถบเตือน + ราคาให้ในตัว)
+        if (el){ applyItemLookup(el); return; }
+
+        // ไม่เหลือรหัสสินค้าเลยทั้งใบ → ซ่อนแถบเตือน + ล้างกล่องราคา
+        showMatchWarning(null);
+        syncItemnoToPrice();
     }
 
     // flatpickr ของช่องวันที่ในแถว — ต้องผูกทุกครั้งที่สร้างแถวใหม่
+    /* ⚠ ช่องวันที่ในตารางรายการใช้ static:false ต่างจากที่อื่นในระบบ (ที่อื่นใช้ static:true)
+       เพราะตารางนี้อยู่ใน .table-responsive ซึ่งมี overflow-x:auto — ตามสเปก CSS พอแกนหนึ่ง
+       ไม่ใช่ visible อีกแกนที่เป็น visible จะถูกบังคับเป็น auto ด้วย ⇒ ปฏิทินที่ฝังไว้ใน <td>
+       (static:true) จะถูก clip เหลือแค่แถบบน. static:false ให้ flatpickr ย้ายปฏิทินไป <body>
+       แล้วคำนวณตำแหน่งเอง จึงไม่โดนตัด
+       ⚠ ต้องคู่กับ CSS `.flatpickr-calendar { z-index: 1092 }` ด้านบนของไฟล์นี้เสมอ —
+         flatpickr.css ของ theme ตั้งไว้แค่ 999 ปฏิทินจะจมใต้ modal (1090) ถ้าไม่ยกขึ้น
+
+       ผลข้างเคียงของการย้ายไป <body>: ปฏิทินไม่เลื่อนตามเวลาผู้ใช้เลื่อนตาราง/modal
+       → ปิดปฏิทินให้เองเมื่อมีการเลื่อน จะได้ไม่มีปฏิทินค้างลอยผิดที่ */
+    // ที่ที่เลื่อนแล้วทำให้ปฏิทินลอยผิดตำแหน่ง: กล่องเลื่อนแนวนอนของตาราง + ตัว modal เอง
+    function rowPickerScrollTargets(){
+        return $('#orderItemsTable').closest('.table-responsive').add('#orderModal');
+    }
+
     function initRowPickers(scope){
         $(scope).find('.oi-date').each(function(){
             if (this._flatpickr) return;
-            flatpickr(this, {dateFormat: 'd/m/Y', allowInput: true, static: true, disableMobile: true});
+            flatpickr(this, {
+                dateFormat: 'd/m/Y',
+                allowInput: true,
+                disableMobile: true,
+                onOpen: function (_, __, fp) {
+                    fp._closeOnScroll = function(){ fp.close(); };
+                    rowPickerScrollTargets().on('scroll.wpfp', fp._closeOnScroll);
+                },
+                onClose: function (_, __, fp) {
+                    if (!fp._closeOnScroll) return;
+                    rowPickerScrollTargets().off('scroll.wpfp', fp._closeOnScroll);
+                    fp._closeOnScroll = null;
+                }
+            });
         });
     }
 
@@ -907,24 +1074,52 @@
 
     // ── กรอกรหัสสินค้า → เติมชื่อสินค้า + ผูกกล่องราคา + เตือน Match ใหม่ ──
     // ผู้ใช้กรอกรหัสเดียวทั้งใบ → ใช้รหัสของแถวแรกที่กรอกไว้เป็นตัวอ้างอิงของกล่องราคา
-    var itemLookupTimer = null;
+    // เก็บตัวจับเวลา debounce ไว้ที่ช่องแต่ละช่อง — เดิมใช้ตัวแปรกลางตัวเดียวร่วมกันทุกแถว
+    // ทำให้พิมพ์แถวถัดไปเร็ว ๆ แล้วไป clearTimeout ของแถวก่อนหน้าทิ้ง แถวนั้นเลยไม่ถูกดึงข้อมูล
     function onItemnoInput(el){
-        clearTimeout(itemLookupTimer);
-        itemLookupTimer = setTimeout(function(){ applyItemLookup(el); }, 350);
+        clearTimeout(el._lookupTimer);
+        el._lookupTimer = setTimeout(function(){ applyItemLookup(el); }, 350);
     }
 
     function applyItemLookup(el){
         var $row   = $(el).closest('tr');
         var itemno = ($(el).val() || '').trim();
 
-        if (!itemno){ syncItemnoToPrice(); return; }
+        // ลบรหัสในช่องนี้จนว่าง → ไปใช้รหัสของแถวอื่นที่ยังเหลือ (ถ้าไม่เหลือเลยแถบเตือนจะถูกซ่อน)
+        // ไม่วนซ้ำ เพราะ refreshItemContext() เลือกเฉพาะช่องที่ "มีค่า" เท่านั้น
+        if (!itemno){ refreshItemContext(); return; }
 
-        $.getJSON("{{ $page_url }}/item-lookup", {itemno: itemno}, function(res){
+        $.getJSON("{{ $page_url }}/item-lookup", {
+            itemno: itemno,
+            custno: ($('#o_Custno').val() || '').trim()   // Label ของเบอร์เดียวกันต่างกันได้ตามลูกค้า
+        }, function(res){
             if (($(el).val() || '').trim() !== itemno) return;   // ผู้ใช้พิมพ์ต่อแล้ว
-            // เติมชื่อสินค้าให้เฉพาะตอนช่องยังว่าง (ไม่ทับที่ผู้ใช้พิมพ์เอง)
+
+            /* เติมชื่อสินค้าให้ทุกครั้งที่เปลี่ยนรหัสสินค้า — แต่ยังต้องไม่ทับชื่อที่ "ผู้ใช้พิมพ์เอง"
+               แยกสองอย่างนี้ด้วย data-autofill: จำชื่อที่ระบบเติมไว้ล่าสุด
+                 - ช่องว่าง หรือ ค่าปัจจุบัน = ค่าที่ระบบเติมไว้เอง  → เติมทับได้
+                 - ค่าอื่น (ผู้ใช้พิมพ์เอง / ชื่อที่บันทึกไว้ในใบเดิม) → ไม่แตะ
+               (เดิมเช็คแค่ `!$name.val()` จึงเติมได้ครั้งเดียว เปลี่ยนรหัสรอบต่อไปชื่อค้างของเก่า) */
             var $name = $row.find('[data-f="prodname"]');
+            var cur   = $name.val() || '';
+            var auto  = $name.attr('data-autofill');
             // ชื่อที่ได้จาก uprice.Label ยาวเกิน 20 ตัวได้ แต่คอลัมน์รับได้แค่ 20 — ตัดให้พอดี
-            if (res.prodname && !$name.val()) $name.val(String(res.prodname).substring(0, 20));
+            if (res.prodname && (cur === '' || (auto !== undefined && cur === auto))){
+                var name = String(res.prodname).substring(0, 20);
+                $name.val(name).attr('data-autofill', name);
+                oiAutoGrow($name[0]);                    // เติมค่าด้วย .val() ไม่ยิง event ต้องสั่งขยายเอง
+            }
+
+            // หมายเหตุ — เติมจาก uprice.Label ด้วยกติกา data-autofill ชุดเดียวกับชื่อสินค้า
+            // (suborder.Remark เป็น text จึงไม่ต้องตัดความยาว)
+            var $rem   = $row.find('[data-f="Remark"]');
+            var curRem = $rem.val() || '';
+            var autoRem = $rem.attr('data-autofill');
+            if (res.remark && (curRem === '' || (autoRem !== undefined && curRem === autoRem))){
+                $rem.val(res.remark).attr('data-autofill', res.remark);
+                oiAutoGrow($rem[0]);
+            }
+
             showMatchWarning(res);
             syncItemnoToPrice();
         }).fail(syncItemnoToPrice);
@@ -970,21 +1165,20 @@
     function lookupOrderCustomer(code){
         code = (code || '').trim();
         clearTimeout(custLookupTimer);
-        if (!code){ $('#o_Custname').val(''); $('#o_itype').val(''); fillDvpoints([], ''); return; }
+        if (!code){ $('#o_Custname').val(''); fillDvpoints([], ''); return; }
         custLookupTimer = setTimeout(function(){
             if (custLookupXhr) custLookupXhr.abort();
             custLookupXhr = $.getJSON("{{ $page_url }}/customer/" + encodeURIComponent(code), function(res){
                 if ($('#o_Custno').val().trim() !== code) return;   // กันผลเก่ามาทับ
                 if (!res.found){
                     $('#o_Custname').val('');
-                    $('#o_itype').val('');
                     fillDvpoints([], '');
                     return;
                 }
                 var c = res.customer;
                 $('#o_Custname').val(c.name || '');
-                $('#o_itype').val(c.type ? c.type + ' — ' + (c.type_name || '') : '');
                 fillDvpoints(res.dvpoints, '');
+                // itype ไม่ได้ผูกกับลูกค้าแล้ว (เป็นประเภทสินค้าที่สั่ง ผู้ใช้เลือกเอง) จึงไม่แตะที่นี่
 
                 // ── ค่าที่ดึงจากข้อมูลลูกค้า ──
                 // ทำทุกครั้งที่ "ผู้ใช้เปลี่ยนรหัสลูกค้า" (ฟังก์ชันนี้ถูกเรียกจาก oninput เท่านั้น
@@ -1036,6 +1230,18 @@
         }
         if (!items.length){
             Swal.fire('ยังไม่มีรายการสินค้า', 'กรอกรหัสสินค้าในตารางอย่างน้อย 1 แถว', 'warning');
+            return;
+        }
+        // ใบที่เลขที่ขึ้นต้นด้วย W ต้องเลือก itype
+        // ⚠ ตอนนี้กันได้แค่ฝั่งจอ — itype ยังไม่มีที่เก็บใน DB จึงไม่ได้ส่งไปให้ server ตรวจ
+        //   (ด่านฝั่ง server ใน OrderController::save() ถูกคอมเมนต์ไว้ รอที่เก็บ)
+        if (itypeRequired() && !$('.o-itype-opt:checked').length){
+            syncItypeRequired();
+            Swal.fire({
+                icon:  'warning',
+                title: 'ใบสั่งที่ขึ้นต้นด้วย W ต้องระบุ itype',
+                text:  'กดที่ช่อง itype แล้วเลือกประเภทสินค้า 1 ข้อ ก่อนบันทึก'
+            });
             return;
         }
 
@@ -1172,7 +1378,7 @@
                  +  '<td class="text-end">' + (fmtNum(r.price, 2) || '—') + '</td>'
                  +  '<td class="text-center">'
                  +    '<span class="btn btn-sm btn-label-warning border">'
-                 +      '<i class="ti ti-gavel me-1"></i>อนุมัติ</span>'
+                 +      '<i class="ti ti-gavel me-1"></i>รออนุมัติ</span>'
                  +  '</td>'
                  +  '</tr>';
         });
@@ -1461,7 +1667,7 @@
         $('#approvalModal textarea').val('');
         $('#approvalModal input[type="checkbox"]').prop('checked', false);
         $('#a_itemno').html('<option value="">— เลือกลูกค้าก่อน —</option>');
-        setFp('a_validto', '');
+        setFp('a_validto', tomorrowYmd());   // ค่าเริ่มต้น "อนุมัติราคาถึง" = พรุ่งนี้
         highlightPriceGroup();
         renderApprovalReqState(null);
         renderApprovalGrid('ราคาที่ยืนไว้ของเบอร์นี้', ZCUST_COLS, []);
@@ -1567,8 +1773,9 @@
         $('#a_uprice_rem2').val(u.REM2 || '');
 
         // "อนุมัติราคาถึง" = วันที่ยืนราคาของเบอร์ที่เลือก (zcustprice.enddate)
+        // ยังไม่เคยยืนราคาให้เบอร์นี้ → ค่าเริ่มต้นเป็นพรุ่งนี้ (ตรงกับที่ server เติมให้ถ้าปล่อยว่าง)
         var first = (res.rows || [])[0];
-        setFp('a_validto', first ? first.enddate : '');
+        setFp('a_validto', (first && first.enddate) ? first.enddate : tomorrowYmd());
 
         highlightPriceGroup();
         renderApprovalGrid('ราคาที่ยืนไว้ของเบอร์นี้', ZCUST_COLS, res.rows || []);

@@ -191,13 +191,13 @@
                                     </div>
                                     {{-- ขึ้นแถวใหม่ --}}
                                     <div class="w-100"></div>
-
-                                    {{-- Chemical Safety — มาตรฐานความปลอดภัยสารเคมี --}}
+                                    {{-- Chemical Safety — มาตรฐานความปลอดภัยสารเคมี (เลือกได้หลายค่า 29/08/2569) --}}
                                     {{-- select2 ของ modal นี้ตั้ง tags:true → พิมพ์ค่านอกรายการเองได้ (= ช่อง "อื่นๆ ระบุ" ในฟอร์มกระดาษ) --}}
+                                    {{-- หลายค่าเก็บลง testmain.ChemSafety คอลัมน์เดียว คั่นด้วย ", " (ดู ColorMatchingController::joinMulti) --}}
                                     <div class="col-md-4">
                                         <label class="form-label small mb-1">
                                             <i class="ti ti-shield-check me-1"></i>
-                                            Chemical Safety <span class="text-muted fw-normal">(เลือก หรือพิมพ์ค่าอื่นได้)</span>
+                                            Chemical Safety <span class="text-muted fw-normal">(เลือกได้หลายค่า หรือพิมพ์ค่าอื่นได้)</span>
                                         </label>
                                         @php $chemSafetyFixed = [
                                             'EN 71:3',
@@ -207,8 +207,11 @@
                                             'EU 2002/72/EC',
                                             'RoHS2 (EU2011/65/EU)',
                                         ]; @endphp
-                                        <select name="ChemSafety" class="form-select select2-tags">
-                                            <option value="">-- เลือก --</option>
+                                        {{-- ถ้าไม่เลือกอะไรเลย <select multiple> จะไม่ส่ง key มา → ล้างค่าเดิมไม่ได้
+                                             hidden ตัวนี้ทำให้ ChemSafety ถูกส่งมาเสมอ (ค่าว่าง = ล้างค่า) --}}
+                                        <input type="hidden" name="ChemSafety[]" value="">
+                                        <select name="ChemSafety[]" multiple class="form-select select2-tags"
+                                                data-placeholder="เลือก หรือพิมพ์ค่าอื่นได้">
                                             {{-- ตัวเลือกตายตัวตามฟอร์มกระดาษ (บนสุด) --}}
                                             @foreach ($chemSafetyFixed as $opt)
                                                 <option>{{ $opt }}</option>
