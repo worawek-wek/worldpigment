@@ -41,10 +41,18 @@
 
                     <div class="card-header">
                         <div class="row g-3 align-items-center">
-                            <div class="col-md-12" style="text-align: right">
+                            <div class="col-md-12 d-flex justify-content-end gap-2">
                                 <button class="btn btn-primary" id="btn_add">
                                     <i class="ti ti-plus me-1"></i>
                                     สร้างแผน
+                                </button>
+                                <button class="btn btn-success" id="btn_export_excel">
+                                    <i class="ti ti-file-spreadsheet me-1"></i>
+                                    Export Excel
+                                </button>
+                                <button class="btn btn-danger" id="btn_export_pdf">
+                                    <i class="ti ti-file-type-pdf me-1"></i>
+                                    Export PDF
                                 </button>
                             </div>
                         </div>
@@ -301,6 +309,35 @@
     $(document).on('keyup', '#searchInput', function(e){
         e.preventDefault();
         oTable.draw();
+    });
+
+    // ---- Export Excel / PDF ----
+    // เก็บค่าตัวกรองปัจจุบันชุดเดียวกับที่ส่งให้ DataTable (ajax.data) แล้วต่อเป็น querystring
+    function collectExportParams() {
+        return {
+            search:             $('#searchInput').val() || '',
+            company:            $('#searchCompany').val() || '',
+            planning_status:    $('#searchStatus').val() || '',
+            end_job:            $('#searchEndJob').val() || 'N',
+            date_field:         $('#searchDateField').val() || '',
+            date_start:         $('#searchDateStart').val() || '',
+            date_end:           $('#searchDateEnd').val() || '',
+            packing_date:       $('#searchPackingDate').val() || '',
+            packing_time_start: $('#searchPackingTimeStart').val() || '',
+            packing_time_end:   $('#searchPackingTimeEnd').val() || ''
+        };
+    }
+
+    $(document).on('click', '#btn_export_excel', function(e){
+        e.preventDefault();
+        var qs = $.param(collectExportParams());
+        window.location.href = '{{ route("production.planning.excel") }}?' + qs;
+    });
+
+    $(document).on('click', '#btn_export_pdf', function(e){
+        e.preventDefault();
+        var qs = $.param(collectExportParams());
+        window.open('{{ route("production.planning.pdf") }}?' + qs, '_blank');
     });
 
     // เปลี่ยนแผนก → โหลดสถานะของแผนกนั้น (ตามความสัมพันธ์แผนก↔สถานะในฐานข้อมูล) แล้วค้นหาใหม่

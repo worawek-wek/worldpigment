@@ -101,6 +101,7 @@ class ReportController extends Controller
         $machine_no = $request->get('machine_no');  // code เครื่องจักร
         $date_start = $request->get('date_start');
         $date_end   = $request->get('date_end');
+        $search     = trim((string) $request->get('search')); // ค้นหาข้ามฟิลด์ (แบบหน้ารายการวางแผน)
 
         $rows = Planning::query()
             ->leftJoin('tb_planning_header', 'tb_planning_header.id', '=', 'tb_planning.planning_header_id')
@@ -138,6 +139,19 @@ class ReportController extends Controller
             ->when(!empty($machine_no), fn ($q) => $q->where('tb_planning.machine_no', $machine_no))
             ->when(!empty($date_start), fn ($q) => $q->whereDate('tb_planning.inplan', '>=', $date_start))
             ->when(!empty($date_end), fn ($q) => $q->whereDate('tb_planning.inplan', '<=', $date_end))
+            // ค้นหาข้ามฟิลด์ในหน้านี้ + ชื่อลูกค้า (ยึดแนวเดียวกับ ProductionPlanController::dataQuery)
+            ->when($search !== '', function ($q) use ($search) {
+                $like = '%'.$search.'%';
+                $q->where(function ($w) use ($like) {
+                    $w->where('tb_planning.machine_no', 'LIKE', $like)
+                        ->orWhere('tb_planning.itemno', 'LIKE', $like)
+                        ->orWhere('tb_planning.red_bill_code', 'LIKE', $like)
+                        ->orWhere('tb_planning.lot', 'LIKE', $like)
+                        ->orWhere('tb_planning_header.orderno', 'LIKE', $like)
+                        ->orWhere('tb_planning_header.custno', 'LIKE', $like)
+                        ->orWhere('customer.name', 'LIKE', $like);
+                });
+            })
             ->get();
 
         // ── สถานะวิธีการผลิต (tb_planning_prod_method): แนบขั้นตอนของแต่ละรายการผลิต ──
@@ -258,6 +272,7 @@ class ReportController extends Controller
                 'machine_no' => $machine_no,
                 'date_start' => $date_start,
                 'date_end'   => $date_end,
+                'search'     => $search,
             ],
         ];
     }
@@ -438,6 +453,9 @@ class ReportController extends Controller
         $ds = $filters['date_start'] ? \Carbon\Carbon::parse($filters['date_start'])->format('d/m/Y') : '-';
         $de = $filters['date_end'] ? \Carbon\Carbon::parse($filters['date_end'])->format('d/m/Y') : '-';
         $parts[] = 'ช่วงวันที่ Inplan: '.$ds.' - '.$de;
+        if (!empty($filters['search'])) {
+            $parts[] = 'คำค้น: '.$filters['search'];
+        }
         $parts[] = 'พบ '.number_format($total).' รายการ';
 
         return implode('   |   ', $parts);

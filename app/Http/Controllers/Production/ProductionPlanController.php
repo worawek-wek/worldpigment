@@ -200,6 +200,157 @@ class ProductionPlanController extends Controller
         return $data;
     }
 
+    // ประกอบข้อมูลสำหรับ export (Excel/PDF) — ดึงตาม dataQuery() (เงื่อนไขค้นหาชุดเดียวกับตาราง)
+    // แล้วเติมค่าที่คำนวณฝั่ง PHP ให้ตรงกับที่ datatable() แสดง: company จริง (item→header) และ inner_status
+    // ไม่ส่ง order[] มา จึงเรียงตาม default ของ dataQuery() (id ล่าสุด / packing เมื่อกรอง)
+    private function buildReportRows()
+    {
+        $rows = $this->dataQuery()->get();
+
+        // รวม planning_status ต่อ header ครั้งเดียว (กัน query ซ้ำต่อแถวเหมือนใน datatable)
+        $header_ids = $rows->pluck('planning_header_id')->filter()->unique()->values();
+        $status_map = Planning::whereIn('planning_header_id', $header_ids)
+            ->get(['planning_header_id', 'planning_status'])
+            ->groupBy('planning_header_id')
+            ->map(function ($items) {
+                return $items->pluck('planning_status')
+                    ->filter(fn ($s) => $s !== null && $s !== '')
+                    ->unique()
+                    ->values();
+            });
+
+        foreach ($rows as $row) {
+            // แผนกจริง: ของ item ก่อน ถ้าว่างจึง fallback ไปที่ header
+            $row->company_display = $row->company ?: $row->header_company;
+
+            // สถานะภายใน (เฉพาะ planning_status ของ header เดียวกัน)
+            $statuses = $status_map->get($row->planning_header_id, collect());
+            $row->inner_status_text = $statuses->isEmpty() ? '-' : $statuses->implode(', ');
+            $row->end_job_label = ($row->end_job ?? 'N') === 'Y' ? 'ปิดงาน' : 'ยังไม่ปิดงาน';
+        }
+
+        return $rows;
+    }
+
+    // ป้ายชื่อคอลัมน์สำหรับไฟล์ export (ใช้ร่วม Excel/PDF)
+    private function reportHeaders(): array
+    {
+        return [
+            '#', 'Orderno', 'เลขที่ใบเบิก', 'Company', 'Inplan', 'Custwant',
+            'วันเวลาบรรจุเสร็จ', 'Itemno', 'Quantity', 'MachineNo', 'สถานะภายใน',
+        ];
+    }
+
+    public function excel(Request $request)
+    {
+        $rows = $this->buildReportRows();
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('วางแผนการผลิต');
+
+        $headers = $this->reportHeaders();
+        $cols    = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'];
+        $lastCol = 'K';
+
+        // หัวรายงาน
+        $sheet->setCellValue('A1', 'รายงานวางแผนการผลิต');
+        $sheet->mergeCells("A1:{$lastCol}1");
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // แถวหัวตาราง
+        $r = 3;
+        foreach ($headers as $i => $h) {
+            $sheet->setCellValue($cols[$i].$r, $h);
+        }
+        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setBold(true);
+        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('E9ECEF');
+        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getAlignment()->setWrapText(true);
+        // Inplan (E) พื้นน้ำเงิน, Custwant (F) พื้นแดง — ให้เหมือนฝั่งเว็บ
+        $sheet->getStyle("E{$r}")->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('CFE2FF');
+        $sheet->getStyle("E{$r}")->getFont()->getColor()->setRGB('084298');
+        $sheet->getStyle("F{$r}")->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('F8D7DA');
+        $sheet->getStyle("F{$r}")->getFont()->getColor()->setRGB('842029');
+
+        $rownum = 0;
+        $r++;
+        foreach ($rows as $row) {
+            $inplan   = $row->inplan ? \Carbon\Carbon::parse($row->inplan)->format('d/m/Y') : '-';
+            if (!empty($row->work_shift)) {
+                $inplan .= ' (กะ '.$row->work_shift.')';
+            }
+            $custwant = $row->custwant ? \Carbon\Carbon::parse($row->custwant)->format('d/m/Y') : '-';
+            $packing  = $row->packing_datetie ? \Carbon\Carbon::parse($row->packing_datetie)->format('d/m/Y H:i') : '-';
+            $status   = $row->inner_status_text.' ('.$row->end_job_label.')';
+
+            $sheet->setCellValue("A{$r}", ++$rownum);
+            $sheet->setCellValueExplicit("B{$r}", $row->orderno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit("C{$r}", $row->red_bill_code ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue("D{$r}", $row->company_display ?: '-');
+            $sheet->setCellValue("E{$r}", $inplan);
+            $sheet->getStyle("E{$r}")->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('CFE2FF');
+            $sheet->getStyle("E{$r}")->getFont()->getColor()->setRGB('084298');
+            $sheet->setCellValue("F{$r}", $custwant);
+            $sheet->getStyle("F{$r}")->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('F8D7DA');
+            $sheet->getStyle("F{$r}")->getFont()->getColor()->setRGB('842029');
+            $sheet->setCellValue("G{$r}", $packing);
+            $sheet->setCellValueExplicit("H{$r}", $row->itemno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue("I{$r}", $row->quantity !== null ? number_format($row->quantity, 2) : '-');
+            $sheet->setCellValueExplicit("J{$r}", $row->machine_no ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue("K{$r}", $status);
+            $r++;
+        }
+
+        if ($rows->isEmpty()) {
+            $sheet->setCellValue("A{$r}", 'ไม่พบข้อมูลตามเงื่อนไขที่เลือก');
+            $sheet->mergeCells("A{$r}:{$lastCol}{$r}");
+            $sheet->getStyle("A{$r}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        }
+
+        foreach ($cols as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $fileName = 'planning-'.now()->format('Ymd-His').'.xls';
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            (new \PhpOffice\PhpSpreadsheet\Writer\Xls($spreadsheet))->save('php://output');
+        }, $fileName, [
+            'Content-Type' => 'application/vnd.ms-excel',
+        ]);
+    }
+
+    public function pdf(Request $request)
+    {
+        $rows = $this->buildReportRows();
+
+        $html = view('production-planning.planning.partials.report-pdf', [
+            'rows'    => $rows,
+            'headers' => $this->reportHeaders(),
+        ])->render();
+
+        $mpdf = new \Mpdf\Mpdf([
+            'mode'          => 'utf-8',
+            'format'        => 'A4-L', // แนวนอน (คอลัมน์เยอะ)
+            'margin_left'   => 6,
+            'margin_right'  => 6,
+            'margin_top'    => 8,
+            'margin_bottom' => 8,
+        ]);
+        $mpdf->autoScriptToLang = true;
+        $mpdf->autoLangToFont   = true;
+        $mpdf->SetFont('sarabun');
+        $mpdf->WriteHTML($html);
+
+        return response($mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="planning.pdf"',
+        ]);
+    }
+
     public function edit()
     {
         $planning_id = request('planning_id');

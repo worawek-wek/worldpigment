@@ -30,6 +30,9 @@ Route::prefix('production-planning')->group(function () {
     Route::post('/planning/save-item', [Production\ProductionPlanController::class, 'saveItem'])->name('production.planning.save-item');
     Route::post('/planning/save-end-order', [Production\ProductionPlanController::class, 'saveEndOrder'])->name('production.planning.save-end-order');
     Route::post('/planning/save-end-close', [Production\ProductionPlanController::class, 'saveEndClose'])->name('production.planning.save-end-close');
+    // Export หน้าวางแผนการผลิต — ใช้เงื่อนไขค้นหา/ตัวกรองชุดเดียวกับตาราง (datatable) — 2026-08-31
+    Route::get('/planning/excel', [Production\ProductionPlanController::class, 'excel'])->name('production.planning.excel');
+    Route::get('/planning/pdf', [Production\ProductionPlanController::class, 'pdf'])->name('production.planning.pdf');
 
     // รายงานการผลิต — เพิ่ม 2026-07-31
     Route::get('/report/machine', [Production\ReportController::class, 'machine'])->name('production.report.machine.index');

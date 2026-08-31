@@ -51,6 +51,18 @@
                         <h5 class="mb-0"><i class="ti ti-filter me-1"></i>เงื่อนไขการค้นหา</h5>
                     </div>
                     <div class="card-body">
+                        {{-- ค้นหาข้ามฟิลด์ (แนวเดียวกับหน้ารายการวางแผน) — มีคำค้นจะล้างช่วงวันที่ให้อัตโนมัติ --}}
+                        <div class="row g-3 mb-3">
+                            <div class="col-12">
+                                <label class="form-label mb-1 small text-muted">ค้นหา</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="ti ti-search"></i></span>
+                                    <input id="searchText" type="text" class="form-control" autocomplete="off"
+                                        placeholder="รหัสสี / เลขที่ใบเบิก / Order No / Lot / รหัส-ชื่อลูกค้า / เครื่องจักร">
+                                </div>
+                                <div class="form-text">พิมพ์คำค้นแล้วกด Enter หรือปุ่มค้นหา — เมื่อมีคำค้นระบบจะล้างช่วงวันที่ให้เพื่อค้นทั้งหมด</div>
+                            </div>
+                        </div>
                         <div class="row g-3 align-items-end">
                             {{-- แผนก --}}
                             <div class="col-md-3">
@@ -151,7 +163,8 @@
             dept:       $('#searchDept').val(),
             machine_no: $('#searchMachine').val(),
             date_start: $('#searchDateStart').val(),
-            date_end:   $('#searchDateEnd').val()
+            date_end:   $('#searchDateEnd').val(),
+            search:     $('#searchText').val()
         };
     }
 
@@ -335,14 +348,39 @@
         });
     });
 
-    // ค้นหา → โหลดตารางใหม่ตามเงื่อนไข
+    // ล้างช่วงวันที่ (ทั้งช่องที่แสดง d/m/Y และค่าจริง Y-m-d) — ใช้ตอนมีคำค้น
+    function clearDateRange() {
+        if (fpStart) fpStart.clear(); else $('#searchDateStart').val('');
+        if (fpEnd)   fpEnd.clear();   else $('#searchDateEnd').val('');
+    }
+
+    // เมื่อช่องค้นหามีข้อความ → ล้างช่วงวันที่ให้อัตโนมัติ (ค้นทั้งหมด ไม่ให้ default วันนี้บังงานเก่า)
+    $('#searchText').on('input', function () {
+        if ($.trim($(this).val()) !== '') {
+            clearDateRange();
+        }
+    });
+
+    // กด Enter ในช่องค้นหา = ค้นหา
+    $('#searchText').on('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            loadReport();
+        }
+    });
+
+    // ค้นหา → โหลดตารางใหม่ตามเงื่อนไข (มีคำค้นให้ล้างวันที่ก่อน กันหลุดงานเก่า)
     $('#btn_search').on('click', function () {
+        if ($.trim($('#searchText').val()) !== '') {
+            clearDateRange();
+        }
         loadReport();
     });
 
     // ล้าง → คืนค่าเริ่มต้น (แผนก/เครื่องจักรว่าง, วันที่ = วันนี้) แล้วโหลดใหม่
     $('#btn_clear').on('click', function () {
         var today = '{{ now()->format('Y-m-d') }}';
+        $('#searchText').val('');
         $('#searchDept').val('');
         $('#searchMachine').prop('disabled', true).html('<option value="">-- เลือกแผนกก่อน --</option>');
         // ตั้งค่าผ่าน instance flatpickr เพื่อให้ทั้งช่องที่แสดง (d/m/Y) และค่าจริง (Y-m-d) อัปเดตพร้อมกัน
