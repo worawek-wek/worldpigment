@@ -593,7 +593,7 @@ class ProductionPlanController extends Controller
             'weight_produced'    => 'nullable|numeric|min:0',
             'weight_packing'     => 'nullable|numeric|min:0',
             'red_bill_code'      => 'nullable|string|max:255',
-            'cycles'             => 'nullable|integer|min:0',
+            'cycles'             => 'nullable|string|max:25',
             'end_job'            => 'nullable|in:Y,N',
             'empno'              => 'nullable|string|max:50|exists:emp,empno',
             'machine_no'         => 'nullable|string|max:255',

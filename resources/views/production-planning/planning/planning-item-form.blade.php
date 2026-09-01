@@ -128,7 +128,7 @@
             {{-- เพิ่มใหม่: รอบการผลิต (คอลัมน์ cycles ของ tb_planning) --}}
             <div class="col-md-4 mb-3">
                 <label class="form-label">รอบการผลิต (Cycles)</label>
-                <input type="number" name="cycles" min="0" step="1"
+                <input type="text" name="cycles" maxlength="25"
                        value="{{ $planning_item ? ($planning_item->cycles ?? '') : '' }}"
                        class="form-control" placeholder="รอบการผลิต">
             </div>
