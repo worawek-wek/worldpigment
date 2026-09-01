@@ -609,7 +609,13 @@ class SemiPigmentController extends Controller
     /* ===================== อนุมัติ / ไม่อนุมัติ ===================== */
 
     /**
-     * อนุมัติรายการ Semi/Pigment (ยังไม่สร้างแผน — ไปสร้างที่หน้าอนุมัติแล้ว)
+     * อนุมัติรายการ Semi/Pigment + สร้างแผนการผลิตให้อัตโนมัติในคราวเดียว (01/09/2569)
+     *
+     * เดิมการอนุมัติแค่เปลี่ยนสถานะ แล้วต้องไปกดปุ่ม "สร้างแผน" ในหน้าอนุมัติแล้วอีกที
+     * ตอนนี้กดอนุมัติแล้วเรียก createPlanningFromSemiPigment() ต่อทันที (ตรรกะเดียวกับ convertplanning)
+     * — ครอบด้วยทรานแซกชัน (tb_semi_pigment / tb_planning / tb_planning_header เป็น InnoDB)
+     *   ถ้าสร้างแผนพลาดจะ rollback การอนุมัติกลับ ให้ผู้ใช้แก้แล้วกดใหม่ได้ ไม่เหลือสถานะค้างครึ่งทาง
+     * — ปุ่ม "สร้างแผน" ในหน้าอนุมัติแล้วยังคงไว้ (convertplanning) สำหรับรายการเก่าที่อนุมัติแล้วแต่ยังไม่มีแผน
      */
     public function approve(Request $request)
     {
@@ -631,16 +637,33 @@ class SemiPigmentController extends Controller
             return response()->json(['status' => 422, 'message' => $validator->errors()->first()]);
         }
 
-        // บันทึกข้อมูลฟอร์ม + เปลี่ยนสถานะเป็นอนุมัติในคราวเดียว
-        $sp->update(array_merge($this->entryFields($request), [
-            'status'        => SemiPigment::STATUS_APPROVED,
-            'approver_code' => Auth::id(),
-            'approve_date'  => now(),
-        ]));
+        DB::beginTransaction();
+        try {
+            // บันทึกข้อมูลฟอร์ม + เปลี่ยนสถานะเป็นอนุมัติในคราวเดียว
+            $sp->update(array_merge($this->entryFields($request), [
+                'status'        => SemiPigment::STATUS_APPROVED,
+                'approver_code' => Auth::id(),
+                'approve_date'  => now(),
+            ]));
+
+            // สร้างแผนการผลิตให้อัตโนมัติ (กัน race: ข้ามถ้ามีแผนอยู่แล้ว)
+            if (!$sp->result_planning_id) {
+                $planning = $this->createPlanningFromSemiPigment($sp);
+                $sp->update(['result_planning_id' => $planning->id]);
+            }
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'status'  => 500,
+                'message' => 'อนุมัติไม่สำเร็จ (สร้างแผนการผลิตผิดพลาด): ' . $e->getMessage(),
+            ]);
+        }
 
         return response()->json([
             'status'  => 200,
-            'message' => 'อนุมัติรายการสำเร็จ'
+            'message' => 'อนุมัติรายการและสร้างแผนการผลิตสำเร็จ'
         ]);
     }
 

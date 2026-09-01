@@ -162,4 +162,30 @@
             fp.altInput.classList.add('bg-light');
         }
     });
+
+    // น้ำหนักที่จะผลิต = น้ำหนักที่จะใช้ + ผลิตเพิ่ม (คำนวณอัตโนมัติ แต่แก้เองได้)
+    // เหมือน Modal เพิ่ม Semi ในหน้า planning (planning/index.blade.php)
+    // ผูกตรงกับ input ของฟอร์มที่เพิ่งถูกฉีด (ไม่ใช้ delegated กัน handler สะสมทุกครั้งที่เปิด modal)
+    // ไม่คำนวณตอนโหลด → ไม่ทับค่า weight_production เดิมที่บันทึกไว้ จะคำนวณเฉพาะเมื่อผู้ใช้แก้ 2 ช่องต้นทาง
+    (function () {
+        var $form = $('#sp_edit_form');
+        var $req  = $form.find('[name="weight_request"]');
+        var $inc  = $form.find('[name="increase_production"]');
+        var $prod = $form.find('[name="weight_production"]');
+        if (!$req.length || !$inc.length || !$prod.length) return;
+
+        var spProdManual = false;
+        function spNum(v) { v = parseFloat(v); return isNaN(v) ? 0 : v; }
+        function spRound(v) { return Math.round(v * 100) / 100; }
+        function spRecalc() {
+            if (spProdManual) return;
+            var req = ($req.val() || '').trim();
+            var inc = ($inc.val() || '').trim();
+            if (req === '' && inc === '') { $prod.val(''); return; }
+            $prod.val(spRound(spNum(req) + spNum(inc)));
+        }
+
+        $req.add($inc).on('input', function () { spProdManual = false; spRecalc(); });
+        $prod.on('input', function () { spProdManual = true; });
+    })();
 </script>
