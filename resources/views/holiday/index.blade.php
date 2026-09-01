@@ -29,19 +29,19 @@
             <div class="col-12 mt-4">
                 <div class="card">
 
-                    {{-- แถบเลือกมุมมอง: ตาราง / ปฏิทินรายปี --}}
+                    {{-- แถบเลือกมุมมอง — ค่าเริ่มต้นคือ "ปฏิทินรายปี" (แท็บแรก) --}}
                     <div class="card-header pb-0">
                         <ul class="nav nav-tabs" role="tablist">
                             <li class="nav-item">
-                                <button type="button" class="nav-link active" id="tab_table"
-                                    data-bs-toggle="tab" data-bs-target="#pane_table" role="tab">
-                                    <i class="ti ti-list me-1"></i>ตารางวันหยุด
+                                <button type="button" class="nav-link active" id="tab_calendar"
+                                    data-bs-toggle="tab" data-bs-target="#pane_calendar" role="tab">
+                                    <i class="ti ti-calendar me-1"></i>ปฏิทินรายปี
                                 </button>
                             </li>
                             <li class="nav-item">
-                                <button type="button" class="nav-link" id="tab_calendar"
-                                    data-bs-toggle="tab" data-bs-target="#pane_calendar" role="tab">
-                                    <i class="ti ti-calendar me-1"></i>ปฏิทินรายปี
+                                <button type="button" class="nav-link" id="tab_table"
+                                    data-bs-toggle="tab" data-bs-target="#pane_table" role="tab">
+                                    <i class="ti ti-list me-1"></i>ตารางวันหยุด
                                 </button>
                             </li>
                         </ul>
@@ -50,7 +50,7 @@
                     <div class="tab-content">
 
                         {{-- ───────── มุมมองตาราง ───────── --}}
-                        <div class="tab-pane fade show active" id="pane_table" role="tabpanel">
+                        <div class="tab-pane fade" id="pane_table" role="tabpanel">
 
                             <div class="card-header">
                                 <div class="row g-3 align-items-center">
@@ -113,7 +113,7 @@
                         </div>
 
                         {{-- ───────── มุมมองปฏิทินรายปี ───────── --}}
-                        <div class="tab-pane fade" id="pane_calendar" role="tabpanel">
+                        <div class="tab-pane fade show active" id="pane_calendar" role="tabpanel">
                             <div class="card-header">
                                 <div class="row g-3 align-items-center">
                                     <div class="col-md-3">
@@ -204,9 +204,19 @@
             ],
         });
 
-        // โหลดปฏิทินตอนเปิดแท็บครั้งแรก (ตอนซ่อนอยู่ไม่ต้องโหลดล่วงหน้า)
+        // ปฏิทินเป็นมุมมองเริ่มต้น → โหลดทันทีตอนเปิดหน้า
+        loadCalendar();
+
+        // กลับมาที่แท็บปฏิทินแล้วข้อมูลเปลี่ยนไประหว่างนั้น (บันทึก/ลบ/สลับสถานะ) → โหลดใหม่
         $('#tab_calendar').on('shown.bs.tab', function () {
             if (!calendarLoaded) loadCalendar();
+        });
+
+        // DataTables ถูก init ตอนแท็บตารางยังซ่อนอยู่ → วัดความกว้างคอลัมน์ไม่ได้
+        // ต้องสั่งวัดใหม่ตอนแท็บโผล่ ไม่งั้นหัวตารางกับเนื้อตารางเหลื่อมกัน
+        $('#tab_table').on('shown.bs.tab', function () {
+            oTable.columns.adjust();
+            if (oTable.responsive) oTable.responsive.recalc();
         });
     });
 
