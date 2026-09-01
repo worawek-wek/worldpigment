@@ -53,18 +53,13 @@ class ProductionPlanController extends Controller
             ->editColumn('packing_datetie', fn ($row) => $row->packing_datetie ? \Carbon\Carbon::parse($row->packing_datetie)->format('d/m/Y H:i') : '-')
             // เลขที่ใบเบิก: ดึงจาก red_bill_code (ว่าง = แสดง -)
             ->addColumn('red_bill_code', fn ($row) => $row->red_bill_code ?: '-')
-            // สถานะภายใน: รวม planning_status ของ planning item ที่อยู่ใน header (planning_code) เดียวกัน
-            // เฉพาะรายการ planning เท่านั้น — ไม่ดึงสถานะของ semi/pigment มา — ตัดค่าซ้ำ คั่นด้วย ,
+            // สถานะภายใน: สถานะของ planning item แถวนี้เอง (planning_status ของแถว)
+            // ไม่รวมสถานะของ item อื่นใน header เดียวกัน — item ที่ยังไม่มีสถานะ (เช่น R1/R2 ที่ปิดงานแล้ว)
+            // ต้องแสดงเป็นว่าง ไม่ใช่ดึงสถานะของ item อื่น (เช่น R3) มาโชว์
             ->addColumn('inner_status', function ($row) {
-                $statuses = Planning::where('planning_header_id', $row->planning_header_id)
-                    ->pluck('planning_status')
-                    ->filter(fn ($s) => $s !== null && $s !== '')
-                    ->unique()
-                    ->values();
-
-                $text = $statuses->isEmpty()
-                    ? '-'
-                    : $statuses->map(fn ($s) => e($s))->implode(', ');
+                $text = ($row->planning_status !== null && $row->planning_status !== '')
+                    ? e($row->planning_status)
+                    : '-';
 
                 // บรรทัดที่ 2: สถานะปิดงานของ item แถวนี้ (อ้างอิงคอลัมน์ end_job) — รูปแบบเดียวกับ badge กะ ใน Inplan
                 $end_job_badge = ($row->end_job ?? 'N') === 'Y'
@@ -207,25 +202,14 @@ class ProductionPlanController extends Controller
     {
         $rows = $this->dataQuery()->get();
 
-        // รวม planning_status ต่อ header ครั้งเดียว (กัน query ซ้ำต่อแถวเหมือนใน datatable)
-        $header_ids = $rows->pluck('planning_header_id')->filter()->unique()->values();
-        $status_map = Planning::whereIn('planning_header_id', $header_ids)
-            ->get(['planning_header_id', 'planning_status'])
-            ->groupBy('planning_header_id')
-            ->map(function ($items) {
-                return $items->pluck('planning_status')
-                    ->filter(fn ($s) => $s !== null && $s !== '')
-                    ->unique()
-                    ->values();
-            });
-
         foreach ($rows as $row) {
             // แผนกจริง: ของ item ก่อน ถ้าว่างจึง fallback ไปที่ header
             $row->company_display = $row->company ?: $row->header_company;
 
-            // สถานะภายใน (เฉพาะ planning_status ของ header เดียวกัน)
-            $statuses = $status_map->get($row->planning_header_id, collect());
-            $row->inner_status_text = $statuses->isEmpty() ? '-' : $statuses->implode(', ');
+            // สถานะภายใน: สถานะของ item แถวนี้เอง (ไม่รวมของ item อื่นใน header เดียวกัน)
+            $row->inner_status_text = ($row->planning_status !== null && $row->planning_status !== '')
+                ? $row->planning_status
+                : '-';
             $row->end_job_label = ($row->end_job ?? 'N') === 'Y' ? 'ปิดงาน' : 'ยังไม่ปิดงาน';
         }
 
@@ -706,9 +690,13 @@ class ProductionPlanController extends Controller
 
                     // ถ้าย้ายแผนก (company เปลี่ยน) → เครื่องจักร/สถานะเดิมเป็นของแผนกเก่า ล้างทิ้งเพื่อกันค่าที่ไม่ตรงแผนกใหม่
                     // (กันกรณี JS ฝั่งหน้าเว็บไม่ได้ล้างให้)
+                    // ⚠ ล้างเฉพาะเมื่อ "เคยมีแผนกเดิมอยู่จริง" แล้วถูกเปลี่ยนไปแผนกอื่นเท่านั้น
+                    //   item ที่เพิ่งสร้างจาก Order (convertplanning) มี company = NULL แต่ฟอร์มเติมแผนกจาก header ให้
+                    //   ถ้าไม่กันด้วย $old_company !== null การบันทึกครั้งแรกจะถูกเข้าใจผิดว่า "ย้ายแผนก" (NULL → "MB")
+                    //   แล้วล้าง machine_no/planning_status ที่ผู้ใช้เพิ่งกรอกทิ้ง (ครั้งที่สองถึงบันทึกได้ เพราะ company ถูกตั้งแล้ว)
                     $old_company = $existing->company ?: null;
                     $new_company = !empty($fields['company']) ? $fields['company'] : null;
-                    if ($old_company !== $new_company) {
+                    if ($old_company !== null && $old_company !== $new_company) {
                         $fields['machine_no']      = null;
                         $fields['planning_status'] = null;
                     }
