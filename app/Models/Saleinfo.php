@@ -8,18 +8,26 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * กำหนดราคา (ราคาสินค้าต่อลูกค้า)
  *
- * ชื่อคอลัมน์ยึดตามตาราง `uprice` ของเดิม เพื่อให้ copy ข้อมูลเก่ามาได้ตรงๆ
- * — `uprice` ใช้อ่านอย่างเดียว ระบบเขียนลง tb_saleinfo เท่านั้น
+ * ⚠ ย้ายมาเขียนลงตาราง legacy `uprice` โดยตรงแล้ว (29/08/2569 ตามที่ผู้ใช้ยืนยัน)
+ * เดิมเขียนลง `tb_saleinfo` ที่สร้างใหม่ — ทำให้ราคาอยู่ 2 ที่ไม่ตรงกัน
+ * และหน้าอื่นที่อ่าน `uprice` (ใบสั่งซื้อ / อนุมัติใบสั่งซื้อ / ขออนุมัติราคาพิเศษ)
+ * มองไม่เห็นราคาที่ตั้งจากเมนูนี้เลย
+ *
+ * `uprice` เป็น MyISAM และเดิมไม่มี primary key — migration
+ * `add_id_to_uprice_table` เพิ่มคอลัมน์ `id` ให้เพื่อใช้ edit/update/delete รายแถว
+ *
+ * ไม่มี created_at / updated_at ในตารางนี้ → ปิด timestamps
+ * (เวลาบันทึกล่าสุดเก็บที่คอลัมน์ `AuthDate` ของเดิมแทน)
  */
 class Saleinfo extends Model
 {
     use HasFactory;
 
-    protected $table = 'tb_saleinfo';
+    protected $table = 'uprice';
     protected $primaryKey = 'id';
     public $incrementing = true;
     protected $keyType = 'int';
-    public $timestamps = true;
+    public $timestamps = false;
 
     protected $guarded = [];
 }

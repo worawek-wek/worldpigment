@@ -81,6 +81,10 @@ class OrderController extends Controller
         // ผู้บันทึก = พนักงานที่ล็อกอินอยู่ (เติมให้อัตโนมัติเมื่อเปิดใบใหม่)
         $data['current_emp'] = optional(Auth::user())->empno;
 
+        // ค่าเริ่มต้นของช่อง "อนุมัติราคาถึง" ในฟอร์มขออนุมัติราคาพิเศษ = วันทำการถัดไป (ข้ามวันหยุด)
+        // ต้องมาจาก server เพราะ JS ไม่รู้จักวันหยุดใน tb_holiday — ดู PriceApprovalController::defaultValidTo()
+        $data['default_valid_to'] = PriceApprovalController::defaultValidTo();
+
         return view('order.index', $data);
     }
 

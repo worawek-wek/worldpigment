@@ -55,18 +55,18 @@
                                         <div class="row g-3">
                                             <div class="col-md-5">
                                                 <label class="form-label small mb-1">รหัสลูกค้า <span class="text-muted fw-normal">(เช่น 41008)</span></label>
-                                                <input type="text" name="CustNo" class="form-control" required>
+                                                <input type="text" name="CustNo" maxlength="5" class="form-control" required>
                                             </div>
                                             <div class="col-md-7">
                                                 <label class="form-label small mb-1 text-danger">
                                                     <i class="ti ti-asterisk-simple"></i>
                                                     ชื่อสินค้า <span class="text-muted fw-normal">(เช่น CP8462B)</span>
                                                 </label>
-                                                <input type="text" name="st_code" class="form-control" required>
+                                                <input type="text" name="st_code" maxlength="17" class="form-control" required>
                                             </div>
                                             <div class="col-md-7 offset-md-5">
                                                 <label class="form-label small mb-1">รหัสสินค้า <span class="text-muted fw-normal">(เช่น CP8462B)</span></label>
-                                                <input type="text" name="ITEMNO" class="form-control">
+                                                <input type="text" name="ITEMNO" maxlength="17" class="form-control">
                                             </div>
                                         </div>
                                     </div>
@@ -104,19 +104,25 @@
                                 </div>
 
                                 <div class="row g-3 align-items-end">
-                                    <div class="col-md-3">
+                                    {{-- wip: `uprice` ไม่มีคอลัมน์ NotifyDate → ช่องนี้ยังไม่ถูกบันทึก (29/08/2569)
+                                         รอลูกค้ายืนยันว่าจะเพิ่มคอลัมน์เข้า uprice หรือตัดช่องนี้ออกจากฟอร์ม
+                                         เสร็จแล้ว: ลบคำว่า wip + คืน 'NotifyDate' เข้า SaleinfoController::COLUMNS --}}
+                                    <div class="col-md-3 wip">
                                         <label class="form-label small mb-1">วันที่แจ้งปรับ <span class="text-muted fw-normal">(วว/ดด/ปปปป)</span></label>
-                                        <input type="text" name="NotifyDate" class="form-control flatpickr-date">
+                                        <input type="text" name="NotifyDate" class="form-control flatpickr-date"
+                                            title="ยังไม่บันทึก — ตาราง uprice ไม่มีคอลัมน์นี้ รอลูกค้ายืนยัน">
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">วันที่เริ่มราคาใหม่ <span class="text-muted fw-normal">(วว/ดด/ปปปป)</span></label>
                                         <input type="text" name="DATE" class="form-control flatpickr-date">
                                     </div>
-                                    <div class="col-md-3">
+                                    {{-- wip: `uprice` ไม่มีคอลัมน์ MOQ → ช่องนี้ยังไม่ถูกบันทึก (29/08/2569) --}}
+                                    <div class="col-md-3 wip">
                                         <label class="form-label small mb-1">MOQ <span class="text-muted fw-normal">(kg)</span></label>
                                         {{-- input ธรรมดา + คอมมาอัตโนมัติ (ถอดคอมมาก่อน submit ด้วย stripCommaFields) --}}
                                         <input type="text" name="MOQ" class="form-control text-end js-comma"
-                                            inputmode="decimal" autocomplete="off" placeholder="0.00">
+                                            inputmode="decimal" autocomplete="off" placeholder="0.00"
+                                            title="ยังไม่บันทึก — ตาราง uprice ไม่มีคอลัมน์นี้ รอลูกค้ายืนยัน">
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1 text-danger">
@@ -128,7 +134,7 @@
                                     </div>
                                     {{-- ปิดไว้ก่อน: NoAcp เป็นคอลัมน์ใน uprice ของเดิม (มีค่า 1 อยู่ 114 จาก 60,603 แถว)
                                          แต่ "ไม่รับ Order เบอร์นี้" เป็นการเดาความหมายจากชื่อคอลัมน์ — ไม่มีช่องนี้ในจอเก่า
-                                         รอลูกค้ายืนยันความหมายก่อนค่อยเปิดใช้ (คอลัมน์ใน tb_saleinfo ยังอยู่)
+                                         รอลูกค้ายืนยันความหมายก่อนค่อยเปิดใช้ (คอลัมน์ NoAcp ใน uprice ยังอยู่ ค่าเดิมไม่ถูกแตะ)
                                     <div class="col-md-6">
                                         <div class="form-check p-2 rounded border border-danger-subtle bg-danger-subtle ms-2">
                                             <input class="form-check-input" type="checkbox" name="NoAcp" value="1" id="saleinfo_noacp">
@@ -144,11 +150,11 @@
                                             <i class="ti ti-note me-1"></i>
                                             หมายเหตุ <span class="text-muted fw-normal">(เช่น เฉพาะเบอร์คิดราคาพิเศษ เช็คราคาก่อนเปิด ORDER)</span>
                                         </label>
-                                        <input type="text" name="REM1" class="form-control">
+                                        <input type="text" name="REM1" maxlength="100" class="form-control">
                                     </div>
                                     {{-- ปิดไว้: หมายเหตุเพิ่มเติม / ประวัติการปรับราคา (REM2)
                                          เลิกใช้เพราะทำตาราง "ประวัติการปรับราคา" ขึ้นมาแทนแล้ว
-                                         (คอลัมน์ REM2 ใน tb_saleinfo ยังอยู่ ค่าเดิมไม่ถูกแตะต้อง)
+                                         (คอลัมน์ REM2 ใน uprice ยังอยู่ ค่าเดิมไม่ถูกแตะต้อง)
                                     <div class="col-12">
                                         <label class="form-label small mb-1">
                                             หมายเหตุเพิ่มเติม / ประวัติการปรับราคา
@@ -173,15 +179,15 @@
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="form-label small mb-1">ระบุข้างบรรจุภัณฑ์ <span class="text-muted fw-normal">(เช่น PP AZ 864 (NH-361L))</span></label>
-                                        <input type="text" name="PackRem" class="form-control">
+                                        <input type="text" name="PackRem" maxlength="85" class="form-control">
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label small mb-1">Label DB <span class="text-muted fw-normal">(ข้อความบนฉลาก)</span></label>
-                                        <input type="text" name="Label" class="form-control">
+                                        <input type="text" name="Label" maxlength="85" class="form-control">
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label small mb-1">ผู้บริหาร (ผู้อนุมัติราคา)</label>
-                                        <input type="text" name="Author" class="form-control">
+                                        <input type="text" name="Author" maxlength="50" class="form-control">
                                     </div>
                                 </div>
                             </div>
@@ -206,10 +212,10 @@
                                 <table class="table table-hover align-middle mb-0">
                                     <thead>
                                         <tr>
-                                            <th class="text-center">วันที่แจ้งปรับ</th>
+                                            <th class="text-center wip">วันที่แจ้งปรับ</th>
                                             <th class="text-center">วันที่เริ่มราคาใหม่</th>
                                             <th>รหัสสินค้า</th>
-                                            <th class="text-end">MOQ (kg)</th>
+                                            <th class="text-end wip">MOQ (kg)</th>
                                             <th class="text-end">ราคา หรือ<br>ค่าแรง+ค่าสี</th>
                                             <th>หมายเหตุ</th>
                                         </tr>

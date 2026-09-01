@@ -46,17 +46,19 @@ worldpigment/
 │   │   ├── UserController.php
 │   │   ├── PermissionController.php
 │   │   ├── PDFController.php
-│   │   ├── SaleinfoController.php   # กำหนดราคา + ค้นหาราคาสินค้า (04/08/2569)
+│   │   ├── SaleinfoController.php   # กำหนดราคา + ค้นหาราคาสินค้า — เขียนลง `uprice` (04/08/2569, ย้ายตาราง 29/08/2569)
 │   │   ├── PriceRuleController.php  # ตั้งค่าเงื่อนไขราคา คูณ/หาร/บวก — เมนูแยก /price-rule (21/08/2569)
 │   │   ├── ProductController.php    # ข้อมูลสินค้า tb_products — CRUD (07/08/2569)
+│   │   ├── HolidayController.php    # วันหยุดนักขัตฤกษ์ tb_holiday — CRUD + ปฏิทินรายปี (01/09/2569)
 │   │   └── ExportExcelController.php
 │   ├── Models/
-│   └── Services/                # AccessService, ProductPriceService (04/08/2569)
+│   └── Services/                # AccessService, ProductPriceService (04/08/2569), HolidayService (01/09/2569)
 ├── config/
 │   ├── menu.php                 # โครงสร้างเมนู
 │   ├── product_price.php        # ตารางเงื่อนไขคิดราคาขายจากราคาทุน (04/08/2569)
-│   └── color_matching.php       # ตัวเลือกผลการทดสอบตัวอย่างสี (testmain.TyResp) (10/08/2569)
-│                                # — mul/div/add เป็นแค่ "ค่าตั้งต้น" ผู้ใช้แก้ทับได้ (10/08/2569)
+│   │                            # — mul/div/add เป็นแค่ "ค่าตั้งต้น" ผู้ใช้แก้ทับได้ (10/08/2569)
+│   ├── color_matching.php       # ตัวเลือกผลการทดสอบตัวอย่างสี (testmain.TyResp) (10/08/2569)
+│   └── holiday.php              # วันหยุดประจำสัปดาห์ของ HolidayService (01/09/2569)
 ├── database/
 │   ├── migrations/
 │   └── seeders/
@@ -73,6 +75,7 @@ worldpigment/
 │   ├── report.php
 │   ├── permission.php
 │   ├── product.php              # ข้อมูลสินค้า tb_products (07/08/2569)
+│   ├── holiday.php              # วันหยุดนักขัตฤกษ์ tb_holiday (01/09/2569)
 │   └── pricerule.php            # ตั้งค่าเงื่อนไขราคา tb_price_rule (21/08/2569)
 └── public/
 ```
@@ -130,7 +133,7 @@ php artisan migrate --seed
 
 `routes/web.php` เป็นจุดเริ่มต้น แต่ route ส่วนใหญ่แยกอยู่ใน**ไฟล์ตาม feature** ในโฟลเดอร์ `routes/` และถูกดึงเข้ามาด้วย `@include_once(...)` จาก*ภายใน* group `Route::middleware('auth')` ใน `web.php`:
 
-- `color-matching.php`, `quotation.php`, `saleinfo.php`, `pricerule.php`, `order.php`, `customer.php`, `report.php`, `permission.php`, `product.php`, `worker.php`, `production.php`
+- `color-matching.php`, `quotation.php`, `saleinfo.php`, `pricerule.php`, `order.php`, `customer.php`, `report.php`, `permission.php`, `product.php`, `holiday.php`, `worker.php`, `production.php`
 
 ดังนั้น route ในไฟล์เหล่านี้จึงถูกป้องกันด้วย `auth` โดยปริยายจากตำแหน่งที่มัน include เข้ามา — **ห้าม** ครอบ `auth` ซ้ำอีก
 
@@ -213,7 +216,7 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 | จำนวนที่เลือกได้ | — | **ข้อเดียว** (ติ๊กข้อใหม่ → ปลดข้อเก่าให้เอง) |
 
 - **ตาราง `c_type` ไม่เกี่ยวกับช่องนี้แล้ว** — `customerLookup()` ยังคืน `type`/`type_name` มาเหมือนเดิม แต่ฝั่งจอเลิกเอาไปเติม `#o_itype` แล้ว
-- **UI** (`order/form.blade.php`): input readonly + `data-bs-toggle="dropdown"` กดแล้วกาง `<ul id="o_itype_menu">` ที่มี checkbox ตาม `config('order.itypes')` · ฝั่ง JS (`order/index.blade.php`): `syncItypeText()` เอาข้อที่ติ๊กมาโชว์ในช่อง + handler `.o-itype-opt` บังคับให้เหลือติ๊กได้ข้อเดียว
+- **UI — ติ๊กเลือกบนฟอร์มได้เลย (01/09/2569)**: `order/form.blade.php` แสดง checkbox ทั้ง 6 ข้อ (`.o-itype-opt` ตาม `config('order.itypes')`) เรียงเป็นแถวใน `<div id="o_itype_box" class="of-itype-box">` + `.of-checkrow` เต็มความกว้าง (`col-12`) · **เดิม (29/08/2569) เป็น input readonly หน้าตาเหมือน select ที่ `data-bs-toggle="dropdown"` กดแล้วกาง `<ul id="o_itype_menu">` — ถอดออกแล้ว** พร้อมช่อง `#o_itype` และฟังก์ชัน `syncItypeText()` ที่เอาข้อที่ติ๊กมาโชว์ในช่องนั้น · ฝั่ง JS (`order/index.blade.php`): handler `.o-itype-opt` ยัง**บังคับให้ติ๊กได้ข้อเดียว**เหมือนเดิม (ติ๊กข้อใหม่ → ปลดข้อเก่า) แล้วเรียก `syncItypeRequired()` ตรง ๆ · `syncItypeRequired()` เลิกอ่านค่าจากช่องข้อความ เปลี่ยนไปนับ `.o-itype-opt:checked` และขึ้นกรอบแดงที่ `#o_itype_box` (CSS `.of-itype-box.is-invalid` ใน `order/index.blade.php`) แทนที่จะใส่ `is-invalid` ที่ input
 - **key ใน config = รหัสที่จะเอาไปเก็บลง DB ตอนได้ที่เก็บแล้ว — ห้ามเปลี่ยน/ใช้ซ้ำ**
 - ⚠ **ยังไม่มีที่เก็บ**: ค้นทั้ง DB แล้ว**ไม่มีตารางไหนเก็บตัวเลือกชุดนี้** และ `morder` **ไม่มีคอลัมน์รองรับ** (25 คอลัมน์ ไม่มีตัวไหนใช้ได้) ⇒ ต้องตกลงกันก่อนว่าจะเพิ่มคอลัมน์ `morder.itype` หรือทำตารางลูก
 
@@ -370,9 +373,15 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 
 **กติกาการบันทึก** (`save()`): เขียน `appvreq` (คีย์ `ReqDate` + `custno` + `itemno`) — **1 คู่ (ลูกค้า, เบอร์) = 1 ใบที่แก้ได้**: server หา `ReqDate` ของ**ใบล่าสุด**ของคู่นั้นเอง (มี = แก้ทับ, ไม่มี = ขึ้นใบใหม่ด้วยเวลาปัจจุบัน) — **client ไม่ส่ง `ReqDate` มาแล้ว** กันเผลอสร้างใบซ้ำ/ใบผิดวัน · **ติ๊ก "อนุมัติ" ต้องอยู่ในโหมดอนุมัติ** ไม่งั้น 422 — **ยกเว้นใบที่อนุมัติไปแล้ว** ฝั่ง MK แก้หมายเหตุ/ราคาต่อได้โดยไม่ต้องปลดล็อก (checkbox ถูก disabled ค่าที่ส่งมาจึงเป็นสถานะเดิม ไม่ใช่การอนุมัติใหม่) · เขียน `zcustprice` (`exprice` = ราคาขายครั้งนี้, `enddate` = อนุมัติราคาถึง) **เฉพาะตอนอนุมัติจริงในโหมด MD** — ไม่งั้น MK ที่แก้ใบซึ่งอนุมัติแล้วจะเผลอทับ `enddate` ด้วยช่องที่ถูกล็อกไว้ (ค่าว่าง) · `destroy()` ลบเฉพาะแถว `appvreq` **ไม่แตะ `zcustprice`**
 
-**ช่อง "อนุมัติราคาถึง" (`zcustprice.enddate`) มีค่าเริ่มต้น = วันนี้ + 1 วัน** (29/08/2569) — เติมให้ 2 ที่ ต้องแก้คู่กันเสมอ:
-- **ฝั่งจอ** `tomorrowYmd()` (`order/index.blade.php`) → ใช้ที่ `clearApprovalForm()` (เปิดฟอร์มใหม่) และตอนเติมข้อมูลใน `fillApprovalData()` **เฉพาะเมื่อเบอร์นั้นยังไม่เคยยืนราคา** (`res.rows[0].enddate` ว่าง) — ถ้ามีค่าเดิมอยู่ยังโชว์ค่าเดิมตามปกติ
-- **ฝั่ง server** `PriceApprovalController::defaultValidTo()` → `save()` เติมให้เองเมื่อ `valid_to` ที่ส่งมาว่างหรือรูปแบบผิด (เผลอลบวันที่ทิ้ง) จึงไม่ต้องพึ่งจอ
+**ช่อง "อนุมัติราคาถึง" (`zcustprice.enddate`) มีค่าเริ่มต้น = "วันทำการถัดไป" ข้ามวันหยุด** (29/08/2569 = วันนี้+1 · **เปลี่ยนเป็นข้ามวันหยุด 01/09/2569** ตามที่ผู้ใช้สั่ง)
+- **ตรรกะอยู่ที่เดียว: `App\Services\HolidayService::nextWorkingDay()`** — วันหยุด = **วันอาทิตย์** (`config/holiday.php` → `weekly_off`, ผู้ใช้ยืนยันว่า**ไม่หยุดเสาร์**) **+ `tb_holiday` ที่ `is_active='Y'`** · เช่น วันนี้ที่ 1 · วันที่ 2 หยุด → ได้วันที่ 3 · ก่อนสงกรานต์ 12 เม.ย. 2026 → ได้ 16 เม.ย.
+- 🔴 **JS คำนวณเองไม่ได้แล้ว เพราะไม่รู้จักวันหยุด** — ฟังก์ชัน `tomorrowYmd()` เดิมใน `order/index.blade.php` **ถูกแทนด้วย `defaultValidToYmd()` ที่อ่านค่าที่ server ส่งมา**:
+  - ตอนโหลดหน้า: `OrderController::index` ส่ง `$default_valid_to` → blade ฝังเป็นตัวแปร `APPROVAL_DEFAULT_VALID_TO`
+  - ทุกครั้งที่เลือกลูกค้า+เบอร์: `PriceApprovalController::data()` แนบ `default_valid_to` มา → `fillApprovalData()` เขียนทับตัวแปรนั้น (กันค่าค้างเมื่อเปิดฟอร์มทิ้งไว้ข้ามวัน/ข้ามวันหยุด)
+  - `defaultValidToYmd()` มี fallback เป็น "พรุ่งนี้ตรง ๆ" เฉพาะกรณี server ไม่ได้ส่งค่ามา — **อย่าใช้ค่านี้เป็นทางหลัก** เพราะไม่ข้ามวันหยุด
+  - ใช้ที่ `clearApprovalForm()` (เปิดฟอร์มใหม่) และ `fillApprovalData()` **เฉพาะเมื่อเบอร์นั้นยังไม่เคยยืนราคา** (`res.rows[0].enddate` ว่าง) — ถ้ามีค่าเดิมอยู่ยังโชว์ค่าเดิมตามปกติ
+- **ฝั่ง server** `PriceApprovalController::defaultValidTo()` (public static — `OrderController::index` เรียกด้วย) → `save()` เติมให้เองเมื่อ `valid_to` ที่ส่งมาว่างหรือรูปแบบผิด (เผลอลบวันที่ทิ้ง) จึงไม่ต้องพึ่งจอ
+- `HolidayService` ครอบด้วย `Schema::hasTable('tb_holiday')` — server ที่ยังไม่ได้รัน migration/SQL จะเหลือแค่ข้ามวันอาทิตย์ ไม่ throw ทำให้ฟอร์มพัง · cache รายชื่อวันหยุดต่อ 1 request (`flush()` ไว้ใช้ในสคริปต์/เทสต์ที่แก้ข้อมูลแล้วคำนวณต่อ)
 - ⚠ **ห้ามปล่อย `enddate` เป็น null** — `activeApprovedPrice()` ถือว่า "ว่าง = ไม่กำหนดวันหมดอายุ" ⇒ ราคาพิเศษใบนั้นจะปลดล็อกด่านราคาใน `OrderController::checkPriceFloor()` ได้ตลอดไป (ปัจจุบัน `zcustprice` มีแถวที่ `enddate` ว่างอยู่ 1 จาก 5,406 แถว)
 - ⚠ **ยังไม่ได้ทำ: เบอร์ที่มี `enddate` เดิมซึ่ง "หมดอายุไปแล้ว" ฟอร์มยังโชว์วันเดิมนั้น ไม่ได้เด้งเป็นพรุ่งนี้ให้** — ข้อมูลจริงตอนนี้ `zcustprice` **หมดอายุครบทุกแถว** (`enddate` ล่าสุด 30/05/2026) ⇒ เปิดใบเก่าจะเจอวันที่หมดอายุค้างอยู่ ต้องแก้เอง (วันเดิมยังดูได้ที่ตารางล่างของฟอร์ม) — ถ้าต้องการให้เด้งเป็นพรุ่งนี้เมื่อวันเดิมเลยมาแล้ว ให้เพิ่มเงื่อนไขที่ `fillApprovalData()` จุดเดียว
 
@@ -390,7 +399,7 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 |---|---|
 | วันที่ขอราคา | `appvreq.ReqDate` (PK ร่วมกับ custno + itemno) — อ่านอย่างเดียว server กำหนดให้ |
 | รหัสลูกค้า · **# 15** · ชื่อลูกค้า | `appvreq.custno` · `customer.sale` (รหัสพนักงานขาย) · `customer.name` |
-| รหัสสินค้า | `appvreq.itemno` — ตัวเลือกรวมจาก `uprice.ITEMNO` + `zcustprice.colorno` + **`tb_saleinfo.ITEMNO`** ของลูกค้ารายนั้น (25/08/2569) |
+| รหัสสินค้า | `appvreq.itemno` — ตัวเลือกรวมจาก `uprice.ITEMNO` + `zcustprice.colorno` ของลูกค้ารายนั้น (25/08/2569, ถอด `tb_saleinfo` ออก 29/08/2569) |
 | ราคา 3 ช่อง | คำนวณจาก `ProductPriceService::lookup($itemno)` (= กลุ่ม A/B/C) แล้วเก็บสำเนาลง `appvreq.price1` / `price2` / `price3` |
 | ราคาขายครั้งนี้ / จำนวนสั่งซื้อ | `appvreq.price` / `weight` |
 | หมายเหตุ การปรับราคา | `appvreq.remark` |
@@ -399,11 +408,11 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 | ตารางล่าง (รหัสสี · ราคาขาย · ยืนราคาถึงวันที่ · หมายเหตุ) | `zcustprice` (`colorno` · `exprice` · `enddate` · `remark`) |
 
 **ที่มาของ dropdown "รหัสสินค้า" (`items()`) — 25/08/2569:** union 3 ตาราง กรองด้วยรหัสลูกค้าที่เลือก แล้ว unique + sort natural
-- `uprice` (`CustNo`+`ITEMNO`) = ข้อมูลยกมาจากระบบเก่า 60,603 แถว — **ทั้งระบบไม่มีที่ไหนเขียนเลย อ่านอย่างเดียว**
+- `uprice` (`CustNo`+`ITEMNO`) = ข้อมูลยกมาจากระบบเก่า 60,603 แถว — **เมนู "กำหนดราคา" (`/saleinfo`) เขียนลงตารางนี้แล้ว** (29/08/2569) ⇒ เบอร์ที่เพิ่งตั้งราคาโผล่ในช่องนี้ทันที
 - `zcustprice` (`custno`+`colorno`) = เขียนได้ที่เดียวคือตอน **อนุมัติในฟอร์มนี้เอง** ⇒ ลำพังตัวเดียวเป็นไก่กับไข่ (ต้องเลือกเบอร์ได้ก่อนถึงอนุมัติได้)
-- **`tb_saleinfo` (`CustNo`+`ITEMNO`) = ตารางของเมนู "กำหนดราคา" (`/saleinfo`)** — เพิ่มเข้ามาเพราะเป็น**หน้าจอเดียวในระบบใหม่ที่ผู้ใช้เพิ่มราคาให้เบอร์ใหม่ได้เอง**; ก่อนหน้านี้ตั้งราคาแล้วเบอร์ก็ยังไม่โผล่ในช่องนี้ ⇒ เพิ่มเบอร์ใหม่เข้าฟอร์มขออนุมัติราคาพิเศษไม่ได้เลยถ้าไม่แตะ DB ตรง ๆ
+- ~~`tb_saleinfo`~~ **ถอดออกจาก union แล้ว 29/08/2569** — เดิม (25/08/2569) union เข้ามาเป็นที่ที่ 3 เพราะตอนนั้น `/saleinfo` เขียนลงตารางแยก ตอนนี้เขียนลง `uprice` ตัวเดียวกันแล้วจึงซ้ำซ้อน (และตารางนั้นเหลือแต่ข้อมูลทดสอบ)
 
-⚠ **เบอร์ที่มาจาก `tb_saleinfo` อย่างเดียวจะไม่มีข้อมูลในกล่อง "ราคาที่ตกลงไว้ล่าสุด"** (กล่องนั้นอ่าน `uprice` ล้วน) — `data()` คืน `uprice: null` ฟอร์มไม่พัง แค่ช่องว่าง · ส่วนราคา 1/2/3 ยังคำนวณจาก `ProductPriceService` ตามปกติ (เบอร์ที่ไม่มีใน `access_pdprice` = โชว์เหตุผลแทน ตามเดิม)
+⚠ **ราคาที่ตั้งใหม่จาก `/saleinfo` จะมีข้อมูลในกล่อง "ราคาที่ตกลงไว้ล่าสุด" ด้วยแล้ว** (กล่องนั้นอ่าน `uprice`) — ต่างจากเดิมที่เบอร์ซึ่งมาจาก `tb_saleinfo` อย่างเดียวจะได้ `uprice: null` ช่องว่าง · ส่วนราคา 1/2/3 ยังคำนวณจาก `ProductPriceService` ตามปกติ (เบอร์ที่ไม่มีใน `access_pdprice` = โชว์เหตุผลแทน ตามเดิม)
 
 ปุ่มตรวจสอบ/ประวัติทั้ง 4 ปุ่มโหลดผลลงตารางล่างตัวเดียวกัน: **ตรวจสอบเบอร์อื่น** → `zcustprice` ทุกเบอร์ของลูกค้า · **ประวัติของเบอร์นี้** → `appvreq` ทุกครั้งของคู่ custno+itemno · **ตรวจสอบเฉพาะร้าน** → `zcustprice` ของลูกค้ารายอื่นที่ใช้เบอร์นี้ · **ประวัติราคาเม็ด CP** → `cp_itemprice` ของเบอร์นี้
 
@@ -497,6 +506,77 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 
 ⚠ **ความเสี่ยงที่ยังค้างอยู่** (เหมือน `POST order/save`): route `customer/save` + `customer/delete` ป้องกันแค่ `auth` + สิทธิ์ระดับเมนู (`Customer`) — **ไม่มีสิทธิ์แยกสำหรับการเขียน/ลบ** ใครเข้าเมนูนี้ได้ก็แก้ข้อมูลลูกค้าและลบได้ และ **ไม่มี audit trail** ว่าใครแก้ (ตาราง `customer` ไม่มีคอลัมน์ผู้แก้ไข/เวลาแก้ไข)
 
+## ระบบกำหนดราคา (เมนู "กำหนดราคา", `/saleinfo`) — ย้ายมาเขียนลง `uprice` — 29/08/2569
+
+🔴 **เปลี่ยนตารางปลายทาง: `tb_saleinfo` → `uprice`** (ผู้ใช้สั่ง "ต้องใช้ uprice") — อย่าเอาเอกสาร/โค้ดเก่ามาอ้าง
+
+เดิมเมนูนี้เขียนลง `tb_saleinfo` ที่สร้างใหม่ (ตั้งชื่อคอลัมน์ตาม `uprice` เพื่อ copy ข้อมูลได้ตรง ๆ) โดยตั้งใจไม่แตะตาราง legacy — ผลคือ **ราคาอยู่ 2 ที่ที่ไม่ sync กัน** และหน้าอื่นที่อ่าน `uprice` อยู่มองไม่เห็นราคาที่ตั้งจากเมนูนี้เลย
+
+**ผลข้างเคียงที่ตั้งใจ — ตั้งราคาที่นี่แล้วมีผลกับ 3 หน้านี้ทันที:**
+- `OrderController::itemLookup` — เติมชื่อสินค้า (`prodname`) + หมายเหตุ (`suborder.Remark`) จาก `uprice.Label` ในฟอร์มใบสั่งซื้อ
+- `OrderApprovalController` — ช่อง REM1 / REM2 / ราคาที่กำหนดไว้ ในฟอร์มอนุมัติใบสั่งซื้อ (`uprice.REM1/REM2/PRICE`)
+- `PriceApprovalController` — กล่อง "ราคาที่ตกลงไว้ล่าสุด" + dropdown รหัสสินค้าในใบขออนุมัติราคาพิเศษ
+
+**`uprice` เดิมไม่มี primary key เลย** (ไม่มี `id` ไม่มี index สักตัว, MyISAM, 60,603 แถว) จึงระบุแถวเพื่อแก้ไข/ลบไม่ได้ → migration **`2026_08_29_100000_add_id_to_uprice_table`** เพิ่ม `id INT AUTO_INCREMENT PRIMARY KEY FIRST` ให้
+- ตรวจแล้วปลอดภัยกับโค้ดเดิม — ทุก query ในระบบ select ชื่อคอลัมน์ตรง ๆ ไม่มีที่ไหนพึ่งลำดับคอลัมน์
+- migration idempotent (`Schema::hasColumn`) และ `down()` ถอดคืนได้
+- ⚠ MyISAM ⇒ คำสั่งนี้ rebuild ตารางทั้งใบ **สำรองก่อนรันบน production**
+- หลังรัน: 60,603 แถวครบ `id` = 1..60603 ไม่ซ้ำ
+
+**Model `Saleinfo` ชี้ที่ `uprice` และ `public $timestamps = false`** — ตารางนี้ไม่มี `created_at`/`updated_at` (เวลาบันทึกล่าสุดเก็บที่คอลัมน์ `AuthDate` ของเดิม ซึ่ง `insert()`/`update()` เขียน `now()` ให้อยู่แล้ว)
+
+🔴 **2 ช่องที่ยังบันทึกไม่ได้ — `uprice` ไม่มีคอลัมน์รองรับ** (รอลูกค้ายืนยัน):
+
+| ช่องบนฟอร์ม | คอลัมน์ที่เคยใช้ | สถานะตอนนี้ |
+|---|---|---|
+| วันที่แจ้งปรับ | `tb_saleinfo.NotifyDate` | ช่องยังอยู่ แปะ class `wip` + `title` บอกว่ายังไม่บันทึก |
+| MOQ (kg) | `tb_saleinfo.MOQ` | เหมือนกัน — คอลัมน์ในตารางประวัติก็แปะ `wip` (จะว่างเสมอ) |
+
+- ถอดออกจาก `SaleinfoController::COLUMNS` และ `extractForm()` แล้ว (คอมเมนต์ค้างไว้ทั้งคู่) — **ถ้าไม่ถอดจะกลายเป็นคอลัมน์ที่ไม่มีจริงตอน insert/update = SQL error**
+- `history()` เปลี่ยน `orderByRaw('COALESCE(NotifyDate, DATE, AuthDate) DESC')` → **`COALESCE(\`DATE\`, AuthDate)`** (อ้าง NotifyDate จะได้ SQL error) และคืน `NotifyDate` = `''` / `MOQ` = `null` เพื่อให้ JS ฝั่งจอไม่ต้องแยกเคส
+- `edit()` ส่ง `NotifyDate` = `''` / `MOQ` = `null` ด้วยเหตุผลเดียวกัน
+- **เปิดใช้เมื่อได้ข้อสรุป:** เพิ่ม 2 คอลัมน์เข้า `uprice` → คืนชื่อเข้า `COLUMNS` + ปลดคอมเมนต์ใน `extractForm()` + ลบคำว่า `wip` ในฟอร์ม
+
+⚠ **`uprice.CustNo` เป็น varchar(5) — แคบกว่า `tb_saleinfo` เดิมที่เป็น varchar(6)** (`customer.code` ยาวสุด 5 ตัวพอดี ไม่มีรายไหนเกิน) ⇒ ใส่ `maxlength` ให้ช่องในฟอร์มตามความกว้างจริงแล้ว: CustNo 5 · st_code/ITEMNO 17 · REM1 100 · PackRem/Label 85 · Author 50 — กัน **error 1406 Data too long** (MySQL เปิด `STRICT_TRANS_TABLES`)
+
+⚠ **`uprice` เป็น MyISAM + charset `utf8` (3 ไบต์)** — ต่างจาก `tb_saleinfo` ที่เป็น InnoDB/utf8mb4 ⇒ ไม่มีทรานแซกชัน (ดูหัวข้อ MyISAM ด้านล่าง) และเก็บ emoji ไม่ได้ (ภาษาไทยปกติเก็บได้ ทดสอบแล้ว)
+
+**ตาราง `tb_saleinfo` ยังอยู่ ไม่ได้ลบ** — มี 6 แถวและ**เป็นข้อมูลทดสอบทั้งหมด** (`Test`, `12345`, `78945`) ไม่มีของจริงต้องย้าย. ตอนนี้ไม่มีโค้ดไหนอ่าน/เขียนแล้ว — จะ drop ทิ้งเมื่อไหร่ก็ได้ (พร้อม migration 2 ไฟล์ที่สร้างมัน) แต่ยังไม่ทำเพราะเป็นการลบข้อมูล
+
+## ตารางวันหยุดนักขัตฤกษ์ (เมนู "วันหยุดนักขัตฤกษ์", `/holiday`) — 01/09/2569
+
+`HolidayController` + `routes/holiday.php` + view `holiday/{index,holiday-form,calendar}.blade.php` + Model `Holiday` (`tb_holiday`) — หน้าจัดการข้อมูล (master)
+
+**ที่เอาไปใช้แล้ว (01/09/2569):** ช่อง **"อนุมัติราคาถึง"** ในฟอร์มขออนุมัติราคาพิเศษ ใช้ `App\Services\HolidayService::nextWorkingDay()` หา "วันทำการถัดไป" (ดูหัวข้อฟอร์ม MK ขออนุมัติราคาพิเศษ) — **ที่อื่นยังไม่ผูก** (เตือนตอนเลือก `inplan`/`custwant`/`senddate` ตรงวันหยุด ฯลฯ ยังไม่ได้ทำ) จะเพิ่มก็เรียก `HolidayService` ตัวเดิม ไม่ต้องแก้ตาราง
+
+**`App\Services\HolidayService`** — ตรรกะวันทำการอยู่ที่นี่ที่เดียว: `isHoliday()` / `isWorkingDay()` / `nextWorkingDay($from = null, $days = 1)` / `weeklyOff()` / `flush()` · วันหยุดประจำสัปดาห์ตั้งที่ **`config/holiday.php` → `weekly_off`** (ค่าปัจจุบัน `[0]` = หยุดเฉพาะอาทิตย์ · จะหยุดเสาร์ด้วยให้เป็น `[0, 6]`) · **วันหยุดที่ `is_active='N'` ไม่ถูกนับ**
+
+**ตาราง `tb_holiday` เป็นของใหม่ (InnoDB)** สร้างด้วย migration `2026_09_01_100000_create_tb_holiday_table` (idempotent ตามกติกาโปรเจกต์) — ค้นทั้ง DB แล้ว**ไม่มีตาราง legacy ไหนเก็บวันหยุด**
+
+| คอลัมน์ | เก็บอะไร |
+|---|---|
+| `holiday_date` | วันที่ (DATE, **unique** = 1 วัน 1 แถว) เก็บเป็น ค.ศ. แสดงผลเป็น พ.ศ. |
+| `name` | ชื่อวันหยุด |
+| `type` | `public` = นักขัตฤกษ์ · `substitute` = ชดเชย · `company` = วันหยุดบริษัท — **key ห้ามเปลี่ยน** (นิยาม + ป้ายไทย + สี badge อยู่ที่ `Holiday::TYPES` / `TYPE_BADGES`) |
+| `remark` | หมายเหตุ |
+| `is_active` | `Y`/`N` — ปิดใช้งาน = เก็บแถวไว้แต่ไม่นับเป็นวันหยุด (สลับจากตารางได้เลยด้วย switch) |
+
+- **หน้าเดียว 2 มุมมอง**: แท็บ **ปฏิทินรายปี** (12 เดือน, วันหยุดเป็นวงกลมสีตามประเภท, **คลิกวันที่ = เปิดฟอร์มแก้ไข**) และแท็บ **ตารางวันหยุด** (DataTables serverSide, กรอง ปี/ประเภท/สถานะ + ค้นหาชื่อ-หมายเหตุ, sort ได้ทุกคอลัมน์ที่เป็นคอลัมน์จริง)
+- **ชื่อวันหยุดในปฏิทินเป็น tooltip ของ Bootstrap** (`data-bs-toggle="tooltip"` + `data-bs-title`, ไม่ใช่ `title` ธรรมดา — เปลี่ยน 01/09/2569 ตามที่ผู้ใช้สั่ง): `main.js` ของ theme init tooltip **ครั้งเดียวตอนโหลดหน้า** แต่ปฏิทินมาทีหลังผ่าน AJAX ⇒ ต้องเรียก **`initCalendarTooltips()`** เองทุกครั้งหลัง `$box.html(res.data)` — ฟังก์ชันนี้ `dispose()` ตัวเก่าก่อน init ใหม่ ไม่งั้น tooltip ของปฏิทินปีก่อนค้างลอย · `hideCalendarTooltips()` ถูกเรียกตอนคลิกวันที่ กัน tooltip ค้างบนจอเมื่อ modal เปิดทับ
+- **คลิกวันที่ในปฏิทินใช้ class `btn_edit_calendar`** (ไม่ใช่ `btn_edit` ของปุ่มในตาราง) → `openHolidayForm(id, 'calendar')` ส่ง **`?from=calendar`** ไปที่ `edit()` → controller ตั้ง `$showDelete = $holiday && request('from') === 'calendar'` ⇒ **ฟอร์มมีปุ่ม "ลบวันหยุดนี้" เฉพาะตอนเปิดจากปฏิทิน** (หน้าปฏิทินไม่มีปุ่มลบของตัวเอง ส่วนตารางมีปุ่มลบในแถวอยู่แล้ว) · ปุ่มนั้นใช้ class `btn_delete` ตัวเดียวกับในตาราง จึงได้ Swal ยืนยัน + โหลดตาราง/ปฏิทินใหม่ในตัว (handler เพิ่ม `modal('hide')` ให้แล้ว) · Swal เด้งทับ modal ได้เพราะ `layout/inc_header` ตั้ง `.swal2-container { z-index: 9999 }`
+- **ฟอร์มนี้ไม่ใช้ `placeholder` เลย** — ตัวอย่างที่ต้องกรอกอยู่ในวงเล็บข้าง label แทน (`ชื่อวันหยุด * (เช่น วันขึ้นปีใหม่)`, `หมายเหตุ (เช่น ชดเชยวันวิสาขบูชา)`) เพราะ placeholder ดูเหมือนค่าที่กรอกไว้แล้ว · **ช่องวันที่ไม่มีวงเล็บบอกรูปแบบ** (ถอด `(วว/ดด/ปปปป)` ออกตามที่ผู้ใช้สั่ง 01/09/2569 — เลือกจากปฏิทิน flatpickr อยู่แล้ว) — แนวเดียวกับฟอร์มขออนุมัติราคาพิเศษ (01/09/2569) · ⚠ ช่องค้นหาบนหน้ารายการยังใช้ placeholder อยู่ เพราะไม่มี label กำกับ
+  - **ค่าเริ่มต้นคือแท็บปฏิทินรายปี** (01/09/2569 ตามที่ผู้ใช้สั่ง — เดิมเปิดมาเจอแท็บตาราง): ปฏิทินเป็นแท็บแรกใน `nav-tabs` + `pane_calendar` ถือ `show active` และ `loadCalendar()` ถูกเรียกใน `$(document).ready` ตรง ๆ ไม่ต้องรอ `shown.bs.tab`
+  - ⚠ **DataTables ถูก init ตอนแท็บตารางยังซ่อนอยู่ → วัดความกว้างคอลัมน์ไม่ได้** จึงต้องเรียก `oTable.columns.adjust()` (+ `responsive.recalc()` ถ้ามี) ใน `shown.bs.tab` ของ `#tab_table` ไม่งั้นหัวตารางกับเนื้อตารางเหลื่อมกัน
+  - ปฏิทินโหลดผ่าน AJAX (`holiday.calendar` → partial `holiday/calendar.blade.php`) — บันทึก/ลบ/สลับสถานะจะสั่งโหลดใหม่ถ้าแท็บปฏิทินเปิดอยู่ ไม่งั้นตั้งธง `calendarLoaded=false` ไว้โหลดตอนกลับมาที่แท็บ
+  - ตัวช่วยแปลงวันที่ไทยอยู่ที่ Model: `Holiday::thaiDate()` (`1 ม.ค. 2569`) / `thaiWeekday()` / `MONTHS_FULL` / `MONTHS_SHORT` — **อย่า hardcode ชื่อเดือน/วันซ้ำใน blade**
+- **ช่องวันที่ในฟอร์มเป็น flatpickr `d/m/Y` (ค.ศ. ตามทั้งระบบ)** — ฟอร์มโหลดผ่าน AJAX เข้า modal จึงต้องเรียก `initHolidayPicker()` ทุกครั้งหลังโหลด และหน้ามี CSS `.flatpickr-calendar { z-index: 1092 }` เหมือนหน้า Order (ของ theme ตั้งไว้ 999 ปฏิทินจะจมใต้ modal)
+  - `HolidayController::parseDate()` แปลง `d/m/Y` → `Y-m-d` (รับ `Y-m-d` ด้วย) + `checkdate()` กันวันที่ไม่มีจริง (31/02) · แปลงไม่ได้ = คืน null ให้ validator ตีกลับ 422
+  - กันบันทึกวันซ้ำด้วย `Rule::unique(...)->ignore($request->id)` ให้ตรงกับ unique index ของตาราง (แก้แถวเดิมไม่ชนตัวเอง)
+- **ข้อมูลตั้งต้นปี 2569 (21 วัน) อยู่ที่ `database/seeders/HolidaySeeder.php`** (ลงทะเบียนใน `DatabaseSeeder` แล้ว) — ใช้ `firstOrCreate` คีย์ด้วย `holiday_date` ⇒ **รันซ้ำได้และไม่ทับค่าที่ผู้ใช้แก้เอง**
+  - ⚠ วันหยุดที่อิงจันทรคติ (มาฆบูชา 3 มี.ค. · วิสาขบูชา 31 พ.ค. · อาสาฬหบูชา 29 ก.ค. · เข้าพรรษา 30 ก.ค.) **ต้องตรวจกับประกาศราชการอีกครั้ง** — ใส่หมายเหตุกำกับไว้ในแถวแล้ว
+  - รวมวันหยุดชดเชย 2 วันที่คำนวณจากวันที่ตรงเสาร์-อาทิตย์: **1 มิ.ย.** (ชดเชยวิสาขบูชา วันอาทิตย์) และ **7 ธ.ค.** (ชดเชย 5 ธ.ค. วันเสาร์) · **ยังไม่รวม "วันหยุดพิเศษ" ที่ ครม. ประกาศเพิ่มรายปี**
+- ⚠ **ความเสี่ยงแบบเดียวกับเมนูอื่น**: route `holiday/store` · `holiday/delete` · `holiday/toggle-status` ป้องกันแค่ `auth` + สิทธิ์ระดับเมนู (menu key **`Holiday`** → namespace `holiday`) — **ไม่มีสิทธิ์แยกสำหรับการเขียน/ลบ และไม่มี audit trail** ใครเข้าเมนูนี้ได้ก็แก้/ลบได้ · พนักงาน (guard `emp`) ต้องไปติ๊กเมนูนี้ให้ role ที่หน้า "จัดการสิทธิ์" ก่อน (admin เข้าได้อยู่แล้ว)
+
 ## ข้อตกลงและข้อควรระวัง (Conventions & Gotchas)
 
 - **ช่องกรอกตัวเลขแบบใส่คอมมาอัตโนมัติ** (`resources/views/layout/inc_js.blade.php`, 18/08/2569): ช่องกรอกราคา/น้ำหนัก/จำนวน **ห้ามใช้ `type="number"`** (แสดงคอมมาไม่ได้) ให้ใช้ `type="text" class="js-comma"` แทน — ตัวช่วยกลางอยู่ใน `inc_js` จึงใช้ได้ทุกหน้าโดยไม่ต้อง include เพิ่ม
@@ -585,7 +665,7 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
   - **หน้าจอแก้ค่าย้ายออกมาเป็นเมนูของตัวเองแล้ว: "ตั้งค่าเงื่อนไขราคา" `/price-rule` (21/08/2569)** — `PriceRuleController` (`index` / `data` → JSON / `update`) + `routes/pricerule.php` + view `pricerule/index.blade.php`; menu key **`PriceRule`** อยู่ใต้หัวข้อ Settings (ต่อจาก "สถานะ Planning"). เดิมเป็น modal `saleinfo/modal-pricerule.blade.php` ในหน้า `/saleinfo` — **ลบทิ้งแล้ว** พร้อม method `SaleinfoController::priceRules/priceRulesUpdate` + route `saleinfo/price-rules*` (ย้ายโค้ดมาทั้งชุด ตรรกะเดิมทุกอย่าง); **ปุ่ม "ตั้งค่าเงื่อนไขราคา" บนหัวหน้า `/saleinfo` ปิดไปแล้ว** เข้าได้ทางเมนูอย่างเดียว
   - **หน้าจอไม่แสดงเรื่อง "ค่าตั้งต้น" เลย** (21/08/2569) — ไม่มีคอลัมน์ค่าตั้งต้น ไม่มีปุ่มคืนค่า และไม่มีป้าย "แก้แล้ว" เพราะค่าจริงถูกแก้อยู่ตลอด ค่าใน config จึงไม่ใช่ค่าอ้างอิงที่มีความหมายกับผู้ใช้ · ตาราง 4 คอลัมน์ = เงื่อนไข / คูณ / หาร / บวก เท่านั้น (ฝั่ง server ยังลบแถว `tb_price_rule` เมื่อค่าตรงกับ config เหมือนเดิม — ผู้ใช้ไม่เห็นความต่าง). มีบรรทัดบอกตัวคูณระหว่างขั้นราคา (`tier.price_2_from_price_1` / `price_3_from_price_2` — อ่านอย่างเดียว แก้ที่ config)
   - ⚠ สิทธิ์คุมด้วย **menu key** (`AccessControl` เทียบ namespace ของ route name = `pricerule`) ไม่ใช่ค่าในช่อง `permission` → พนักงาน (guard `emp`) ต้องไปติ๊กเมนู "ตั้งค่าเงื่อนไขราคา" ให้ role ที่หน้า "จัดการสิทธิ์" ก่อน ถึงจะเข้าได้ (admin เข้าได้อยู่แล้ว)
-  - **ฟอร์ม "กำหนดราคา" (`/saleinfo` → modal `saleinfo/modal-price.blade.php`) คำนวณกล่อง "คำนวนราคา" แล้ว (25/08/2569)** — ราคา 1/2/3 + DB 3-4 / 1-2 Kg. ยิง `saleinfo/price-lookup` (endpoint เดียวกับจอ "ค้นหาราคาสินค้า") ตอนพิมพ์ **รหัสสินค้า (`ITEMNO`)** โดยหน่วง 400ms · ยังไม่กรอก `ITEMNO` → ใช้ **ชื่อสินค้า (`st_code`)** แทน (ตรงกับ `SaleinfoController::extractForm` ที่ ITEMNO ว่าง = ใช้ st_code) · โหมดแก้ไขคำนวณให้ทันทีหลังเติมฟอร์ม · มีบรรทัดบอกที่มา `#saleinfo_price_note` (ราคาทุน · เงื่อนไขที่เข้า · สูตร) และขึ้นกรอบแดงพร้อมเหตุผลเมื่อคำนวณไม่ได้ · **ช่อง `db_price_*` เป็นแค่การแสดงผล ไม่ได้บันทึก** (ไม่มีใน `SaleinfoController::COLUMNS` และ `tb_saleinfo` ไม่มีคอลัมน์นี้) · ⚠ กล่อง **"ค่าสีทั้งสิ้น / % สี" ยังไม่รู้สูตร** จึงคง class `wip` ไว้เฉพาะกล่องนั้น
+  - **ฟอร์ม "กำหนดราคา" (`/saleinfo` → modal `saleinfo/modal-price.blade.php`) คำนวณกล่อง "คำนวนราคา" แล้ว (25/08/2569)** — ราคา 1/2/3 + DB 3-4 / 1-2 Kg. ยิง `saleinfo/price-lookup` (endpoint เดียวกับจอ "ค้นหาราคาสินค้า") ตอนพิมพ์ **รหัสสินค้า (`ITEMNO`)** โดยหน่วง 400ms · ยังไม่กรอก `ITEMNO` → ใช้ **ชื่อสินค้า (`st_code`)** แทน (ตรงกับ `SaleinfoController::extractForm` ที่ ITEMNO ว่าง = ใช้ st_code) · โหมดแก้ไขคำนวณให้ทันทีหลังเติมฟอร์ม · มีบรรทัดบอกที่มา `#saleinfo_price_note` (ราคาทุน · เงื่อนไขที่เข้า · สูตร) และขึ้นกรอบแดงพร้อมเหตุผลเมื่อคำนวณไม่ได้ · **ช่อง `db_price_*` เป็นแค่การแสดงผล ไม่ได้บันทึก** (ไม่มีใน `SaleinfoController::COLUMNS` และ `uprice` ไม่มีคอลัมน์นี้) · ⚠ กล่อง **"ค่าสีทั้งสิ้น / % สี" ยังไม่รู้สูตร** จึงคง class `wip` ไว้เฉพาะกล่องนั้น
   - **จอ Test Price (`/saleinfo` → modal `saleinfo/modal-testprice.blade.php`) ต่อข้อมูลแล้ว (25/08/2569)** — อ่านอย่างเดียว ไม่มีบันทึก ผ่าน `GET saleinfo/test-price` → `SaleinfoController::testPrice()`
     - **ใบเทส = `access_testmai`** (สำเนา TestMai ของไฟล์ Access): `TestNo` = ช่อง Test No. (รูปแบบ `26/0055/1`, **ไม่ซ้ำในตาราง**) · `Lotno` = Lot Test (**ซ้ำได้**) · `TDecs` = Sample · `CResin` = Resin ที่ลูกค้าใช้ · `Resin` = Resin (Match) · `CCode` = รหัสลูกค้า
     - **`Test No.` กับ `Lot Test` เป็นคีย์ค้นเท่าเทียมกัน — กรอกช่องไหนก็ได้ (25/08/2569)** ส่วน `Customer` เป็นตัวกรองเสริม; **ช่องที่ผู้ใช้ไม่ได้กรอก ระบบเติมให้เองจากใบที่เจอ** (ค้นด้วย Lot → ได้ Test No. · ค้นด้วย Test No. → ได้ Lot) ช่องที่ระบบเติมขึ้นพื้นเหลือง (class `tp-autofill`) + มี tooltip

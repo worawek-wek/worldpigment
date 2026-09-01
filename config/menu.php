@@ -164,6 +164,14 @@ return [
         'permission' => 'pricerule read',
     ],
 
+    // ตารางวันหยุดนักขัตฤกษ์ (master data) — เพิ่ม 01/09/2569
+    'Holiday' => [
+        'title' => 'วันหยุดนักขัตฤกษ์',
+        'icon' => 'ti-calendar-event',
+        'route_name' => 'holiday.index',
+        'permission' => 'holiday read',
+    ],
+
     'Machine' => [
         'title' => 'เครื่องจักร',
         'icon' => 'ti-tools',

@@ -107,6 +107,10 @@
 /* แถว checkbox ท้ายกล่องซ้าย */
 .of-checkrow { display: flex; flex-wrap: wrap; gap: 1.25rem; padding-top: .35rem; }
 
+/* กลุ่ม checkbox ของ itype — ขึ้นกรอบแดงเมื่อใบ W ยังไม่ได้ติ๊ก (syncItypeRequired) */
+.of-itype-box { border: 1px solid transparent; border-radius: .375rem; padding: .1rem .5rem .35rem; }
+.of-itype-box.is-invalid { border-color: var(--bs-danger); background-color: rgba(var(--bs-danger-rgb), .04); }
+
 /* ตารางรายการในใบสั่งซื้อ — ช่องกรอก (พื้นเหลืองอ่อนตามฟอร์ม Access เดิม) */
 #orderItemsTable { background: #fffdf0; }
 #orderItemsTable thead th {
@@ -622,15 +626,26 @@
         }
     }
 
-    // ตั้งค่าให้ flatpickr (รับ Y-m-d / datetime); ว่าง = เคลียร์
-    // ค่าเริ่มต้นของช่อง "อนุมัติราคาถึง" = พรุ่งนี้ (Y-m-d)
-    // ต้องตรงกับ PriceApprovalController::defaultValidTo() ที่ server เติมให้เมื่อช่องถูกส่งมาว่าง
-    function tomorrowYmd(){
+    // ค่าเริ่มต้นของช่อง "อนุมัติราคาถึง" = **วันทำการถัดไป** (ข้ามวันอาทิตย์ + วันหยุดใน tb_holiday)
+    //
+    // ⚠ JS ไม่รู้จักวันหยุด → ค่านี้ต้องมาจาก server เสมอ (PriceApprovalController::defaultValidTo())
+    //   - ตอนโหลดหน้า: OrderController::index ส่งมาเป็น $default_valid_to
+    //   - ทุกครั้งที่เลือกลูกค้า+เบอร์: data() แนบ default_valid_to มาให้ แล้ว fillApprovalData() อัปเดตค่านี้
+    //     (กันค่าค้างเมื่อเปิดฟอร์มทิ้งไว้ข้ามวัน)
+    // เดิม (29/08/2569) คำนวณ "พรุ่งนี้" เองใน JS — เลิกใช้แล้ว 01/09/2569
+    var APPROVAL_DEFAULT_VALID_TO = @json($default_valid_to ?? null);
+
+    function defaultValidToYmd(){
+        if (APPROVAL_DEFAULT_VALID_TO) return APPROVAL_DEFAULT_VALID_TO;
+
+        // สำรองกรณี server ไม่ได้ส่งค่ามา — พรุ่งนี้ตรง ๆ (ไม่ข้ามวันหยุด)
         var d = new Date();
         d.setDate(d.getDate() + 1);
         var p = function(n){ return (n < 10 ? '0' : '') + n; };
         return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
     }
+
+    // ตั้งค่าให้ flatpickr (รับ Y-m-d / datetime); ว่าง = เคลียร์
 
     function setFp(id, val){
         var el = document.getElementById(id);
@@ -743,26 +758,20 @@
     function itypeRequired(){ return orderPrefix() === 'W'; }
 
     // ── itype = ประเภทสินค้าที่สั่ง (ตัวเลือกจาก config/order.php → itypes) ──
-    // เลือกได้ข้อเดียว: ติ๊กข้อใหม่ → ปลดข้อเก่าให้เอง (ใช้ checkbox ตามที่ผู้ใช้กำหนดหน้าตาไว้)
+    // ติ๊กเลือกบนฟอร์มได้เลย (01/09/2569 — เดิมซ่อนอยู่ในกล่องที่ต้องกดกางก่อน)
+    // เลือกได้ข้อเดียว: ติ๊กข้อใหม่ → ปลดข้อเก่าให้เอง
     // ⚠ ยังไม่มีที่เก็บใน DB → ค่าที่เลือกไม่ได้ถูกส่งไปบันทึก (ดู config/order.php)
     $(document).on('change', '.o-itype-opt', function(){
         if (this.checked) $('.o-itype-opt').not(this).prop('checked', false);
-        syncItypeText();
+        syncItypeRequired();
     });
 
-    // เอาข้อที่ติ๊กไว้มาโชว์ในช่อง (ไม่ติ๊กเลย = ช่องว่าง)
-    function syncItypeText(){
-        var $on = $('.o-itype-opt:checked').first();
-        $('#o_itype').val($on.length ? ($on.data('label') || '') : '');
-        syncItypeRequired();
-    }
-
-    // โชว์ * ข้างป้าย itype + ขึ้นกรอบแดงเมื่อจำเป็นแต่ยังว่าง
+    // โชว์ * ข้างป้าย itype + ขึ้นกรอบแดงรอบกลุ่ม checkbox เมื่อจำเป็นแต่ยังไม่ได้ติ๊ก
     function syncItypeRequired(){
         var need  = itypeRequired();
-        var empty = !($('#o_itype').val() || '').trim();
+        var empty = !$('.o-itype-opt:checked').length;
         $('#o_itype_req').toggleClass('d-none', !need);
-        $('#o_itype').toggleClass('is-invalid', need && empty);
+        $('#o_itype_box').toggleClass('is-invalid', need && empty);
     }
 
     // เปลี่ยนประเภทใบสั่ง — ไม่เจนเลขที่ใหม่ (เจนเฉพาะตอนกดปุ่ม "เพิ่มใบสั่งซื้อใหม่")
@@ -1667,7 +1676,7 @@
         $('#approvalModal textarea').val('');
         $('#approvalModal input[type="checkbox"]').prop('checked', false);
         $('#a_itemno').html('<option value="">— เลือกลูกค้าก่อน —</option>');
-        setFp('a_validto', tomorrowYmd());   // ค่าเริ่มต้น "อนุมัติราคาถึง" = พรุ่งนี้
+        setFp('a_validto', defaultValidToYmd());   // ค่าเริ่มต้น "อนุมัติราคาถึง" = วันทำการถัดไป
         highlightPriceGroup();
         renderApprovalReqState(null);
         renderApprovalGrid('ราคาที่ยืนไว้ของเบอร์นี้', ZCUST_COLS, []);
@@ -1773,9 +1782,11 @@
         $('#a_uprice_rem2').val(u.REM2 || '');
 
         // "อนุมัติราคาถึง" = วันที่ยืนราคาของเบอร์ที่เลือก (zcustprice.enddate)
-        // ยังไม่เคยยืนราคาให้เบอร์นี้ → ค่าเริ่มต้นเป็นพรุ่งนี้ (ตรงกับที่ server เติมให้ถ้าปล่อยว่าง)
+        // ยังไม่เคยยืนราคาให้เบอร์นี้ → ค่าเริ่มต้น = วันทำการถัดไป (ตรงกับที่ server เติมให้ถ้าปล่อยว่าง)
+        // รับค่าที่ server คำนวณสด ๆ มาทุกครั้ง กันค่าค้างเมื่อเปิดฟอร์มทิ้งไว้ข้ามวัน/ข้ามวันหยุด
+        if (res.default_valid_to) APPROVAL_DEFAULT_VALID_TO = res.default_valid_to;
         var first = (res.rows || [])[0];
-        setFp('a_validto', (first && first.enddate) ? first.enddate : tomorrowYmd());
+        setFp('a_validto', (first && first.enddate) ? first.enddate : defaultValidToYmd());
 
         highlightPriceGroup();
         renderApprovalGrid('ราคาที่ยืนไว้ของเบอร์นี้', ZCUST_COLS, res.rows || []);

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Services\HolidayService;
 use App\Services\ProductPriceService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -18,7 +19,7 @@ use Illuminate\Support\Facades\Validator;
  *                 price1/2/3 = ราคาตามกลุ่มปริมาณสั่ง A/B/C, price = ราคาขายครั้งนี้, Appv = อนุมัติแล้ว
  *   zcustprice    ราคาที่ยืนไว้กับลูกค้า (PK = custno + colorno) → ตารางล่างของฟอร์ม
  *   uprice        ราคาที่ตกลงไว้ล่าสุด (ใช้เป็นรายการเบอร์สินค้าของลูกค้ารายนั้น)
- *   tb_saleinfo   ราคาที่ตั้งในเมนู "กำหนดราคา" — รวมเป็นตัวเลือกเบอร์สินค้าด้วย (25/08/2569)
+ *   uprice        ราคาที่ตกลงไว้ล่าสุด + ราคาที่ตั้งในเมนู "กำหนดราคา" (ย้ายมาเขียนตารางนี้ 29/08/2569)
  *   cp_itemprice  ประวัติราคาเม็ด CP รายใบสั่ง (ปุ่ม "ประวัติ ราคาเม็ด CP")
  *   customer      ชื่อลูกค้า + รหัสพนักงานขาย (เลข "# 15" ข้างรหัสลูกค้าบนฟอร์ม)
  */
@@ -73,12 +74,13 @@ class PriceApprovalController extends Controller
             return response()->json(['items' => []]);
         }
 
-        // รวมเบอร์จาก 3 ที่ — บางเบอร์มีอยู่ที่เดียว ถ้าดึงที่เดียวจะหาย
-        //   1) uprice      ราคาที่ตกลงไว้ล่าสุด (ยกมาจากระบบเก่า ไม่มีหน้าจอเขียน)
+        // รวมเบอร์จาก 2 ที่ — บางเบอร์มีอยู่ที่เดียว ถ้าดึงที่เดียวจะหาย
+        //   1) uprice      ราคาที่ตกลงไว้ล่าสุด — **เมนู "กำหนดราคา" (/saleinfo) เขียนลงตารางนี้แล้ว**
+        //                  (29/08/2569 ย้ายจาก tb_saleinfo) ⇒ เบอร์ที่เพิ่งตั้งราคาโผล่ที่นี่เลย
         //   2) zcustprice  ราคาที่ยืนไว้กับลูกค้า (เขียนตอนอนุมัติในฟอร์มนี้เอง)
-        //   3) tb_saleinfo ราคาที่ตั้งไว้ในเมนู "กำหนดราคา" (/saleinfo) — 25/08/2569
-        //      เพิ่มเข้ามาเพราะเป็นหน้าจอเดียวที่ผู้ใช้เพิ่มราคาให้เบอร์ใหม่ได้เอง
-        //      ถ้าไม่รวมไว้ เบอร์ที่เพิ่งตั้งราคาจะเลือกขออนุมัติราคาพิเศษไม่ได้เลย
+        //
+        // เดิม (25/08/2569) union `tb_saleinfo` เข้ามาเป็นที่ที่ 3 เพราะตอนนั้น /saleinfo
+        // เขียนลงตารางแยก — ถอดออกแล้วเพราะซ้ำกับ uprice และเหลือแต่ข้อมูลทดสอบ
         $items = DB::table('uprice')
             ->where('CustNo', $custno)
             ->whereRaw("TRIM(COALESCE(ITEMNO, '')) <> ''")
@@ -88,12 +90,6 @@ class PriceApprovalController extends Controller
                     ->where('custno', $custno)
                     ->whereRaw("TRIM(COALESCE(colorno, '')) <> ''")
                     ->selectRaw('TRIM(colorno) as itemno')
-            )
-            ->union(
-                DB::table('tb_saleinfo')
-                    ->where('CustNo', $custno)
-                    ->whereRaw("TRIM(COALESCE(ITEMNO, '')) <> ''")
-                    ->selectRaw('TRIM(ITEMNO) as itemno')
             )
             ->pluck('itemno')
             ->unique()
@@ -165,6 +161,9 @@ class PriceApprovalController extends Controller
             'rows'     => $this->zcustRows($custno, $itemno),
             // ยังอยู่ใน "โหมดอนุมัติ" ไหม — ให้ฟอร์มล็อก/ปลดล็อกช่องอนุมัติตามจริงทุกครั้งที่โหลด
             'md_unlocked' => $this->mdUnlocked(),
+            // ค่าเริ่มต้นของ "อนุมัติราคาถึง" = วันทำการถัดไป (ข้ามวันหยุด)
+            // คำนวณที่ server ทุกครั้ง เพื่อให้ฟอร์มที่เปิดค้างข้ามวัน/ข้ามวันหยุดยังได้ค่าที่ถูก
+            'default_valid_to' => self::defaultValidTo(),
         ]);
     }
 
@@ -485,17 +484,22 @@ class PriceApprovalController extends Controller
     }
 
     /**
-     * ค่าเริ่มต้นของช่อง "อนุมัติราคาถึง" (zcustprice.enddate) = พรุ่งนี้
+     * ค่าเริ่มต้นของช่อง "อนุมัติราคาถึง" (zcustprice.enddate) = **วันทำการถัดไป**
      *
-     * ใช้ 2 ที่ให้ตรงกัน: ฟอร์มเติมให้ตอนเปิด (tomorrowYmd() ใน order/index.blade.php)
+     * เดิม (29/08/2569) คือ "พรุ่งนี้" ตรง ๆ — เปลี่ยนเป็นข้ามวันหยุด 01/09/2569 ตามที่ผู้ใช้สั่ง:
+     * วันนี้ที่ 1 · วันที่ 2 เป็นวันหยุด → ได้วันที่ 3
+     * (วันหยุด = วันอาทิตย์ + tb_holiday ที่เปิดใช้งาน — ดู App\Services\HolidayService)
+     *
+     * ใช้ 2 ที่ให้ตรงกัน: ฟอร์มเติมให้ตอนเปิด (ค่ามาจาก server ผ่าน default_valid_to
+     * ใน data() และตัวแปร APPROVAL_DEFAULT_VALID_TO ที่ blade ฝังไว้)
      * และ save() เติมให้เองเมื่อช่องถูกส่งมาว่าง (เผลอลบวันที่ทิ้ง)
      *
      * ⚠ ห้ามปล่อย enddate เป็น null — activeApprovedPrice() ถือว่า "ว่าง = ไม่กำหนดวันหมดอายุ"
      *   ราคาพิเศษใบนั้นจะปลดล็อกด่านราคาใน OrderController::checkPriceFloor() ได้ตลอดไป
      */
-    private static function defaultValidTo(): string
+    public static function defaultValidTo(): string
     {
-        return now()->addDay()->format('Y-m-d');
+        return HolidayService::nextWorkingDay();
     }
 
     /** d/m/Y → Y-m-d (ว่าง/รูปแบบผิด = null) */
