@@ -274,6 +274,21 @@
   }
 </style>
 
+{{-- ─────────────────────────────────────────────────────────────────
+     ถอดเพดานความกว้างของ container ที่จอ ≥1400px (01/09/2569)
+     core.css ของธีมตั้ง @media (min-width:1400px){ .container-xxl,… { max-width:1440px } }
+     ทำให้จอกว้างเหลือขอบว่างสองข้างเยอะ — เอาเพดานนั้นออก ให้เนื้อหาเต็มความกว้าง
+     override ที่นี่ (หลัง core.css) แทนการแก้ไฟล์ธีม จะได้ไม่หายตอนอัปเดตธีม
+     อยากได้เพดานคืน: ลบบล็อกนี้ทิ้ง หรือเปลี่ยน none เป็นค่า px ที่ต้องการ
+   ───────────────────────────────────────────────────────────────── --}}
+<style>
+  @media (min-width: 1400px) {
+    .container-xxl, .container-xl, .container-lg, .container-md, .container-sm, .container {
+      max-width: none;
+    }
+  }
+</style>
+
 <div id="loadingOverlay" style="display: none;">
     <div class="col">
         <!-- Chase -->

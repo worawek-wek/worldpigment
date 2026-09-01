@@ -250,11 +250,35 @@
             data: { year: $('#calendarYear').val() },
             success: function(res) {
                 $box.html(res.data);
+                initCalendarTooltips();
                 calendarLoaded = true;
             },
             error: function() {
                 $box.html('<div class="alert alert-danger mb-0">โหลดปฏิทินไม่สำเร็จ กรุณาลองใหม่</div>');
             }
+        });
+    }
+
+    // ชื่อวันหยุดในปฏิทินใช้ tooltip ของ Bootstrap
+    // main.js ของ theme init ให้เฉพาะ element ที่มีอยู่ตอนโหลดหน้า — ปฏิทินมาทีหลังจึงต้อง init เอง
+    // และต้อง dispose ตัวเก่าก่อนทุกครั้ง ไม่งั้น tooltip ของปฏิทินรอบก่อนค้างลอยอยู่หลังเปลี่ยนปี
+    function initCalendarTooltips() {
+        if (typeof bootstrap === 'undefined' || !bootstrap.Tooltip) return;
+
+        document.querySelectorAll('#calendarBox [data-bs-toggle="tooltip"]').forEach(function (el) {
+            var old = bootstrap.Tooltip.getInstance(el);
+            if (old) old.dispose();
+            new bootstrap.Tooltip(el);
+        });
+    }
+
+    // ปิด tooltip ที่ค้างอยู่ (เช่น ชี้อยู่แล้วกดเปิด modal — เมาส์ออกไม่ทัน tooltip จะค้างบนจอ)
+    function hideCalendarTooltips() {
+        if (typeof bootstrap === 'undefined' || !bootstrap.Tooltip) return;
+
+        document.querySelectorAll('#calendarBox [data-bs-toggle="tooltip"]').forEach(function (el) {
+            var t = bootstrap.Tooltip.getInstance(el);
+            if (t) t.hide();
         });
     }
 
@@ -298,17 +322,24 @@
         openHolidayForm(null);
     });
 
-    // ปุ่มแก้ไขในตาราง + คลิกวันที่ในปฏิทิน ใช้คลาสเดียวกัน
+    // ปุ่มแก้ไขในตาราง
     $(document).on('click', '.btn_edit', function(e){
         e.preventDefault();
         openHolidayForm($(this).data('id'));
     });
 
-    function openHolidayForm(id) {
+    // คลิกวันที่ในปฏิทิน — ส่ง from=calendar ให้ฟอร์มโชว์ปุ่มลบ (หน้าปฏิทินไม่มีปุ่มลบของตัวเอง)
+    $(document).on('click', '.btn_edit_calendar', function(e){
+        e.preventDefault();
+        hideCalendarTooltips();
+        openHolidayForm($(this).data('id'), 'calendar');
+    });
+
+    function openHolidayForm(id, from) {
         $.ajax({
             url: "{{ route('holiday.edit') }}",
             method: "GET",
-            data: { id: id },
+            data: { id: id, from: from || '' },
             success: function(response) {
                 $('#result_detail').html(response.data);
                 initHolidayPicker();
@@ -391,6 +422,9 @@
                 data: { _token: "{{ csrf_token() }}", id: id },
                 success: function(res){
                     if (res.status == 200) {
+                        // กดลบจากในฟอร์ม (เปิดมาจากปฏิทิน) → ปิด modal ให้ด้วย
+                        // กดจากตาราง modal ปิดอยู่แล้ว บรรทัดนี้จึงไม่มีผล
+                        $('#holidayModal').modal('hide');
                         oTable.draw(false);
                         refreshCalendarIfVisible();
                         Swal.fire({ icon: 'success', title: res.message, toast: true,

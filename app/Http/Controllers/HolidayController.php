@@ -125,6 +125,9 @@ class HolidayController extends Controller
         $html = view('holiday.holiday-form', [
             'holiday' => $holiday,
             'types'   => Holiday::TYPES,
+            // เปิดจากปฏิทิน (?from=calendar) → โชว์ปุ่มลบในฟอร์ม เพราะหน้าปฏิทินไม่มีปุ่มลบของตัวเอง
+            // (เปิดจากตารางไม่ต้อง — มีปุ่มลบอยู่ในแถวแล้ว)
+            'showDelete' => $holiday && request('from') === 'calendar',
         ])->render();
 
         return response()->json([

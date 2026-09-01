@@ -56,10 +56,13 @@
                                             @if(!$inMonth)
                                                 <span class="hc-day hc-empty"></span>
                                             @elseif($holiday)
-                                                {{-- คลิกวันที่มีวันหยุด = เปิดฟอร์มแก้ไขวันนั้น --}}
-                                                <span class="hc-day hc-holiday hc-{{ $holiday->is_active === 'Y' ? $holiday->type : 'off' }} btn_edit"
+                                                {{-- คลิกวันที่มีวันหยุด = เปิดฟอร์มแก้ไขวันนั้น (btn_edit_calendar → ฟอร์มจะมีปุ่มลบ)
+                                                     ชื่อวันหยุดใช้ tooltip ของ Bootstrap (data-bs-*) ไม่ใช่ title ธรรมดา
+                                                     — ปฏิทินโหลดผ่าน AJAX จึงต้อง init เองที่ initCalendarTooltips() --}}
+                                                <span class="hc-day hc-holiday hc-{{ $holiday->is_active === 'Y' ? $holiday->type : 'off' }} btn_edit_calendar"
                                                     data-id="{{ $holiday->id }}" role="button"
-                                                    title="{{ $holiday->name }}{{ $holiday->is_active === 'Y' ? '' : ' (ปิดใช้งาน)' }}">
+                                                    data-bs-toggle="tooltip" data-bs-placement="top"
+                                                    data-bs-title="{{ $holiday->name }}{{ $holiday->is_active === 'Y' ? '' : ' (ปิดใช้งาน)' }}">
                                                     {{ $dayNum }}
                                                 </span>
                                             @else

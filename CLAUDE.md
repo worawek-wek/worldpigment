@@ -52,12 +52,13 @@ worldpigment/
 │   │   ├── HolidayController.php    # วันหยุดนักขัตฤกษ์ tb_holiday — CRUD + ปฏิทินรายปี (01/09/2569)
 │   │   └── ExportExcelController.php
 │   ├── Models/
-│   └── Services/                # AccessService, ProductPriceService (04/08/2569)
+│   └── Services/                # AccessService, ProductPriceService (04/08/2569), HolidayService (01/09/2569)
 ├── config/
 │   ├── menu.php                 # โครงสร้างเมนู
 │   ├── product_price.php        # ตารางเงื่อนไขคิดราคาขายจากราคาทุน (04/08/2569)
-│   └── color_matching.php       # ตัวเลือกผลการทดสอบตัวอย่างสี (testmain.TyResp) (10/08/2569)
-│                                # — mul/div/add เป็นแค่ "ค่าตั้งต้น" ผู้ใช้แก้ทับได้ (10/08/2569)
+│   │                            # — mul/div/add เป็นแค่ "ค่าตั้งต้น" ผู้ใช้แก้ทับได้ (10/08/2569)
+│   ├── color_matching.php       # ตัวเลือกผลการทดสอบตัวอย่างสี (testmain.TyResp) (10/08/2569)
+│   └── holiday.php              # วันหยุดประจำสัปดาห์ของ HolidayService (01/09/2569)
 ├── database/
 │   ├── migrations/
 │   └── seeders/
@@ -371,9 +372,15 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 
 **กติกาการบันทึก** (`save()`): เขียน `appvreq` (คีย์ `ReqDate` + `custno` + `itemno`) — **1 คู่ (ลูกค้า, เบอร์) = 1 ใบที่แก้ได้**: server หา `ReqDate` ของ**ใบล่าสุด**ของคู่นั้นเอง (มี = แก้ทับ, ไม่มี = ขึ้นใบใหม่ด้วยเวลาปัจจุบัน) — **client ไม่ส่ง `ReqDate` มาแล้ว** กันเผลอสร้างใบซ้ำ/ใบผิดวัน · **ติ๊ก "อนุมัติ" ต้องอยู่ในโหมดอนุมัติ** ไม่งั้น 422 — **ยกเว้นใบที่อนุมัติไปแล้ว** ฝั่ง MK แก้หมายเหตุ/ราคาต่อได้โดยไม่ต้องปลดล็อก (checkbox ถูก disabled ค่าที่ส่งมาจึงเป็นสถานะเดิม ไม่ใช่การอนุมัติใหม่) · เขียน `zcustprice` (`exprice` = ราคาขายครั้งนี้, `enddate` = อนุมัติราคาถึง) **เฉพาะตอนอนุมัติจริงในโหมด MD** — ไม่งั้น MK ที่แก้ใบซึ่งอนุมัติแล้วจะเผลอทับ `enddate` ด้วยช่องที่ถูกล็อกไว้ (ค่าว่าง) · `destroy()` ลบเฉพาะแถว `appvreq` **ไม่แตะ `zcustprice`**
 
-**ช่อง "อนุมัติราคาถึง" (`zcustprice.enddate`) มีค่าเริ่มต้น = วันนี้ + 1 วัน** (29/08/2569) — เติมให้ 2 ที่ ต้องแก้คู่กันเสมอ:
-- **ฝั่งจอ** `tomorrowYmd()` (`order/index.blade.php`) → ใช้ที่ `clearApprovalForm()` (เปิดฟอร์มใหม่) และตอนเติมข้อมูลใน `fillApprovalData()` **เฉพาะเมื่อเบอร์นั้นยังไม่เคยยืนราคา** (`res.rows[0].enddate` ว่าง) — ถ้ามีค่าเดิมอยู่ยังโชว์ค่าเดิมตามปกติ
-- **ฝั่ง server** `PriceApprovalController::defaultValidTo()` → `save()` เติมให้เองเมื่อ `valid_to` ที่ส่งมาว่างหรือรูปแบบผิด (เผลอลบวันที่ทิ้ง) จึงไม่ต้องพึ่งจอ
+**ช่อง "อนุมัติราคาถึง" (`zcustprice.enddate`) มีค่าเริ่มต้น = "วันทำการถัดไป" ข้ามวันหยุด** (29/08/2569 = วันนี้+1 · **เปลี่ยนเป็นข้ามวันหยุด 01/09/2569** ตามที่ผู้ใช้สั่ง)
+- **ตรรกะอยู่ที่เดียว: `App\Services\HolidayService::nextWorkingDay()`** — วันหยุด = **วันอาทิตย์** (`config/holiday.php` → `weekly_off`, ผู้ใช้ยืนยันว่า**ไม่หยุดเสาร์**) **+ `tb_holiday` ที่ `is_active='Y'`** · เช่น วันนี้ที่ 1 · วันที่ 2 หยุด → ได้วันที่ 3 · ก่อนสงกรานต์ 12 เม.ย. 2026 → ได้ 16 เม.ย.
+- 🔴 **JS คำนวณเองไม่ได้แล้ว เพราะไม่รู้จักวันหยุด** — ฟังก์ชัน `tomorrowYmd()` เดิมใน `order/index.blade.php` **ถูกแทนด้วย `defaultValidToYmd()` ที่อ่านค่าที่ server ส่งมา**:
+  - ตอนโหลดหน้า: `OrderController::index` ส่ง `$default_valid_to` → blade ฝังเป็นตัวแปร `APPROVAL_DEFAULT_VALID_TO`
+  - ทุกครั้งที่เลือกลูกค้า+เบอร์: `PriceApprovalController::data()` แนบ `default_valid_to` มา → `fillApprovalData()` เขียนทับตัวแปรนั้น (กันค่าค้างเมื่อเปิดฟอร์มทิ้งไว้ข้ามวัน/ข้ามวันหยุด)
+  - `defaultValidToYmd()` มี fallback เป็น "พรุ่งนี้ตรง ๆ" เฉพาะกรณี server ไม่ได้ส่งค่ามา — **อย่าใช้ค่านี้เป็นทางหลัก** เพราะไม่ข้ามวันหยุด
+  - ใช้ที่ `clearApprovalForm()` (เปิดฟอร์มใหม่) และ `fillApprovalData()` **เฉพาะเมื่อเบอร์นั้นยังไม่เคยยืนราคา** (`res.rows[0].enddate` ว่าง) — ถ้ามีค่าเดิมอยู่ยังโชว์ค่าเดิมตามปกติ
+- **ฝั่ง server** `PriceApprovalController::defaultValidTo()` (public static — `OrderController::index` เรียกด้วย) → `save()` เติมให้เองเมื่อ `valid_to` ที่ส่งมาว่างหรือรูปแบบผิด (เผลอลบวันที่ทิ้ง) จึงไม่ต้องพึ่งจอ
+- `HolidayService` ครอบด้วย `Schema::hasTable('tb_holiday')` — server ที่ยังไม่ได้รัน migration/SQL จะเหลือแค่ข้ามวันอาทิตย์ ไม่ throw ทำให้ฟอร์มพัง · cache รายชื่อวันหยุดต่อ 1 request (`flush()` ไว้ใช้ในสคริปต์/เทสต์ที่แก้ข้อมูลแล้วคำนวณต่อ)
 - ⚠ **ห้ามปล่อย `enddate` เป็น null** — `activeApprovedPrice()` ถือว่า "ว่าง = ไม่กำหนดวันหมดอายุ" ⇒ ราคาพิเศษใบนั้นจะปลดล็อกด่านราคาใน `OrderController::checkPriceFloor()` ได้ตลอดไป (ปัจจุบัน `zcustprice` มีแถวที่ `enddate` ว่างอยู่ 1 จาก 5,406 แถว)
 - ⚠ **ยังไม่ได้ทำ: เบอร์ที่มี `enddate` เดิมซึ่ง "หมดอายุไปแล้ว" ฟอร์มยังโชว์วันเดิมนั้น ไม่ได้เด้งเป็นพรุ่งนี้ให้** — ข้อมูลจริงตอนนี้ `zcustprice` **หมดอายุครบทุกแถว** (`enddate` ล่าสุด 30/05/2026) ⇒ เปิดใบเก่าจะเจอวันที่หมดอายุค้างอยู่ ต้องแก้เอง (วันเดิมยังดูได้ที่ตารางล่างของฟอร์ม) — ถ้าต้องการให้เด้งเป็นพรุ่งนี้เมื่อวันเดิมเลยมาแล้ว ให้เพิ่มเงื่อนไขที่ `fillApprovalData()` จุดเดียว
 
@@ -537,7 +544,11 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 
 ## ตารางวันหยุดนักขัตฤกษ์ (เมนู "วันหยุดนักขัตฤกษ์", `/holiday`) — 01/09/2569
 
-`HolidayController` + `routes/holiday.php` + view `holiday/{index,holiday-form,calendar}.blade.php` + Model `Holiday` (`tb_holiday`) — **หน้าจัดการข้อมูล (master) อย่างเดียว ยังไม่ถูกผูกกับระบบอื่น** (ผู้ใช้เลือกขอบเขตนี้ไว้) ถ้าจะเอาไปใช้ต่อ (เตือนตอนเลือก `inplan`/`custwant`/`senddate` ตรงวันหยุด, ข้ามวันหยุดตอนคำนวณวันทำการ) ให้เขียน service อ่าน `tb_holiday` เพิ่ม — ตัวตารางไม่ต้องแก้
+`HolidayController` + `routes/holiday.php` + view `holiday/{index,holiday-form,calendar}.blade.php` + Model `Holiday` (`tb_holiday`) — หน้าจัดการข้อมูล (master)
+
+**ที่เอาไปใช้แล้ว (01/09/2569):** ช่อง **"อนุมัติราคาถึง"** ในฟอร์มขออนุมัติราคาพิเศษ ใช้ `App\Services\HolidayService::nextWorkingDay()` หา "วันทำการถัดไป" (ดูหัวข้อฟอร์ม MK ขออนุมัติราคาพิเศษ) — **ที่อื่นยังไม่ผูก** (เตือนตอนเลือก `inplan`/`custwant`/`senddate` ตรงวันหยุด ฯลฯ ยังไม่ได้ทำ) จะเพิ่มก็เรียก `HolidayService` ตัวเดิม ไม่ต้องแก้ตาราง
+
+**`App\Services\HolidayService`** — ตรรกะวันทำการอยู่ที่นี่ที่เดียว: `isHoliday()` / `isWorkingDay()` / `nextWorkingDay($from = null, $days = 1)` / `weeklyOff()` / `flush()` · วันหยุดประจำสัปดาห์ตั้งที่ **`config/holiday.php` → `weekly_off`** (ค่าปัจจุบัน `[0]` = หยุดเฉพาะอาทิตย์ · จะหยุดเสาร์ด้วยให้เป็น `[0, 6]`) · **วันหยุดที่ `is_active='N'` ไม่ถูกนับ**
 
 **ตาราง `tb_holiday` เป็นของใหม่ (InnoDB)** สร้างด้วย migration `2026_09_01_100000_create_tb_holiday_table` (idempotent ตามกติกาโปรเจกต์) — ค้นทั้ง DB แล้ว**ไม่มีตาราง legacy ไหนเก็บวันหยุด**
 
@@ -549,7 +560,10 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 | `remark` | หมายเหตุ |
 | `is_active` | `Y`/`N` — ปิดใช้งาน = เก็บแถวไว้แต่ไม่นับเป็นวันหยุด (สลับจากตารางได้เลยด้วย switch) |
 
-- **หน้าเดียว 2 มุมมอง**: แท็บ **ปฏิทินรายปี** (12 เดือน, วันหยุดเป็นวงกลมสีตามประเภท, **คลิกวันที่ = เปิดฟอร์มแก้ไข** เพราะใช้ class `btn_edit` ตัวเดียวกับปุ่มในตาราง) และแท็บ **ตารางวันหยุด** (DataTables serverSide, กรอง ปี/ประเภท/สถานะ + ค้นหาชื่อ-หมายเหตุ, sort ได้ทุกคอลัมน์ที่เป็นคอลัมน์จริง)
+- **หน้าเดียว 2 มุมมอง**: แท็บ **ปฏิทินรายปี** (12 เดือน, วันหยุดเป็นวงกลมสีตามประเภท, **คลิกวันที่ = เปิดฟอร์มแก้ไข**) และแท็บ **ตารางวันหยุด** (DataTables serverSide, กรอง ปี/ประเภท/สถานะ + ค้นหาชื่อ-หมายเหตุ, sort ได้ทุกคอลัมน์ที่เป็นคอลัมน์จริง)
+- **ชื่อวันหยุดในปฏิทินเป็น tooltip ของ Bootstrap** (`data-bs-toggle="tooltip"` + `data-bs-title`, ไม่ใช่ `title` ธรรมดา — เปลี่ยน 01/09/2569 ตามที่ผู้ใช้สั่ง): `main.js` ของ theme init tooltip **ครั้งเดียวตอนโหลดหน้า** แต่ปฏิทินมาทีหลังผ่าน AJAX ⇒ ต้องเรียก **`initCalendarTooltips()`** เองทุกครั้งหลัง `$box.html(res.data)` — ฟังก์ชันนี้ `dispose()` ตัวเก่าก่อน init ใหม่ ไม่งั้น tooltip ของปฏิทินปีก่อนค้างลอย · `hideCalendarTooltips()` ถูกเรียกตอนคลิกวันที่ กัน tooltip ค้างบนจอเมื่อ modal เปิดทับ
+- **คลิกวันที่ในปฏิทินใช้ class `btn_edit_calendar`** (ไม่ใช่ `btn_edit` ของปุ่มในตาราง) → `openHolidayForm(id, 'calendar')` ส่ง **`?from=calendar`** ไปที่ `edit()` → controller ตั้ง `$showDelete = $holiday && request('from') === 'calendar'` ⇒ **ฟอร์มมีปุ่ม "ลบวันหยุดนี้" เฉพาะตอนเปิดจากปฏิทิน** (หน้าปฏิทินไม่มีปุ่มลบของตัวเอง ส่วนตารางมีปุ่มลบในแถวอยู่แล้ว) · ปุ่มนั้นใช้ class `btn_delete` ตัวเดียวกับในตาราง จึงได้ Swal ยืนยัน + โหลดตาราง/ปฏิทินใหม่ในตัว (handler เพิ่ม `modal('hide')` ให้แล้ว) · Swal เด้งทับ modal ได้เพราะ `layout/inc_header` ตั้ง `.swal2-container { z-index: 9999 }`
+- **ฟอร์มนี้ไม่ใช้ `placeholder` เลย** — ตัวอย่างที่ต้องกรอกอยู่ในวงเล็บข้าง label แทน (`ชื่อวันหยุด * (เช่น วันขึ้นปีใหม่)`, `หมายเหตุ (เช่น ชดเชยวันวิสาขบูชา)`) เพราะ placeholder ดูเหมือนค่าที่กรอกไว้แล้ว · **ช่องวันที่ไม่มีวงเล็บบอกรูปแบบ** (ถอด `(วว/ดด/ปปปป)` ออกตามที่ผู้ใช้สั่ง 01/09/2569 — เลือกจากปฏิทิน flatpickr อยู่แล้ว) — แนวเดียวกับฟอร์มขออนุมัติราคาพิเศษ (01/09/2569) · ⚠ ช่องค้นหาบนหน้ารายการยังใช้ placeholder อยู่ เพราะไม่มี label กำกับ
   - **ค่าเริ่มต้นคือแท็บปฏิทินรายปี** (01/09/2569 ตามที่ผู้ใช้สั่ง — เดิมเปิดมาเจอแท็บตาราง): ปฏิทินเป็นแท็บแรกใน `nav-tabs` + `pane_calendar` ถือ `show active` และ `loadCalendar()` ถูกเรียกใน `$(document).ready` ตรง ๆ ไม่ต้องรอ `shown.bs.tab`
   - ⚠ **DataTables ถูก init ตอนแท็บตารางยังซ่อนอยู่ → วัดความกว้างคอลัมน์ไม่ได้** จึงต้องเรียก `oTable.columns.adjust()` (+ `responsive.recalc()` ถ้ามี) ใน `shown.bs.tab` ของ `#tab_table` ไม่งั้นหัวตารางกับเนื้อตารางเหลื่อมกัน
   - ปฏิทินโหลดผ่าน AJAX (`holiday.calendar` → partial `holiday/calendar.blade.php`) — บันทึก/ลบ/สลับสถานะจะสั่งโหลดใหม่ถ้าแท็บปฏิทินเปิดอยู่ ไม่งั้นตั้งธง `calendarLoaded=false` ไว้โหลดตอนกลับมาที่แท็บ

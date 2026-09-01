@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Services\HolidayService;
 use App\Services\ProductPriceService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -160,6 +161,9 @@ class PriceApprovalController extends Controller
             'rows'     => $this->zcustRows($custno, $itemno),
             // ยังอยู่ใน "โหมดอนุมัติ" ไหม — ให้ฟอร์มล็อก/ปลดล็อกช่องอนุมัติตามจริงทุกครั้งที่โหลด
             'md_unlocked' => $this->mdUnlocked(),
+            // ค่าเริ่มต้นของ "อนุมัติราคาถึง" = วันทำการถัดไป (ข้ามวันหยุด)
+            // คำนวณที่ server ทุกครั้ง เพื่อให้ฟอร์มที่เปิดค้างข้ามวัน/ข้ามวันหยุดยังได้ค่าที่ถูก
+            'default_valid_to' => self::defaultValidTo(),
         ]);
     }
 
@@ -480,17 +484,22 @@ class PriceApprovalController extends Controller
     }
 
     /**
-     * ค่าเริ่มต้นของช่อง "อนุมัติราคาถึง" (zcustprice.enddate) = พรุ่งนี้
+     * ค่าเริ่มต้นของช่อง "อนุมัติราคาถึง" (zcustprice.enddate) = **วันทำการถัดไป**
      *
-     * ใช้ 2 ที่ให้ตรงกัน: ฟอร์มเติมให้ตอนเปิด (tomorrowYmd() ใน order/index.blade.php)
+     * เดิม (29/08/2569) คือ "พรุ่งนี้" ตรง ๆ — เปลี่ยนเป็นข้ามวันหยุด 01/09/2569 ตามที่ผู้ใช้สั่ง:
+     * วันนี้ที่ 1 · วันที่ 2 เป็นวันหยุด → ได้วันที่ 3
+     * (วันหยุด = วันอาทิตย์ + tb_holiday ที่เปิดใช้งาน — ดู App\Services\HolidayService)
+     *
+     * ใช้ 2 ที่ให้ตรงกัน: ฟอร์มเติมให้ตอนเปิด (ค่ามาจาก server ผ่าน default_valid_to
+     * ใน data() และตัวแปร APPROVAL_DEFAULT_VALID_TO ที่ blade ฝังไว้)
      * และ save() เติมให้เองเมื่อช่องถูกส่งมาว่าง (เผลอลบวันที่ทิ้ง)
      *
      * ⚠ ห้ามปล่อย enddate เป็น null — activeApprovedPrice() ถือว่า "ว่าง = ไม่กำหนดวันหมดอายุ"
      *   ราคาพิเศษใบนั้นจะปลดล็อกด่านราคาใน OrderController::checkPriceFloor() ได้ตลอดไป
      */
-    private static function defaultValidTo(): string
+    public static function defaultValidTo(): string
     {
-        return now()->addDay()->format('Y-m-d');
+        return HolidayService::nextWorkingDay();
     }
 
     /** d/m/Y → Y-m-d (ว่าง/รูปแบบผิด = null) */

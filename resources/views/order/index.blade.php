@@ -626,15 +626,26 @@
         }
     }
 
-    // ตั้งค่าให้ flatpickr (รับ Y-m-d / datetime); ว่าง = เคลียร์
-    // ค่าเริ่มต้นของช่อง "อนุมัติราคาถึง" = พรุ่งนี้ (Y-m-d)
-    // ต้องตรงกับ PriceApprovalController::defaultValidTo() ที่ server เติมให้เมื่อช่องถูกส่งมาว่าง
-    function tomorrowYmd(){
+    // ค่าเริ่มต้นของช่อง "อนุมัติราคาถึง" = **วันทำการถัดไป** (ข้ามวันอาทิตย์ + วันหยุดใน tb_holiday)
+    //
+    // ⚠ JS ไม่รู้จักวันหยุด → ค่านี้ต้องมาจาก server เสมอ (PriceApprovalController::defaultValidTo())
+    //   - ตอนโหลดหน้า: OrderController::index ส่งมาเป็น $default_valid_to
+    //   - ทุกครั้งที่เลือกลูกค้า+เบอร์: data() แนบ default_valid_to มาให้ แล้ว fillApprovalData() อัปเดตค่านี้
+    //     (กันค่าค้างเมื่อเปิดฟอร์มทิ้งไว้ข้ามวัน)
+    // เดิม (29/08/2569) คำนวณ "พรุ่งนี้" เองใน JS — เลิกใช้แล้ว 01/09/2569
+    var APPROVAL_DEFAULT_VALID_TO = @json($default_valid_to ?? null);
+
+    function defaultValidToYmd(){
+        if (APPROVAL_DEFAULT_VALID_TO) return APPROVAL_DEFAULT_VALID_TO;
+
+        // สำรองกรณี server ไม่ได้ส่งค่ามา — พรุ่งนี้ตรง ๆ (ไม่ข้ามวันหยุด)
         var d = new Date();
         d.setDate(d.getDate() + 1);
         var p = function(n){ return (n < 10 ? '0' : '') + n; };
         return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
     }
+
+    // ตั้งค่าให้ flatpickr (รับ Y-m-d / datetime); ว่าง = เคลียร์
 
     function setFp(id, val){
         var el = document.getElementById(id);
@@ -1665,7 +1676,7 @@
         $('#approvalModal textarea').val('');
         $('#approvalModal input[type="checkbox"]').prop('checked', false);
         $('#a_itemno').html('<option value="">— เลือกลูกค้าก่อน —</option>');
-        setFp('a_validto', tomorrowYmd());   // ค่าเริ่มต้น "อนุมัติราคาถึง" = พรุ่งนี้
+        setFp('a_validto', defaultValidToYmd());   // ค่าเริ่มต้น "อนุมัติราคาถึง" = วันทำการถัดไป
         highlightPriceGroup();
         renderApprovalReqState(null);
         renderApprovalGrid('ราคาที่ยืนไว้ของเบอร์นี้', ZCUST_COLS, []);
@@ -1771,9 +1782,11 @@
         $('#a_uprice_rem2').val(u.REM2 || '');
 
         // "อนุมัติราคาถึง" = วันที่ยืนราคาของเบอร์ที่เลือก (zcustprice.enddate)
-        // ยังไม่เคยยืนราคาให้เบอร์นี้ → ค่าเริ่มต้นเป็นพรุ่งนี้ (ตรงกับที่ server เติมให้ถ้าปล่อยว่าง)
+        // ยังไม่เคยยืนราคาให้เบอร์นี้ → ค่าเริ่มต้น = วันทำการถัดไป (ตรงกับที่ server เติมให้ถ้าปล่อยว่าง)
+        // รับค่าที่ server คำนวณสด ๆ มาทุกครั้ง กันค่าค้างเมื่อเปิดฟอร์มทิ้งไว้ข้ามวัน/ข้ามวันหยุด
+        if (res.default_valid_to) APPROVAL_DEFAULT_VALID_TO = res.default_valid_to;
         var first = (res.rows || [])[0];
-        setFp('a_validto', (first && first.enddate) ? first.enddate : tomorrowYmd());
+        setFp('a_validto', (first && first.enddate) ? first.enddate : defaultValidToYmd());
 
         highlightPriceGroup();
         renderApprovalGrid('ราคาที่ยืนไว้ของเบอร์นี้', ZCUST_COLS, res.rows || []);
