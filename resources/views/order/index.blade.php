@@ -107,6 +107,10 @@
 /* แถว checkbox ท้ายกล่องซ้าย */
 .of-checkrow { display: flex; flex-wrap: wrap; gap: 1.25rem; padding-top: .35rem; }
 
+/* กลุ่ม checkbox ของ itype — ขึ้นกรอบแดงเมื่อใบ W ยังไม่ได้ติ๊ก (syncItypeRequired) */
+.of-itype-box { border: 1px solid transparent; border-radius: .375rem; padding: .1rem .5rem .35rem; }
+.of-itype-box.is-invalid { border-color: var(--bs-danger); background-color: rgba(var(--bs-danger-rgb), .04); }
+
 /* ตารางรายการในใบสั่งซื้อ — ช่องกรอก (พื้นเหลืองอ่อนตามฟอร์ม Access เดิม) */
 #orderItemsTable { background: #fffdf0; }
 #orderItemsTable thead th {
@@ -743,26 +747,20 @@
     function itypeRequired(){ return orderPrefix() === 'W'; }
 
     // ── itype = ประเภทสินค้าที่สั่ง (ตัวเลือกจาก config/order.php → itypes) ──
-    // เลือกได้ข้อเดียว: ติ๊กข้อใหม่ → ปลดข้อเก่าให้เอง (ใช้ checkbox ตามที่ผู้ใช้กำหนดหน้าตาไว้)
+    // ติ๊กเลือกบนฟอร์มได้เลย (01/09/2569 — เดิมซ่อนอยู่ในกล่องที่ต้องกดกางก่อน)
+    // เลือกได้ข้อเดียว: ติ๊กข้อใหม่ → ปลดข้อเก่าให้เอง
     // ⚠ ยังไม่มีที่เก็บใน DB → ค่าที่เลือกไม่ได้ถูกส่งไปบันทึก (ดู config/order.php)
     $(document).on('change', '.o-itype-opt', function(){
         if (this.checked) $('.o-itype-opt').not(this).prop('checked', false);
-        syncItypeText();
+        syncItypeRequired();
     });
 
-    // เอาข้อที่ติ๊กไว้มาโชว์ในช่อง (ไม่ติ๊กเลย = ช่องว่าง)
-    function syncItypeText(){
-        var $on = $('.o-itype-opt:checked').first();
-        $('#o_itype').val($on.length ? ($on.data('label') || '') : '');
-        syncItypeRequired();
-    }
-
-    // โชว์ * ข้างป้าย itype + ขึ้นกรอบแดงเมื่อจำเป็นแต่ยังว่าง
+    // โชว์ * ข้างป้าย itype + ขึ้นกรอบแดงรอบกลุ่ม checkbox เมื่อจำเป็นแต่ยังไม่ได้ติ๊ก
     function syncItypeRequired(){
         var need  = itypeRequired();
-        var empty = !($('#o_itype').val() || '').trim();
+        var empty = !$('.o-itype-opt:checked').length;
         $('#o_itype_req').toggleClass('d-none', !need);
-        $('#o_itype').toggleClass('is-invalid', need && empty);
+        $('#o_itype_box').toggleClass('is-invalid', need && empty);
     }
 
     // เปลี่ยนประเภทใบสั่ง — ไม่เจนเลขที่ใหม่ (เจนเฉพาะตอนกดปุ่ม "เพิ่มใบสั่งซื้อใหม่")

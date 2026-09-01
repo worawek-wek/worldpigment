@@ -107,38 +107,34 @@
                         </label>
                         <input type="text" id="o_supno" class="form-control bg-light" maxlength="2" readonly>
                     </div>
-                    <div class="col-sm-5">
-                        <label class="form-label">
+                    {{--
+                        ช่อง itype — ติ๊กเลือกบนฟอร์มได้เลย (เดิมเป็นกล่องหน้าตาเหมือน select ที่กดแล้วกางรายการ, 01/09/2569)
+                        ตัวเลือกมาจาก config/order.php → itypes
+                        เลือกได้ "ข้อเดียว" ตามที่ผู้ใช้กำหนดไว้เดิม: ติ๊กข้อใหม่แล้วข้อเก่าจะหลุดเอง (จัดการที่ JS)
+                        ⚠ ยังไม่มีที่เก็บใน DB → ค่าที่เลือกไม่ถูกบันทึก (ดูหมายเหตุใน config/order.php)
+                    --}}
+                    <div class="col-12">
+                        <label class="form-label d-block">
                             itype
                             {{-- ใบสั่งที่ขึ้นต้นด้วย W ต้องมี itype — โชว์ * เฉพาะตอนนั้น (syncItypeRequired) --}}
                             <span id="o_itype_req" class="text-danger fw-bold d-none"
                                 title="ใบสั่งที่ขึ้นต้นด้วย W ต้องระบุ itype">*</span>
                             <i class="ti ti-info-circle text-muted"
-                                title="ประเภทสินค้าที่สั่ง — กดที่ช่องเพื่อเลือก (เลือกได้ข้อเดียว)"></i>
+                                title="ประเภทสินค้าที่สั่ง — ติ๊กเลือก 1 ข้อ"></i>
                         </label>
-                        {{--
-                            ช่อง itype — กดแล้วกางรายการให้ติ๊กเลือก (ตัวเลือกจาก config/order.php → itypes)
-                            เลือกได้ "ข้อเดียว" ตามที่ผู้ใช้กำหนด: ติ๊กข้อใหม่แล้วข้อเก่าจะหลุดเอง
-                            ⚠ ยังไม่มีที่เก็บใน DB → ค่าที่เลือกไม่ถูกบันทึก (ดูหมายเหตุใน config/order.php)
-                        --}}
-                        <div class="dropdown">
-                            <input type="text" id="o_itype" class="form-control bg-light" readonly
-                                data-bs-toggle="dropdown" data-bs-display="static"
-                                style="cursor:pointer;" placeholder="— กดเพื่อเลือก —">
-                            <ul class="dropdown-menu w-100 py-2" id="o_itype_menu">
+                        <div id="o_itype_box" class="of-itype-box">
+                            <div class="of-checkrow">
                                 @foreach (config('order.itypes', []) as $it)
-                                    <li>
-                                        <div class="form-check px-3 mx-2">
-                                            <input class="form-check-input o-itype-opt" type="checkbox"
-                                                id="o_itype_{{ $it['key'] }}" value="{{ $it['key'] }}"
-                                                data-label="{{ $it['label'] }}">
-                                            <label class="form-check-label" for="o_itype_{{ $it['key'] }}">
-                                                {{ $it['label'] }}
-                                            </label>
-                                        </div>
-                                    </li>
+                                    <div class="form-check">
+                                        <input class="form-check-input o-itype-opt" type="checkbox"
+                                            id="o_itype_{{ $it['key'] }}" value="{{ $it['key'] }}"
+                                            data-label="{{ $it['label'] }}">
+                                        <label class="form-check-label" for="o_itype_{{ $it['key'] }}">
+                                            {{ $it['label'] }}
+                                        </label>
+                                    </div>
                                 @endforeach
-                            </ul>
+                            </div>
                         </div>
                     </div>
 

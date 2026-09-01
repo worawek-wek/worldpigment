@@ -11,18 +11,28 @@ use Illuminate\Support\Facades\DB;
 /**
  * กำหนดราคา (ราคาสินค้าต่อลูกค้า)
  *
- * เขียนลงตาราง `tb_saleinfo` — ชื่อคอลัมน์ยึดตาม `uprice` ของเดิม
- * (`uprice` = ข้อมูลจอเก่าของลูกค้า ใช้อ่านอย่างเดียว ห้ามเขียนทับ)
+ * ⚠ เขียนลงตาราง legacy `uprice` โดยตรง (29/08/2569 ตามที่ผู้ใช้ยืนยัน)
+ * เดิมเขียนลง `tb_saleinfo` ที่สร้างใหม่ ทำให้ราคาอยู่ 2 ที่ไม่ตรงกัน และหน้าอื่น
+ * ที่อ่าน `uprice` อยู่ (เติมชื่อสินค้า/หมายเหตุในใบสั่งซื้อ · กล่องราคาในฟอร์ม
+ * อนุมัติใบสั่งซื้อ · กล่อง "ราคาที่ตกลงไว้ล่าสุด" ในใบขออนุมัติราคาพิเศษ)
+ * มองไม่เห็นราคาที่ตั้งจากเมนูนี้ ⇒ ตอนนี้ตั้งราคาที่นี่แล้วมีผลกับหน้าเหล่านั้นทันที
+ *
  * แถบข้อมูลลูกค้าดึงจากตาราง `customer` ผ่าน CustNo → code
  *
- * ยังไม่ทำ: ราคา 1/2/3 (DB tier) + ค่าสี/%สี — รอสรุปสูตรกับลูกค้า
+ * 🔴 `uprice` ไม่มีคอลัมน์ `NotifyDate` (วันที่แจ้งปรับ) และ `MOQ` (ปริมาณขั้นต่ำ)
+ *    สองช่องนี้จึง **ยังไม่ถูกบันทึก** — รอลูกค้ายืนยันว่าจะเพิ่มคอลัมน์เข้า `uprice`
+ *    หรือตัดออกจากฟอร์ม (ช่องในฟอร์มแปะ class `wip` กำกับไว้แล้ว)
+ *    เปิดใช้เมื่อได้ข้อสรุป: คืนชื่อคอลัมน์เข้า self::COLUMNS + parse ใน extractForm()
+ *
+ * ยังไม่ทำ: ค่าสี/%สี — รอสรุปสูตรกับลูกค้า
  */
 class SaleinfoController extends Controller
 {
     /** คอลัมน์ที่รับจากฟอร์มได้ */
     private const COLUMNS = [
-        'CustNo', 'st_code', 'ITEMNO', 'DATE', 'NotifyDate', 'MOQ', 'PRICE',
+        'CustNo', 'st_code', 'ITEMNO', 'DATE', 'PRICE',
         'REM1', 'PackRem', 'Label', 'Author',
+        // 'NotifyDate', 'MOQ',   // ปิดไว้ — `uprice` ไม่มี 2 คอลัมน์นี้ (ดู docblock ของ class)
         // 'REM2',    // ปิดไว้ — เลิกใช้ช่อง "ประวัติการปรับราคา" แบบข้อความ (มีตารางประวัติแทนแล้ว)
         // 'NoAcp',   // ปิดไว้ก่อน — รอลูกค้ายืนยันความหมาย (ดู extractForm)
     ];
@@ -35,14 +45,14 @@ class SaleinfoController extends Controller
     }
 
     /**
-     * GET — รายการราคา (tb_saleinfo) + ชื่อ/เงื่อนไขลูกค้าจากตาราง customer
+     * GET — รายการราคา (uprice) + ชื่อ/เงื่อนไขลูกค้าจากตาราง customer
      */
     public function datatable(Request $request)
     {
         $results = Saleinfo::query()
-            ->leftJoin('customer as c', 'tb_saleinfo.CustNo', '=', 'c.code')
-            ->select('tb_saleinfo.*', 'c.name as custname', 'c.term as term')
-            ->orderByDesc('tb_saleinfo.id');
+            ->leftJoin('customer as c', 'uprice.CustNo', '=', 'c.code')
+            ->select('uprice.*', 'c.name as custname', 'c.term as term')
+            ->orderByDesc('uprice.id');
 
         $this->applyFilters($results, $request);
 
@@ -289,8 +299,12 @@ class SaleinfoController extends Controller
 
         // ฟอร์มใช้ flatpickr d/m/Y → แปลงให้ตรงรูปแบบก่อนส่งกลับ
         $data = $row->toArray();
-        $data['DATE']       = $row->DATE ? Carbon::parse($row->DATE)->format('d/m/Y') : '';
-        $data['NotifyDate'] = $row->NotifyDate ? Carbon::parse($row->NotifyDate)->format('d/m/Y') : '';
+        $data['DATE'] = $row->DATE ? Carbon::parse($row->DATE)->format('d/m/Y') : '';
+
+        // `uprice` ไม่มี NotifyDate / MOQ — ส่งค่าว่างไปให้ฟอร์มไม่ต้องแยกเคส
+        // (ช่องสองช่องนี้ยังไม่ถูกบันทึก รอลูกค้ายืนยัน — ดู docblock ของ class)
+        $data['NotifyDate'] = '';
+        $data['MOQ']        = null;
 
         return response()->json(['found' => true, 'data' => $data]);
     }
@@ -320,17 +334,17 @@ class SaleinfoController extends Controller
         }
 
         $rows = $query
-            ->orderByRaw('COALESCE(NotifyDate, DATE, AuthDate) DESC')
+            ->orderByRaw('COALESCE(`DATE`, AuthDate) DESC')   // uprice ไม่มี NotifyDate
             ->orderByDesc('id')
             ->get();
 
         $out = $rows->map(function ($r) {
             return [
                 'id'         => $r->id,
-                'NotifyDate' => $r->NotifyDate ? Carbon::parse($r->NotifyDate)->format('d/m/Y') : '',
+                'NotifyDate' => '',    // ไม่มีคอลัมน์นี้ใน uprice (รอลูกค้ายืนยัน)
                 'DATE'       => $r->DATE ? Carbon::parse($r->DATE)->format('d/m/Y') : '',
                 'ITEMNO'     => $r->ITEMNO,
-                'MOQ'        => $r->MOQ,
+                'MOQ'        => null,  // ไม่มีคอลัมน์นี้ใน uprice (รอลูกค้ายืนยัน)
                 'PRICE'      => $r->PRICE,
                 'REM1'       => $r->REM1,
             ];
@@ -449,10 +463,14 @@ class SaleinfoController extends Controller
         // รหัสสินค้าไม่ได้กรอก → ใช้ชื่อสินค้าแทน (ในข้อมูลเก่าสองช่องนี้มักตรงกัน)
         $row['ITEMNO']  = trim((string) $row['ITEMNO']) ?: $row['st_code'];
 
-        $row['DATE']       = $this->parseDate($row['DATE']);
-        $row['NotifyDate'] = $this->parseDate($row['NotifyDate']);
-        $row['PRICE']      = $row['PRICE'] !== null && $row['PRICE'] !== '' ? (float) $row['PRICE'] : null;
-        $row['MOQ']        = $row['MOQ']   !== null && $row['MOQ']   !== '' ? (float) $row['MOQ']   : null;
+        $row['DATE']  = $this->parseDate($row['DATE']);
+        $row['PRICE'] = $row['PRICE'] !== null && $row['PRICE'] !== '' ? (float) $row['PRICE'] : null;
+
+        // NotifyDate / MOQ ปิดไว้ — `uprice` ไม่มีคอลัมน์นี้ ถ้าใส่กลับเข้า array
+        // จะกลายเป็นคอลัมน์ที่ไม่มีจริงตอน insert/update (SQL error)
+        // เปิดใช้พร้อมกับคืนชื่อเข้า self::COLUMNS เมื่อลูกค้ายืนยันแล้ว:
+        // $row['NotifyDate'] = $this->parseDate($row['NotifyDate']);
+        // $row['MOQ']        = $row['MOQ'] !== null && $row['MOQ'] !== '' ? (float) $row['MOQ'] : null;
 
         // NoAcp ปิดไว้ก่อน — ช่องในฟอร์มถูกคอมเมนต์ไว้ ค่าที่บันทึกจะเป็น default 0 ของตาราง
         // เปิดใช้เมื่อลูกค้ายืนยันความหมายแล้ว (คืน 'NoAcp' เข้า COLUMNS ด้วย):
@@ -479,19 +497,19 @@ class SaleinfoController extends Controller
         if (@$request->search) {
             $s = $request->search;
             $query->where(function ($q) use ($s) {
-                $q->where('tb_saleinfo.CustNo', 'LIKE', "%{$s}%")
-                  ->orWhere('tb_saleinfo.st_code', 'LIKE', "%{$s}%")
-                  ->orWhere('tb_saleinfo.ITEMNO', 'LIKE', "%{$s}%")
+                $q->where('uprice.CustNo', 'LIKE', "%{$s}%")
+                  ->orWhere('uprice.st_code', 'LIKE', "%{$s}%")
+                  ->orWhere('uprice.ITEMNO', 'LIKE', "%{$s}%")
                   ->orWhere('c.name', 'LIKE', "%{$s}%");
             });
         }
         if (@$request->date_from) {
             $d = $this->parseDate($request->date_from);
-            if ($d) $query->whereDate('tb_saleinfo.DATE', '>=', $d);
+            if ($d) $query->whereDate('uprice.DATE', '>=', $d);
         }
         if (@$request->date_to) {
             $d = $this->parseDate($request->date_to);
-            if ($d) $query->whereDate('tb_saleinfo.DATE', '<=', $d);
+            if ($d) $query->whereDate('uprice.DATE', '<=', $d);
         }
     }
 }
