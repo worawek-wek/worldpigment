@@ -201,8 +201,11 @@
                     <form id="create_semi_form">
                         @include('production-planning.semi-pigment.partials.entry-fields', [
                             'prefix'         => 'cs',
-                            'companies'      => ['CP', 'MB', 'DB', 'SPP'],
+                            // 01/09/2569: ทั้ง Company และ Cust No. ดึงจากตารางแผนก (tb_departments)
+                            'companies'      => $departments->pluck('name')->toArray(),
                             'custnoReadonly' => false,
+                            // ช่อง "แผนกที่ใช้ (Cust No.)" เป็น dropdown (custnoOptions ดีฟอลต์ = companies)
+                            'custnoAsSelect' => true,
                         ])
                     </form>
                 </div>

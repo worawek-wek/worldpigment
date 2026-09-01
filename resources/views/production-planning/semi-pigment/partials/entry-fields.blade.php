@@ -6,11 +6,15 @@
       - $prefix          : prefix ของ id แต่ละ input (เช่น 'sp' หรือ 'cs')  [ดีฟอลต์ 'sp']
       - $companies       : array ตัวเลือก Company                            [ดีฟอลต์ []]
       - $custnoReadonly  : true = ช่อง Cust No. อ่านอย่างเดียว               [ดีฟอลต์ false]
+      - $custnoAsSelect  : true = ช่อง Cust No. เป็น dropdown (ดึงจากแผนก)   [ดีฟอลต์ false]
+      - $custnoOptions   : array ตัวเลือกของ Cust No. เมื่อเป็น dropdown      [ดีฟอลต์ = $companies]
 --}}
 @php
     $prefix         = $prefix ?? 'sp';
     $companies      = $companies ?? [];
     $custnoReadonly = $custnoReadonly ?? false;
+    $custnoAsSelect = $custnoAsSelect ?? false;   // 01/09/2569: modal "สร้างแผน (Semi)" ใช้ dropdown แผนก
+    $custnoOptions  = $custnoOptions ?? $companies;
 @endphp
 <div class="row">
     <div class="col-md-4 mb-3">
@@ -24,8 +28,18 @@
     </div>
     <div class="col-md-4 mb-3">
         <label class="form-label">แผนกที่ใช้ (Cust No.)</label>
-        <input type="text" class="form-control{{ $custnoReadonly ? ' bg-light' : '' }}"
-               id="{{ $prefix }}_custno" placeholder="รหัสลูกค้า" {{ $custnoReadonly ? 'readonly' : '' }}>
+        @if($custnoAsSelect)
+            {{-- dropdown ดึงจากตารางแผนก (เฉพาะ modal "สร้างแผน (Semi)") --}}
+            <select class="form-select" id="{{ $prefix }}_custno">
+                <option value="">-- เลือก --</option>
+                @foreach($custnoOptions as $c)
+                    <option value="{{ $c }}">{{ $c }}</option>
+                @endforeach
+            </select>
+        @else
+            <input type="text" class="form-control{{ $custnoReadonly ? ' bg-light' : '' }}"
+                   id="{{ $prefix }}_custno" placeholder="รหัสลูกค้า" {{ $custnoReadonly ? 'readonly' : '' }}>
+        @endif
     </div>
     <div class="col-md-4 mb-3">
         <label class="form-label">วันที่สั่ง (Order Date)</label>
