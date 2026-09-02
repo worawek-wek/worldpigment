@@ -38,6 +38,12 @@
             value="{{ $machine?->speed_rpm }}" placeholder="กรอกความเร็วรอบ (ถ้ามี)">
     </div>
 
+    <div class="mb-3">
+        <label class="form-label" for="machine_group">ประเภท/กลุ่ม (Group)</label>
+        <input type="text" class="form-control" id="machine_group" name="group" maxlength="50"
+            value="{{ $machine?->group }}" placeholder="กรอกประเภท/กลุ่ม (ถ้ามี)">
+    </div>
+
     <div class="d-flex justify-content-end gap-2">
         <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ยกเลิก</button>
         <button type="button" class="btn btn-primary" id="btn_machine_save">

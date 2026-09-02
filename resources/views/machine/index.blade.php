@@ -33,7 +33,7 @@
                                 <input id="searchInput" type="text" class="form-control"
                                 placeholder="ค้นหา...">
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <select id="searchDept" class="form-select">
                                     <option value="">ทุกแผนก</option>
                                     @foreach($dept_codes as $code)
@@ -41,7 +41,15 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-3 ms-auto text-end">
+                            <div class="col-md-2">
+                                <select id="searchGroup" class="form-select">
+                                    <option value="">ทุกกลุ่ม</option>
+                                    @foreach($group_codes as $g)
+                                        <option value="{{ $g }}">{{ $g }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-2 ms-auto text-end">
                                 <button type="button" class="btn btn-primary" id="btn_add"
                                     data-bs-target="#machineModal">
                                     <i class="ti ti-plus me-1"></i> เพิ่มเครื่องจักร
@@ -58,8 +66,9 @@
                                     <tr>
                                         <th class="col-1">#</th>
                                         <th class="col-2">แผนก</th>
-                                        <th class="col-3">เครื่องจักร (MBX)</th>
+                                        <th class="col-2">เครื่องจักร (MBX)</th>
                                         <th class="col-3">Speed RPM</th>
+                                        <th class="col-2">ประเภท/กลุ่ม</th>
                                         <th class="col-2">จัดการ</th>
                                     </tr>
                                 </thead>
@@ -108,6 +117,7 @@
                 data: function(d) {
                     d.search = $('#searchInput').val();
                     d.dept   = $('#searchDept').val();
+                    d.group  = $('#searchGroup').val();
                 },
                 error: function(xhr, error, thrown) {
                     console.error('AJAX Error:', error, thrown);
@@ -120,6 +130,7 @@
                 { 'className': "text-center", data: 'dept', name: 'dept', orderable: true },
                 { 'className': "text-center", data: 'MBX', name: 'MBX', orderable: true },
                 { 'className': "text-center", data: 'speed_rpm', name: 'speed_rpm', orderable: true, searchable: false },
+                { 'className': "text-center", data: 'group', name: 'group', orderable: true, searchable: false },
                 { 'className': "text-center", data: 'btnedit', name: 'btnedit', orderable: false, searchable: false },
             ],
             // เริ่มต้นเรียงตามแผนก แล้วตามด้วยเครื่องจักร (เหมือนลำดับเดิมที่เคย hard-code ใน controller)
@@ -136,6 +147,11 @@
     });
 
     $(document).on('change', '#searchDept', function(e){
+        e.preventDefault();
+        oTable.draw();
+    });
+
+    $(document).on('change', '#searchGroup', function(e){
         e.preventDefault();
         oTable.draw();
     });

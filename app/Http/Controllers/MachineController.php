@@ -21,6 +21,16 @@ class MachineController extends Controller
             ->pluck('dept');
     }
 
+    // กลุ่ม/ประเภท (group) ที่มีอยู่จริงในตาราง machine — ใช้เป็นตัวเลือก filter หน้า index
+    private function groupCodes()
+    {
+        return Machine::whereNotNull('group')
+            ->where('group', '!=', '')
+            ->distinct()
+            ->orderBy('group', 'asc')
+            ->pluck('group');
+    }
+
     // รายชื่อแผนกที่เปิดใช้งาน (ใช้เติม dropdown แผนกในฟอร์มเพิ่ม/แก้ไข)
     private function activeDepartments()
     {
@@ -32,21 +42,26 @@ class MachineController extends Controller
     public function index()
     {
         return view('machine.index', [
-            'dept_codes' => $this->deptCodes(),
+            'dept_codes'  => $this->deptCodes(),
+            'group_codes' => $this->groupCodes(),
         ]);
     }
 
     public function datatable()
     {
-        $query = Machine::select(['id', 'dept', 'MBX', 'speed_rpm'])
+        $query = Machine::select(['id', 'dept', 'MBX', 'speed_rpm', 'group'])
             ->when(request('search'), function ($q, $search) {
                 $q->where(function ($sub) use ($search) {
                     $sub->where('MBX', 'like', "%{$search}%")
-                        ->orWhere('dept', 'like', "%{$search}%");
+                        ->orWhere('dept', 'like', "%{$search}%")
+                        ->orWhere('group', 'like', "%{$search}%");
                 });
             })
             ->when(request('dept'), function ($q, $dept) {
                 $q->where('dept', $dept);
+            })
+            ->when(request('group'), function ($q, $group) {
+                $q->where('group', $group);
             });
         // หมายเหตุ: ไม่ hard-code orderBy ที่นี่แล้ว — ให้ Yajra จัดการเรียงตามที่คลิกหัวคอลัมน์
         // (ลำดับเริ่มต้น dept→MBX ถูกกำหนดเป็นค่า default order ในฝั่ง DataTables ของ machine/index)
@@ -66,6 +81,13 @@ class MachineController extends Controller
                 $short = Str::limit($full, 40);
                 return '<span title="'.e($full).'">'.e($short).'</span>';
             })
+            ->editColumn('group', function ($machine) {
+                $val = $machine->group;
+                if ($val === null || $val === '') {
+                    return '<span class="text-muted">-</span>';
+                }
+                return e($val);
+            })
             ->addColumn('btnedit', function ($machine) {
                 return '<button type="button" class="btn btn-sm btn-icon btn-warning btn_edit me-1" data-id="'.$machine->id.'" title="แก้ไข">
                             <i class="ti ti-pencil ti-sm"></i>
@@ -74,7 +96,7 @@ class MachineController extends Controller
                             <i class="ti ti-trash ti-sm"></i>
                         </button>';
             })
-            ->rawColumns(['speed_rpm', 'btnedit'])
+            ->rawColumns(['speed_rpm', 'group', 'btnedit'])
             ->make(true);
     }
 
@@ -101,6 +123,7 @@ class MachineController extends Controller
             'dept'      => ['required', 'string', 'max:50', 'exists:tb_departments,name'],
             'MBX'       => ['required', 'string', 'max:20'],
             'speed_rpm' => ['nullable', 'string', 'max:255'],
+            'group'     => ['nullable', 'string', 'max:50'],
         ], [
             'dept.required' => 'กรุณาเลือกแผนก',
             'dept.exists'   => 'ไม่พบแผนกที่เลือก',
@@ -137,6 +160,7 @@ class MachineController extends Controller
                 'dept'      => $request->dept,
                 'MBX'       => $request->MBX,
                 'speed_rpm' => $request->speed_rpm,
+                'group'     => $request->group,
             ]
         );
 

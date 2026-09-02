@@ -115,6 +115,7 @@ class ReportController extends Controller
             ->select([
                 'tb_planning.id',
                 'tb_planning.machine_no',
+                'tb_planning.company', // แผนกของงาน — ใช้แบ่ง section ต่อแผนกใน PDF (2026-09-02)
                 'tb_planning.inplan',
                 'tb_planning.queue_sort', // ลำดับคิวที่จัดไว้ (ต่อเครื่อง+ต่อวัน) — NULL = ยังไม่จัดคิว
                 'tb_planning.red_bill_code',
@@ -134,6 +135,8 @@ class ReportController extends Controller
                 'tb_products.sampling as product_sampling',
                 // Speed (RPM) ต่อเครื่องจักร: machine.speed_rpm (MBX = machine_no) — subquery กัน row ซ้ำ
                 \Illuminate\Support\Facades\DB::raw('(SELECT m.speed_rpm FROM machine m WHERE m.MBX = tb_planning.machine_no LIMIT 1) AS speed_rpm'),
+                // กลุ่มเครื่องจักร: machine.`group` (reserved word ต้อง backtick ใน raw SQL) — ใช้เรียงเครื่องใน PDF (2026-09-02)
+                \Illuminate\Support\Facades\DB::raw('(SELECT m.`group` FROM machine m WHERE m.MBX = tb_planning.machine_no LIMIT 1) AS machine_group'),
             ])
             ->when(!empty($company), fn ($q) => $q->where('tb_planning.company', $company))
             ->when(!empty($machine_no), fn ($q) => $q->where('tb_planning.machine_no', $machine_no))
@@ -277,7 +280,71 @@ class ReportController extends Controller
         ];
     }
 
-    // Export Excel (.xlsx) — คงรูปแบบจัดกลุ่มตามเครื่องจักรเหมือนบนหน้าจอ
+    // จัดบล็อกเครื่องจักร (จาก buildMachineReport) เป็น section ต่อคู่ "แผนก (company) + หน่วยย่อย (group)"
+    // ใช้ร่วมกันทั้ง PDF และ Excel (2026-09-02) — group ต่างกัน = คนละ section
+    //  - ภายใน section เรียงบล็อกตามลำดับเดิม (inplan เก่าสุดของบล็อก = min)
+    //  - เรียง section: แผนกตามตัวอักษร (ว่างท้ายสุด) → group แบบ natural (ว่าง/NULL = "ไม่ระบุ" ท้ายสุด)
+    //  - คืน collection ของ ['dept','group','count','blocks'] (ยังไม่มี summary — ให้ผู้เรียกประกอบเอง)
+    private function machineSections(\Illuminate\Support\Collection $groups): \Illuminate\Support\Collection
+    {
+        return collect($groups)
+            // แนบ dept + group ของบล็อก (ทุก item ในบล็อกคือเครื่องเดียว → dept/group เท่ากัน)
+            ->map(function ($blk) {
+                $blk['company']       = (string) ($blk['items']->first()->company ?? '');
+                $blk['machine_group'] = trim((string) ($blk['items']->first()->machine_group ?? ''));
+                return $blk;
+            })
+            ->groupBy(fn ($blk) => $blk['company'].'||'.$blk['machine_group'])
+            ->map(function ($blocks) {
+                $blocks = $blocks->sort(function ($a, $b) {
+                    $ma = $a['min'];
+                    $mb = $b['min'];
+                    if ($ma === $mb) {
+                        return 0;
+                    }
+                    if (!$ma) {
+                        return 1;
+                    }
+                    if (!$mb) {
+                        return -1;
+                    }
+                    return strcmp($ma, $mb);
+                })->values();
+
+                $first = $blocks->first();
+
+                return [
+                    'dept'   => $first['company'],
+                    'group'  => $first['machine_group'],
+                    'count'  => $blocks->sum(fn ($blk) => $blk['items']->count()),
+                    'blocks' => $blocks,
+                ];
+            })
+            ->sort(function ($a, $b) {
+                if ($a['dept'] !== $b['dept']) {
+                    if ($a['dept'] === '') {
+                        return 1;
+                    }
+                    if ($b['dept'] === '') {
+                        return -1;
+                    }
+                    return strcmp($a['dept'], $b['dept']);
+                }
+                if ($a['group'] === $b['group']) {
+                    return 0;
+                }
+                if ($a['group'] === '') {
+                    return 1;
+                }
+                if ($b['group'] === '') {
+                    return -1;
+                }
+                return strnatcasecmp($a['group'], $b['group']);
+            })
+            ->values();
+    }
+
+    // Export Excel (.xls) — แบ่ง section ต่อ (แผนก + หน่วยย่อย/group) แต่ละ section ขึ้นหน้าใหม่ (print) เหมือน PDF
     public function machineExcel(Request $request)
     {
         ['groups' => $groups, 'total' => $total, 'filters' => $filters] = $this->buildMachineReport($request);
@@ -298,106 +365,138 @@ class ReportController extends Controller
         $lastCol = 'P';
         $weightCol = 'H'; // คอลัมน์น้ำหนักออเดอร์ (ใช้ทำผลรวมต่อเครื่อง)
 
-        // หัวรายงาน
-        $sheet->setCellValue('A1', 'รายงานผลิตตามเครื่องจักร');
-        $sheet->mergeCells("A1:{$lastCol}1");
-        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
-        $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        // แบ่งเป็น section ต่อ (แผนก + หน่วยย่อย/group) เหมือน PDF — group ต่างกัน = คนละ section
+        $sections = $this->machineSections($groups);
 
-        $sheet->setCellValue('A2', $this->filterSummary($filters, $total));
-        $sheet->mergeCells("A2:{$lastCol}2");
-        $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $r = 1;
 
-        // แถวหัวตาราง
-        $r = 4;
-        foreach ($headers as $i => $h) {
-            $sheet->setCellValue($cols[$i].$r, $h);
-        }
-        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setBold(true);
-        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()
-            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-            ->getStartColor()->setRGB('E9ECEF');
-        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getAlignment()->setWrapText(true);
-        // คอลัมน์ วันที่ลงแผน (B) พื้นน้ำเงิน — ให้เหมือนฝั่งเว็บ/PDF
-        $sheet->getStyle("B{$r}")->getFill()
-            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-            ->getStartColor()->setRGB('CFE2FF');
-        $sheet->getStyle("B{$r}")->getFont()->getColor()->setRGB('084298');
-
-        $rownum = 0;
-        $r++;
-        foreach ($groups as $group) {
-            $machineLabel = $group['machine'] !== '' ? $group['machine'] : 'ไม่ระบุเครื่องจักร';
-
-            // หัวกลุ่มเครื่องจักร — ต่อท้ายด้วย Speed (RPM) ในวงเล็บ (ถ้ามีค่า)
-            $machineHeader = 'เครื่องจักร: '.$machineLabel;
-            if (!empty($group['speed_rpm'])) {
-                $machineHeader .= ' (Speed RPM: '.$group['speed_rpm'].')';
-            }
-            $sheet->setCellValue("A{$r}", $machineHeader);
+        if ($total === 0) {
+            // ไม่มีข้อมูล → หัวรายงาน + หัวสรุป (ทุกแผนก, 0) + ข้อความ
+            $sheet->setCellValue("A{$r}", 'รายงานผลิตตามเครื่องจักร');
             $sheet->mergeCells("A{$r}:{$lastCol}{$r}");
-            $sheet->getStyle("A{$r}")->getFont()->setBold(true);
-            $sheet->getStyle("A{$r}")->getFill()
-                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-                ->getStartColor()->setRGB('F1F3F5');
+            $sheet->getStyle("A{$r}")->getFont()->setBold(true)->setSize(14);
+            $sheet->getStyle("A{$r}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
             $r++;
 
-            $groupSum = 0;
-            foreach ($group['items'] as $it) {
-                // แถวขั้นตอน "สถานะวิธีการผลิต / การล้าง" (แสดงก่อนแถวผลิต)
-                foreach ($it->steps as $s) {
-                    $sheet->setCellValue("A{$r}", '↳');
-                    $sheet->setCellValue("B{$r}", $s->work_date ? \Carbon\Carbon::parse($s->work_date)->format('d/m/Y') : '');
-                    $desc = 'ขั้นตอน: '.($s->method_name ?: '-')
-                        .' ('.($s->start_time ? substr($s->start_time, 0, 5) : '--').'–'.($s->end_time ? substr($s->end_time, 0, 5) : '--').')';
-                    $sheet->setCellValue("C{$r}", $desc);
-                    $sheet->mergeCells("C{$r}:{$lastCol}{$r}");
-                    $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()
-                        ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-                        ->getStartColor()->setRGB('F8F9FA');
-                    $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setItalic(true);
-                    $r++;
-                }
+            $sheet->setCellValue("A{$r}", $this->machineSectionSummary($filters, $filters['dept'] ?: 'ทุกแผนก', '-', 0));
+            $sheet->mergeCells("A{$r}:{$lastCol}{$r}");
+            $sheet->getStyle("A{$r}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $r += 2;
 
-                // แถวผลิตสินค้า
-                $sheet->setCellValue("A{$r}", ++$rownum);
-                $sheet->setCellValue("B{$r}", $it->inplan ? \Carbon\Carbon::parse($it->inplan)->format('d/m/Y') : '-');
+            $sheet->setCellValue("A{$r}", 'ไม่พบข้อมูลตามเงื่อนไขที่เลือก');
+            $sheet->mergeCells("A{$r}:{$lastCol}{$r}");
+            $sheet->getStyle("A{$r}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        } else {
+            $sectionIndex = 0;
+            foreach ($sections as $sec) {
+                // แต่ละ section (แผนก+group) ขึ้นหน้าใหม่ตอนพิมพ์ (ยกเว้น section แรก)
+                // setBreak วางที่แถวสุดท้ายของ section ก่อนหน้า → row ถัดไป (หัว section นี้) เริ่มหน้าใหม่
+                if ($sectionIndex > 0) {
+                    $sheet->setBreak('A'.($r - 1), \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet::BREAK_ROW);
+                }
+                $sectionIndex++;
+
+                $deptLabel  = $sec['dept'] !== '' ? $sec['dept'] : 'ไม่ระบุแผนก';
+                $groupLabel = $sec['group'] !== '' ? $sec['group'] : 'ไม่ระบุ';
+
+                // หัวรายงาน (พิมพ์ซ้ำต่อ section)
+                $sheet->setCellValue("A{$r}", 'รายงานผลิตตามเครื่องจักร');
+                $sheet->mergeCells("A{$r}:{$lastCol}{$r}");
+                $sheet->getStyle("A{$r}")->getFont()->setBold(true)->setSize(14);
+                $sheet->getStyle("A{$r}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                $r++;
+
+                // หัวสรุปต่อ section: แผนก + หน่วยย่อย (group เดียว) + พบ N รายการ
+                $sheet->setCellValue("A{$r}", $this->machineSectionSummary($filters, $deptLabel, $groupLabel, $sec['count']));
+                $sheet->mergeCells("A{$r}:{$lastCol}{$r}");
+                $sheet->getStyle("A{$r}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                $r += 2;
+
+                // แถวหัวตาราง
+                foreach ($headers as $i => $h) {
+                    $sheet->setCellValue($cols[$i].$r, $h);
+                }
+                $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setBold(true);
+                $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setRGB('E9ECEF');
+                $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getAlignment()->setWrapText(true);
                 // คอลัมน์ วันที่ลงแผน (B) พื้นน้ำเงิน — ให้เหมือนฝั่งเว็บ/PDF
                 $sheet->getStyle("B{$r}")->getFill()
                     ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
                     ->getStartColor()->setRGB('CFE2FF');
                 $sheet->getStyle("B{$r}")->getFont()->getColor()->setRGB('084298');
-                $sheet->setCellValue("C{$r}", $it->senddate ? \Carbon\Carbon::parse($it->senddate)->format('d/m/Y') : '');  // Revise = senddate (กำหนดส่งทบทวน)
-                $sheet->setCellValue("D{$r}", $it->cust_name ?: '-');
-                $sheet->setCellValue("E{$r}", $it->red_bill_code ?: '-');
-                $sheet->setCellValueExplicit("F{$r}", $it->itemno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-                $sheet->setCellValue("G{$r}", $it->lot ?: '-');
-                $sheet->setCellValue("H{$r}", $it->quantity !== null ? number_format($it->quantity, 2) : '-');
-                $sheet->setCellValue("I{$r}", $it->weight !== null ? number_format($it->weight, 2) : '');  // TP = น้ำหนัก TP (Weight)
-                $sheet->setCellValueExplicit("J{$r}", $it->product_resin ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);   // Resin (tb_products.resin)
-                $sheet->setCellValueExplicit("K{$r}", $it->product_temp ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);   // Temp (temp.Temp1 via tb_products.temp_id)
-                $sheet->setCellValueExplicit("L{$r}", $it->product_code_val ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING); // CODE (tb_products.code)
-                $sheet->setCellValueExplicit("M{$r}", $it->product_pack ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);   // Packaging (tb_products.pack)
-                $sheet->setCellValueExplicit("N{$r}", $it->product_batch ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);  // Batch (tb_products.batch)
-                $sheet->setCellValueExplicit("O{$r}", $it->product_sampling ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING); // สูตรตัวอย่าง (tb_products.sampling)
-                $sheet->setCellValue("P{$r}", $it->remark ?: '');
-                $groupSum += (float) ($it->quantity ?? 0);
                 $r++;
+
+                $rownum = 0;
+                foreach ($sec['blocks'] as $group) {
+                    $machineLabel = $group['machine'] !== '' ? $group['machine'] : 'ไม่ระบุเครื่องจักร';
+
+                    // หัวกลุ่มเครื่องจักร — ต่อท้ายด้วย Speed (RPM) ในวงเล็บ (ถ้ามีค่า)
+                    $machineHeader = 'เครื่องจักร: '.$machineLabel;
+                    if (!empty($group['speed_rpm'])) {
+                        $machineHeader .= ' (Speed RPM: '.$group['speed_rpm'].')';
+                    }
+                    $sheet->setCellValue("A{$r}", $machineHeader);
+                    $sheet->mergeCells("A{$r}:{$lastCol}{$r}");
+                    $sheet->getStyle("A{$r}")->getFont()->setBold(true);
+                    $sheet->getStyle("A{$r}")->getFill()
+                        ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                        ->getStartColor()->setRGB('F1F3F5');
+                    $r++;
+
+                    $groupSum = 0;
+                    foreach ($group['items'] as $it) {
+                        // แถวขั้นตอน "สถานะวิธีการผลิต / การล้าง" (แสดงก่อนแถวผลิต)
+                        foreach ($it->steps as $s) {
+                            $sheet->setCellValue("A{$r}", '↳');
+                            $sheet->setCellValue("B{$r}", $s->work_date ? \Carbon\Carbon::parse($s->work_date)->format('d/m/Y') : '');
+                            $desc = 'ขั้นตอน: '.($s->method_name ?: '-')
+                                .' ('.($s->start_time ? substr($s->start_time, 0, 5) : '--').'–'.($s->end_time ? substr($s->end_time, 0, 5) : '--').')';
+                            $sheet->setCellValue("C{$r}", $desc);
+                            $sheet->mergeCells("C{$r}:{$lastCol}{$r}");
+                            $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()
+                                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                                ->getStartColor()->setRGB('F8F9FA');
+                            $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setItalic(true);
+                            $r++;
+                        }
+
+                        // แถวผลิตสินค้า
+                        $sheet->setCellValue("A{$r}", ++$rownum);
+                        $sheet->setCellValue("B{$r}", $it->inplan ? \Carbon\Carbon::parse($it->inplan)->format('d/m/Y') : '-');
+                        // คอลัมน์ วันที่ลงแผน (B) พื้นน้ำเงิน — ให้เหมือนฝั่งเว็บ/PDF
+                        $sheet->getStyle("B{$r}")->getFill()
+                            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                            ->getStartColor()->setRGB('CFE2FF');
+                        $sheet->getStyle("B{$r}")->getFont()->getColor()->setRGB('084298');
+                        $sheet->setCellValue("C{$r}", $it->senddate ? \Carbon\Carbon::parse($it->senddate)->format('d/m/Y') : '');  // Revise = senddate (กำหนดส่งทบทวน)
+                        $sheet->setCellValue("D{$r}", $it->cust_name ?: '-');
+                        $sheet->setCellValue("E{$r}", $it->red_bill_code ?: '-');
+                        $sheet->setCellValueExplicit("F{$r}", $it->itemno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                        $sheet->setCellValue("G{$r}", $it->lot ?: '-');
+                        $sheet->setCellValue("H{$r}", $it->quantity !== null ? number_format($it->quantity, 2) : '-');
+                        $sheet->setCellValue("I{$r}", $it->weight !== null ? number_format($it->weight, 2) : '');  // TP = น้ำหนัก TP (Weight)
+                        $sheet->setCellValueExplicit("J{$r}", $it->product_resin ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);   // Resin (tb_products.resin)
+                        $sheet->setCellValueExplicit("K{$r}", $it->product_temp ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);   // Temp (temp.Temp1 via tb_products.temp_id)
+                        $sheet->setCellValueExplicit("L{$r}", $it->product_code_val ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING); // CODE (tb_products.code)
+                        $sheet->setCellValueExplicit("M{$r}", $it->product_pack ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);   // Packaging (tb_products.pack)
+                        $sheet->setCellValueExplicit("N{$r}", $it->product_batch ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);  // Batch (tb_products.batch)
+                        $sheet->setCellValueExplicit("O{$r}", $it->product_sampling ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING); // สูตรตัวอย่าง (tb_products.sampling)
+                        $sheet->setCellValue("P{$r}", $it->remark ?: '');
+                        $groupSum += (float) ($it->quantity ?? 0);
+                        $r++;
+                    }
+
+                    // แถวรวมต่อเครื่องจักร
+                    $sheet->setCellValue("A{$r}", 'รวม '.$machineLabel);
+                    $sheet->mergeCells("A{$r}:G{$r}");
+                    $sheet->setCellValue("{$weightCol}{$r}", number_format($groupSum, 2));
+                    $sheet->setCellValue("F{$r}", $group['items']->count().' รายการ');
+                    $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setBold(true);
+                    $r++;
+                }
             }
-
-            // แถวรวมต่อเครื่องจักร
-            $sheet->setCellValue("A{$r}", 'รวม '.$machineLabel);
-            $sheet->mergeCells("A{$r}:G{$r}");
-            $sheet->setCellValue("{$weightCol}{$r}", number_format($groupSum, 2));
-            $sheet->setCellValue("F{$r}", $group['items']->count().' รายการ');
-            $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setBold(true);
-            $r++;
-        }
-
-        if ($total === 0) {
-            $sheet->setCellValue("A{$r}", 'ไม่พบข้อมูลตามเงื่อนไขที่เลือก');
-            $sheet->mergeCells("A{$r}:{$lastCol}{$r}");
-            $sheet->getStyle("A{$r}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         }
 
         foreach ($cols as $col) {
@@ -416,12 +515,32 @@ class ReportController extends Controller
     // Export PDF — คงรูปแบบจัดกลุ่มตามเครื่องจักรเหมือนบนหน้าจอ
     public function machinePdf(Request $request)
     {
-        ['groups' => $groups, 'total' => $total, 'filters' => $filters] = $this->buildMachineReport($request);
+        ['groups' => $groups, 'filters' => $filters] = $this->buildMachineReport($request);
+
+        // แบ่ง PDF เป็น section ต่อ "แผนก (company) + หน่วยย่อย (group)" — แต่ละคู่ขึ้นหน้าใหม่ + พิมพ์หัวสรุปซ้ำ (2026-09-02)
+        //  - group ต่างกัน = คนละ section = ขึ้นหน้าใหม่ (แม้อยู่แผนกเดียวกัน)
+        //  - "พบ N รายการ" = จำนวนเฉพาะ section (แผนก+group) นั้น
+        $sections = $this->machineSections($groups)
+            ->map(function ($sec) use ($filters) {
+                $deptLabel  = $sec['dept'] !== '' ? $sec['dept'] : 'ไม่ระบุแผนก';
+                $groupLabel = $sec['group'] !== '' ? $sec['group'] : 'ไม่ระบุ';
+
+                $sec['summary'] = $this->machineSectionSummary($filters, $deptLabel, $groupLabel, $sec['count']);
+                return $sec;
+            });
+
+        // ไม่มีข้อมูลเลย → คง 1 section ว่างไว้เพื่อให้ PDF ยังพิมพ์หัว + ข้อความ "ไม่พบข้อมูล"
+        if ($sections->isEmpty()) {
+            $sections = collect([[
+                'dept'    => $filters['dept'] ?: '',
+                'count'   => 0,
+                'blocks'  => collect(),
+                'summary' => $this->machineSectionSummary($filters, $filters['dept'] ?: 'ทุกแผนก', '-', 0),
+            ]]);
+        }
 
         $html = view('production-planning.report.partials.machine-pdf', [
-            'groups'  => $groups,
-            'total'   => $total,
-            'summary' => $this->filterSummary($filters, $total),
+            'sections' => $sections,
         ])->render();
 
         $mpdf = new \Mpdf\Mpdf([
@@ -443,7 +562,10 @@ class ReportController extends Controller
         ]);
     }
 
-    // ข้อความสรุปเงื่อนไขค้นหา (ใช้บนหัว Excel/PDF)
+    // ข้อความสรุปเงื่อนไขค้นหาแบบเดิม (ป้าย "เครื่องจักร: …", ยอดรวมทั้งหมด)
+    // ⚠ ปัจจุบัน "ไม่มีผู้เรียกแล้ว" — ตั้งแต่ 02/09/2569 ทั้ง PDF และ Excel เปลี่ยนไปใช้
+    //   machineSectionSummary() (แบ่งต่อ section แผนก+group, ป้าย "หน่วยย่อย"). เก็บไว้เผื่อ
+    //   ต้องการหัวสรุปรวมทั้งรายงานแบบเดิมอีกครั้ง
     private function filterSummary(array $filters, int $total): string
     {
         $parts = [];
@@ -457,6 +579,26 @@ class ReportController extends Controller
             $parts[] = 'คำค้น: '.$filters['search'];
         }
         $parts[] = 'พบ '.number_format($total).' รายการ';
+
+        return implode('   |   ', $parts);
+    }
+
+    // หัวสรุปต่อ section (แผนก + หน่วยย่อย/group) ในรายงานเครื่องจักร — ใช้ทั้ง PDF และ Excel (2026-09-02)
+    //  - ต่างจาก filterSummary(): แสดง "หน่วยย่อย" (= group ของเครื่อง) แทน "เครื่องจักร",
+    //    และ "พบ N รายการ" = จำนวนเฉพาะ section (ไม่ใช่ยอดรวม)
+    private function machineSectionSummary(array $filters, string $deptLabel, string $groupText, int $count): string
+    {
+        $parts = [];
+        $parts[] = 'แผนก: '.$deptLabel;
+        $parts[] = 'หน่วยย่อย: '.($groupText !== '' ? $groupText : '-');
+
+        $ds = $filters['date_start'] ? \Carbon\Carbon::parse($filters['date_start'])->format('d/m/Y') : '-';
+        $de = $filters['date_end'] ? \Carbon\Carbon::parse($filters['date_end'])->format('d/m/Y') : '-';
+        $parts[] = 'ช่วงวันที่ Inplan: '.$ds.' - '.$de;
+        if (!empty($filters['search'])) {
+            $parts[] = 'คำค้น: '.$filters['search'];
+        }
+        $parts[] = 'พบ '.number_format($count).' รายการ';
 
         return implode('   |   ', $parts);
     }

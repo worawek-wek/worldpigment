@@ -24,8 +24,11 @@
     </style>
 </head>
 <body>
+@foreach($sections as $sec)
+    {{-- แต่ละแผนกขึ้นหน้าใหม่ (ยกเว้นแผนกแรก) — ใช้ $loop->first แทน CSS :first-of-type ที่ mPDF ไม่รองรับ --}}
+    <div class="dept-section" @if(!$loop->first) style="page-break-before: always;" @endif>
     <div class="title">รายงานผลิตตามเครื่องจักร</div>
-    <div class="summary">{{ $summary }}</div>
+    <div class="summary">{{ $sec['summary'] }}</div>
 
     <table class="data">
         <thead>
@@ -50,7 +53,7 @@
         </thead>
         <tbody>
             @php $rownum = 0; @endphp
-            @forelse($groups as $group)
+            @forelse($sec['blocks'] as $group)
                 @php $machineLabel = $group['machine'] !== '' ? $group['machine'] : 'ไม่ระบุเครื่องจักร'; $groupSum = 0; @endphp
                 <tr class="group-row">
                     <td colspan="16">เครื่องจักร: {{ $machineLabel }}@if(!empty($group['speed_rpm'])) (Speed RPM: {{ $group['speed_rpm'] }})@endif</td>
@@ -102,5 +105,7 @@
             @endforelse
         </tbody>
     </table>
+    </div>
+@endforeach
 </body>
 </html>
