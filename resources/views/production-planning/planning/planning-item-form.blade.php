@@ -252,7 +252,18 @@
                     </select>
                 </div>
                 <div class="col-md-3 mb-3">
-                    <label class="form-label">พนักงานผู้รับผิดชอบ</label>
+                    <label class="form-label d-flex align-items-center justify-content-between mb-1">
+                        <span>พนักงานผู้รับผิดชอบ</span>
+                        {{-- เพิ่มพนักงานใหม่ทันทีจากฟอร์มนี้ (เปิด modal ซ้อน ใช้ฟอร์มเดียวกับหน้าจัดการพนักงาน)
+                             แสดงเฉพาะบัญชีที่มีสิทธิ์เมนู "พนักงาน" — เพราะ endpoint employee.edit/store ถูกกันสิทธิ์
+                             ตาม namespace employee อยู่แล้ว (ไม่มีสิทธิ์กดแล้วจะได้ 403) --}}
+                        @if(\App\Services\AccessControl::menuVisible('Employee'))
+                            <button type="button" id="btn_add_employee_inline"
+                                class="btn btn-sm btn-label-primary py-0 px-1 lh-1" title="เพิ่มพนักงานใหม่">
+                                <i class="ti ti-plus"></i>
+                            </button>
+                        @endif
+                    </label>
                     @php $current_empno = $planning_item?->empno ?? ''; @endphp
                     <select name="empno" id="planning_item_empno" class="form-select">
                         <option value="">เลือกพนักงาน</option>

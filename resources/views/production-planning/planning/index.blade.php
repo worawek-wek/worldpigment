@@ -184,6 +184,24 @@
         </div>
     </div>
 
+    <!-- Modal เพิ่มพนักงานใหม่ (เปิดซ้อนจากฟอร์ม Planning Item) — ใช้ฟอร์ม/endpoint เดียวกับหน้าจัดการพนักงาน -->
+    {{-- data-bs-backdrop="false": กันชนกับ logic คืน/ล้าง backdrop ของ modal 2 ชั้นด้านล่าง; z-index ยกให้อยู่บนสุดใน CSS --}}
+    <div class="modal fade" id="planningEmpModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="false">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color:#54BAB9; padding:1rem 1.5rem;">
+                    <h5 class="modal-title text-white mb-0">
+                        <i class="ti ti-user-plus me-1"></i>เพิ่มพนักงานใหม่
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="planning_emp_form_box"></div>
+            </div>
+        </div>
+    </div>
+    {{-- modal ชั้น 3 ต้องอยู่เหนือ modal Planning/Planning Item (Bootstrap ตั้งทุกตัวที่ 1055 เท่ากัน) --}}
+    <style>#planningEmpModal { z-index: 1090; }</style>
+
     <!-- Modal สร้างแผน: สร้าง Semi กรอกเอง (ไม่ผูกแผนการผลิต) → เข้ารายการรออนุมัติ -->
     <div class="modal fade" id="createSemiModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
@@ -603,6 +621,106 @@
             document.body.style.removeProperty('padding-right');
             document.querySelectorAll('.modal-backdrop').forEach(function (b) { b.remove(); });
         }
+    });
+
+    // ---- เพิ่มพนักงานใหม่จากฟอร์ม Planning Item (modal ซ้อนชั้น 3) ----
+    // ใช้ฟอร์ม/endpoint เดียวกับหน้า "จัดการพนักงาน" (employee.edit / employee.store) จะได้ไม่ตกหล่นฟิลด์
+    var planningEmpModal = new bootstrap.Modal(document.getElementById('planningEmpModal'));
+
+    // กดปุ่ม + ข้างช่องพนักงานผู้รับผิดชอบ → โหลดฟอร์มพนักงานเปล่า + ตั้งแผนกเริ่มต้น = แผนกของ item ที่กำลังแก้
+    $(document).on('click', '#btn_add_employee_inline', function (e) {
+        e.preventDefault();
+        var company = $('#planning_item_company').val() || '';
+        $.ajax({
+            url: "{{ route('employee.edit') }}",
+            method: 'GET',
+            data: { empno: null },
+            success: function (res) {
+                $('#planning_emp_form_box').html(res.data);
+                // ตั้งแผนกเริ่มต้นเป็นแผนกของงาน → พนักงานใหม่จะอยู่ในลิสต์ dropdown (ซึ่งกรองตามแผนกของ item) พอดี
+                if (company) {
+                    $('#planning_emp_form_box #employee_department').val(company);
+                }
+                // เพิ่มพนักงานจากส่วนนี้ = บังคับสิทธิ์เป็น "Worker" เท่านั้น
+                // ตัดตัวเลือก role อื่นออกให้เหลือ Worker (ค่ายังถูกส่งปกติ ต่างจาก disable ที่จะไม่ส่งค่า)
+                var $role = $('#planning_emp_form_box #employee_role');
+                var $worker = $role.find('option').filter(function () {
+                    return $(this).text().trim() === @json(\App\Models\Emp::WORKER_ROLE_NAME);
+                });
+                if ($worker.length) {
+                    $role.find('option').not($worker).remove();
+                    $role.val($worker.val());
+                    if (!$role.next('.wp-role-lock-note').length) {
+                        $role.after('<small class="text-muted d-block mt-1 wp-role-lock-note">' +
+                            'เพิ่มพนักงานจากหน้าแผนการผลิตจะถูกกำหนดเป็นสิทธิ์ Worker โดยอัตโนมัติ</small>');
+                    }
+                }
+                planningEmpModal.show();
+            },
+            error: function () {
+                Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: 'โหลดฟอร์มพนักงานไม่สำเร็จ' });
+            }
+        });
+    });
+
+    // พรีวิวรูปลายเซ็นในฟอร์มพนักงานที่โหลดเข้า modal ชั้น 3 (handler ของหน้า employee อยู่คนละหน้า)
+    $(document).on('change', '#planning_emp_form_box #employee_signature', function (e) {
+        var input = e.target;
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function (ev) {
+                $('#planning_emp_form_box #employee_signature_preview').attr('src', ev.target.result);
+                $('#planning_emp_form_box #employee_signature_box').show();
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    });
+
+    // บันทึกพนักงานใหม่ → success แล้ว append option + เลือกตัวใหม่ใน dropdown พนักงานผู้รับผิดชอบทันที
+    $(document).on('click', '#planning_emp_form_box #btn_employee_save', function (e) {
+        e.preventDefault();
+        var $btn = $(this);
+        var formEl = document.querySelector('#planning_emp_form_box #employee_form');
+        if (!formEl) return;
+        var formData = new FormData(formEl);
+
+        $btn.prop('disabled', true);
+        $.ajax({
+            url: "{{ route('employee.store') }}",
+            method: 'POST',
+            dataType: 'json',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function (res) {
+                if (res.status == 200) {
+                    var emp = res.data || {};
+                    var empno = emp.empno || '';
+                    var name = ((emp.empname || '') + ' ' + (emp.empsur || '')).trim() || empno;
+                    var $sel = $('#planning_item_empno');
+                    if (empno && $sel.length) {
+                        // กันซ้ำ: เพิ่ม option เฉพาะเมื่อยังไม่มีในลิสต์ แล้วเลือกตัวใหม่
+                        if ($sel.find('option[value="' + empno + '"]').length === 0) {
+                            $sel.append($('<option>', { value: empno, text: name }));
+                        }
+                        $sel.val(empno);
+                    }
+                    planningEmpModal.hide();
+                    Swal.fire({ icon: 'success', title: 'สำเร็จ', text: res.message,
+                        timer: 1600, showConfirmButton: false });
+                } else if (res.status == 400) {
+                    var msg = Object.values(res.errors).map(function (er) { return er[0]; }).join('<br>');
+                    Swal.fire({ icon: 'warning', title: 'ข้อมูลไม่ถูกต้อง', html: msg });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: res.message || '' });
+                }
+            },
+            error: function (xhr) {
+                var msg = xhr.responseJSON?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: msg });
+            },
+            complete: function () { $btn.prop('disabled', false); }
+        });
     });
 
     // ---- บันทึก Planning Item ----
