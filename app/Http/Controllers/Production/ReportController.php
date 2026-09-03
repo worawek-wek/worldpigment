@@ -754,6 +754,14 @@ class ReportController extends Controller
             $row->lack_pigment = trim((string) $row->shortage_remark);
         }
 
+        // ── กรองให้เหลือเฉพาะงานที่ "ขาดจริง" (03/09/2569) ──────────────────────
+        //    แกนยังเป็นงานที่ยังไม่ปิดงานเหมือนเดิม แต่ตัดแถวที่ไม่ได้ขาดอะไรออก
+        //    เงื่อนไข OR: มีขาด semi (lack_semi) หรือ ขาดวัตถุดิบ (lack_pigment = shortage_remark)
+        //    อย่างใดอย่างหนึ่งก็แสดง — งานที่ไม่ขาดทั้งสองอย่างจะไม่ขึ้น
+        $rows = $rows
+            ->filter(fn ($row) => $row->lack_semi !== '' || $row->lack_pigment !== '')
+            ->values();
+
         return [
             'rows'    => $rows,
             'total'   => $rows->count(),
@@ -768,7 +776,7 @@ class ReportController extends Controller
     {
         return implode('   |   ', [
             'แผนก: '.($filters['dept'] ?: 'ทุกแผนก'),
-            'สถานะ: ยังไม่ปิดงาน',
+            'สถานะ: ยังไม่ปิดงาน + ขาด semi/วัตถุดิบ',
             'พบ '.number_format($total).' รายการ',
         ]);
     }

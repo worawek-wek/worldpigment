@@ -17,11 +17,18 @@
             /* border-collapse ทำให้เส้นขอบหายตอน sticky → วาดเส้นด้วย box-shadow แทน */
             box-shadow: inset 0 1px 0 var(--bs-table-border-color), inset 0 -1px 0 var(--bs-table-border-color);
         }
-        /* คอลัมน์ IN PLAN พื้นน้ำเงิน — !important เพื่อทับทั้งหัวตาราง sticky และ table-hover */
-        #materialShortageTable th.col-inplan,
-        #materialShortageTable td.col-inplan {
-            background-color: #cfe2ff !important;
-            color: #084298 !important;
+        /* ไฮไลต์คอลัมน์ให้ตรงกับ PDF — !important เพื่อทับทั้งหัวตาราง sticky และ table-hover */
+        /* ขาดวัตถุดิบ / ขาด semi — พื้นเหลืองตามฟอร์มต้นฉบับ */
+        #materialShortageTable th.col-lack,
+        #materialShortageTable td.col-lack {
+            background-color: #fff8b3 !important;
+            color: #665c00 !important;
+        }
+        /* Cust Due (กำหนดที่ลูกค้าต้องการ) — พื้นชมพู */
+        #materialShortageTable th.col-custdue,
+        #materialShortageTable td.col-custdue {
+            background-color: #f8d7da !important;
+            color: #842029 !important;
         }
     </style>
 
