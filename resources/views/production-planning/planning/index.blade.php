@@ -116,7 +116,8 @@
                             </div>
                         </div>
                         {{-- แถวที่ 3: ค้นหาตามวันเวลาบรรจุเสร็จ — ระบุวันที่บรรจุ และช่วงเวลาเริ่ม–สิ้นสุด --}}
-                        <div class="row g-3 align-items-end mt-1">
+                        {{-- lang="en-GB" → บังคับช่อง <input type="time"> ด้านล่างให้แสดง 24 ชม. ทุกเครื่อง --}}
+                        <div class="row g-3 align-items-end mt-1" lang="en-GB">
                             <div class="col-md-4">
                                 <label class="form-label mb-1 small text-muted">วันที่บรรจุ (Packing)</label>
                                 <input id="searchPackingDate" type="text" class="form-control flatpickr-date"

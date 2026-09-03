@@ -27,7 +27,7 @@
                 <td colspan="{{ count($slots) + 1 }}">
                     <i class="ti ti-user me-1"></i>
                     <strong>{{ $group['label'] }}</strong>
-                    <span class="small ms-1" style="color:#c6f0e0;">({{ number_format($group['job_count']) }} รายการ)</span>
+                    <span class="small ms-1" style="color:#6c757d;">({{ number_format($group['job_count']) }} รายการ)</span>
                 </td>
             </tr>
         </tbody>

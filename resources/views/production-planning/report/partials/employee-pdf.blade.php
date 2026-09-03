@@ -10,10 +10,18 @@
         .title { font-size: 13px; font-weight: bold; }
         .date-box { border: 1px solid #000; padding: 1px 8px; font-weight: bold; background-color: #fff3a0; }
         table.data { width: 100%; border-collapse: collapse; }
-        table.data th, table.data td { border: 1px solid #000; padding: 2px 3px; font-size: 8px; text-align: center; }
-        table.data th { background-color: #e9ecef; }
+        /* เส้นแนวตั้ง (ช่วงเวลา) = ปกติ / เส้นแนวนอนภายในบล็อกพนักงาน = บางๆ */
+        table.data th, table.data td {
+            border-left: 1px solid #000;
+            border-right: 1px solid #000;
+            border-top: 0.3px solid #b5b5b5;
+            border-bottom: 0.3px solid #b5b5b5;
+            padding: 2px 3px; font-size: 8px; text-align: center;
+        }
+        table.data th { background-color: #e9ecef; border-top: 1px solid #000; border-bottom: 1px solid #000; }
         td.rowlabel { text-align: left; width: 70px; background-color: #f4f4f4; }
-        tr.emp-head td { background-color: #d9d9d9; font-weight: bold; text-align: left; }
+        /* ชื่อพนักงาน = พื้นขาว ตัวอักษรน้ำเงิน / เส้นบนสุด = เส้นปกติ (คั่นระหว่างพนักงาน) */
+        tr.emp-head td { background-color: #fff; color: #1d4ed8; font-weight: bold; text-align: left; border-top: 1px solid #000; }
         td.signcell { height: 16px; }
         .unsched { text-align: left; font-style: italic; color: #333; }
     </style>

@@ -783,17 +783,25 @@ class ReportController extends Controller
         $sheet->setTitle('รายงานการขาดวัตถุดิบ');
 
         // คอลัมน์ตามผังฟอร์ม Access เดิม (Revise / น้ำ / ส่งชั่งสี ยังไม่มีฟิลด์ใน DB → เว้นว่าง)
+        // ── ซ่อนบางคอลัมน์ชั่วคราวตามที่ผู้ใช้สั่ง (03/09/2569): MACHINE No., IN PLAN, สถานะปัจจุบัน,
+        //     SaleNo, Order No, LOT, ส่งชั่งสี, เริ่มผลิต, วันที่ส่ง QC, เวลาที่ส่ง QC, สถานะ QC
+        //     เปิดคืน: ใช้ผังเต็ม 23 คอลัมน์ (A..W) ที่คอมเมนต์ไว้ + ปลดคอมเมนต์ setCellValue/สไตล์ที่คู่กัน
+        // $headers = [
+        //     '#', 'แผนก', 'เลขที่ใบแดง', 'MACHINE No.', 'IN PLAN', 'Revise', 'สถานะปัจจุบัน', 'ขาดวัตถุดิบ', 'ขาด semi', 'Cust Due',
+        //     'Cust no', 'Cust Name', 'SaleNo', 'Order Date', 'Order No', 'PRODUCT NO',
+        //     'LOT', 'น้ำหนัก', 'ส่งชั่งสี', 'เริ่มผลิต', 'วันที่ส่ง QC', 'เวลาที่ส่ง QC', 'สถานะ QC',
+        // ];
+        // $cols = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W'];
+        // $lastCol = 'W';
         $headers = [
-            '#', 'แผนก', 'เลขที่ใบแดง', 'MACHINE No.', 'IN PLAN', 'Revise', 'สถานะปัจจุบัน', 'ขาด semi', 'ขาดวัตถุดิบ', 'Cust Due',
-            'Cust no', 'Cust Name', 'SaleNo', 'Order Date', 'Order No', 'PRODUCT NO',
-            'LOT', 'น้ำหนัก', 'ส่งชั่งสี', 'เริ่มผลิต', 'วันที่ส่ง QC', 'เวลาที่ส่ง QC', 'สถานะ QC',
+            '#', 'แผนก', 'เลขที่ใบแดง', 'Revise', 'ขาดวัตถุดิบ', 'ขาด semi', 'Cust Due',
+            'Cust no', 'Cust Name', 'Order Date', 'PRODUCT NO', 'น้ำหนัก',
         ];
         $cols = [
-            'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
-            'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
-            'U', 'V', 'W',
+            'A', 'B', 'C', 'D', 'E', 'F', 'G',
+            'H', 'I', 'J', 'K', 'L',
         ];
-        $lastCol = 'W';
+        $lastCol = 'L';
 
         // หัวรายงาน
         $sheet->setCellValue('A1', 'รายงานการขาดวัตถุดิบ');
@@ -825,42 +833,44 @@ class ReportController extends Controller
             $sheet->setCellValue("A{$r}", ++$rownum);
             $sheet->setCellValue("B{$r}", $dept ?: '-');
             $sheet->setCellValueExplicit("C{$r}", $it->red_bill_code ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-            $sheet->setCellValueExplicit("D{$r}", $it->machine_no ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-            $sheet->setCellValue("E{$r}", $it->inplan ? \Carbon\Carbon::parse($it->inplan)->format('d/m/Y') : '-');
-            $sheet->setCellValue("F{$r}", $it->senddate ? \Carbon\Carbon::parse($it->senddate)->format('d/m/Y') : '');  // Revise = senddate (กำหนดส่งทบทวน)
-            $sheet->setCellValue("G{$r}", $it->planning_status ?: '-');
-            $sheet->setCellValue("H{$r}", $it->lack_semi ?: '');  // ขาด semi (itemno+semi_code+primary_color ของ semi)
-            $sheet->setCellValue("I{$r}", $it->lack_pigment ?: '');  // ขาดวัตถุดิบ (tb_planning.shortage_remark) — 25/08/2569
-            $sheet->setCellValue("J{$r}", $custDue ? \Carbon\Carbon::parse($custDue)->format('d/m/Y') : '-');
-            $sheet->setCellValueExplicit("K{$r}", $it->custno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-            $sheet->setCellValue("L{$r}", $it->cust_name ?: '-');
-            $sheet->setCellValueExplicit("M{$r}", $it->saleno ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-            $sheet->setCellValue("N{$r}", $it->order_date ? \Carbon\Carbon::parse($it->order_date)->format('d/m/Y') : '-');
-            $sheet->setCellValueExplicit("O{$r}", $it->orderno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-            $sheet->setCellValueExplicit("P{$r}", $it->itemno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-            $sheet->setCellValue("Q{$r}", $it->lot ?: '-');
-            $sheet->setCellValue("R{$r}", $it->quantity !== null ? number_format($it->quantity, 2) : '-');  // น้ำหนัก (quantity)
-            $sheet->setCellValue("S{$r}", '');  // ส่งชั่งสี (ยังไม่มีฟิลด์)
-            $sheet->setCellValue("T{$r}", $it->start_date ? \Carbon\Carbon::parse($it->start_date)->format('d/m/Y') : '');
-            $sheet->setCellValue("U{$r}", $it->qc_date ? \Carbon\Carbon::parse($it->qc_date)->format('d/m/Y') : '');
-            $sheet->setCellValue("V{$r}", $it->qc_time ? substr($it->qc_time, 0, 5) : '');
-            $sheet->setCellValue("W{$r}", $it->qc_status ?: '');
+            // ── ซ่อนชั่วคราว (03/09/2569): MACHINE No. / IN PLAN / สถานะปัจจุบัน / SaleNo / Order No / LOT / ส่งชั่งสี / เริ่มผลิต / QC
+            // $sheet->setCellValueExplicit("D{$r}", $it->machine_no ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);  // MACHINE No.
+            // $sheet->setCellValue("E{$r}", $it->inplan ? \Carbon\Carbon::parse($it->inplan)->format('d/m/Y') : '-');  // IN PLAN
+            $sheet->setCellValue("D{$r}", $it->senddate ? \Carbon\Carbon::parse($it->senddate)->format('d/m/Y') : '');  // Revise = senddate (กำหนดส่งทบทวน)
+            // $sheet->setCellValue("G{$r}", $it->planning_status ?: '-');  // สถานะปัจจุบัน
+            $sheet->setCellValue("E{$r}", $it->lack_pigment ?: '');  // ขาดวัตถุดิบ (tb_planning.shortage_remark) — 25/08/2569
+            $sheet->setCellValue("F{$r}", $it->lack_semi ?: '');  // ขาด semi (itemno+semi_code+primary_color ของ semi)
+            $sheet->setCellValue("G{$r}", $custDue ? \Carbon\Carbon::parse($custDue)->format('d/m/Y') : '-');  // Cust Due
+            $sheet->setCellValueExplicit("H{$r}", $it->custno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue("I{$r}", $it->cust_name ?: '-');
+            // $sheet->setCellValueExplicit("M{$r}", $it->saleno ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);  // SaleNo
+            $sheet->setCellValue("J{$r}", $it->order_date ? \Carbon\Carbon::parse($it->order_date)->format('d/m/Y') : '-');  // Order Date
+            // $sheet->setCellValueExplicit("O{$r}", $it->orderno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);  // Order No
+            $sheet->setCellValueExplicit("K{$r}", $it->itemno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);  // PRODUCT NO
+            // $sheet->setCellValue("Q{$r}", $it->lot ?: '-');  // LOT
+            $sheet->setCellValue("L{$r}", $it->quantity !== null ? number_format($it->quantity, 2) : '-');  // น้ำหนัก (quantity)
+            // $sheet->setCellValue("S{$r}", '');  // ส่งชั่งสี (ยังไม่มีฟิลด์)
+            // $sheet->setCellValue("T{$r}", $it->start_date ? \Carbon\Carbon::parse($it->start_date)->format('d/m/Y') : '');  // เริ่มผลิต
+            // $sheet->setCellValue("U{$r}", $it->qc_date ? \Carbon\Carbon::parse($it->qc_date)->format('d/m/Y') : '');  // วันที่ส่ง QC
+            // $sheet->setCellValue("V{$r}", $it->qc_time ? substr($it->qc_time, 0, 5) : '');  // เวลาที่ส่ง QC
+            // $sheet->setCellValue("W{$r}", $it->qc_status ?: '');  // สถานะ QC
             $r++;
         }
 
-        // พื้นน้ำเงินคอลัมน์ IN PLAN (E) ทั้งหัวตารางและทุกแถวข้อมูล — ให้ตรงกับตารางบนเว็บ/PDF
         // $r ชี้แถวถัดจากข้อมูลสุดท้ายหลังลูป → แถวสุดท้าย = $r - 1 (ไม่มีข้อมูล = แถวหัว 4)
         $inplanLastRow = $r - 1;
-        $sheet->getStyle("E4:E{$inplanLastRow}")->getFill()
-            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-            ->getStartColor()->setRGB('CFE2FF');
-        $sheet->getStyle("E4:E{$inplanLastRow}")->getFont()->getColor()->setRGB('084298');
 
-        // พื้นแดงคอลัมน์ Cust Due (J) ทั้งหัวตารางและทุกแถวข้อมูล — ให้ตรงกับ Custwant บนเว็บ/PDF
-        $sheet->getStyle("J4:J{$inplanLastRow}")->getFill()
+        // พื้นน้ำเงินคอลัมน์ IN PLAN — ซ่อนชั่วคราว (03/09/2569) เพราะคอลัมน์ IN PLAN ถูกปิดไว้
+        // $sheet->getStyle("E4:E{$inplanLastRow}")->getFill()
+        //     ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+        //     ->getStartColor()->setRGB('CFE2FF');
+        // $sheet->getStyle("E4:E{$inplanLastRow}")->getFont()->getColor()->setRGB('084298');
+
+        // พื้นแดงคอลัมน์ Cust Due (G) ทั้งหัวตารางและทุกแถวข้อมูล — ให้ตรงกับ Custwant บนเว็บ/PDF
+        $sheet->getStyle("G4:G{$inplanLastRow}")->getFill()
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
             ->getStartColor()->setRGB('F8D7DA');
-        $sheet->getStyle("J4:J{$inplanLastRow}")->getFont()->getColor()->setRGB('842029');
+        $sheet->getStyle("G4:G{$inplanLastRow}")->getFont()->getColor()->setRGB('842029');
 
         if ($total === 0) {
             $sheet->setCellValue("A{$r}", 'ไม่พบข้อมูลตามเงื่อนไขที่เลือก');
@@ -1245,6 +1255,10 @@ class ReportController extends Controller
             ->getStartColor()->setRGB('E9ECEF');
         $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getAlignment()
             ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        // หัวตาราง = เส้นกรอบปกติ
+        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getBorders()->getAllBorders()
+            ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)
+            ->getColor()->setRGB('000000');
         $r++;
 
         $rowLabels = [
@@ -1255,13 +1269,14 @@ class ReportController extends Controller
         ];
 
         foreach ($groups as $group) {
-            // หัวกลุ่มพนักงาน
+            $blockStart = $r;
+            // หัวกลุ่มพนักงาน — พื้นขาว ตัวอักษรน้ำเงิน
             $sheet->setCellValue("A{$r}", 'พนักงาน: '.$group['label'].'  ('.$group['job_count'].' รายการ)');
             $sheet->mergeCells("A{$r}:{$lastCol}{$r}");
-            $sheet->getStyle("A{$r}")->getFont()->setBold(true);
+            $sheet->getStyle("A{$r}")->getFont()->setBold(true)->getColor()->setRGB('1D4ED8');
             $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()
                 ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-                ->getStartColor()->setRGB('DCE7F7');
+                ->getStartColor()->setRGB('FFFFFF');
             $r++;
 
             foreach ($rowLabels as $key => $label) {
@@ -1300,6 +1315,17 @@ class ReportController extends Controller
                     $r++;
                 }
             }
+
+            // เส้นกรอบบล็อกพนักงาน: กรอบนอก + แนวตั้ง = เส้นปกติ (คั่นระหว่างพนักงาน/ช่วงเวลา)
+            //                        แนวนอนภายในบล็อก = เส้นบางๆ (hair)
+            $blockEnd = $r - 1;
+            $bd = $sheet->getStyle("A{$blockStart}:{$lastCol}{$blockEnd}")->getBorders();
+            $bd->getOutline()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)
+                ->getColor()->setRGB('000000');
+            $bd->getVertical()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)
+                ->getColor()->setRGB('000000');
+            $bd->getHorizontal()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_HAIR)
+                ->getColor()->setRGB('B5B5B5');
 
             $r++; // เว้น 1 แถวระหว่างพนักงาน
         }

@@ -2,12 +2,22 @@
 
 @section('content')
     <style>
-        /* หัวกลุ่มพนักงาน: พื้นหลังเข้ม + ปิด overlay striped/hover ของ Bootstrap */
+        /* หัวกลุ่มพนักงาน: พื้นขาว ตัวอักษรน้ำเงิน + ปิด overlay striped/hover ของ Bootstrap */
         #employeeReportTable tbody.emp-head > tr,
         #employeeReportTable tbody.emp-head > tr > td {
-            background-color: #0f6e56 !important;
-            color: #fff !important;
+            background-color: #fff !important;
+            color: #1d4ed8 !important;
+            font-weight: 600;
             box-shadow: none !important;
+        }
+        /* เส้นคั่นระหว่างพนักงาน = เส้นปกติ (ขอบบนของแถวหัวชื่อพนักงาน) */
+        #employeeReportTable tbody.emp-head > tr > td {
+            border-top: 1px solid #000 !important;
+        }
+        /* เส้นแนวนอนภายในบล็อกพนักงาน = บางๆ (จางลง) — คงเส้นแนวตั้งไว้ปกติ */
+        #employeeReportTable > tbody:not(.emp-head) > tr > td {
+            border-top-color: #eef0f2;
+            border-bottom-color: #eef0f2;
         }
         /* กริดเวลา: ตัวอักษรเล็ก จัดกึ่งกลาง อ่านง่ายแบบฟอร์มกระดาษ */
         #employeeReportTable { font-size: 12px; }

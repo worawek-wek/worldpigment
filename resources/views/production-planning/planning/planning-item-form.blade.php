@@ -68,7 +68,9 @@
         <span>ออเดอร์นี้ถูกปิดแล้ว (End Order) — ไม่สามารถแก้ไขได้ กดได้เฉพาะปุ่ม "ยกเลิก"</span>
     </div>
     @endif
-    <form id="planning_item_form">
+    {{-- lang="en-GB" → บังคับ <input type="time"> ให้แสดง 24 ชม. ทุกเครื่อง (ไม่ขึ้นกับ region ของ OS)
+         ใส่ที่ระดับ form → ครอบทุกช่องเวลาในฟอร์ม รวมถึงแถววิธีการผลิตที่ JS สร้างเพิ่มด้วย (inherit ค่า lang) --}}
+    <form id="planning_item_form" lang="en-GB">
         <input type="hidden" name="planning_id"        value="{{ $planning_item?->id ?? '' }}">
         <input type="hidden" name="planning_header_id" value="{{ $planning_header_id ?? '' }}">
 
