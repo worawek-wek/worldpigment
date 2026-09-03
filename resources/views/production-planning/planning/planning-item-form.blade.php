@@ -783,12 +783,77 @@ window.wpInitDateFields = function (scope) {
 window.wpSetDateField = function (sel, val) {
     var el = $(sel)[0];
     if (!el) return;
+    var ymd = val ? String(val).substr(0, 10) : '';
     if (el._flatpickr) {
-        if (val) el._flatpickr.setDate(String(val).substr(0, 10), false, 'Y-m-d');
+        if (ymd) el._flatpickr.setDate(ymd, false, 'Y-m-d'); // triggerChange=false: ไม่ยิง change ซ้ำ
         else el._flatpickr.clear();
     } else {
-        el.value = val ? String(val).substr(0, 10) : '';
+        el.value = ymd;
     }
+    // ให้ตัวเตือนวันหยุด (wpBindHolidayWarn) ย้อนกลับไปที่ค่าที่ตั้งด้วยโปรแกรมล่าสุดได้ถูกต้อง
+    if (el.hasAttribute('data-last')) el.setAttribute('data-last', ymd);
+};
+
+// ── เตือนเมื่อเลือกวันตรงวันหยุด (ใช้ร่วมทั้งฟอร์มหลักและ modal เพิ่ม Semi) ──
+// ข้อมูลวันหยุดฝังจาก PHP ครั้งเดียว: วันหยุดประจำสัปดาห์ (weekly_off) + tb_holiday ที่ is_active='Y'
+window.WP_HOLIDAY_MAP = @json($holidays);   // { 'Y-m-d': 'ชื่อวันหยุด' }
+window.WP_WEEKLY_OFF  = @json($weekly_off); // [0] = วันอาทิตย์ (0 = อา ... 6 = ส)
+
+// Y-m-d ตรงวันหยุดไหม → คืนชื่อเหตุผล (null = วันทำการปกติ)
+window.wpHolidayReason = function (ymd) {
+    if (!ymd) return null;
+    var p = String(ymd).substr(0, 10).split('-');
+    if (p.length !== 3) return null;
+    // สร้าง Date แบบ local ด้วยเลขปี/เดือน/วัน กัน timezone เพี้ยน
+    var d = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+    var off = window.WP_WEEKLY_OFF || [];
+    if (off.indexOf(d.getDay()) !== -1) {
+        return ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'][d.getDay()];
+    }
+    var map = window.WP_HOLIDAY_MAP || {};
+    var key = p[0] + '-' + p[1] + '-' + p[2];
+    if (Object.prototype.hasOwnProperty.call(map, key)) return map[key] || 'วันหยุด';
+    return null;
+};
+
+// ผูกเตือน "ตรงวันหยุด" ให้ช่องวันที่ 1 ช่อง (flatpickr ยิง change บน input ตัวจริงเมื่อเลือก/พิมพ์วัน)
+// label = ชื่อช่องที่โชว์ในกล่องยืนยัน; data-last = ค่าล่าสุดที่ผ่านการยืนยัน; กด "ยกเลิก" = ย้อนกลับ
+window.wpBindHolidayWarn = function (el, label) {
+    if (!el) return;
+    if (!el.hasAttribute('data-last')) el.setAttribute('data-last', (el.value || '').substr(0, 10));
+    $(el).off('change.wpholiday').on('change.wpholiday', function () {
+        var val  = (this.value || '').substr(0, 10);
+        var last = this.getAttribute('data-last') || '';
+        if (val === last) return; // ไม่ได้เปลี่ยนจริง
+
+        var reason = window.wpHolidayReason(val);
+        if (!reason) { this.setAttribute('data-last', val); return; } // วันทำการปกติ → รับค่าไว้
+
+        var self = this;
+        var sp = val.split('-');
+        var showTH = sp.length === 3 ? (sp[2] + '/' + sp[1] + '/' + sp[0]) : val;
+        Swal.fire({
+            icon: 'warning',
+            title: 'วันที่เลือกตรงกับวันหยุด',
+            html: label + ' <b>' + showTH + '</b><br>ตรงกับ <b>' + reason + '</b><br>ต้องการเลือกวันนี้หรือไม่?',
+            showCancelButton: true,
+            confirmButtonText: 'ยืนยันเลือกวันนี้',
+            cancelButtonText: 'ยกเลิก'
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                self.setAttribute('data-last', val);          // ยืนยัน → รับค่าไว้
+            } else {
+                // ยกเลิก → ย้อนกลับค่าก่อนหน้า (self-contained: ใช้ flatpickr ของช่องเอง, ไม่ยิง change ซ้ำ)
+                if (self._flatpickr) {
+                    if (last) self._flatpickr.setDate(last, false, 'Y-m-d');
+                    else self._flatpickr.clear();
+                } else {
+                    self.value = last;
+                }
+                self.setAttribute('data-last', last);
+            }
+        });
+    });
 };
 
 (function () {
@@ -811,6 +876,18 @@ window.wpSetDateField = function (sel, val) {
     // ช่องวันที่แบบมีเวลา (packing_datetie) — ผูก flatpickr พร้อมเวลา
     $('#planning_item_form').find('.flatpickr-datetime').each(function () {
         if (!this._flatpickr) flatpickr(this, window.wpFpDateTimeOptions);
+    });
+
+    // ── เตือนเมื่อเลือกวันที่ตรงกับวันหยุด (วันอาทิตย์ / tb_holiday) — ช่องหลัก 4 ช่อง ──
+    // วันที่สั่ง (mdate) · วันที่ต้องการรับ (custwant) · วันที่กำหนดทบทวน (senddate) · วันที่วางแผนผลิต (inplan)
+    // ตรรกะกลางอยู่ที่ window.wpBindHolidayWarn (นิยามในบล็อก helper ด้านบน) ใช้ร่วมกับ modal เพิ่ม Semi
+    [
+        ['mdate',    'วันที่สั่ง'],
+        ['custwant', 'วันที่ต้องการรับ'],
+        ['senddate', 'วันที่กำหนดทบทวน'],
+        ['inplan',   'วันที่วางแผนผลิต'],
+    ].forEach(function (f) {
+        window.wpBindHolidayWarn($('#planning_item_form').find('input[name="' + f[0] + '"]')[0], f[1]);
     });
 
     // ── เปลี่ยนแผนก (Company) → โหลดเครื่องจักร/สถานะของแผนกใหม่ แล้วล้างค่าที่เลือกไว้ ──
@@ -1005,6 +1082,11 @@ window.wpSetDateField = function (sel, val) {
     $('body').children('#sp_entry_modal').remove();
     var $entryModal = $('#sp_entry_modal').appendTo('body');
     initDateFields($entryModal); // ผูก flatpickr ช่องวันที่ใน modal Semi (ย้ายไป body แล้ว)
+
+    // เตือนวันหยุดในช่องวันที่ของ modal เพิ่ม Semi — วันที่สั่ง (Order Date) / วันที่ต้องการรับ (Want Date)
+    // (modal ถูกย้ายไป body จึงอยู่นอก #planning_item_form → ต้องผูกแยกจากช่องหลัก)
+    window.wpBindHolidayWarn($entryModal.find('#sp_mdate')[0],    'วันที่สั่ง');
+    window.wpBindHolidayWarn($entryModal.find('#sp_custwant')[0], 'วันที่ต้องการรับ');
 
     // แถวที่กำลังแก้ไขผ่าน modal (null = โหมดเพิ่มใหม่)
     var $editingRow = null;

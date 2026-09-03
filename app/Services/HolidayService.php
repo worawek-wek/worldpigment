@@ -19,7 +19,7 @@ class HolidayService
     /** กันวนไม่จบถ้าตั้งค่าจนไม่เหลือวันทำการเลย (เช่น weekly_off ครบ 7 วัน) */
     private const MAX_SCAN_DAYS = 366;
 
-    /** cache ต่อ 1 request: 'Y-m-d' => true */
+    /** cache ต่อ 1 request: 'Y-m-d' => 'ชื่อวันหยุด' */
     private static ?array $holidayCache = null;
 
     /** ตาราง tb_holiday มีจริงไหม (server ที่ยังไม่ได้รัน migration/SQL จะไม่มี) */
@@ -83,7 +83,17 @@ class HolidayService
         self::$tableExists  = null;
     }
 
-    /** วันหยุดที่เปิดใช้งานทั้งหมด → map 'Y-m-d' => true (อ่าน DB ครั้งเดียวต่อ request) */
+    /**
+     * วันหยุดจากตาราง tb_holiday ที่เปิดใช้งาน → map 'Y-m-d' => 'ชื่อวันหยุด'
+     * (ไม่รวมวันหยุดประจำสัปดาห์ ซึ่งฝั่งเรียกใช้ตรวจเองจาก weeklyOff())
+     * ใช้ส่งให้ฝั่ง JS ตรวจวันหยุดแบบทันทีตอนผู้ใช้เลือกวัน
+     */
+    public static function activeMap(): array
+    {
+        return self::holidayMap();
+    }
+
+    /** วันหยุดที่เปิดใช้งานทั้งหมด → map 'Y-m-d' => 'ชื่อวันหยุด' (อ่าน DB ครั้งเดียวต่อ request) */
     private static function holidayMap(): array
     {
         if (self::$holidayCache !== null) {
@@ -100,11 +110,11 @@ class HolidayService
             return self::$holidayCache = [];
         }
 
-        $dates = Holiday::where('is_active', 'Y')->pluck('holiday_date');
+        $rows = Holiday::where('is_active', 'Y')->get(['holiday_date', 'name']);
 
         $map = [];
-        foreach ($dates as $d) {
-            $map[substr((string) $d, 0, 10)] = true;
+        foreach ($rows as $row) {
+            $map[substr((string) $row->holiday_date, 0, 10)] = (string) $row->name;
         }
 
         return self::$holidayCache = $map;

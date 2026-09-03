@@ -270,6 +270,70 @@
             if (!this._flatpickr) flatpickr(this, fpOptions);
         });
 
+        // ── เตือนเมื่อเลือกวันตรงวันหยุด (วันอาทิตย์ / tb_holiday) ในช่องวันที่ของ modal "สร้างแผน (Semi)" ──
+        // modal นี้อยู่บนหน้า index (เปิดได้โดยไม่ต้องโหลดฟอร์มแก้ไข Item) จึงต้องมี helper + ข้อมูลวันหยุดที่นี่เอง
+        // helper เป็น self-contained (revert ผ่าน flatpickr ของช่องเอง) เหมือนตัวใน planning-item-form — guard กันนิยามซ้ำ
+        window.WP_HOLIDAY_MAP = @json($holidays);   // { 'Y-m-d': 'ชื่อวันหยุด' }
+        window.WP_WEEKLY_OFF  = @json($weekly_off); // [0] = วันอาทิตย์ (0 = อา ... 6 = ส)
+
+        if (typeof window.wpHolidayReason !== 'function') {
+            window.wpHolidayReason = function (ymd) {
+                if (!ymd) return null;
+                var p = String(ymd).substr(0, 10).split('-');
+                if (p.length !== 3) return null;
+                var d = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+                var off = window.WP_WEEKLY_OFF || [];
+                if (off.indexOf(d.getDay()) !== -1) {
+                    return ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'][d.getDay()];
+                }
+                var map = window.WP_HOLIDAY_MAP || {};
+                var key = p[0] + '-' + p[1] + '-' + p[2];
+                if (Object.prototype.hasOwnProperty.call(map, key)) return map[key] || 'วันหยุด';
+                return null;
+            };
+        }
+
+        if (typeof window.wpBindHolidayWarn !== 'function') {
+            window.wpBindHolidayWarn = function (el, label) {
+                if (!el) return;
+                if (!el.hasAttribute('data-last')) el.setAttribute('data-last', (el.value || '').substr(0, 10));
+                $(el).off('change.wpholiday').on('change.wpholiday', function () {
+                    var val  = (this.value || '').substr(0, 10);
+                    var last = this.getAttribute('data-last') || '';
+                    if (val === last) return;
+                    var reason = window.wpHolidayReason(val);
+                    if (!reason) { this.setAttribute('data-last', val); return; }
+                    var self = this;
+                    var sp = val.split('-');
+                    var showTH = sp.length === 3 ? (sp[2] + '/' + sp[1] + '/' + sp[0]) : val;
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'วันที่เลือกตรงกับวันหยุด',
+                        html: label + ' <b>' + showTH + '</b><br>ตรงกับ <b>' + reason + '</b><br>ต้องการเลือกวันนี้หรือไม่?',
+                        showCancelButton: true,
+                        confirmButtonText: 'ยืนยันเลือกวันนี้',
+                        cancelButtonText: 'ยกเลิก'
+                    }).then(function (result) {
+                        if (result.isConfirmed) {
+                            self.setAttribute('data-last', val);
+                        } else {
+                            if (self._flatpickr) {
+                                if (last) self._flatpickr.setDate(last, false, 'Y-m-d');
+                                else self._flatpickr.clear();
+                            } else {
+                                self.value = last;
+                            }
+                            self.setAttribute('data-last', last);
+                        }
+                    });
+                });
+            };
+        }
+
+        // ผูกช่องวันที่สั่ง (Order Date) / วันที่ต้องการรับ (Want Date) ของ modal "สร้างแผน (Semi)"
+        window.wpBindHolidayWarn($('#cs_mdate')[0],    'วันที่สั่ง');
+        window.wpBindHolidayWarn($('#cs_custwant')[0], 'วันที่ต้องการรับ');
+
         oTable = $('#dataTable').DataTable({
             processing: true,
             serverSide: true,

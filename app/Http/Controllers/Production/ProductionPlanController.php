@@ -17,6 +17,7 @@ use App\Models\Department;
 use App\Models\Emp;
 use App\Models\ProdMethod;
 use App\Models\PlanningProdMethod;
+use App\Services\HolidayService;
 
 class ProductionPlanController extends Controller
 {
@@ -28,6 +29,10 @@ class ProductionPlanController extends Controller
 
         return view('production-planning.planning.index', [
             'departments' => $departments,
+            // วันหยุด (tb_holiday ที่เปิดใช้งาน) + วันหยุดประจำสัปดาห์ — ให้ JS เตือนตอนเลือกวันหยุด
+            // ในช่องวันที่ของ modal "สร้างแผน (Semi)" ที่อยู่บนหน้านี้ (เปิดได้โดยไม่ต้องเปิดฟอร์มแก้ไข Item ก่อน)
+            'holidays'    => HolidayService::activeMap(),
+            'weekly_off'  => HolidayService::weeklyOff(),
         ]);
     }
 
@@ -512,6 +517,9 @@ class ProductionPlanController extends Controller
             'selected_emp' => $selected_emp,
             'prod_methods'     => $prod_methods,
             'prod_method_rows' => $prod_method_rows,
+            // วันหยุด (tb_holiday ที่เปิดใช้งาน) + วันหยุดประจำสัปดาห์ — ให้ JS เตือนตอนเลือกวันหยุด
+            'holidays'         => HolidayService::activeMap(),
+            'weekly_off'       => HolidayService::weeklyOff(),
         ])->render();
 
         return response()->json([
