@@ -42,6 +42,15 @@
                                     placeholder="ค้นหา Item No., รหัสลูกค้า, Order No., Company">
                             </div>
                             <div class="col-md-2">
+                                <label class="form-label mb-1 small text-muted">แผนก</label>
+                                <select id="searchCompany" class="form-select">
+                                    <option value="">ทุกแผนก</option>
+                                    @foreach ($companies as $company)
+                                        <option value="{{ $company }}">{{ $company }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-2">
                                 <label class="form-label mb-1 small text-muted">สถานะ</label>
                                 <select id="searchStatus" class="form-select">
                                     <option value="">ทุกสถานะ</option>
@@ -154,6 +163,7 @@
                 url: "{{ route('production.semipigment.datatable') }}",
                 data: function (d) {
                     d.search = $('#searchInput').val();
+                    d.company = $('#searchCompany').val();
                     d.status = $('#searchStatus').val();
                     d.date_field = $('#searchDateField').val();
                     d.date_start = $('#searchDateStart').val();
@@ -187,6 +197,7 @@
 
     $(document).on('keyup', '#searchInput', function () { oTable.draw(); });
     $(document).on('change', '#searchStatus', function () { oTable.draw(); });
+    $(document).on('change', '#searchCompany', function () { oTable.draw(); });
 
     // ค้นหาช่วงวันที่ (วันที่สั่ง / วันที่ขอ / วันที่ต้องการรับ) — redraw เมื่อเปลี่ยนฟิลด์หรือวันที่
     $(document).on('change', '#searchDateField, #searchDateStart, #searchDateEnd', function () {
@@ -209,6 +220,7 @@
 
         var params = $.param({
             search:     $('#searchInput').val(),
+            company:    $('#searchCompany').val(),
             status:     $('#searchStatus').val(),
             date_field: $('#searchDateField').val(),
             date_start: $('#searchDateStart').val(),
@@ -224,6 +236,7 @@
 
         var params = $.param({
             search:     $('#searchInput').val(),
+            company:    $('#searchCompany').val(),
             status:     $('#searchStatus').val(),
             date_field: $('#searchDateField').val(),
             date_start: $('#searchDateStart').val(),

@@ -24,7 +24,28 @@ class SemiPigmentController extends Controller
 
     public function index()
     {
-        return view('production-planning.semi-pigment.index');
+        return view('production-planning.semi-pigment.index', [
+            'companies' => $this->companyOptions(),
+        ]);
+    }
+
+    /**
+     * รายชื่อแผนก (company) ที่มีอยู่จริงในรายการ Semi — ไม่ซ้ำ ตัดค่าว่าง เรียงแบบธรรมชาติ
+     * ใช้เป็นตัวเลือกใน dropdown กรองแผนกของหน้ารายการ (แทนการ hardcode)
+     */
+    private function companyOptions(): array
+    {
+        $codes = SemiPigment::query()
+            ->where('type', 'semi')
+            ->whereNotNull('company')
+            ->where('company', '!=', '')
+            ->distinct()
+            ->pluck('company')
+            ->all();
+
+        natcasesort($codes);
+
+        return array_values($codes);
     }
 
     /**
@@ -265,6 +286,10 @@ class SemiPigmentController extends Controller
 
         if (request()->filled('search')) {
             $parts[] = 'คำค้นหา: '.request('search');
+        }
+
+        if (request()->filled('company')) {
+            $parts[] = 'แผนก: '.request('company');
         }
 
         $statusLabels = SemiPigment::$statusLabels;
@@ -698,8 +723,9 @@ class SemiPigmentController extends Controller
 
     private function baseQuery()
     {
-        $search = request('search');
-        $type   = request('type');
+        $search  = request('search');
+        $type    = request('type');
+        $company = request('company'); // กรองแผนก (CP/MB/DB/SPP) แบบ exact จาก dropdown
 
         // ค้นหาช่วงวันที่: เลือกฟิลด์ได้เฉพาะ created_at (วันที่ขอ) / order_date (วันที่สั่ง) / want_date (วันที่ต้องการรับ)
         // ใช้ whitelist กัน SQL injection ที่ชื่อคอลัมน์ — ค่าเริ่มต้นตรงกับตัวเลือกแรกของ dropdown ในหน้า index
@@ -719,6 +745,8 @@ class SemiPigmentController extends Controller
                 });
             })
             ->when(!empty($type), fn ($q) => $q->where('type', $type))
+            // กรองแผนก (company) แบบตรงตัว เมื่อเลือกจาก dropdown
+            ->when(!empty($company), fn ($q) => $q->where('company', $company))
             // กรองช่วงวันที่ตามฟิลด์ที่เลือก — ระบุด้านเดียวหรือทั้งช่วงก็ได้
             ->when(!empty($date_start), function ($q) use ($date_field, $date_start) {
                 $q->whereDate('tb_semi_pigment.'.$date_field, '>=', $date_start);
