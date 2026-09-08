@@ -373,7 +373,7 @@
                 { 'className': "text-center", data: 'company', name: 'company', orderable: true },
                 { 'className': "text-center col-inplan", data: 'inplan', name: 'tb_planning.inplan', orderable: true },
                 { 'className': "text-center col-custwant", data: 'custwant', name: 'tb_planning.custwant', orderable: true },
-                { 'className': "text-center", data: 'packing_datetie', name: 'tb_planning.packing_datetie', orderable: true, searchable: false },
+                { 'className': "text-center", data: 'packing_display', name: 'packing_display', orderable: false, searchable: false },
                 { 'className': "text-left", data: 'itemno', name: 'tb_planning.itemno', orderable: true },
                 // { 'className': "text-left", data: 'quantity', name: 'quantity', orderable: false },
                 { 'className': "text-left", data: 'machine_no', name: 'tb_planning.machine_no', orderable: true },

@@ -50,7 +50,7 @@
                         {{ $row->custwant ? \Carbon\Carbon::parse($row->custwant)->format('d/m/Y') : '-' }}
                     </td>
                     <td class="text-center">
-                        {{ $row->packing_datetie ? \Carbon\Carbon::parse($row->packing_datetie)->format('d/m/Y H:i') : '-' }}
+                        {{ $row->pk_last ? \Carbon\Carbon::parse($row->pk_last)->format('d/m/Y H:i') : '-' }}@if($row->pk_last && ($row->pk_count ?? 0) > 1) ({{ (int) $row->pk_count }} รายการ)@endif
                     </td>
                     <td>{{ $row->itemno ?: '-' }}</td>
                     <td class="text-end">{{ $row->quantity !== null ? number_format($row->quantity, 2) : '-' }}</td>

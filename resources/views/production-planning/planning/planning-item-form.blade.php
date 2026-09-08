@@ -457,26 +457,62 @@
             </div>
         </div>
 
+        {{-- ── การ์ดการบรรจุ: เพิ่มได้หลายแถว (บันทึกลงตารางลูก tb_planning_packing) ── --}}
+        {{-- item ที่จบงานแล้ว (end_job = Y) → ล็อกการบรรจุ: เพิ่ม/แก้ไข/ลบไม่ได้ (ฝั่ง server ก็ไม่ sync ให้ ดู saveItem) --}}
+        @php $packing_locked = ($planning_item?->end_job ?? 'N') === 'Y'; @endphp
         <div class="row p-3 rounded" style="background-color: #eaffd9; border: 1px dashed #04ac2e;">
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">วันเวลาที่บรรจุเสร็จ (Packing Datetime)</label>
-                    {{-- flatpickr แบบมีเวลา: ช่องที่เห็นแสดง d/m/Y H:i (dd/mm/yyyy + เวลา) แต่ค่าจริงส่ง Y-m-d H:i --}}
-                    <input type="text" name="packing_datetie"
-                        value="{{ $planning_item?->packing_datetie ? \Carbon\Carbon::parse($planning_item->packing_datetie)->format('Y-m-d H:i') : '' }}"
-                        class="form-control flatpickr-datetime" autocomplete="off" placeholder="วว/ดด/ปปปป ชช:นน">
+            <div class="col-12 d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0 text-primary">
+                    <i class="ti ti-package me-1"></i>การบรรจุ
+                    @if($packing_locked)
+                        <span class="badge bg-label-success ms-2"><i class="ti ti-lock me-1"></i>จบงานแล้ว — แก้ไขการบรรจุไม่ได้</span>
+                    @endif
+                </h6>
+                @unless($packing_locked)
+                    <button type="button" id="btn_add_packing" class="btn btn-sm btn-primary">
+                        <i class="ti ti-plus me-1"></i>เพิ่ม
+                    </button>
+                @endunless
+            </div>
+            <div class="col-12">
+                {{-- หัวคอลัมน์ (แสดงครั้งเดียว) --}}
+                <div class="row g-2 fw-semibold small text-muted mb-1 d-none d-md-flex">
+                    <div class="col-md-4">วันเวลาที่บรรจุเสร็จ (Packing Datetime)</div>
+                    <div class="col-md-3">น้ำหนักบรรจุได้ (Weight Packing)</div>
+                    <div class="col-md-4">หมายเหตุการบรรจุ (Pack Remark)</div>
+                    <div class="col-md-1"></div>
                 </div>
-                <div class="col-md-3 mb-3">
-                    <label class="form-label">น้ำหนักบรรจุได้ (Weight Packing)</label>
-                    <input type="text" name="weight_packing" inputmode="decimal"
-                        value="{{ $planning_item && $planning_item->weight_packing !== null ? number_format((float) $planning_item->weight_packing, 2) : '' }}"
-                        class="form-control js-number-format" placeholder="0.00">
-                </div>
-                <div class="col-md-5 mb-3">
-                    <label class="form-label">หมายเหตุการบรรจุ (Pack Remark)</label>
-                    <input type="text" name="pack_remark"
-                        value="{{ $planning_item?->pack_remark ?? '' }}"
-                        class="form-control" placeholder="หมายเหตุการบรรจุ">
+                <div id="packing_rows" data-locked="{{ $packing_locked ? '1' : '0' }}">
+                    @if($packing_locked)
+                        {{-- ล็อก: แสดงอ่านอย่างเดียว (ไม่มี name → ไม่ถูกส่ง, ไม่มีปุ่มลบ) --}}
+                        @forelse($packing_rows as $row)
+                            <div class="row g-2 align-items-center mb-2 packing-row">
+                                <div class="col-md-4"><input type="text" class="form-control form-control-sm" value="{{ $row->packing_datetime ? \Carbon\Carbon::parse($row->packing_datetime)->format('d/m/Y H:i') : '' }}" disabled></div>
+                                <div class="col-md-3"><input type="text" class="form-control form-control-sm text-end" value="{{ $row->weight_packing !== null ? number_format((float) $row->weight_packing, 2) : '' }}" disabled></div>
+                                <div class="col-md-4"><input type="text" class="form-control form-control-sm" value="{{ $row->pack_remark ?? '' }}" disabled></div>
+                                <div class="col-md-1"></div>
+                            </div>
+                        @empty
+                            <div class="text-muted small py-1">— ไม่มีข้อมูลการบรรจุ —</div>
+                        @endforelse
+                    @else
+                        @forelse($packing_rows as $row)
+                            <div class="row g-2 align-items-center mb-2 packing-row">
+                                {{-- flatpickr แบบมีเวลา: ช่องที่เห็นแสดง d/m/Y H:i แต่ค่าจริงส่ง Y-m-d H:i --}}
+                                <div class="col-md-4"><input type="text" name="packing_datetime[]" class="form-control form-control-sm flatpickr-datetime" autocomplete="off" placeholder="วว/ดด/ปปปป ชช:นน" value="{{ $row->packing_datetime ? \Carbon\Carbon::parse($row->packing_datetime)->format('Y-m-d H:i') : '' }}"></div>
+                                <div class="col-md-3"><input type="text" name="weight_packing[]" inputmode="decimal" class="form-control form-control-sm js-number-format" placeholder="0.00" value="{{ $row->weight_packing !== null ? number_format((float) $row->weight_packing, 2) : '' }}"></div>
+                                <div class="col-md-4"><input type="text" name="pack_remark[]" class="form-control form-control-sm" placeholder="หมายเหตุการบรรจุ" value="{{ $row->pack_remark ?? '' }}"></div>
+                                <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger btn_remove_packing" title="ลบ"><i class="ti ti-trash"></i></button></div>
+                            </div>
+                        @empty
+                            <div class="row g-2 align-items-center mb-2 packing-row">
+                                <div class="col-md-4"><input type="text" name="packing_datetime[]" class="form-control form-control-sm flatpickr-datetime" autocomplete="off" placeholder="วว/ดด/ปปปป ชช:นน"></div>
+                                <div class="col-md-3"><input type="text" name="weight_packing[]" inputmode="decimal" class="form-control form-control-sm js-number-format" placeholder="0.00"></div>
+                                <div class="col-md-4"><input type="text" name="pack_remark[]" class="form-control form-control-sm" placeholder="หมายเหตุการบรรจุ"></div>
+                                <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger btn_remove_packing" title="ลบ"><i class="ti ti-trash"></i></button></div>
+                            </div>
+                        @endforelse
+                    @endif
                 </div>
             </div>
         </div>
@@ -992,10 +1028,65 @@ window.wpBindHolidayWarn = function (el, label) {
         }
     });
 
-    // ── ติ๊ก "จบงาน (End Job)" → เติมวันเวลาที่บรรจุเสร็จเป็นเวลาปัจจุบัน (เฉพาะเมื่อช่องยังว่าง) ──
-    // ช่อง packing_datetie เป็น flatpickr (altInput) → ต้องตั้ง/ล้างผ่าน instance เพื่ออัปเดตทั้งช่องที่แสดงและค่าจริง
+    // ── การ์ด "การบรรจุ": เพิ่ม/ลบแถว (บันทึกลง tb_planning_packing) ──
+    function initPackingDateFields($scope) {
+        $scope.find('.flatpickr-datetime').each(function () {
+            if (!this._flatpickr) flatpickr(this, window.wpFpDateTimeOptions);
+        });
+    }
+    function packingRowHtml() {
+        return '<div class="row g-2 align-items-center mb-2 packing-row">'
+            + '<div class="col-md-4"><input type="text" name="packing_datetime[]" class="form-control form-control-sm flatpickr-datetime" autocomplete="off" placeholder="วว/ดด/ปปปป ชช:นน"></div>'
+            + '<div class="col-md-3"><input type="text" name="weight_packing[]" inputmode="decimal" class="form-control form-control-sm js-number-format" placeholder="0.00"></div>'
+            + '<div class="col-md-4"><input type="text" name="pack_remark[]" class="form-control form-control-sm" placeholder="หมายเหตุการบรรจุ"></div>'
+            + '<div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger btn_remove_packing" title="ลบ"><i class="ti ti-trash"></i></button></div>'
+            + '</div>';
+    }
+    $('#btn_add_packing').on('click', function () {
+        var $row = $(packingRowHtml()).appendTo('#packing_rows');
+        initPackingDateFields($row); // ผูก flatpickr แบบมีเวลาให้แถวใหม่
+        recalcWeightProducedFromPacking(); // แถวใหม่ยังว่าง แต่เรียกให้สถานะสอดคล้องเสมอ
+    });
+    // ลบแถว; ถ้าเหลือแถวเดียวให้ล้างค่าแทนการลบ (คงไว้อย่างน้อย 1 แถว)
+    $('#packing_rows').on('click', '.btn_remove_packing', function () {
+        var $rows = $('#packing_rows .packing-row');
+        if ($rows.length <= 1) {
+            $(this).closest('.packing-row').find('input').each(function () {
+                if (this._flatpickr) this._flatpickr.clear();
+                else this.value = '';
+            });
+        } else {
+            $(this).closest('.packing-row').remove();
+        }
+        recalcWeightProducedFromPacking(); // ผลรวมลดตามหลังลบ/ล้างแถว
+    });
+
+    // ── auto-รวมน้ำหนักบรรจุทุกแถว → เติมช่อง "น้ำหนักที่ผลิตได้ (Weight Produced)" ──
+    // weight_produced = ผลรวม weight_packing[] ทุกแถว (อัปเดตสดขณะพิมพ์/เพิ่ม/ลบแถว)
+    // - ยังพิมพ์ weight_produced เองได้ แต่จะถูกทับเมื่อแก้น้ำหนักบรรจุ
+    // - ไม่เรียกตอนโหลดฟอร์ม → คงค่าเดิมที่บันทึกไว้จนกว่าผู้ใช้จะแตะน้ำหนักบรรจุ
+    // - item ที่จบงานแล้ว: ช่องบรรจุ disabled + ไม่มี name → selector ไม่เจอ → ไม่ทำงาน (คงค่าเดิม)
+    function recalcWeightProducedFromPacking() {
+        var sum = 0, hasValue = false;
+        $('#packing_rows input[name="weight_packing[]"]').each(function () {
+            var raw = String(this.value || '').replace(/[^\d.]/g, '');
+            if (raw === '' || raw === '.') return;
+            var n = parseFloat(raw);
+            if (!isNaN(n)) { sum += n; hasValue = true; }
+        });
+        var $wp = $('#planning_item_form input[name="weight_produced"]');
+        if (!$wp.length) return;
+        $wp.val(hasValue ? sum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '');
+    }
+    // พิมพ์/แก้/ออกจากช่องน้ำหนักบรรจุ (รองรับแถวที่เพิ่มทีหลังด้วย delegation)
+    $('#packing_rows').on('input change blur', 'input[name="weight_packing[]"]', function () {
+        recalcWeightProducedFromPacking();
+    });
+
+    // ── ติ๊ก "จบงาน (End Job)" → เติมวันเวลาที่บรรจุเสร็จเป็นเวลาปัจจุบันที่ "แถวบรรจุแถวสุดท้าย" (เฉพาะเมื่อช่องยังว่าง) ──
+    // ช่อง packing_datetime เป็น flatpickr (altInput) → ต้องตั้ง/ล้างผ่าน instance เพื่ออัปเดตทั้งช่องที่แสดงและค่าจริง
     $('#planning_item_end_job').on('change', function () {
-        var packingEl = $('input[name="packing_datetie"]')[0];
+        var packingEl = $('#packing_rows .packing-row:last input[name="packing_datetime[]"]')[0];
         if (!packingEl) return;
         var fp = packingEl._flatpickr;
         if (this.checked) {
@@ -1006,7 +1097,7 @@ window.wpBindHolidayWarn = function (el, label) {
                 else packingEl.value = '';
             }
         } else {
-            // ปลดติ๊ก → ล้างค่าช่องบรรจุ
+            // ปลดติ๊ก → ล้างค่าช่องบรรจุแถวสุดท้าย
             if (fp) fp.clear();
             else packingEl.value = '';
         }

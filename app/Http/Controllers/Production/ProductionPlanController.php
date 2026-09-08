@@ -17,6 +17,7 @@ use App\Models\Department;
 use App\Models\Emp;
 use App\Models\ProdMethod;
 use App\Models\PlanningProdMethod;
+use App\Models\PlanningPacking;
 use App\Services\HolidayService;
 
 class ProductionPlanController extends Controller
@@ -54,8 +55,18 @@ class ProductionPlanController extends Controller
                 return $date;
             })
             ->editColumn('custwant', fn ($row) => $row->custwant ? \Carbon\Carbon::parse($row->custwant)->format('d/m/Y') : '-')
-            // วันเวลาที่บรรจุเสร็จ (packing_datetie) — เก็บเป็น datetime แสดง วัน/เดือน/ปี ชั่วโมง:นาที
-            ->editColumn('packing_datetie', fn ($row) => $row->packing_datetie ? \Carbon\Carbon::parse($row->packing_datetie)->format('d/m/Y H:i') : '-')
+            // วันเวลาที่บรรจุเสร็จ — จากตารางลูก tb_planning_packing: แสดงวันเวลาล่าสุด + "(N รายการ)" เมื่อมีหลายแถว
+            // ใช้ addColumn คีย์ใหม่ (packing_display) ไม่ผูกกับคอลัมน์เดิม packing_datetie จึงไม่ชนตอน drop
+            ->addColumn('packing_display', function ($row) {
+                if (!$row->pk_last) {
+                    return '-';
+                }
+                $text = \Carbon\Carbon::parse($row->pk_last)->format('d/m/Y H:i');
+                if (($row->pk_count ?? 0) > 1) {
+                    $text .= ' <span class="badge bg-label-secondary">'.((int) $row->pk_count).' รายการ</span>';
+                }
+                return $text;
+            })
             // เลขที่ใบเบิก: ดึงจาก red_bill_code (ว่าง = แสดง -)
             ->addColumn('red_bill_code', fn ($row) => $row->red_bill_code ?: '-')
             // สถานะภายใน: สถานะของ planning item แถวนี้เอง (planning_status ของแถว)
@@ -86,7 +97,7 @@ class ProductionPlanController extends Controller
             })
             // sort คอลัมน์แผนก = ตามแผนกจริงของ item (COALESCE item→header) ให้ตรงกับที่แสดง
             ->orderColumn('company', 'COALESCE(tb_planning.company, tb_planning_header.company) $1')
-            ->rawColumns(['inplan', 'inner_status', 'btnedit']) // 👈 บอกให้ column นี้ render HTML
+            ->rawColumns(['inplan', 'inner_status', 'packing_display', 'btnedit']) // 👈 บอกให้ column นี้ render HTML
             ->make(true);
     }
 
@@ -123,6 +134,12 @@ class ProductionPlanController extends Controller
                 'tb_planning_header.orderno as orderno',
                 'tb_planning_header.planning_code as planning_code',
                 'tb_planning_header.mdate as header_mdate',
+                // การบรรจุย้ายไปตารางลูก (tb_planning_packing) — สรุปมาแสดงเป็นค่าเดียว:
+                //   pk_last  = วันเวลาบรรจุล่าสุด · pk_count = จำนวนแถวบรรจุ (ใช้ต่อท้าย "(N รายการ)")
+                // ⚠ ใช้ alias คนละชื่อกับคอลัมน์เดิม (packing_datetie) เพื่อกันชื่อชนกับ tb_planning.* ตอน Yajra
+                //   ห่อ query เป็น derived table (error 1060 Duplicate column) — โค้ดจึงทำงานได้ทั้งก่อน/หลัง drop คอลัมน์เดิม
+                DB::raw('(SELECT MAX(packing_datetime) FROM tb_planning_packing WHERE tb_planning_packing.planning_id = tb_planning.id) as pk_last'),
+                DB::raw('(SELECT COUNT(*) FROM tb_planning_packing WHERE tb_planning_packing.planning_id = tb_planning.id) as pk_count'),
             ])
             ->when(!empty($search), function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
@@ -172,22 +189,27 @@ class ProductionPlanController extends Controller
             ->when(!empty($date_end), function ($query) use ($date_field, $date_end) {
                 $query->whereDate('tb_planning.'.$date_field, '<=', $date_end);
             })
-            // กรองตามวันเวลาบรรจุเสร็จ: เฉพาะวันที่บรรจุที่เลือก และถ้าระบุช่วงเวลาก็กรองตามเวลาในวันนั้น
+            // กรองตามวันเวลาบรรจุเสร็จ (จากตารางลูก tb_planning_packing): มีแถวบรรจุที่ตรงวันที่เลือก
+            //   และถ้าระบุช่วงเวลาก็กรองตามเวลาในวันนั้น (whereExists กับตารางลูก)
             ->when($has_packing_filter, function ($query) use ($packing_date, $packing_time_start, $packing_time_end) {
-                $query->whereDate('tb_planning.packing_datetie', '=', $packing_date);
-                if (!empty($packing_time_start)) {
-                    $query->whereTime('tb_planning.packing_datetie', '>=', $packing_time_start);
-                }
-                if (!empty($packing_time_end)) {
-                    $query->whereTime('tb_planning.packing_datetie', '<=', $packing_time_end);
-                }
+                $query->whereExists(function ($sub) use ($packing_date, $packing_time_start, $packing_time_end) {
+                    $sub->select(DB::raw(1))->from('tb_planning_packing')
+                        ->whereColumn('tb_planning_packing.planning_id', 'tb_planning.id')
+                        ->whereDate('tb_planning_packing.packing_datetime', '=', $packing_date);
+                    if (!empty($packing_time_start)) {
+                        $sub->whereTime('tb_planning_packing.packing_datetime', '>=', $packing_time_start);
+                    }
+                    if (!empty($packing_time_end)) {
+                        $sub->whereTime('tb_planning_packing.packing_datetime', '<=', $packing_time_end);
+                    }
+                });
             })
             // ลำดับเริ่มต้น (เฉพาะเมื่อผู้ใช้ยังไม่คลิก sort หัวคอลัมน์ = ไม่มี order[] จาก DataTables):
-            //   ปกติเรียงตาม id ล่าสุด; ถ้าค้นตามวันเวลาบรรจุเสร็จให้เรียงตามวันเวลานั้นก่อน แล้วตามด้วย id
+            //   ปกติเรียงตาม id ล่าสุด; ถ้าค้นตามวันเวลาบรรจุเสร็จให้เรียงตามวันเวลาบรรจุล่าสุดก่อน แล้วตามด้วย id
             // เมื่อผู้ใช้คลิก sort (มี order[]) → ปล่อยให้ Yajra จัดการ ไม่ใส่ default ทับ (ไม่งั้น sort ไม่มีผล)
             ->when(empty(request('order')), function ($query) use ($has_packing_filter) {
                 if ($has_packing_filter) {
-                    $query->orderBy('tb_planning.packing_datetie', 'desc');
+                    $query->orderByRaw('(SELECT MAX(packing_datetime) FROM tb_planning_packing WHERE tb_planning_packing.planning_id = tb_planning.id) desc');
                 }
                 $query->orderBy('tb_planning.id', 'desc');
             });
@@ -272,7 +294,10 @@ class ProductionPlanController extends Controller
                 $inplan .= ' (กะ '.$row->work_shift.')';
             }
             $custwant = $row->custwant ? \Carbon\Carbon::parse($row->custwant)->format('d/m/Y') : '-';
-            $packing  = $row->packing_datetie ? \Carbon\Carbon::parse($row->packing_datetie)->format('d/m/Y H:i') : '-';
+            $packing  = $row->pk_last ? \Carbon\Carbon::parse($row->pk_last)->format('d/m/Y H:i') : '-';
+            if ($row->pk_last && ($row->pk_count ?? 0) > 1) {
+                $packing .= ' ('.((int) $row->pk_count).' รายการ)';
+            }
             $status   = $row->inner_status_text.' ('.$row->end_job_label.')';
 
             $sheet->setCellValue("A{$r}", ++$rownum);
@@ -522,6 +547,8 @@ class ProductionPlanController extends Controller
             'selected_emp' => $selected_emp,
             'prod_methods'     => $prod_methods,
             'prod_method_rows' => $prod_method_rows,
+            // การบรรจุ (tb_planning_packing) — แถวเดิมของ item (item ใหม่ = ว่าง)
+            'packing_rows'     => $planning_item ? $planning_item->packings : collect(),
             'planning_remarks' => $planning_remarks,
             // วันหยุด (tb_holiday ที่เปิดใช้งาน) + วันหยุดประจำสัปดาห์ — ให้ JS เตือนตอนเลือกวันหยุด
             'holidays'         => HolidayService::activeMap(),
@@ -589,7 +616,8 @@ class ProductionPlanController extends Controller
     {
         // ช่องตัวเลขในฟอร์มแสดงผลด้วย number_format จึงอาจมีจุลภาคหลักพัน (เช่น "1,250.00")
         // ตัดจุลภาคออกก่อน validate ไม่งั้น rule numeric จะไม่ผ่าน
-        foreach (['quantity', 'weight', 'weight_produced', 'weight_packing'] as $numeric_field) {
+        // หมายเหตุ: weight_packing ย้ายไปเป็น array (ตารางลูก tb_planning_packing) — ตัดคอมมาใน syncPackings แทน
+        foreach (['quantity', 'weight', 'weight_produced'] as $numeric_field) {
             if ($request->filled($numeric_field)) {
                 $request->merge([
                     $numeric_field => str_replace(',', '', $request->input($numeric_field)),
@@ -605,7 +633,6 @@ class ProductionPlanController extends Controller
             'lot'                => 'nullable|string|max:255',
             'weight'             => 'nullable|numeric|min:0',
             'weight_produced'    => 'nullable|numeric|min:0',
-            'weight_packing'     => 'nullable|numeric|min:0',
             'red_bill_code'      => 'nullable|string|max:255',
             'cycles'             => 'nullable|string|max:25',
             'end_job'            => 'nullable|in:Y,N',
@@ -622,8 +649,13 @@ class ProductionPlanController extends Controller
             'qc_date'            => 'nullable|date',
             'qc_time'            => 'nullable|string|max:10',
             'qc_status'          => 'nullable|string|max:255',
-            'packing_datetie'    => 'nullable|string|max:255',
-            'pack_remark'        => 'nullable|string|max:1000',
+            // การบรรจุ (ตารางลูก tb_planning_packing) — array คู่ขนาน
+            'packing_datetime'   => 'nullable|array',
+            'packing_datetime.*' => 'nullable|string|max:255',
+            'weight_packing'     => 'nullable|array',
+            'weight_packing.*'   => 'nullable|string|max:255',
+            'pack_remark'        => 'nullable|array',
+            'pack_remark.*'      => 'nullable|string|max:1000',
             'shortage_remark'    => 'nullable|string|max:1000',
             'planning_remark'    => 'nullable|string|max:1000',
             'mdate'              => 'nullable|date',
@@ -655,11 +687,13 @@ class ProductionPlanController extends Controller
             ]);
         }
 
+        // หมายเหตุ: การบรรจุ (packing_datetime / weight_packing / pack_remark) ไม่อยู่ที่นี่แล้ว
+        // ย้ายไปตารางลูก tb_planning_packing (sync ผ่าน syncPackings) — เก็บได้หลายแถวต่อ 1 planning
         $fields = $request->only([
             'planning_header_id', 'company', 'itemno', 'quantity', 'lot', 'weight',
-            'weight_produced', 'weight_packing', 'red_bill_code', 'cycles', 'end_job', 'empno',
+            'weight_produced', 'red_bill_code', 'cycles', 'end_job', 'empno',
             'machine_no', 'plan_type', 'planning_status', 'inplan', 'work_shift', 'start_date', 'start_time', 'end_date', 'end_time',
-            'qc_date', 'qc_time', 'qc_status', 'packing_datetie', 'pack_remark',
+            'qc_date', 'qc_time', 'qc_status',
             'mdate', 'custwant', 'senddate', 'remark', 'shortage_remark', 'planning_remark'
         ]);
 
@@ -668,6 +702,11 @@ class ProductionPlanController extends Controller
 
         $planning_id = $request->planning_id;
         $is_update   = !empty($planning_id);
+
+        // การบรรจุจะถูกล็อกเมื่อ item "จบงานอยู่แล้ว" (สถานะ end_job ใน DB ก่อนบันทึกครั้งนี้ = Y)
+        //   → ไม่ sync การบรรจุเลย (กันเพิ่ม/แก้ไข/ลบ แม้ client ส่งมา) ให้ตรงกับฟอร์มที่ล็อกช่องไว้
+        //   ยึด "สถานะเดิม" ไม่ใช่ค่าที่ส่งมา: ครั้งที่เพิ่งกดปิดงาน (เดิม N) ยังบันทึกการบรรจุได้ตามปกติ
+        $was_ended = $is_update && (optional(Planning::find($planning_id))->end_job === 'Y');
 
         // เงื่อนไขปิดงาน (end_job = Y): ถ้า item มีคำขอ Semi แผน Semi ทุกใบต้องถูกปิดออเดอร์ (end_order = Y) ก่อน
         // ตรวจซ้ำฝั่ง server กันการ bypass attribute disabled ฝั่ง client
@@ -725,6 +764,12 @@ class ProductionPlanController extends Controller
 
             // 2) sync สถานะวิธีการผลิต (การ์ดสีน้ำเงิน) — ลบของเดิมแล้ว insert ใหม่จาก array ที่ส่งมา
             $this->syncProdMethods($planning_id, $request);
+
+            // 2.1) sync การบรรจุ (การ์ดสีเขียว) — ลบของเดิมแล้ว insert ใหม่จาก array ที่ส่งมา (tb_planning_packing)
+            //      ข้ามเมื่อ item จบงานอยู่แล้ว (การบรรจุถูกล็อก) → ไม่แตะแถวบรรจุเดิม
+            if (!$was_ended) {
+                $this->syncPackings($planning_id, $request);
+            }
 
             // 3) ปิดออเดอร์อัตโนมัติ (auto-close end_order):
             //    เมื่อรอบนี้เป็นการ "ปิดงาน" item (end_job='Y') และทำให้ทุก item ในต้นไม้ของ header
@@ -796,6 +841,48 @@ class ProductionPlanController extends Controller
                 'start_time'     => $start ?: null,
                 'end_time'       => $end ?: null,
                 'sort'           => $i,
+            ]);
+        }
+    }
+
+    /**
+     * sync การบรรจุ (tb_planning_packing) ของ planning หนึ่ง ๆ
+     * ลบแถวเดิมทั้งหมดแล้ว insert ใหม่จาก array คู่ขนานที่ส่งมา (ข้ามแถวที่ว่างทั้งหมด)
+     * เรียกภายในทรานแซกชันของ saveItem
+     */
+    private function syncPackings($planning_id, Request $request): void
+    {
+        PlanningPacking::where('planning_id', $planning_id)->delete();
+
+        $datetimes = $request->input('packing_datetime', []);
+        $weights   = $request->input('weight_packing', []);
+        $remarks   = $request->input('pack_remark', []);
+
+        $count = max(count($datetimes), count($weights), count($remarks));
+
+        for ($i = 0; $i < $count; $i++) {
+            $datetime = $datetimes[$i] ?? null;
+            $weight   = $weights[$i]   ?? null;
+            $remark   = $remarks[$i]   ?? null;
+
+            $datetime = ($datetime !== null && trim((string) $datetime) !== '') ? trim((string) $datetime) : null;
+            $remark   = ($remark   !== null && trim((string) $remark)   !== '') ? trim((string) $remark)   : null;
+
+            // ช่องน้ำหนักมาจาก js-number-format (มีคอมมาหลักพัน) → ตัดคอมมาแล้วแปลงเป็นตัวเลข
+            $weight_raw = ($weight !== null) ? str_replace(',', '', trim((string) $weight)) : '';
+            $weight_val = ($weight_raw !== '' && is_numeric($weight_raw)) ? (float) $weight_raw : null;
+
+            // ข้ามแถวที่ว่างทั้งหมด
+            if ($datetime === null && $weight_val === null && $remark === null) {
+                continue;
+            }
+
+            PlanningPacking::create([
+                'planning_id'      => $planning_id,
+                'packing_datetime' => $datetime,
+                'weight_packing'   => $weight_val,
+                'pack_remark'      => $remark,
+                'sort'             => $i,
             ]);
         }
     }

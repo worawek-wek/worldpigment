@@ -129,10 +129,13 @@ class OrderChangeRequestController extends Controller
 
             // รายการสินค้าตรงของ header (ไม่ไล่ sub-header semi/pigment)
             // ดึงทั้งแถวมา group ในฝั่ง PHP เพื่อเลือก "แถวตัวแทน" ตาม senddate_changed_at ได้ (SQL GROUP BY ทำไม่ได้ตรง ๆ)
+            // weight_packing ย้ายไปตารางลูก tb_planning_packing แล้ว → รวมผลด้วย subquery (ผลรวมทุกแถวบรรจุของ item)
             $plannings = DB::table('tb_planning')
                 ->where('planning_header_id', $h->id)
                 ->orderBy('id', 'asc')
-                ->get(['id', 'itemno', 'red_bill_code', 'weight_packing', 'senddate', 'senddate_log', 'senddate_changed_at']);
+                ->select('id', 'itemno', 'red_bill_code', 'senddate', 'senddate_log', 'senddate_changed_at')
+                ->selectRaw('(SELECT COALESCE(SUM(weight_packing), 0) FROM tb_planning_packing WHERE tb_planning_packing.planning_id = tb_planning.id) as weight_packing')
+                ->get();
 
             // รวมรายการที่ "รหัสสินค้า (itemno) เดียวกัน" เป็นแถวเดียว (คงลำดับตาม id แรกที่พบ)
             foreach ($plannings->groupBy('itemno') as $itemno => $group) {

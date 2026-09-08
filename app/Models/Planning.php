@@ -56,4 +56,10 @@ class Planning extends Model
         return $this->hasMany(PlanningProdMethod::class, 'planning_id')->orderBy('sort');
     }
 
+    // การบรรจุ (หลายแถวต่อ 1 planning item) — เก็บใน tb_planning_packing
+    public function packings()
+    {
+        return $this->hasMany(PlanningPacking::class, 'planning_id')->orderBy('sort');
+    }
+
 }
