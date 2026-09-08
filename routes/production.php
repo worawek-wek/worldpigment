@@ -7,6 +7,7 @@ use App\Http\Controllers\RoleController as RoleController;
 use App\Http\Controllers\MachineController as MachineController;
 use App\Http\Controllers\ProdMethodController as ProdMethodController;
 use App\Http\Controllers\TempController as TempController;
+use App\Http\Controllers\PlanningRemarkController as PlanningRemarkController;
 
 Route::prefix('production-planning')->group(function () {
 
@@ -154,5 +155,13 @@ Route::prefix('production-planning')->group(function () {
     Route::post('/temp/store', [TempController::class, 'store'])->name('temp.store');
     Route::post('/temp/delete', [TempController::class, 'destroy'])->name('temp.delete');
     Route::post('/temp/toggle-status', [TempController::class, 'toggleStatus'])->name('temp.toggle-status');
+
+    // หมายเหตุวางแผน (master) — ตาราง tb_planning_remark
+    Route::get('/planning-remark', [PlanningRemarkController::class, 'index'])->name('planningremark.index');
+    Route::get('/planning-remark/datatable', [PlanningRemarkController::class, 'datatable'])->name('planningremark.datatable');
+    Route::get('/planning-remark/edit', [PlanningRemarkController::class, 'edit'])->name('planningremark.edit');
+    Route::post('/planning-remark/store', [PlanningRemarkController::class, 'store'])->name('planningremark.store');
+    Route::post('/planning-remark/delete', [PlanningRemarkController::class, 'destroy'])->name('planningremark.delete');
+    Route::post('/planning-remark/toggle-status', [PlanningRemarkController::class, 'toggleStatus'])->name('planningremark.toggle-status');
 
 });

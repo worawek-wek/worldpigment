@@ -207,5 +207,13 @@ return [
         'permission' => 'temp read',
     ],
 
+    // หมายเหตุวางแผน (master) — ตาราง tb_planning_remark — เพิ่ม 08/09/2569
+    'PlanningRemark' => [
+        'title' => 'หมายเหตุวางแผน',
+        'icon' => 'ti-notes',
+        'route_name' => 'planningremark.index',
+        'permission' => 'planningremark read',
+    ],
+
 
 ];

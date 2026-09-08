@@ -501,6 +501,11 @@ class ProductionPlanController extends Controller
             ->get(['id', 'name']);
         $prod_method_rows = $planning_item ? $planning_item->prodMethods : collect();
 
+        // หมายเหตุวางแผน (master) — ตัวเลือก dropdown เฉพาะที่เปิดใช้งาน (เก็บลง tb_planning.planning_remark เป็นข้อความ)
+        $planning_remarks = \App\Models\PlanningRemark::where('is_active', 'Y')
+            ->orderBy('sort', 'asc')->orderBy('id', 'asc')
+            ->pluck('name');
+
         $html = view('production-planning.planning.planning-item-form', [
             'planning_item'      => $planning_item,
             'planning_header_id' => $planning_header_id,
@@ -517,6 +522,7 @@ class ProductionPlanController extends Controller
             'selected_emp' => $selected_emp,
             'prod_methods'     => $prod_methods,
             'prod_method_rows' => $prod_method_rows,
+            'planning_remarks' => $planning_remarks,
             // วันหยุด (tb_holiday ที่เปิดใช้งาน) + วันหยุดประจำสัปดาห์ — ให้ JS เตือนตอนเลือกวันหยุด
             'holidays'         => HolidayService::activeMap(),
             'weekly_off'       => HolidayService::weeklyOff(),

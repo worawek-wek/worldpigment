@@ -20,9 +20,11 @@ class RoleController extends Controller
 
     public function datatable(Request $request)
     {
+        // ⚠ select() ต้องมาก่อน withCount() — ถ้า withCount() มาก่อน select() จะไปล้าง
+        // subquery COUNT ที่ withCount เติมไว้ ทำให้ employees_count เป็น NULL ทุกแถว (แก้ 08/09/2569)
         $roles = Role::query()
-            ->withCount('employees')
-            ->select(['id', 'name', 'description', 'is_active', 'is_default']);
+            ->select(['id', 'name', 'description', 'is_active', 'is_default'])
+            ->withCount('employees');
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -59,12 +61,14 @@ class RoleController extends Controller
                 return '<span class="badge bg-label-secondary">ปิดใช้งาน</span>';
             })
             ->addColumn('btnedit', function ($role) {
+                // ปุ่มลบถูกซ่อนไว้ชั่วคราวตามที่ผู้ใช้สั่ง (08/09/2569) — เปิดคืนโดยเอาคอมเมนต์ปุ่ม btn_delete ออก
+                // backend (route role.delete + destroy()) ยังอยู่ครบ ไม่ถูกแตะ
                 return '<button type="button" class="btn btn-sm btn-icon btn-warning btn_edit me-1" data-id="'.$role->id.'" title="แก้ไข">
                             <i class="ti ti-pencil ti-sm"></i>
-                        </button>
-                        <button type="button" class="btn btn-sm btn-icon btn-danger btn_delete" data-id="'.$role->id.'" title="ลบ">
-                            <i class="ti ti-trash ti-sm"></i>
                         </button>';
+                        // <button type="button" class="btn btn-sm btn-icon btn-danger btn_delete" data-id="'.$role->id.'" title="ลบ">
+                        //     <i class="ti ti-trash ti-sm"></i>
+                        // </button>
             })
             ->rawColumns(['name', 'status_badge', 'btnedit'])
             ->make(true);

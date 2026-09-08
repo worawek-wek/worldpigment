@@ -50,6 +50,7 @@ worldpigment/
 │   │   ├── PriceRuleController.php  # ตั้งค่าเงื่อนไขราคา คูณ/หาร/บวก — เมนูแยก /price-rule (21/08/2569)
 │   │   ├── ProductController.php    # ข้อมูลสินค้า tb_products — CRUD (07/08/2569)
 │   │   ├── HolidayController.php    # วันหยุดนักขัตฤกษ์ tb_holiday — CRUD + ปฏิทินรายปี (01/09/2569)
+│   │   ├── PlanningRemarkController.php # หมายเหตุวางแผน tb_planning_remark — CRUD master (08/09/2569)
 │   │   └── ExportExcelController.php
 │   ├── Models/
 │   └── Services/                # AccessService, ProductPriceService (04/08/2569), HolidayService (01/09/2569)
@@ -604,6 +605,22 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 - modal โหลดฟอร์มผ่าน AJAX (`edit()`) · datatable serverSide (Yajra) sort ได้ทุกคอลัมน์จริง (`dept`/`MBX`/`speed_rpm`/`group`), ค่าเริ่มต้นเรียง dept→MBX ที่ฝั่ง DataTables · กันเครื่องซ้ำด้วยคู่ (`dept` + `MBX`)
 - `Machine::displayLabel()` = `MBX - (speed_rpm)` ใช้ทำ label ใน dropdown เลือกเครื่องจักรที่อื่น (เช่น รายงานตามเครื่องจักร) — **ยังไม่รวม `group`**
 - ⚠ **ความเสี่ยงแบบเดียวกับเมนูอื่น:** route `machine/store` · `machine/delete` ป้องกันแค่ `auth` + สิทธิ์ระดับเมนู — ไม่มีสิทธิ์เขียนแยกและไม่มี audit trail
+
+## หมายเหตุวางแผน (เมนู "หมายเหตุวางแผน", `/production-planning/planning-remark`) — 08/09/2569
+
+`PlanningRemarkController` + Model `PlanningRemark` (`tb_planning_remark`, InnoDB, timestamps เปิด) + view `planning-remark/{index,planning-remark-form}.blade.php` — ตาราง master ของ**หมายเหตุสำเร็จรูปสำหรับแผนการผลิต** (CRUD)
+
+- **route อยู่ใน `routes/production.php`** (ใต้ prefix `production-planning` เหมือน temp/machine/prodmethod) แต่ **route name เป็น namespace แบน `planningremark.*`** (`index`/`datatable`/`edit`/`store`/`delete`/`toggle-status`) — ไม่ใช่ `production.*`
+- **เมนู `PlanningRemark`** (title "หมายเหตุวางแผน") อยู่**ใต้ Temperature** ใน `config/menu.php` — สิทธิ์คุมด้วย **menu key** (`AccessControl` เทียบ namespace ของ route name = `planningremark`) → พนักงาน (guard `emp`) ต้องไปติ๊กเมนูนี้ให้ role ที่หน้า "จัดการสิทธิ์" ก่อน (admin เข้าได้อยู่แล้ว)
+- โครง controller/blade มิเรอร์จาก **TempController** (หน้ารายการ DataTables serverSide + modal ฟอร์ม + สลับสถานะจากตาราง) แต่ต่างที่: field ชื่อ `name` ตรง ๆ (ไม่ใช่ `Temp1`), มีช่อง **ลำดับ (`sort`)** ในฟอร์ม (เรียงเริ่มต้น `sort`→`id`), และเซ็ต **`created_by`/`updated_by`** = `AccessControl::currentAccount()?->id` ตอนบันทึก (แบบเดียวกับ `ProductController`)
+- คอลัมน์: `id` · `name` varchar(255) · `sort` int default 0 (มี index) · `is_active` char(1) `Y`/`N` · `created_at`/`updated_at` · `created_by`/`updated_by` (unsignedBigInteger nullable) — สร้างด้วย migration `2026_09_08_100000_create_tb_planning_remark_table` (idempotent)
+- ⚠ **ความเสี่ยงแบบเดียวกับเมนูอื่น:** route ป้องกันแค่ `auth` + สิทธิ์ระดับเมนู — ไม่มีสิทธิ์เขียน/ลบแยก (มี audit trail เบา ๆ ผ่าน `created_by`/`updated_by`)
+
+**นำไปใช้เป็น dropdown ในฟอร์มแก้ไข Planning Item แล้ว (08/09/2569):** ช่อง "หมายเหตุวางแผน (Planning Remark)" ใน `planning-item-form.blade.php` เดิมเป็น **textarea** → เปลี่ยนเป็น **`<select class="select2-tags">`** (เลือกจาก master ที่ `is_active='Y'` ได้ + **พิมพ์ค่าเองได้**)
+- 🟢 **เก็บเป็น "ข้อความ" ไม่ใช่ id** (ผู้ใช้เลือก 08/09/2569): ค่าที่เลือก/พิมพ์ถูกบันทึกลง **`tb_planning.planning_remark` (คอลัมน์ `text` เดิม) ตรง ๆ** — **ไม่แก้ schema, ไม่แตะ `saveItem`** (validation `nullable|string|max:1000` รับ string อยู่แล้ว) และ **รายงานผลิตตามเครื่องจักร (machine PDF/Excel) พิมพ์ค่าเดิมได้เลยไม่ต้อง JOIN**. เหตุผล: dropdown เป็นตัวช่วยกรอกให้เป็นมาตรฐาน ไม่ใช่ FK — เก็บข้อความ = snapshot เชิงประวัติ (แก้/ลบ master ภายหลังไม่กระทบแผนเก่า) และข้อมูลเดิม 3 แถวใช้ต่อได้ทันที
+- **คงค่าเดิม/ค่าที่พิมพ์เองที่ไม่มีใน master ไว้เสมอ** — blade เช็ค `$planning_remarks->contains($current_remark)` ถ้าไม่มีจะเติม `<option ... selected>` ของค่านั้นเองเข้าไป กันข้อมูลหายตอนเปิดใบเก่า
+- **controller:** `ProductionPlanController::editItem()` ส่ง `$planning_remarks` = `PlanningRemark::where('is_active','Y')->orderBy('sort')->orderBy('id')->pluck('name')`
+- ⚠ **หน้า planning ไม่ได้อยู่ในกลุ่ม opt-in ของ `enhanceSelects`** (select อื่นในฟอร์มนี้เป็น plain ทั้งหมด) จึง init select2 **เฉพาะช่องนี้ช่องเดียว**: หลังโหลดฟอร์มใน `openPlanningItemModal` (`planning/index.blade.php`) เรียก `enhanceSelects($('#result_planning_item select[name="planning_remark"]'))` — ส่ง element เดี่ยวเข้าไป `.addBack('select')` จึง enhance เฉพาะตัวนั้น ไม่แตะ machine/employee/status/prod-method (ที่มี dept-change reload ผ่าน `.html()`)
 
 ## ข้อตกลงและข้อควรระวัง (Conventions & Gotchas)
 

@@ -183,8 +183,23 @@
         <div class="row">
             <div class="col-md-12 mb-3">
                 <label class="form-label">หมายเหตุวางแผน (Planning Remark)</label>
-                <textarea name="planning_remark" rows="2"
-                          class="form-control" placeholder="หมายเหตุการวางแผน">{{ $planning_item?->planning_remark ?? '' }}</textarea>
+                @php
+                    // เก็บลง tb_planning.planning_remark เป็น "ข้อความ" (snapshot) — dropdown เป็นแค่ตัวช่วยกรอกให้เป็นมาตรฐาน
+                    $current_remark = $planning_item?->planning_remark ?? '';
+                    $remark_in_master = ($planning_remarks ?? collect())->contains($current_remark);
+                @endphp
+                {{-- select2-tags: เลือกจาก master ได้ + พิมพ์ค่าเองได้ (ยืดหยุ่นกว่า แต่หลุดจากมาตรฐาน master) --}}
+                <select name="planning_remark" class="form-select select2-tags"
+                        data-placeholder="เลือกหรือพิมพ์หมายเหตุ">
+                    <option value=""></option>
+                    @foreach(($planning_remarks ?? collect()) as $rm)
+                        <option value="{{ $rm }}" {{ $current_remark === $rm ? 'selected' : '' }}>{{ $rm }}</option>
+                    @endforeach
+                    {{-- ค่าเดิม/ค่าที่พิมพ์เองซึ่งไม่มีใน master → คงไว้เป็นตัวเลือกที่เลือกอยู่ กันข้อมูลหาย --}}
+                    @if($current_remark !== '' && !$remark_in_master)
+                        <option value="{{ $current_remark }}" selected>{{ $current_remark }}</option>
+                    @endif
+                </select>
             </div>
         </div>
 
@@ -388,11 +403,6 @@
                         class="form-control">
                 </div>
             </div>
-        </div>
-
-        {{-- <div class="row my-2"><hr /></div> --}}
-
-        <div class="row p-3 rounded mt-2" >
             <div class="row">
                 <div class="col-md-4 mb-3">
                     <label class="form-label">วันที่ส่ง Qc (QC Date)</label>
@@ -418,35 +428,36 @@
             </div>
         </div>
 
-        <div class="row my-2"><hr /></div>
+        {{-- <div class="row my-2"><hr /></div> --}}
 
-        <div class="row p-3 rounded" style="background-color: #eaffd9; border: 1px dashed #04ac2e;">
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    @php
-                        $item_end_job     = ($planning_item?->end_job ?? 'N') === 'Y';
-                        $semi_jobs_done   = $item_semi_jobs_done ?? true;
-                        // ปิดใช้งานเฉพาะตอน "ยังไม่จบงาน และงาน Semi ยังไม่ครบ" (จบงานอยู่แล้วยังปลดได้เสมอ)
-                        $end_job_disabled = !$item_end_job && !$semi_jobs_done;
-                    @endphp
-                    <div class="p-2 rounded mt-4" style="background-color: #f8adad; border: 1px dashed #f72020;">
-                        <div class="form-check">
-                            {{-- hidden ส่งค่า N เมื่อไม่ติ๊ก (checkbox N มาก่อน, ค่า Y จะ override เมื่อติ๊ก) --}}
-                            <input type="hidden" name="end_job" value="N">
-                            <input type="checkbox" class="form-check-input" id="planning_item_end_job"
-                                name="end_job" value="Y"
-                                {{ $item_end_job ? 'checked' : '' }}
-                                {{ $end_job_disabled ? 'disabled' : '' }}>
-                            <label class="form-check-label" for="planning_item_end_job">จบงาน (End Job)</label>
-                        </div>
-                        @if($end_job_disabled)
-                            <div class="form-text fw-bold mt-1" style="color: #7a0000;">
-                                <i class="ti ti-alert-triangle me-1"></i>ต้องปิดออเดอร์ (End Order) ของแผน Semi ให้ครบทุกใบก่อน
-                            </div>
-                        @endif
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                @php
+                    $item_end_job     = ($planning_item?->end_job ?? 'N') === 'Y';
+                    $semi_jobs_done   = $item_semi_jobs_done ?? true;
+                    // ปิดใช้งานเฉพาะตอน "ยังไม่จบงาน และงาน Semi ยังไม่ครบ" (จบงานอยู่แล้วยังปลดได้เสมอ)
+                    $end_job_disabled = !$item_end_job && !$semi_jobs_done;
+                @endphp
+                <div class="p-2 rounded mt-4" style="background-color: #f8adad; border: 1px dashed #f72020;">
+                    <div class="form-check">
+                        {{-- hidden ส่งค่า N เมื่อไม่ติ๊ก (checkbox N มาก่อน, ค่า Y จะ override เมื่อติ๊ก) --}}
+                        <input type="hidden" name="end_job" value="N">
+                        <input type="checkbox" class="form-check-input" id="planning_item_end_job"
+                            name="end_job" value="Y"
+                            {{ $item_end_job ? 'checked' : '' }}
+                            {{ $end_job_disabled ? 'disabled' : '' }}>
+                        <label class="form-check-label" for="planning_item_end_job">จบงาน (End Job)</label>
                     </div>
+                    @if($end_job_disabled)
+                        <div class="form-text fw-bold mt-1" style="color: #7a0000;">
+                            <i class="ti ti-alert-triangle me-1"></i>ต้องปิดออเดอร์ (End Order) ของแผน Semi ให้ครบทุกใบก่อน
+                        </div>
+                    @endif
                 </div>
             </div>
+        </div>
+
+        <div class="row p-3 rounded" style="background-color: #eaffd9; border: 1px dashed #04ac2e;">
             <div class="row">
                 <div class="col-md-4 mb-3">
                     <label class="form-label">วันเวลาที่บรรจุเสร็จ (Packing Datetime)</label>

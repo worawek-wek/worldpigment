@@ -640,6 +640,11 @@
                     $('#result_planning_item').html(response.data);
                     var itemModal = new bootstrap.Modal(document.getElementById('planningItemModal'));
                     itemModal.show();
+                    // ยกระดับเฉพาะช่อง "หมายเหตุวางแผน" เป็น select2-tags (เลือกจาก master ได้ + พิมพ์เองได้)
+                    // ส่ง element เดี่ยวเข้า enhanceSelects → .addBack() enhance เฉพาะตัวนี้ ไม่แตะ select อื่นในฟอร์ม
+                    if (typeof enhanceSelects === 'function') {
+                        enhanceSelects($('#result_planning_item select[name="planning_remark"]'));
+                    }
                 }
             },
             error: function(response) {
