@@ -180,6 +180,14 @@
             </div>
         </div>
 
+        <div class="row">
+            <div class="col-md-12 mb-3">
+                <label class="form-label">หมายเหตุวางแผน (Planning Remark)</label>
+                <textarea name="planning_remark" rows="2"
+                          class="form-control" placeholder="หมายเหตุการวางแผน">{{ $planning_item?->planning_remark ?? '' }}</textarea>
+            </div>
+        </div>
+
         <div class="row mt-2"><hr /></div>
 
 

@@ -63,6 +63,12 @@
         margin-left: 0;
         padding-right: 0;
     }
+    /* ── เว้นระยะด้านล่างของรายการเมนู ──
+       เดิม .menu-inner มีแค่ py-1 (0.25rem) เมนูรายการสุดท้าย (เช่น Temperature)
+       จึงติดขอบล่างแถบเมนูมากเกินไป — เพิ่มพื้นที่ว่างด้านล่างให้ดูโปร่งขึ้น */
+    .menu-inner {
+        padding-bottom: 2rem !important;
+    }
 </style>
 <aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
     <div class="menu-inner-shadow"></div>

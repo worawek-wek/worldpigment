@@ -11,10 +11,10 @@
                         <div>
                             <h3 class="mb-1">
                                 <i class="ti ti-list text-primary"></i>
-                                จัดการ Temp
+                                จัดการ Temperature
                             </h3>
                             <p class="text-muted mb-0">
-                                รายการข้อมูล Temp
+                                รายการข้อมูล Temperature
                             </p>
                         </div>
                     </div>
@@ -53,9 +53,8 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th class="col-1">#</th>
-                                        <th class="col-6">ชื่อ</th>
-                                        <th class="col-1">ลำดับ</th>
-                                        <th class="col-1">สถานะ</th>
+                                        <th class="col-7">ชื่อ</th>
+                                        <th class="col-2">สถานะ</th>
                                         <th class="col-2">จัดการ</th>
                                     </tr>
                                 </thead>
@@ -75,7 +74,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
-                        <i class="ti ti-list me-1"></i>Temp
+                        <i class="ti ti-list me-1"></i>Temperature
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -115,15 +114,13 @@
                 { 'className': "text-center", data: 'rownum', name: 'rownum', orderable: false },
                 // sort ชื่อตามคอลัมน์จริง Temp1 (แสดงผ่าน addColumn 'name')
                 { 'className': "text-left", data: 'name', name: 'Temp1', orderable: true },
-                { 'className': "text-center", data: 'sort', name: 'sort', orderable: true },
                 // sort สถานะตามคอลัมน์จริง is_active (แม้จะแสดงเป็น switch)
                 { 'className': "text-center", data: 'status_switch', name: 'is_active', orderable: true, searchable: false },
                 { 'className': "text-center", data: 'btnaction', name: 'btnaction', orderable: false, searchable: false },
             ],
-            // เริ่มต้นเรียงตามคอลัมน์ "ลำดับ" (sort) เหมือนลำดับเดิมที่เคย hard-code ใน controller
-            order: [
-                [2, 'asc']
-            ],
+            // ไม่ตั้ง default order ฝั่ง client — คอลัมน์ "ลำดับ" ถูกเอาออกแล้ว
+            // ลำดับเริ่มต้นให้เรียงตามคอลัมน์ sort ใน DB (controller เติม orderBy ให้เมื่อผู้ใช้ยังไม่คลิก sort)
+            order: [],
         });
     });
 

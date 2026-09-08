@@ -201,7 +201,7 @@ return [
     ],
 
     'Temp' => [
-        'title' => 'Temp',
+        'title' => 'Temperature',
         'icon' => 'ti-list',
         'route_name' => 'temp.index',
         'permission' => 'temp read',

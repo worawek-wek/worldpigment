@@ -619,6 +619,7 @@ class ProductionPlanController extends Controller
             'packing_datetie'    => 'nullable|string|max:255',
             'pack_remark'        => 'nullable|string|max:1000',
             'shortage_remark'    => 'nullable|string|max:1000',
+            'planning_remark'    => 'nullable|string|max:1000',
             'mdate'              => 'nullable|date',
             'custwant'           => 'nullable|date',
             'senddate'           => 'nullable|date',
@@ -653,7 +654,7 @@ class ProductionPlanController extends Controller
             'weight_produced', 'weight_packing', 'red_bill_code', 'cycles', 'end_job', 'empno',
             'machine_no', 'plan_type', 'planning_status', 'inplan', 'work_shift', 'start_date', 'start_time', 'end_date', 'end_time',
             'qc_date', 'qc_time', 'qc_status', 'packing_datetie', 'pack_remark',
-            'mdate', 'custwant', 'senddate', 'remark', 'shortage_remark'
+            'mdate', 'custwant', 'senddate', 'remark', 'shortage_remark', 'planning_remark'
         ]);
 
         // หมายเหตุ: Semi / Pigment ไม่ถูกบันทึกที่นี่อีกต่อไป

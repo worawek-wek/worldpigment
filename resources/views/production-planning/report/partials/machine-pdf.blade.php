@@ -36,8 +36,9 @@
                 <th style="width: 3%;">#</th>
                 <th class="col-inplan" style="width: 7%;">วันที่ลงแผน</th>
                 <th style="width: 7%;">Revise</th>
-                <th style="width: 13%;">Cust Name</th>
+                <th style="width: 11%;">Cust Name</th>
                 <th style="width: 7%;">เลขที่ใบเบิก</th>
+                <th style="width: 5%;">รอบการผลิต</th>
                 <th style="width: 9%;">PRODUCT NO</th>
                 <th style="width: 6%;">LOT</th>
                 <th style="width: 7%;">น้ำหนักออเดอร์</th>
@@ -56,7 +57,7 @@
             @forelse($sec['blocks'] as $group)
                 @php $machineLabel = $group['machine'] !== '' ? $group['machine'] : 'ไม่ระบุเครื่องจักร'; $groupSum = 0; @endphp
                 <tr class="group-row">
-                    <td colspan="16">เครื่องจักร: {{ $machineLabel }}@if(!empty($group['speed_rpm'])) (Speed RPM: {{ $group['speed_rpm'] }})@endif</td>
+                    <td colspan="17">เครื่องจักร: {{ $machineLabel }}@if(!empty($group['speed_rpm'])) (Speed RPM: {{ $group['speed_rpm'] }})@endif</td>
                 </tr>
                 @foreach($group['items'] as $it)
                     @php $groupSum += (float) ($it->quantity ?? 0); $hasSteps = count($it->steps) > 0; @endphp
@@ -65,7 +66,7 @@
                         <tr class="step-row">
                             <td class="text-center">↳</td>
                             <td class="text-center">{{ $s->work_date ? \Carbon\Carbon::parse($s->work_date)->format('d/m/Y') : '-' }}</td>
-                            <td colspan="14">
+                            <td colspan="15">
                                 ขั้นตอน: {{ $s->method_name ?: '-' }}
                                 ({{ $s->start_time ? substr($s->start_time, 0, 5) : '--' }}–{{ $s->end_time ? substr($s->end_time, 0, 5) : '--' }})
                             </td>
@@ -78,6 +79,7 @@
                         <td class="text-center">{{ $it->senddate ? \Carbon\Carbon::parse($it->senddate)->format('d/m/Y') : '' }}</td> {{-- Revise = senddate (กำหนดส่งทบทวน) --}}
                         <td>{{ $it->cust_name ?: '-' }}</td>
                         <td class="text-center">{{ $it->red_bill_code ?: '-' }}</td>
+                        <td class="text-center">{{ $it->cycles ?: '-' }}</td> {{-- รอบการผลิต (tb_planning.cycles) --}}
                         <td>{{ $it->itemno ?: '-' }}</td>
                         <td class="text-center">{{ $it->lot ?: '-' }}</td>
                         <td class="text-end">{{ $it->quantity !== null ? number_format($it->quantity, 2) : '-' }}</td>
@@ -88,11 +90,11 @@
                         <td class="text-center">{{ $it->product_pack ?: '' }}</td> {{-- Packaging (tb_products.pack) --}}
                         <td class="text-center">{{ $it->product_batch ?: '' }}</td> {{-- Batch (tb_products.batch) --}}
                         <td>{{ $it->product_sampling ?: '' }}</td> {{-- สูตรตัวอย่าง (tb_products.sampling) --}}
-                        <td>{{ $it->remark ?: '' }}</td>
+                        <td>{{ $it->planning_remark ?: '' }}</td> {{-- Remark = หมายเหตุวางแผน (tb_planning.planning_remark) --}}
                     </tr>
                 @endforeach
                 <tr class="sum-row">
-                    <td colspan="5" class="text-end">รวม {{ $machineLabel }}</td>
+                    <td colspan="6" class="text-end">รวม {{ $machineLabel }}</td>
                     <td class="text-center">{{ number_format($group['items']->count()) }} รายการ</td>
                     <td></td>
                     <td class="text-end">{{ number_format($groupSum, 2) }}</td>
@@ -100,7 +102,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="16" class="text-center" style="padding: 14px;">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td>
+                    <td colspan="17" class="text-center" style="padding: 14px;">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td>
                 </tr>
             @endforelse
         </tbody>

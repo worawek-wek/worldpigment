@@ -11,12 +11,6 @@
     </div>
 
     <div class="mb-3">
-        <label class="form-label" for="temp_sort">ลำดับ (Sort)</label>
-        <input type="number" class="form-control" id="temp_sort" name="sort"
-            value="{{ $temp?->sort ?? 0 }}" placeholder="0">
-    </div>
-
-    <div class="mb-3">
         <label class="form-label d-block">สถานะการใช้งาน</label>
         <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" role="switch"

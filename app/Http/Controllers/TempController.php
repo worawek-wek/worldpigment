@@ -22,9 +22,12 @@ class TempController extends Controller
             })
             ->when(in_array(request('status'), ['Y', 'N'], true), function ($q) {
                 $q->where('is_active', request('status'));
+            })
+            // คอลัมน์ "ลำดับ" ถูกเอาออกจากตารางแล้ว จึงตั้งลำดับเริ่มต้นให้เรียงตาม sort ใน DB ที่นี่แทน
+            // เติมเฉพาะตอนผู้ใช้ยังไม่คลิก sort คอลัมน์อื่น (ไม่งั้น Yajra จะเรียงซ้อนทำให้คลิก sort ไม่มีผล)
+            ->when(empty(request('order')), function ($q) {
+                $q->orderBy('sort', 'asc');
             });
-        // หมายเหตุ: ไม่ hard-code orderBy ที่นี่แล้ว — ให้ Yajra จัดการเรียงตามที่คลิกหัวคอลัมน์
-        // (ลำดับเริ่มต้นตามคอลัมน์ sort ถูกกำหนดเป็นค่า default order ในฝั่ง DataTables ของ temp/index)
 
         $rownum = 0;
 
@@ -76,7 +79,6 @@ class TempController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:100',
-            'sort' => 'nullable|integer',
         ], [
             'name.required' => 'กรุณากรอกชื่อ',
         ]);
@@ -89,15 +91,19 @@ class TempController extends Controller
             ]);
         }
 
-        Temp::updateOrCreate(
-            ['id' => $request->id],
-            [
-                'Temp1'     => $request->name,
-                'sort'      => $request->sort ?: 0,
-                // switch ในฟอร์ม: ติ๊ก = ส่ง is_active (Y), ไม่ติ๊ก = ไม่ส่ง (N)
-                'is_active' => $request->has('is_active') ? 'Y' : 'N',
-            ]
-        );
+        $data = [
+            'Temp1'     => $request->name,
+            // switch ในฟอร์ม: ติ๊ก = ส่ง is_active (Y), ไม่ติ๊ก = ไม่ส่ง (N)
+            'is_active' => $request->has('is_active') ? 'Y' : 'N',
+        ];
+
+        // ฟอร์มไม่มีช่อง "ลำดับ" แล้ว: ระเบียนใหม่ตั้งต้น sort = 0,
+        // ส่วนการแก้ไขระเบียนเดิมจะไม่แตะค่า sort เดิม (คงลำดับที่เคยตั้งไว้)
+        if (!$request->id) {
+            $data['sort'] = 0;
+        }
+
+        Temp::updateOrCreate(['id' => $request->id], $data);
 
         return response()->json([
             'status'  => 200,
