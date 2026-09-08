@@ -19,10 +19,10 @@ use Illuminate\Support\Facades\DB;
  *
  * แถบข้อมูลลูกค้าดึงจากตาราง `customer` ผ่าน CustNo → code
  *
- * 🔴 `uprice` ไม่มีคอลัมน์ `NotifyDate` (วันที่แจ้งปรับ) และ `MOQ` (ปริมาณขั้นต่ำ)
- *    สองช่องนี้จึง **ยังไม่ถูกบันทึก** — รอลูกค้ายืนยันว่าจะเพิ่มคอลัมน์เข้า `uprice`
- *    หรือตัดออกจากฟอร์ม (ช่องในฟอร์มแปะ class `wip` กำกับไว้แล้ว)
- *    เปิดใช้เมื่อได้ข้อสรุป: คืนชื่อคอลัมน์เข้า self::COLUMNS + parse ใน extractForm()
+ * ช่อง "วันที่แจ้งปรับ" (`NotifyDate`) และ "MOQ (kg)" **ถอดออกจากฟอร์มแล้ว** (07/09/2569)
+ * ตามที่ผู้ใช้สั่ง — `uprice` ไม่มีคอลัมน์รองรับ ทั้งคู่จึงไม่เคยถูกบันทึกอยู่แล้ว
+ * (ถอดออกทั้งช่องกรอกและคอลัมน์ในตาราง "ประวัติการปรับราคา")
+ * ⚠ ช่อง `DATE` เปลี่ยนป้ายบนฟอร์มเป็น **"วันที่เริ่มซื้อ"** — คอลัมน์ใน DB ยังชื่อเดิม
  *
  * ยังไม่ทำ: ค่าสี/%สี — รอสรุปสูตรกับลูกค้า
  */
@@ -31,9 +31,8 @@ class SaleinfoController extends Controller
     /** คอลัมน์ที่รับจากฟอร์มได้ */
     private const COLUMNS = [
         'CustNo', 'st_code', 'ITEMNO', 'DATE', 'PRICE',
-        'REM1', 'PackRem', 'Label', 'Author',
-        // 'NotifyDate', 'MOQ',   // ปิดไว้ — `uprice` ไม่มี 2 คอลัมน์นี้ (ดู docblock ของ class)
-        // 'REM2',    // ปิดไว้ — เลิกใช้ช่อง "ประวัติการปรับราคา" แบบข้อความ (มีตารางประวัติแทนแล้ว)
+        'REM1', 'REM2', 'PackRem', 'Label', 'Author',   // REM2 = ช่อง "หมายเหตุ 2" (เปิดคืน 07/09/2569)
+        // 'NotifyDate', 'MOQ',   // ถอดออกจากฟอร์มแล้ว 07/09/2569 — `uprice` ไม่มี 2 คอลัมน์นี้
         // 'NoAcp',   // ปิดไว้ก่อน — รอลูกค้ายืนยันความหมาย (ดู extractForm)
     ];
 
@@ -301,10 +300,7 @@ class SaleinfoController extends Controller
         $data = $row->toArray();
         $data['DATE'] = $row->DATE ? Carbon::parse($row->DATE)->format('d/m/Y') : '';
 
-        // `uprice` ไม่มี NotifyDate / MOQ — ส่งค่าว่างไปให้ฟอร์มไม่ต้องแยกเคส
-        // (ช่องสองช่องนี้ยังไม่ถูกบันทึก รอลูกค้ายืนยัน — ดู docblock ของ class)
-        $data['NotifyDate'] = '';
-        $data['MOQ']        = null;
+        // NotifyDate / MOQ ถอดออกจากฟอร์มแล้ว (07/09/2569) จึงไม่ต้องส่งค่าว่างไปให้อีก
 
         return response()->json(['found' => true, 'data' => $data]);
     }
@@ -340,13 +336,12 @@ class SaleinfoController extends Controller
 
         $out = $rows->map(function ($r) {
             return [
-                'id'         => $r->id,
-                'NotifyDate' => '',    // ไม่มีคอลัมน์นี้ใน uprice (รอลูกค้ายืนยัน)
-                'DATE'       => $r->DATE ? Carbon::parse($r->DATE)->format('d/m/Y') : '',
-                'ITEMNO'     => $r->ITEMNO,
-                'MOQ'        => null,  // ไม่มีคอลัมน์นี้ใน uprice (รอลูกค้ายืนยัน)
-                'PRICE'      => $r->PRICE,
-                'REM1'       => $r->REM1,
+                // NotifyDate / MOQ ถอดออกจากตารางประวัติแล้ว (07/09/2569)
+                'id'     => $r->id,
+                'DATE'   => $r->DATE ? Carbon::parse($r->DATE)->format('d/m/Y') : '',
+                'ITEMNO' => $r->ITEMNO,
+                'PRICE'  => $r->PRICE,
+                'REM1'   => $r->REM1,
             ];
         });
 
@@ -466,9 +461,8 @@ class SaleinfoController extends Controller
         $row['DATE']  = $this->parseDate($row['DATE']);
         $row['PRICE'] = $row['PRICE'] !== null && $row['PRICE'] !== '' ? (float) $row['PRICE'] : null;
 
-        // NotifyDate / MOQ ปิดไว้ — `uprice` ไม่มีคอลัมน์นี้ ถ้าใส่กลับเข้า array
-        // จะกลายเป็นคอลัมน์ที่ไม่มีจริงตอน insert/update (SQL error)
-        // เปิดใช้พร้อมกับคืนชื่อเข้า self::COLUMNS เมื่อลูกค้ายืนยันแล้ว:
+        // NotifyDate / MOQ ถอดออกจากฟอร์มแล้ว (07/09/2569) — `uprice` ไม่มีคอลัมน์นี้
+        // ถ้าจะเปิดใช้ในอนาคตต้องเพิ่มคอลัมน์เข้าตารางก่อน แล้วคืนชื่อเข้า self::COLUMNS:
         // $row['NotifyDate'] = $this->parseDate($row['NotifyDate']);
         // $row['MOQ']        = $row['MOQ'] !== null && $row['MOQ'] !== '' ? (float) $row['MOQ'] : null;
 

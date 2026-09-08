@@ -103,31 +103,20 @@
                                     </span>
                                 </div>
 
-                                <div class="row g-3 align-items-end">
-                                    {{-- wip: `uprice` ไม่มีคอลัมน์ NotifyDate → ช่องนี้ยังไม่ถูกบันทึก (29/08/2569)
-                                         รอลูกค้ายืนยันว่าจะเพิ่มคอลัมน์เข้า uprice หรือตัดช่องนี้ออกจากฟอร์ม
-                                         เสร็จแล้ว: ลบคำว่า wip + คืน 'NotifyDate' เข้า SaleinfoController::COLUMNS --}}
-                                    <div class="col-md-3 wip">
-                                        <label class="form-label small mb-1">วันที่แจ้งปรับ <span class="text-muted fw-normal">(วว/ดด/ปปปป)</span></label>
-                                        <input type="text" name="NotifyDate" class="form-control flatpickr-date"
-                                            title="ยังไม่บันทึก — ตาราง uprice ไม่มีคอลัมน์นี้ รอลูกค้ายืนยัน">
-                                    </div>
+                                {{-- ไม่ใส่ align-items-end แล้ว (07/09/2569) — label ของช่องราคายาว 2 บรรทัดได้
+                                     ถ้าจัดชิดล่างจะดัน label+input ของช่องวันที่หลุดลงไปไม่ตรงหัวแถว --}}
+                                <div class="row g-3">
+                                    {{-- ถอดช่อง "วันที่แจ้งปรับ" (NotifyDate) และ "MOQ (kg)" ออกตามที่ผู้ใช้สั่ง (07/09/2569)
+                                         ทั้งคู่เป็นช่อง wip ที่ `uprice` ไม่มีคอลัมน์รองรับ จึงไม่เคยถูกบันทึก --}}
                                     <div class="col-md-3">
-                                        <label class="form-label small mb-1">วันที่เริ่มราคาใหม่ <span class="text-muted fw-normal">(วว/ดด/ปปปป)</span></label>
+                                        <label class="form-label small mb-1 d-block">วันที่เริ่มซื้อ <span class="text-muted fw-normal">(วว/ดด/ปปปป)</span></label>
                                         <input type="text" name="DATE" class="form-control flatpickr-date">
                                     </div>
-                                    {{-- wip: `uprice` ไม่มีคอลัมน์ MOQ → ช่องนี้ยังไม่ถูกบันทึก (29/08/2569) --}}
-                                    <div class="col-md-3 wip">
-                                        <label class="form-label small mb-1">MOQ <span class="text-muted fw-normal">(kg)</span></label>
-                                        {{-- input ธรรมดา + คอมมาอัตโนมัติ (ถอดคอมมาก่อน submit ด้วย stripCommaFields) --}}
-                                        <input type="text" name="MOQ" class="form-control text-end js-comma"
-                                            inputmode="decimal" autocomplete="off" placeholder="0.00"
-                                            title="ยังไม่บันทึก — ตาราง uprice ไม่มีคอลัมน์นี้ รอลูกค้ายืนยัน">
-                                    </div>
+                                    {{-- คงความกว้าง col-md-3 ตามเดิม — ครึ่งแถวทำให้ช่องกรอกตัวเลขยาวเกินจำเป็น --}}
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1 text-danger">
                                             <i class="ti ti-asterisk-simple"></i>
-                                            ราคา หรือ ค่าแรง+ค่าสี <span class="text-muted fw-normal">(เช่น 46.72)</span>
+                                            ราคา <span class="text-muted fw-normal">(เช่น 46.72)</span>
                                         </label>
                                         <input type="text" name="PRICE" class="form-control text-end js-comma"
                                             inputmode="decimal" autocomplete="off" placeholder="0.00" required>
@@ -145,24 +134,23 @@
                                     </div>
                                     --}}
 
+                                    {{-- หมายเหตุ 2 ช่อง = REM1 / REM2 ของ `uprice` (07/09/2569)
+                                         REM2 เคยปิดไว้ (คิดว่าเลิกใช้เพราะมีตารางประวัติแทน) — ผู้ใช้สั่งให้เปิดคืน
+                                         ทั้งคู่ varchar(100) และเป็นคู่เดียวกับที่ฟอร์มอนุมัติใบสั่งซื้อโชว์เป็น REM1 / REM2 --}}
                                     <div class="col-12">
                                         <label class="form-label small mb-1">
                                             <i class="ti ti-note me-1"></i>
-                                            หมายเหตุ <span class="text-muted fw-normal">(เช่น เฉพาะเบอร์คิดราคาพิเศษ เช็คราคาก่อนเปิด ORDER)</span>
+                                            หมายเหตุ 1 <span class="text-muted fw-normal">(เช่น เฉพาะเบอร์คิดราคาพิเศษ เช็คราคาก่อนเปิด ORDER)</span>
                                         </label>
                                         <input type="text" name="REM1" maxlength="100" class="form-control">
                                     </div>
-                                    {{-- ปิดไว้: หมายเหตุเพิ่มเติม / ประวัติการปรับราคา (REM2)
-                                         เลิกใช้เพราะทำตาราง "ประวัติการปรับราคา" ขึ้นมาแทนแล้ว
-                                         (คอลัมน์ REM2 ใน uprice ยังอยู่ ค่าเดิมไม่ถูกแตะต้อง)
                                     <div class="col-12">
                                         <label class="form-label small mb-1">
-                                            หมายเหตุเพิ่มเติม / ประวัติการปรับราคา
-                                            <span class="text-muted fw-normal">(เช่น เดิม 46.72.- ปรับลด 08/12/25 @44.62.-)</span>
+                                            <i class="ti ti-note me-1"></i>
+                                            หมายเหตุ 2 <span class="text-muted fw-normal">(เช่น เดิม 46.72.- ปรับลด 08/12/25 @44.62.-)</span>
                                         </label>
-                                        <input type="text" name="REM2" class="form-control">
+                                        <input type="text" name="REM2" maxlength="100" class="form-control">
                                     </div>
-                                    --}}
                                 </div>
                             </div>
 
@@ -212,11 +200,10 @@
                                 <table class="table table-hover align-middle mb-0">
                                     <thead>
                                         <tr>
-                                            <th class="text-center wip">วันที่แจ้งปรับ</th>
-                                            <th class="text-center">วันที่เริ่มราคาใหม่</th>
+                                            {{-- ถอดคอลัมน์ "วันที่แจ้งปรับ" / "MOQ (kg)" ออกคู่กับช่องในฟอร์ม (07/09/2569) --}}
+                                            <th class="text-center">วันที่เริ่มซื้อ</th>
                                             <th>รหัสสินค้า</th>
-                                            <th class="text-end wip">MOQ (kg)</th>
-                                            <th class="text-end">ราคา หรือ<br>ค่าแรง+ค่าสี</th>
+                                            <th class="text-end">ราคา</th>
                                             <th>หมายเหตุ</th>
                                         </tr>
                                     </thead>

@@ -726,9 +726,11 @@
     let saleinfoCalcTimer = null, saleinfoCalcXhr = null;
 
     // ช่องคำนวณเป็น input อ่านอย่างเดียว — ว่าง = ยังไม่มีค่า (placeholder "—" ขึ้นเอง)
+    // ราคาที่คำนวณแล้วโชว์เป็น "จำนวนเต็ม" (ปัดเศษ) ให้ตรงกับจอ "ค้นหาราคาสินค้า" (npMoneyInt) — 07/09/2569
+    // ปัดตอนแสดงผลอย่างเดียว ค่าที่ endpoint ส่งมายังเป็นทศนิยมตามจริง
     function setCalcField(name, value) {
         $('#form_saleinfo [name="' + name + '"]')
-            .val(value === null || value === undefined || value === '' ? '' : commaFmt(value, 2));
+            .val(value === null || value === undefined || value === '' ? '' : commaFmt(value, 0));
     }
 
     function clearSaleinfoCalc() {
@@ -844,11 +846,10 @@
                 const html = rows.map(function (r, i) {
                     // แถวบนสุด = ปรับล่าสุด = ราคาที่ใช้อยู่ปัจจุบัน
                     const badge = (i === 0) ? '<span class="badge-current">ปัจจุบัน</span>' : '';
+                    // คอลัมน์ "วันที่แจ้งปรับ" (NotifyDate) / "MOQ" ถอดออกแล้ว (07/09/2569)
                     return '<tr>'
-                        + '<td class="text-center">' + esc(r.NotifyDate || '—') + '</td>'
                         + '<td class="text-center">' + esc(r.DATE || '—') + '</td>'
                         + '<td>' + esc(r.ITEMNO || '—') + '</td>'
-                        + '<td class="text-end">' + fmtNum(r.MOQ) + '</td>'
                         + '<td class="text-end">' + fmtNum(r.PRICE) + badge + '</td>'
                         + '<td class="text-muted">' + esc(r.REM1 || '—') + '</td>'
                         + '</tr>';
@@ -924,10 +925,10 @@
                 $('#form_saleinfo [name="_pk"]').val(id);
 
                 // เติมทุกช่องที่ชื่อตรงกับคอลัมน์ (ยกเว้น checkbox จัดการแยก)
-                ['CustNo', 'st_code', 'ITEMNO', 'DATE', 'NotifyDate', 'MOQ', 'PRICE', 'REM1', 'PackRem', 'Label', 'Author']
+                ['CustNo', 'st_code', 'ITEMNO', 'DATE', 'PRICE', 'REM1', 'REM2', 'PackRem', 'Label', 'Author']
                     .forEach(function (name) {
                         const $f = $('#form_saleinfo [name="' + name + '"]');
-                        // ช่องตัวเลขที่ใส่คอมมา (MOQ / PRICE) → จัดรูปแบบก่อนเติม
+                        // ช่องตัวเลขที่ใส่คอมมา (PRICE) → จัดรูปแบบก่อนเติม
                         $f.val($f.hasClass('js-comma') ? commaFmt(d[name], 2) : (d[name] ?? ''));
                     });
                 // NoAcp ปิดไว้ก่อน — ช่องในฟอร์มถูกคอมเมนต์ไว้ รอลูกค้ายืนยันความหมาย
@@ -1223,11 +1224,13 @@
         const p = calc.prices || null;
 
         if (p) {
-            $('#tp_price_1').val(commaFmt(p.price_1, 2));
-            $('#tp_price_2').val(commaFmt(p.price_2, 2));
-            $('#tp_price_3').val(commaFmt(p.price_3, 2));
-            $('#tp_db_3_4').val(commaFmt(p.db_3_4, 2));
-            $('#tp_db_1_2').val(commaFmt(p.db_1_2, 2));
+            // โชว์เป็นจำนวนเต็ม (ปัดเศษ) ชุดเดียวกับฟอร์ม "กำหนดราคา" และจอ "ค้นหาราคาสินค้า" — 07/09/2569
+            // ปัดตอนแสดงผลอย่างเดียว ค่าที่ endpoint ส่งมายังเป็นทศนิยมตามจริง
+            $('#tp_price_1').val(commaFmt(p.price_1, 0));
+            $('#tp_price_2').val(commaFmt(p.price_2, 0));
+            $('#tp_price_3').val(commaFmt(p.price_3, 0));
+            $('#tp_db_3_4').val(commaFmt(p.db_3_4, 0));
+            $('#tp_db_1_2').val(commaFmt(p.db_1_2, 0));
 
             // ที่มาของราคา: ต้นทุนสูตรของใบเทส → เบอร์ที่ตั้ง → เงื่อนไข → สูตรคูณ/หาร/บวก
             const src = [];
