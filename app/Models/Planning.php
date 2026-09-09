@@ -62,4 +62,10 @@ class Planning extends Model
         return $this->hasMany(PlanningPacking::class, 'planning_id')->orderBy('sort');
     }
 
+    // สถานะ QC — คอลัมน์ qc_status เก็บเป็น id อ้างอิง master tb_qc_status (09/09/2569)
+    public function qcStatus()
+    {
+        return $this->belongsTo(QcStatus::class, 'qc_status');
+    }
+
 }

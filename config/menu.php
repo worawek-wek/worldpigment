@@ -156,6 +156,14 @@ return [
         'permission' => 'productionplanning read',
     ],
 
+    // สถานะ QC (master) — ตาราง tb_qc_status — วางใต้เมนูสถานะ Planning — 09/09/2569
+    'QcStatus' => [
+        'title' => 'สถานะ QC',
+        'icon' => 'ti-clipboard-check',
+        'route_name' => 'qcstatus.index',
+        'permission' => 'qcstatus read',
+    ],
+
     // ตั้งค่าเงื่อนไขราคา — แยกออกจาก modal ในหน้ากำหนดราคา มาเป็นเมนูของตัวเอง — 21/08/2569
     'PriceRule' => [
         'title' => 'ตั้งค่าเงื่อนไขราคา',

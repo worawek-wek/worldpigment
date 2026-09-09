@@ -8,6 +8,7 @@ use App\Http\Controllers\MachineController as MachineController;
 use App\Http\Controllers\ProdMethodController as ProdMethodController;
 use App\Http\Controllers\TempController as TempController;
 use App\Http\Controllers\PlanningRemarkController as PlanningRemarkController;
+use App\Http\Controllers\QcStatusController as QcStatusController;
 
 Route::prefix('production-planning')->group(function () {
 
@@ -163,5 +164,13 @@ Route::prefix('production-planning')->group(function () {
     Route::post('/planning-remark/store', [PlanningRemarkController::class, 'store'])->name('planningremark.store');
     Route::post('/planning-remark/delete', [PlanningRemarkController::class, 'destroy'])->name('planningremark.delete');
     Route::post('/planning-remark/toggle-status', [PlanningRemarkController::class, 'toggleStatus'])->name('planningremark.toggle-status');
+
+    // สถานะ QC (master) — ตาราง tb_qc_status (09/09/2569)
+    Route::get('/qc-status', [QcStatusController::class, 'index'])->name('qcstatus.index');
+    Route::get('/qc-status/datatable', [QcStatusController::class, 'datatable'])->name('qcstatus.datatable');
+    Route::get('/qc-status/edit', [QcStatusController::class, 'edit'])->name('qcstatus.edit');
+    Route::post('/qc-status/store', [QcStatusController::class, 'store'])->name('qcstatus.store');
+    Route::post('/qc-status/delete', [QcStatusController::class, 'destroy'])->name('qcstatus.delete');
+    Route::post('/qc-status/toggle-status', [QcStatusController::class, 'toggleStatus'])->name('qcstatus.toggle-status');
 
 });

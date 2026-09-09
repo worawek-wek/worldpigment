@@ -645,6 +645,8 @@ class ReportController extends Controller
             ->leftJoin('tb_planning_header', 'tb_planning_header.id', '=', 'tb_planning.planning_header_id')
             // ชื่อลูกค้า: customer.code = header.custno
             ->leftJoin('customer', 'customer.code', '=', 'tb_planning_header.custno')
+            // สถานะ QC: tb_planning.qc_status เก็บเป็น id → join หา name จาก master (09/09/2569)
+            ->leftJoin('tb_qc_status', 'tb_qc_status.id', '=', 'tb_planning.qc_status')
             ->select([
                 'tb_planning.id',
                 'tb_planning.machine_no',
@@ -667,7 +669,7 @@ class ReportController extends Controller
                 'tb_planning.start_date', // เริ่มผลิต
                 'tb_planning.qc_date',    // วันที่ส่ง QC
                 'tb_planning.qc_time',    // เวลาที่ส่ง QC
-                'tb_planning.qc_status',  // สถานะ QC
+                'tb_qc_status.name as qc_status',  // สถานะ QC (แปลง id → ชื่อจาก master)
                 'tb_planning.red_bill_code', // เลขที่ใบแดง
                 'tb_planning.senddate',      // กำหนดส่งทบทวน → แสดงในคอลัมน์ Revise (PDF)
                 'tb_planning.shortage_remark', // ขาดวัตถุดิบ (พิมพ์เองในฟอร์ม planning item) → คอลัมน์ "ขาดวัตถุดิบ"

@@ -131,11 +131,23 @@
             data: { _token: CSRF_TOKEN, id: id, status: status },
             success: function (res) {
                 bootstrap.Modal.getInstance(document.getElementById('statusModal')).hide();
-                Swal.fire(res.message || 'อัพเดทสถานะเรียบร้อย', '', 'success');
+                Swal.fire({
+                    icon: 'success', title: res.message || 'อัพเดทสถานะเรียบร้อย',
+                    toast: true, position: 'top-end', timer: 1500, showConfirmButton: false
+                });
                 loadJobs();
             },
             error: function (xhr) {
-                var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'บันทึกไม่สำเร็จ';
+                var res = xhr.responseJSON || {};
+                var msg = res.message ? res.message : 'บันทึกไม่สำเร็จ';
+                // งานถูกปิดแล้ว (บล็อกฝั่ง server) → ปิด modal + reload ตาราง (งานหลุดจากตารางไปแล้ว)
+                if (res.job_closed) {
+                    var m = bootstrap.Modal.getInstance(document.getElementById('statusModal'));
+                    if (m) m.hide();
+                    Swal.fire(msg, '', 'warning');
+                    loadJobs();
+                    return;
+                }
                 Swal.fire(msg, '', 'error');
             }
         });

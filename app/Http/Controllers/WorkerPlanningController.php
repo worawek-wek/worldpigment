@@ -18,6 +18,10 @@ use Illuminate\Support\Facades\DB;
  */
 class WorkerPlanningController extends Controller
 {
+    // ชื่อสถานะ "ส่ง QC รอผล" (มีหลาย id ตามแผนก — id 8/22/32/36 — แต่ชื่อเหมือนกันทุกแผนก จึงจับคู่ด้วยชื่อ)
+    // เข้าสถานะนี้ = เซ็ต qc_date/qc_time เป็นเวลาที่เปลี่ยน · ออกจากสถานะนี้ = คงค่าเดิมไว้ (ไม่ล้าง)
+    private const QC_WAIT_STATUS = 'ส่ง QC รอผล';
+
     // empno ของพนักงานที่ล็อกอินอยู่ (Worker)
     private function currentEmpno(): ?string
     {
@@ -47,6 +51,16 @@ class WorkerPlanningController extends Controller
     private function jobCompany(Planning $job): ?string
     {
         return $job->company ?: optional($job->planning_header)->company;
+    }
+
+    // งานถูกปิดแล้วหรือยัง — ปิดงานราย item (end_job='Y') หรือปิดออเดอร์ทั้ง header (end_order='Y')
+    private function jobIsClosed(Planning $job): bool
+    {
+        if (($job->end_job ?? 'N') === 'Y') {
+            return true;
+        }
+
+        return (optional($job->planning_header)->end_order ?? 'N') === 'Y';
     }
 
     // สถานะที่เลือกได้ = ทุกสถานะที่เปิดใช้งานของแผนกงานนั้น
@@ -83,6 +97,16 @@ class WorkerPlanningController extends Controller
             ->leftJoin('tb_planning_header', 'tb_planning_header.id', '=', 'tb_planning.planning_header_id')
             ->leftJoin('customer', 'customer.code', '=', 'tb_planning_header.custno')
             ->where('tb_planning.empno', $empno)
+            // ตัดงานที่ปิดแล้วออก: ปิดงานราย item (end_job='Y') หรือปิดออเดอร์ทั้ง header (end_order='Y')
+            // นับ NULL เป็น "ยังไม่ปิด" ด้วย (NULL != 'Y' ใน MySQL ให้ผล NULL ไม่ใช่ true)
+            ->where(function ($q) {
+                $q->where('tb_planning.end_job', '!=', 'Y')
+                    ->orWhereNull('tb_planning.end_job');
+            })
+            ->where(function ($q) {
+                $q->where('tb_planning_header.end_order', '!=', 'Y')
+                    ->orWhereNull('tb_planning_header.end_order');
+            })
             ->when($search !== '', function ($q) use ($search) {
                 $q->where(function ($sub) use ($search) {
                     $sub->where('tb_planning.red_bill_code', 'LIKE', '%'.$search.'%')
@@ -153,6 +177,16 @@ class WorkerPlanningController extends Controller
         $empno = $this->currentEmpno();
         $new   = trim((string) $request->get('status'));
 
+        // บล็อกฝั่ง server: งานที่ปิดแล้ว (end_job='Y' หรือ end_order='Y') ห้ามเปลี่ยนสถานะ
+        // กัน bypass ฝั่ง client (ยิงตรง / เปิด modal ค้างไว้แล้วงานถูกปิดทีหลัง) — ยึดค่าจริงใน DB
+        if ($this->jobIsClosed($job)) {
+            return response()->json([
+                'status'     => 422,
+                'message'    => 'งานนี้ถูกปิดแล้ว ไม่สามารถเปลี่ยนสถานะได้',
+                'job_closed' => true, // ธงให้ฝั่งจอปิด modal + reload ตาราง (งานหลุดจากตารางไปแล้ว)
+            ], 422);
+        }
+
         // ต้องเป็นสถานะที่เปิดใช้งานของแผนกงานนี้เท่านั้น (กันยิงค่าตามใจ)
         $allowed = $this->statusesForJob($job)->pluck('name')->all();
         if (!in_array($new, $allowed, true)) {
@@ -167,7 +201,17 @@ class WorkerPlanningController extends Controller
         if ($old !== $new) {
             DB::transaction(function () use ($job, $old, $new, $empno) {
                 // แตะเฉพาะคอลัมน์สถานะ (ไม่ใช้ update ทั้ง model)
-                Planning::where('id', $job->id)->update(['planning_status' => $new]);
+                $fields = ['planning_status' => $new];
+
+                // เข้าสู่ "ส่ง QC รอผล" → บันทึกวัน/เวลาที่เปลี่ยนสถานะลง qc_date / qc_time
+                // (ออกจากสถานะนี้ไปสถานะอื่น = คงค่าเดิมไว้ ไม่ล้างเป็น null)
+                if ($new === self::QC_WAIT_STATUS) {
+                    $now = now();
+                    $fields['qc_date'] = $now->toDateString();   // Y-m-d
+                    $fields['qc_time'] = $now->format('H:i:s');  // TIME
+                }
+
+                Planning::where('id', $job->id)->update($fields);
 
                 DB::table('tb_planning_status_log')->insert([
                     'planning_id' => $job->id,

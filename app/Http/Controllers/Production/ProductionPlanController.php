@@ -531,6 +531,19 @@ class ProductionPlanController extends Controller
             ->orderBy('sort', 'asc')->orderBy('id', 'asc')
             ->pluck('name');
 
+        // สถานะ QC (master) — ตัวเลือก dropdown เฉพาะที่เปิดใช้งาน (เก็บลง tb_planning.qc_status เป็น "id" อ้างอิง tb_qc_status)
+        $qc_statuses = \App\Models\QcStatus::where('is_active', 'Y')
+            ->orderBy('sort', 'asc')->orderBy('id', 'asc')
+            ->get(['id', 'name']);
+        // ถ้าค่าที่บันทึกไว้เป็น id ของสถานะที่ถูกปิดใช้งาน/ลบไปแล้ว → เติมกลับเข้า list ให้ยังแสดง (กันค่าหาย)
+        $current_qc_id = $planning_item?->qc_status;
+        if ($current_qc_id && !$qc_statuses->contains('id', $current_qc_id)) {
+            $extra = \App\Models\QcStatus::find($current_qc_id);
+            if ($extra) {
+                $qc_statuses->push($extra);
+            }
+        }
+
         $html = view('production-planning.planning.planning-item-form', [
             'planning_item'      => $planning_item,
             'planning_header_id' => $planning_header_id,
@@ -550,6 +563,7 @@ class ProductionPlanController extends Controller
             // การบรรจุ (tb_planning_packing) — แถวเดิมของ item (item ใหม่ = ว่าง)
             'packing_rows'     => $planning_item ? $planning_item->packings : collect(),
             'planning_remarks' => $planning_remarks,
+            'qc_statuses'      => $qc_statuses,
             // วันหยุด (tb_holiday ที่เปิดใช้งาน) + วันหยุดประจำสัปดาห์ — ให้ JS เตือนตอนเลือกวันหยุด
             'holidays'         => HolidayService::activeMap(),
             'weekly_off'       => HolidayService::weeklyOff(),
@@ -648,7 +662,7 @@ class ProductionPlanController extends Controller
             'end_time'           => 'nullable|date_format:H:i',
             'qc_date'            => 'nullable|date',
             'qc_time'            => 'nullable|string|max:10',
-            'qc_status'          => 'nullable|string|max:255',
+            'qc_status'          => 'nullable|integer|exists:tb_qc_status,id',
             // การบรรจุ (ตารางลูก tb_planning_packing) — array คู่ขนาน
             'packing_datetime'   => 'nullable|array',
             'packing_datetime.*' => 'nullable|string|max:255',
@@ -696,6 +710,10 @@ class ProductionPlanController extends Controller
             'qc_date', 'qc_time', 'qc_status',
             'mdate', 'custwant', 'senddate', 'remark', 'shortage_remark', 'planning_remark'
         ]);
+
+        // qc_status เก็บเป็น id (FK → tb_qc_status) — ค่าว่าง/ไม่เลือก ต้องเป็น NULL ไม่ใช่ '' หรือ 0
+        // (คอลัมน์เป็น BIGINT UNSIGNED หลัง migration เปลี่ยนจาก enum)
+        $fields['qc_status'] = $request->filled('qc_status') ? (int) $request->qc_status : null;
 
         // หมายเหตุ: Semi / Pigment ไม่ถูกบันทึกที่นี่อีกต่อไป
         // ย้ายไปบันทึกลงฐานข้อมูลทันทีผ่าน modal เพิ่ม/แก้ไข Semi (SemiPigmentController::entryStore/entryUpdate)

@@ -418,11 +418,15 @@
                 </div>
                 <div class="col-md-4 mb-3">
                 <label class="form-label">สถานะ Qc (QC Status) </label>
+                    @php
+                        // เก็บลง tb_planning.qc_status เป็น "id" อ้างอิง master tb_qc_status
+                        $current_qc = $planning_item?->qc_status; // id (int) หรือ null
+                    @endphp
                     <select name="qc_status" class="form-select">
                         <option value="">เลือกสถานะ</option>
-                        <option value="PASSED" @if($planning_item?->qc_status === 'PASSED') selected @endif>ผ่าน</option>
-                        <option value="FAILED" @if($planning_item?->qc_status === 'FAILED') selected @endif>ไม่ผ่าน</option>
-                        <option value="PENDINGREVISION" @if($planning_item?->qc_status === 'PENDINGREVISION') selected @endif>รอสูตรปรับแก้</option>
+                        @foreach(($qc_statuses ?? collect()) as $qc)
+                            <option value="{{ $qc->id }}" {{ (string) $current_qc === (string) $qc->id ? 'selected' : '' }}>{{ $qc->name }}</option>
+                        @endforeach
                     </select>
                 </div>
             </div>
