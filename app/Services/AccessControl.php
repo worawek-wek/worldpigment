@@ -44,6 +44,14 @@ class AccessControl
         return $account instanceof Emp && $account->isWorker();
     }
 
+    /** เป็นพนักงาน QC หรือไม่ */
+    public static function isQc(): bool
+    {
+        $account = self::currentAccount();
+
+        return $account instanceof Emp && $account->isQc();
+    }
+
     /** menu_key ทั้งหมดที่เลือกเป็นสิทธิ์ได้ (ข้าม header) — ไล่ sub_menu ทุกระดับ */
     public static function allMenuKeys(): array
     {
@@ -188,6 +196,11 @@ class AccessControl
         // พนักงานหน้างาน (Worker) → หน้าอัพเดทสถานะงานของตัวเอง (ไม่มีเมนู)
         if (self::isWorker()) {
             return route('worker.planning.index');
+        }
+
+        // พนักงาน QC → หน้าตรวจ QC งานที่ "ส่ง QC รอผล" (ไม่มีเมนู)
+        if (self::isQc()) {
+            return route('qc.planning.index');
         }
 
         foreach (config('menu') as $key => $menu) {

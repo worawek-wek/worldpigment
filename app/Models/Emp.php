@@ -22,6 +22,9 @@ class Emp extends Authenticatable
     // ชื่อ Role ที่ถือว่าเป็น "พนักงานหน้างาน" (Worker) — เก็บที่เดียวกันสะกดเพี้ยน (11/08/2569)
     public const WORKER_ROLE_NAME = 'Worker';
 
+    // ชื่อ Role ที่ถือว่าเป็น "พนักงาน QC" — เข้าหน้าตรวจ QC (09/09/2569)
+    public const QC_ROLE_NAME = 'QC';
+
     // ไม่ส่งรหัสผ่าน (hash) ออกไปกับ response JSON
     protected $hidden = ['password', 'pwd'];
 
@@ -31,6 +34,14 @@ class Emp extends Authenticatable
         return $this->role_id
             && $this->role
             && $this->role->name === self::WORKER_ROLE_NAME;
+    }
+
+    // เป็นพนักงาน QC หรือไม่ — ดูจากชื่อ role
+    public function isQc(): bool
+    {
+        return $this->role_id
+            && $this->role
+            && $this->role->name === self::QC_ROLE_NAME;
     }
 
     // ตาราง emp ไม่มีคอลัมน์ remember_token → ปิดการใช้ remember token
