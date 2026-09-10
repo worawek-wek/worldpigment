@@ -108,7 +108,7 @@ class ReportController extends Controller
             // ชื่อลูกค้า: customer.code = header.custno
             ->leftJoin('customer', 'customer.code', '=', 'tb_planning_header.custno')
             // ข้อมูลสินค้า (master): tb_products.product_code = tb_planning.itemno
-            // → เติมคอลัมน์ Resin / CODE / Pack / สูตรตัวอย่าง (2026-08-13)
+            // → เติมคอลัมน์ Resin / CODE / Pack / สุ่มตัวอย่าง (2026-08-13)
             ->leftJoin('tb_products', 'tb_products.product_code', '=', 'tb_planning.itemno')
             // Temp (อ้างอิงตาม Product no): tb_products.temp_id → temp.id, แสดง temp.Temp1 (2026-08-20)
             ->leftJoin('temp', 'temp.id', '=', 'tb_products.temp_id')
@@ -355,12 +355,12 @@ class ReportController extends Controller
         $sheet->setTitle('รายงานผลิตตามเครื่องจักร');
 
         // คอลัมน์ตามฟอร์ม — คอลัมน์ที่ยังไม่มีข้อมูลใน tb_planning เว้นค่าว่างไว้ก่อน
-        // (Revise, TP, Resin, CODE, Packaging, Batch, สูตรตัวอย่าง)
+        // (Revise, TP, Resin, CODE, Packaging, Batch, สุ่มตัวอย่าง)
         // Speed (RPM) ย้ายไปแสดงต่อท้ายหัวกลุ่มเครื่องจักรแทน (2026-08-13)
         $headers = [
             '#', 'วันที่ลงแผน', 'Revise', 'Cust Name', 'เลขที่ใบเบิก', 'รอบการผลิต', 'PRODUCT NO', 'LOT',
             'น้ำหนักออเดอร์', 'TP', 'Resin', 'Temp', 'CODE', 'Packaging', 'Batch',
-            'สูตรตัวอย่าง', 'Remark',
+            'สุ่มตัวอย่าง', 'Remark',
         ];
         $cols    = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q'];
         $lastCol = 'Q';
@@ -484,7 +484,7 @@ class ReportController extends Controller
                         $sheet->setCellValueExplicit("M{$r}", $it->product_code_val ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING); // CODE (tb_products.code)
                         $sheet->setCellValueExplicit("N{$r}", $it->product_pack ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);   // Packaging (tb_products.pack)
                         $sheet->setCellValueExplicit("O{$r}", $it->product_batch ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);  // Batch (tb_products.batch)
-                        $sheet->setCellValueExplicit("P{$r}", $it->product_sampling ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING); // สูตรตัวอย่าง (tb_products.sampling)
+                        $sheet->setCellValueExplicit("P{$r}", $it->product_sampling ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING); // สุ่มตัวอย่าง (tb_products.sampling)
                         $sheet->setCellValue("Q{$r}", $it->planning_remark ?: '');  // Remark = หมายเหตุวางแผน (tb_planning.planning_remark)
                         $groupSum += (float) ($it->quantity ?? 0);
                         $r++;

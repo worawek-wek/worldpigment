@@ -48,7 +48,7 @@
                 <th style="width: 5%;">CODE</th>
                 <th style="width: 5%;">Packaging</th>
                 <th style="width: 4%;">Batch</th>
-                <th style="width: 6%;">สูตรตัวอย่าง</th>
+                <th style="width: 6%;">สุ่มตัวอย่าง</th>
                 <th style="width: 9%;">Remark</th>
             </tr>
         </thead>
@@ -89,7 +89,7 @@
                         <td>{{ $it->product_code_val ?: '' }}</td> {{-- CODE (tb_products.code) --}}
                         <td class="text-center">{{ $it->product_pack ?: '' }}</td> {{-- Packaging (tb_products.pack) --}}
                         <td class="text-center">{{ $it->product_batch ?: '' }}</td> {{-- Batch (tb_products.batch) --}}
-                        <td>{{ $it->product_sampling ?: '' }}</td> {{-- สูตรตัวอย่าง (tb_products.sampling) --}}
+                        <td>{{ $it->product_sampling ?: '' }}</td> {{-- สุ่มตัวอย่าง (tb_products.sampling) --}}
                         <td>{{ $it->planning_remark ?: '' }}</td> {{-- Remark = หมายเหตุวางแผน (tb_planning.planning_remark) --}}
                     </tr>
                 @endforeach
