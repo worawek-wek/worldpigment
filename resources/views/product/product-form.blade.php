@@ -18,7 +18,17 @@
         </div>
 
         <div class="col-md-12 mb-3">
-            <label class="form-label" for="product_temp_id">Temp</label>
+            <label class="form-label d-flex align-items-center justify-content-between mb-1" for="product_temp_id">
+                <span>Temp</span>
+                {{-- เพิ่ม Temperature ใหม่ทันทีจากฟอร์มนี้ (เปิด modal ซ้อน ใช้ฟอร์ม/endpoint เดียวกับหน้าจัดการ Temperature)
+                     แสดงเฉพาะบัญชีที่มีสิทธิ์เมนู "Temperature" — เพราะ endpoint temp.edit/store ถูกกันสิทธิ์ตาม namespace temp อยู่แล้ว --}}
+                @if(\App\Services\AccessControl::menuVisible('Temp'))
+                    <button type="button" id="btn_add_temp_inline"
+                        class="btn btn-sm btn-label-primary py-0 px-1 lh-1" title="เพิ่ม Temperature ใหม่">
+                        <i class="ti ti-plus"></i>
+                    </button>
+                @endif
+            </label>
             <select class="form-select" id="product_temp_id" name="temp_id">
                 <option value="">- ไม่ระบุ -</option>
                 @foreach ($temps as $temp)

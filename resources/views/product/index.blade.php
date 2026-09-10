@@ -83,6 +83,26 @@
         </div>
     </div>
 
+    <!-- Modal เพิ่ม Temperature ใหม่ (เปิดซ้อนจากฟอร์มข้อมูลสินค้า) — ใช้ฟอร์ม/endpoint เดียวกับหน้าจัดการ Temperature -->
+    {{-- data-bs-backdrop="false": กันชนกับ backdrop ของ modal ชั้นล่าง; z-index ยกให้อยู่บนสุดใน CSS --}}
+    <div class="modal fade modalHeadDecor" id="productTempModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="ti ti-list me-1"></i>เพิ่ม Temperature
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="product_temp_form_box">
+                    {{-- โหลดฟอร์มผ่าน AJAX --}}
+                </div>
+            </div>
+        </div>
+    </div>
+    {{-- modal ชั้นบนต้องอยู่เหนือ productModal (Bootstrap ตั้งทุกตัวเท่ากัน) --}}
+    <style>#productTempModal { z-index: 1090; }</style>
+
 @endsection
 
 @section('script')
@@ -228,6 +248,72 @@
                 Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: msg });
             },
             complete: function() { $btn.prop('disabled', false); }
+        });
+    });
+
+    // ---- เพิ่ม Temperature ใหม่จากฟอร์มข้อมูลสินค้า (modal ซ้อน) ----
+    // ใช้ฟอร์ม/endpoint เดียวกับหน้า "จัดการ Temperature" (temp.edit / temp.store) จะได้ไม่ตกหล่นฟิลด์
+    var productTempModal = new bootstrap.Modal(document.getElementById('productTempModal'));
+
+    // กดปุ่ม + ข้างช่อง Temp → โหลดฟอร์ม Temp เปล่าเข้า modal ซ้อนแล้วเปิด
+    $(document).on('click', '#btn_add_temp_inline', function (e) {
+        e.preventDefault();
+        $.ajax({
+            url: "{{ route('temp.edit') }}",
+            method: "GET",
+            data: { id: null },
+            success: function (res) {
+                $('#product_temp_form_box').html(res.data);
+                productTempModal.show();
+            },
+            error: function () {
+                Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: 'โหลดฟอร์ม Temperature ไม่สำเร็จ' });
+            }
+        });
+    });
+
+    // บันทึก Temp ใหม่ → success แล้ว append option + เลือกตัวใหม่ใน dropdown Temp ทันที
+    // scope selector ไว้ใน modal ซ้อน กันชนกับปุ่มบันทึกอื่น
+    $(document).on('click', '#productTempModal #btn_temp_save', function (e) {
+        e.preventDefault();
+        var $btn = $(this);
+        var formData = $('#productTempModal #temp_master_form').serialize();
+
+        $btn.prop('disabled', true);
+        $.ajax({
+            url: "{{ route('temp.store') }}",
+            method: "POST",
+            dataType: 'json',
+            data: formData,
+            success: function (res) {
+                if (res.status == 200) {
+                    var t = res.data || {};
+                    var $sel = $('#product_temp_id');
+                    if (t.id && $sel.length) {
+                        // กันซ้ำ: เพิ่ม option เฉพาะเมื่อยังไม่มีในลิสต์ แล้วเลือกตัวใหม่
+                        if ($sel.find('option[value="' + t.id + '"]').length === 0) {
+                            $sel.append($('<option>', { value: t.id, text: t.Temp1 }));
+                        }
+                        $sel.val(String(t.id));
+                        // select ถูกยกระดับด้วย enhanceSelects (select2) → ยกระดับซ้ำให้เห็น option/ค่าที่เพิ่งเปลี่ยน
+                        enhanceSelects($sel);
+                    }
+                    productTempModal.hide();
+                    Swal.fire({ icon: 'success', title: 'สำเร็จ', text: res.message,
+                        timer: 1600, showConfirmButton: false });
+                } else {
+                    Swal.fire({
+                        icon: res.status == 422 ? 'warning' : 'error',
+                        title: res.status == 422 ? 'ข้อมูลไม่ถูกต้อง' : 'เกิดข้อผิดพลาด',
+                        text: res.message || ''
+                    });
+                }
+            },
+            error: function (xhr) {
+                var msg = xhr.responseJSON?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: msg });
+            },
+            complete: function () { $btn.prop('disabled', false); }
         });
     });
 

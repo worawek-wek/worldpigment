@@ -103,11 +103,16 @@ class TempController extends Controller
             $data['sort'] = 0;
         }
 
-        Temp::updateOrCreate(['id' => $request->id], $data);
+        $temp = Temp::updateOrCreate(['id' => $request->id], $data);
 
         return response()->json([
             'status'  => 200,
             'message' => $request->id ? 'แก้ไขข้อมูลสำเร็จ' : 'เพิ่มข้อมูลสำเร็จ',
+            // คืนข้อมูลที่เพิ่งบันทึก เพื่อให้ modal ซ้อน (เช่น หน้า product) เอาไป append เป็น option ใน dropdown ได้ทันที
+            'data'    => [
+                'id'    => $temp->id,
+                'Temp1' => $temp->Temp1,
+            ],
         ]);
     }
 
