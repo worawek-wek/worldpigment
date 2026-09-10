@@ -1,23 +1,10 @@
 @extends('./layout/main')
 
 @section('content')
-    {{-- ตรึงหัวตารางไว้เมื่อเลื่อนดูรายการ (24/08/2569) --}}
     <style>
-        /* ให้กล่องผลลัพธ์เลื่อนแนวตั้งภายในตัวเอง หัวตารางจึงตรึงอยู่ได้ */
-        #reportResult {
-            max-height: calc(100vh - 260px);
-            overflow-y: auto;
-        }
-        #materialShortageTable thead th {
-            position: sticky;
-            top: 0;
-            z-index: 2;
-            /* ใช้สีพื้นหลัง/เส้นขอบเดิมของ table-light จากตัวแปรธีม */
-            background-color: var(--bs-table-bg);
-            /* border-collapse ทำให้เส้นขอบหายตอน sticky → วาดเส้นด้วย box-shadow แทน */
-            box-shadow: inset 0 1px 0 var(--bs-table-border-color), inset 0 -1px 0 var(--bs-table-border-color);
-        }
-        /* ไฮไลต์คอลัมน์ให้ตรงกับ PDF — !important เพื่อทับทั้งหัวตาราง sticky และ table-hover */
+        {{-- ตารางเปลี่ยนเป็น DataTables ฝั่ง client (paging/search/sort) แล้ว — 10/09/2569
+             จึงไม่ต้องตรึงหัวตาราง/เลื่อนภายในกล่องเองอีก (DataTables จัดหน้าให้) --}}
+        /* ไฮไลต์คอลัมน์ให้ตรงกับ PDF — !important เพื่อทับทั้งหัวตารางและ table-hover */
         /* ขาดวัตถุดิบ / ขาด semi — พื้นเหลืองตามฟอร์มต้นฉบับ */
         #materialShortageTable th.col-lack,
         #materialShortageTable td.col-lack {
@@ -138,8 +125,40 @@
         $('#btn_export_pdf').attr('href', URL_MS_PDF + '?' + qs);
     }
 
+    // เก็บ instance ของ DataTable ไว้เพื่อ destroy ก่อนโหลดตารางชุดใหม่
+    var msTable = null;
+
+    // init DataTables ฝั่ง client บนตารางที่เพิ่งโหลดมา (paging/search/sort เหมือนหน้าอื่น)
+    //  - ตารางนี้ประกอบข้อมูลใน PHP (attach lack_semi/lack_pigment + filter เฉพาะงานที่ขาดจริง)
+    //    จึงเป็น client-side ไม่ใช่ serverSide Yajra
+    //  - คอลัมน์ # ปิด sort แล้ว renumber ตามผลลัพธ์ที่เรียง/ค้นหาจริง (1..N ข้ามหน้า)
+    function initMaterialShortageTable() {
+        if (!$('#materialShortageTable').length) {
+            return; // ไม่มีตาราง (เช่น error) → ไม่ต้อง init
+        }
+        msTable = $('#materialShortageTable').DataTable({
+            autoWidth: false,
+            order: [],                 // คงลำดับเริ่มต้นจาก server (สถานะ → เครื่อง → inplan)
+            columnDefs: [
+                { targets: 0, orderable: false } // คอลัมน์ # (เลขลำดับ)
+            ]
+        });
+        // renumber คอลัมน์ # ให้ 1..N ตามลำดับ+ผลค้นหาที่แสดงจริง (ข้ามหน้า)
+        msTable.on('order.dt search.dt', function () {
+            msTable.column(0, { search: 'applied', order: 'applied' }).nodes().each(function (cell, i) {
+                cell.innerHTML = i + 1;
+            });
+        }).draw();
+    }
+
     // โหลดตารางรายงานตามเงื่อนไขค้นหา
     function loadReport() {
+        // ทำลาย DataTable เดิมก่อนแทนที่ HTML (กัน reinit ซ้ำบน DOM เดิม)
+        if (msTable) {
+            msTable.destroy();
+            msTable = null;
+        }
+
         $('#reportResult').html(
             '<div class="text-center text-muted py-5">' +
             '<div class="spinner-border text-primary" role="status"></div>' +
@@ -154,6 +173,7 @@
             data: currentFilters(),
             success: function (html) {
                 $('#reportResult').html(html);
+                initMaterialShortageTable();
             },
             error: function (xhr, error, thrown) {
                 console.error('AJAX Error:', error, thrown);

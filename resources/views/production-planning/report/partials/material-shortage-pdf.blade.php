@@ -13,6 +13,8 @@
         .status { background-color: #fff8b3; } /* สถานะปัจจุบัน — เน้นเหลืองตามฟอร์มต้นฉบับ */
         .text-center { text-align: center; }
         .text-end { text-align: right; }
+        /* Cust Name — ชื่อยาวถูกตัด + เติม … ฝั่ง PHP (mPDF ไม่รองรับ text-overflow:ellipsis
+           ใน table cell — มันจะ wrap แทน จึงตัดที่ PHP); ความกว้างคุมด้วย % ของ th */
     </style>
 </head>
 <body>
@@ -23,26 +25,28 @@
         <thead>
             {{-- ซ่อนบางคอลัมน์ชั่วคราวตามที่ผู้ใช้สั่ง (03/09/2569): MACHINE No., IN PLAN, สถานะปัจจุบัน,
                  SaleNo, Order No, LOT, ส่งชั่งสี, เริ่มผลิต, วันที่ส่ง QC, เวลาที่ส่ง QC, สถานะ QC
-                 เปิดคืน: ปลดคอมเมนต์ th + td ที่คู่กัน แล้วปรับ colspan ของแถวว่างกลับเป็น 23 --}}
+                 + Cust no, Order Date (10/09/2569)
+                 เปิดคืน: ปลดคอมเมนต์ th + td ที่คู่กัน แล้วปรับ colspan ของแถวว่างกลับเป็น 23
+                 หมายเหตุ: width ของ th ที่แสดงอยู่ตั้งให้รวม = 100% เพื่อคุมสัดส่วน (mPDF จะกระจายส่วนที่เหลือมั่วถ้าไม่ครบ) --}}
             <tr>
                 <th style="width: 3%;">#</th>
-                <th style="width: 6%;">แผนก</th>
-                <th style="width: 6%;">เลขที่ใบแดง</th>
+                <th style="width: 5%;">แผนก</th>
+                <th style="width: 9%;">เลขที่ใบแดง</th>
                 {{-- <th style="width: 7%;">MACHINE No.</th> --}}
                 {{-- <th style="width: 5%; background-color: #cfe2ff;">IN PLAN</th> --}}
-                <th style="width: 5%;">Revise</th>
+                <th style="width: 7%;">Revise</th>
                 {{-- <th style="width: 6%;">สถานะปัจจุบัน</th> --}}
-                <th style="width: 10%;">ขาดวัตถุดิบ</th>
-                <th style="width: 12%;">ขาด semi</th>
-                <th style="width: 5%; background-color: #f8d7da; color: #842029;">Cust Due</th>
-                <th style="width: 4%;">Cust no</th>
-                <th style="width: 12%;">Cust Name</th>
+                <th style="width: 16%;">ขาดวัตถุดิบ</th>
+                <th style="width: 17%;">ขาด semi</th>
+                <th style="width: 7%; background-color: #f8d7da; color: #842029;">Cust Due</th>
+                {{-- <th style="width: 4%;">Cust no</th> --}}
+                <th style="width: 17%;">Cust Name</th>
                 {{-- <th style="width: 4%;">SaleNo</th> --}}
-                <th style="width: 5%;">Order Date</th>
+                {{-- <th style="width: 5%;">Order Date</th> --}}
                 {{-- <th style="width: 7%;">Order No</th> --}}
-                <th style="width: 8%;">PRODUCT NO</th>
+                <th style="width: 11%;">PRODUCT NO</th>
                 {{-- <th style="width: 5%;">LOT</th> --}}
-                <th style="width: 5%;">น้ำหนัก</th>
+                <th style="width: 8%;">น้ำหนัก</th>
                 {{-- <th style="width: 4%;">ส่งชั่งสี</th> --}}
                 {{-- <th style="width: 5%;">เริ่มผลิต</th> --}}
                 {{-- <th style="width: 5%;">วันที่ส่ง QC</th> --}}
@@ -64,10 +68,10 @@
                     <td class="status">{{ $it->lack_pigment ?: '' }}</td>
                     <td class="status">{{ $it->lack_semi ?: '' }}</td>
                     <td class="text-center" style="background-color: #f8d7da; color: #842029;">{{ $custDue ? \Carbon\Carbon::parse($custDue)->format('d/m/y') : '-' }}</td>
-                    <td class="text-center">{{ $it->custno ?: '-' }}</td>
-                    <td>{{ $it->cust_name ?: '-' }}</td>
+                    {{-- <td class="text-center">{{ $it->custno ?: '-' }}</td> --}}
+                    <td>{{ $it->cust_name ? \Illuminate\Support\Str::limit($it->cust_name, 40, '…') : '-' }}</td>
                     {{-- <td class="text-center">{{ $it->saleno ?: '' }}</td> --}}
-                    <td class="text-center">{{ $it->order_date ? \Carbon\Carbon::parse($it->order_date)->format('d/m/y') : '-' }}</td>
+                    {{-- <td class="text-center">{{ $it->order_date ? \Carbon\Carbon::parse($it->order_date)->format('d/m/y') : '-' }}</td> --}}
                     {{-- <td class="text-center">{{ $it->orderno ?: '-' }}</td> --}}
                     <td>{{ $it->itemno ?: '-' }}</td>
                     {{-- <td class="text-center">{{ $it->lot ?: '-' }}</td> --}}
@@ -80,7 +84,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="12" class="text-center" style="padding: 14px;">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td>
+                    <td colspan="10" class="text-center" style="padding: 14px;">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td>
                 </tr>
             @endforelse
         </tbody>

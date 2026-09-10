@@ -805,15 +805,17 @@ class ReportController extends Controller
         // ];
         // $cols = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W'];
         // $lastCol = 'W';
+        // ── ซ่อนเพิ่มตามที่ผู้ใช้สั่ง (10/09/2569): Cust no, Order Date (สถานะปัจจุบันซ่อนอยู่แล้ว)
+        //     เปิดคืน: เพิ่ม 'Cust no' หลัง 'Cust Due' และ 'Order Date' หลัง 'Cust Name' + เลื่อนคอลัมน์ตาม
         $headers = [
             '#', 'แผนก', 'เลขที่ใบแดง', 'Revise', 'ขาดวัตถุดิบ', 'ขาด semi', 'Cust Due',
-            'Cust no', 'Cust Name', 'Order Date', 'PRODUCT NO', 'น้ำหนัก',
+            'Cust Name', 'PRODUCT NO', 'น้ำหนัก',
         ];
         $cols = [
             'A', 'B', 'C', 'D', 'E', 'F', 'G',
-            'H', 'I', 'J', 'K', 'L',
+            'H', 'I', 'J',
         ];
-        $lastCol = 'L';
+        $lastCol = 'J';
 
         // หัวรายงาน
         $sheet->setCellValue('A1', 'รายงานการขาดวัตถุดิบ');
@@ -853,14 +855,14 @@ class ReportController extends Controller
             $sheet->setCellValue("E{$r}", $it->lack_pigment ?: '');  // ขาดวัตถุดิบ (tb_planning.shortage_remark) — 25/08/2569
             $sheet->setCellValue("F{$r}", $it->lack_semi ?: '');  // ขาด semi (itemno+semi_code+primary_color ของ semi)
             $sheet->setCellValue("G{$r}", $custDue ? \Carbon\Carbon::parse($custDue)->format('d/m/Y') : '-');  // Cust Due
-            $sheet->setCellValueExplicit("H{$r}", $it->custno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-            $sheet->setCellValue("I{$r}", $it->cust_name ?: '-');
+            // $sheet->setCellValueExplicit("H{$r}", $it->custno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);  // Cust no — ซ่อน (10/09/2569)
+            $sheet->setCellValue("H{$r}", $it->cust_name ?: '-');  // Cust Name
             // $sheet->setCellValueExplicit("M{$r}", $it->saleno ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);  // SaleNo
-            $sheet->setCellValue("J{$r}", $it->order_date ? \Carbon\Carbon::parse($it->order_date)->format('d/m/Y') : '-');  // Order Date
+            // $sheet->setCellValue("J{$r}", $it->order_date ? \Carbon\Carbon::parse($it->order_date)->format('d/m/Y') : '-');  // Order Date — ซ่อน (10/09/2569)
             // $sheet->setCellValueExplicit("O{$r}", $it->orderno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);  // Order No
-            $sheet->setCellValueExplicit("K{$r}", $it->itemno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);  // PRODUCT NO
+            $sheet->setCellValueExplicit("I{$r}", $it->itemno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);  // PRODUCT NO
             // $sheet->setCellValue("Q{$r}", $it->lot ?: '-');  // LOT
-            $sheet->setCellValue("L{$r}", $it->quantity !== null ? number_format($it->quantity, 2) : '-');  // น้ำหนัก (quantity)
+            $sheet->setCellValue("J{$r}", $it->quantity !== null ? number_format($it->quantity, 2) : '-');  // น้ำหนัก (quantity)
             // $sheet->setCellValue("S{$r}", '');  // ส่งชั่งสี (ยังไม่มีฟิลด์)
             // $sheet->setCellValue("T{$r}", $it->start_date ? \Carbon\Carbon::parse($it->start_date)->format('d/m/Y') : '');  // เริ่มผลิต
             // $sheet->setCellValue("U{$r}", $it->qc_date ? \Carbon\Carbon::parse($it->qc_date)->format('d/m/Y') : '');  // วันที่ส่ง QC
@@ -891,7 +893,16 @@ class ReportController extends Controller
         }
 
         foreach ($cols as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(true);
+            // Cust Name (H) ลดขนาดเป็นความกว้างคงที่ (10/09/2569) — เดิม autosize ยืดตามชื่อลูกค้าที่ยาว
+            if ($col === 'H') {
+                $sheet->getColumnDimension($col)->setAutoSize(false);
+                $sheet->getColumnDimension($col)->setWidth(22);
+            } else {
+                $sheet->getColumnDimension($col)->setAutoSize(true);
+            }
+        }
+        if ($total > 0) {
+            $sheet->getStyle("H5:H{$inplanLastRow}")->getAlignment()->setWrapText(true);
         }
 
         $fileName = 'report-material-shortage-'.now()->format('Ymd-His').'.xls';

@@ -17,6 +17,24 @@
     </div>
 
     <div class="mb-3">
+        <label class="form-label" for="employee_user">ชื่อผู้ใช้ (Email or Username)</label>
+        <input type="text" class="form-control" id="employee_user" name="user"
+            value="{{ $employee?->user }}" maxlength="50" placeholder="ชื่อผู้ใช้สำหรับเข้าระบบ" autocomplete="off">
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label" for="employee_password">รหัสผ่าน (Password)</label>
+        <input type="password" class="form-control" id="employee_password" name="password"
+            maxlength="255" placeholder="{{ $isEdit ? 'เว้นว่างถ้าไม่เปลี่ยนรหัสผ่าน' : 'กรอกรหัสผ่าน (อย่างน้อย 4 ตัว)' }}"
+            autocomplete="new-password">
+        @if($isEdit)
+            <small class="text-muted">เว้นว่างไว้หากไม่ต้องการเปลี่ยนรหัสผ่านเดิม</small>
+        @endif
+    </div>
+
+    <hr class="mb-3">
+
+    <div class="mb-3">
         <label class="form-label" for="employee_empname">
             ชื่อ <span class="text-danger">*</span>
         </label>
@@ -64,22 +82,6 @@
                 </option>
             @endforeach
         </select>
-    </div>
-
-    <div class="mb-3">
-        <label class="form-label" for="employee_user">ชื่อผู้ใช้ (User)</label>
-        <input type="text" class="form-control" id="employee_user" name="user"
-            value="{{ $employee?->user }}" maxlength="50" placeholder="ชื่อผู้ใช้สำหรับเข้าระบบ" autocomplete="off">
-    </div>
-
-    <div class="mb-3">
-        <label class="form-label" for="employee_password">รหัสผ่าน (Password)</label>
-        <input type="password" class="form-control" id="employee_password" name="password"
-            maxlength="255" placeholder="{{ $isEdit ? 'เว้นว่างถ้าไม่เปลี่ยนรหัสผ่าน' : 'กรอกรหัสผ่าน (อย่างน้อย 4 ตัว)' }}"
-            autocomplete="new-password">
-        @if($isEdit)
-            <small class="text-muted">เว้นว่างไว้หากไม่ต้องการเปลี่ยนรหัสผ่านเดิม</small>
-        @endif
     </div>
 
     <div class="mb-3">

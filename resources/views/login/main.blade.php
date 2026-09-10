@@ -43,7 +43,7 @@
             <div id="formAuthentication" class="mb-3">
               <form id="login-form">
                 <div class="mb-3">
-                  <label for="email" class="form-label">Email or Username</label>
+                  <label for="email" class="form-label">ชื่อผู้ใช้ (Email or Username)</label>
                   <input
                     type="text"
                     class="form-control"
@@ -56,7 +56,7 @@
                 </div>
                 <div class="mb-3 form-password-toggle">
                   <div class="d-flex justify-content-between">
-                    <label class="form-label" for="password">Password</label>
+                    <label class="form-label" for="password">รหัสผ่าน (Password)</label>
                     {{-- <a href="auth-forgot-password-cover.html">
                       <small>Forgot Password?</small>
                     </a> --}}
@@ -96,7 +96,7 @@
     </div>
 
     @include('layout/inc_js')
-    
+
 @section('script')
 
 <script>
@@ -104,7 +104,7 @@
     function togglePassword() {
       var passwordField = document.getElementById('password');
       var eyeIcon = document.getElementById('eye-icon');
-      
+
       // Toggle the type of the input field between password and text
       if (passwordField.type === "password") {
         passwordField.type = "text";
