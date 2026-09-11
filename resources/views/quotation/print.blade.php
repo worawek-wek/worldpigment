@@ -27,14 +27,15 @@
     };
 
     $subject  = $isRevision ? 'ขอแจ้งปรับราคา' : 'ขอเสนอราคา';
+    // ข้อความเนื้อจดหมาย — ตามแบบที่ลูกค้ากำหนด (12/09/2569)
     $bodyText = $isRevision
-        ? 'เนื่องจากขณะนี้ราคาของวัตถุดิบมีการปรับตัวสูงขึ้น บริษัทฯ มีความจำเป็นอย่างยิ่งที่จะต้องขอปรับราคา ' . $ptname . ' ดังต่อไปนี้'
-        : 'บริษัทฯ ขอเสนอราคา ' . $ptname . ' ดังรายละเอียดต่อไปนี้';
+        ? 'บริษัทฯ ขอเรียนแจ้งการปรับเปลี่ยนราคา ของผลิตภัณฑ์ตามรายละเอียดด้านล่างนี้'
+        : 'บริษัทฯ มีความยินดีขอเสนอราคาผลิตภัณฑ์ตามรายละเอียดด้านล่างนี้';
 
     // ── ข้อความหัวบิลภาษาอังกฤษ ──
     $subjectEn  = $isRevision ? 'Price Revision' : 'Quotation';
     $bodyTextEn = $isRevision
-        ? 'Due to the current rise in raw material prices, we regret to inform you that it is necessary to adjust the price of ' . $ptname . ' as follows:'
+        ? 'Please find below our revised offers for the following products.'
         : 'We are pleased to submit our offer for the following products.';
 @endphp
 <!doctype html>
@@ -99,7 +100,7 @@
     @if ($headEn)
         <div class="doc-head">
             <div><span class="field-label">Quotation No.</span> &nbsp;&nbsp; <span class="qno">{{ $qno }}</span></div>
-            <div>Date {{ $enDate($header->Qdate) }}</div>
+            <div>{{ $enDate($header->Qdate) }}</div>
         </div>
 
         <div class="subject"><span class="field-label">Re:</span> &nbsp;&nbsp; {{ $subjectEn }} &nbsp; {{ $ptname }}</div>
@@ -117,10 +118,12 @@
         </div>
 
         <div class="subject"><span class="field-label">เรื่อง</span> &nbsp;&nbsp; {{ $subject }} &nbsp; {{ $ptname }}</div>
+        {{-- ATTN: ชื่อลูกค้า + รหัสลูกค้า แยกบรรทัดจาก "เรียน" เหมือนฉบับภาษาอังกฤษ (12/09/2569) --}}
         <div class="subject">
-            <span class="field-label">เรียน</span> &nbsp;&nbsp; ท่านผู้จัดการฝ่ายจัดซื้อ &nbsp;
+            <span class="field-label">ATTN:</span> &nbsp;&nbsp;
             {{ $tname ?: '—' }} @if($header->Custid) ({{ $header->Custid }}) @endif
         </div>
+        <div class="subject"><span class="field-label">เรียน</span> &nbsp;&nbsp; ผู้จัดการฝ่ายจัดซื้อ</div>
 
         <div class="body-text">{{ $bodyText }}</div>
     @endif
@@ -166,7 +169,10 @@
             : ['resin'=>'ราคาเม็ดพลาสติก', 'valid'=>'ราคานี้มีผลวันที่', 'to'=>'ถึง',
                'minqty'=>'จำนวนส่งมอบขั้นต่ำ', 'unit'=>'กก.', 'place'=>'สถานที่ส่งสินค้า',
                'dterm'=>'เทอมการส่งมอบสินค้า', 'pay'=>'เทอมการชำระเงิน'];
-        $shortDate = fn ($d) => $d ? \Carbon\Carbon::parse($d)->format('d/m/Y') : '-';
+        // วันที่ในหมายเหตุ: ภาษาอังกฤษ = UK English Long Date (21 July 2026) · ภาษาไทย = d/m/Y ตามเดิม
+        $shortDate = $isEn
+            ? $enDate
+            : fn ($d) => $d ? \Carbon\Carbon::parse($d)->format('d/m/Y') : '-';
     @endphp
     <div class="footer-info">
         @if ($header->resin_price_note)
