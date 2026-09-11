@@ -111,7 +111,7 @@
                         ช่อง itype — ติ๊กเลือกบนฟอร์มได้เลย (เดิมเป็นกล่องหน้าตาเหมือน select ที่กดแล้วกางรายการ, 01/09/2569)
                         ตัวเลือกมาจาก config/order.php → itypes
                         เลือกได้ "ข้อเดียว" ตามที่ผู้ใช้กำหนดไว้เดิม: ติ๊กข้อใหม่แล้วข้อเก่าจะหลุดเอง (จัดการที่ JS)
-                        ⚠ ยังไม่มีที่เก็บใน DB → ค่าที่เลือกไม่ถูกบันทึก (ดูหมายเหตุใน config/order.php)
+                        บันทึกลง morder.itype (เก็บ key, 12/09/2569)
                     --}}
                     <div class="col-12">
                         <label class="form-label d-block">
@@ -306,7 +306,7 @@
                 <div class="mb-3">
                     <label class="form-label">
                         ขั้นต่ำ
-                        <i class="ti ti-info-circle text-muted" title="ยังไม่ยืนยันแหล่งข้อมูล — รอผู้ใช้ระบุ"></i>
+                        <i class="ti ti-info-circle text-muted" title="ค่าของกลุ่มราคา (A / B / C) ของรหัสสินค้านี้ จากตาราง zcolorrate"></i>
                     </label>
                     <input type="text" id="o_min_qty" class="form-control of-hl-yellow text-end" readonly>
                 </div>

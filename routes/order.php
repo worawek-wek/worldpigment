@@ -23,6 +23,9 @@ Route::prefix('order')->group(function () {
     // ─── บันทึก (สร้างใหม่ / แก้ไข) ───────────────────────────────────
     Route::post('/save', [OrderController::class, 'save'])->name('order.save');
 
+    // ปุ่ม "เพิ่มใบสั่งซื้อใหม่" ในฟอร์ม — สร้างใบสั่งซื้อทันที (12/09/2569)
+    Route::post('/create', [OrderController::class, 'create'])->name('order.create');
+
     // ─── ฟอร์มขออนุมัติราคาพิเศษ (MD) — ฟอร์มลูกของเมนูนี้ ─────────────
     Route::prefix('price-approval')->group(function () {
         Route::get('/items',           [PriceApprovalController::class, 'items'])->name('order.approval.items');

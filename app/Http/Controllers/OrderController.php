@@ -268,6 +268,8 @@ class OrderController extends Controller
             'Spec'     => self::checked($order->Spec),
             'Cer'      => self::checked($order->Cer),
             'MSDS'     => self::checked($order->MSDS),
+            // ประเภทสินค้าที่สั่ง = key จาก config/order.php → itypes
+            'itype'    => $order->itype,
         ];
     }
 
@@ -277,6 +279,7 @@ class OrderController extends Controller
         return [
             'Runno'      => $row->Runno,
             'Itemno'     => $row->Itemno,
+            'nold'       => $row->nold,   // ช่อง "รหัส" — เดิมไม่ได้ส่งกลับ เปิดใบแล้วว่าง บันทึกซ้ำจึงทับเป็นค่าว่าง (แก้ 12/09/2569)
             'prodname'   => $row->prodname,
             'Lotno'      => $row->Lotno,
             'Stock'      => $row->Stock,
@@ -401,6 +404,7 @@ class OrderController extends Controller
             'appv_price'  => null, 'appv'   => null, 'valid_to' => null,
             'cost_price'  => null, 'remark' => null,
             'group'       => null, 'min_price' => null, 'min_from' => null,
+            'min_rate'    => null,
         ];
 
         // ต้องมีรหัสสินค้าเป็นอย่างน้อย — ราคา 1/2/3 คำนวณจากรหัสสินค้าล้วน ไม่ต้องรู้ลูกค้า
@@ -435,6 +439,10 @@ class OrderController extends Controller
         // กลุ่มราคาตามปริมาณที่สั่ง (A ≥1,000 / B ≥500 / C ต่ำกว่า 500) — แสดงประกอบเฉย ๆ
         $group = PriceApprovalController::groupOf($weight);
 
+        // ขั้นต่ำ = ค่าของกลุ่มราคานั้นจาก zcolorrate (rate_A / rate_B / rate_C ของรหัสสินค้า) — 12/09/2569
+        $colorRate = DB::table('zcolorrate')->where('colorno', $itemno)->first(['rate_A', 'rate_B', 'rate_C']);
+        $minRate   = ($group && $colorRate) ? $colorRate->{'rate_' . $group['group']} : null;
+
         // คำนวณไม่ได้ → บอกเหตุผลที่ระบบกำหนดราคาให้มา (ไม่พบราคาทุน / ไม่มีเงื่อนไขรองรับ ฯลฯ)
         $message = $prices ? null : ($calc['reason'] ?? 'คำนวณราคาไม่ได้');
 
@@ -449,6 +457,7 @@ class OrderController extends Controller
             'others'      => [],
             'group'       => $group ? $group['group'] : null,
             'group_label' => $group ? $group['label'] : null,
+            'min_rate'    => $minRate,
             // ราคาที่กำหนดไว้ = ราคาขาย 1 · ราคาช่อง 2 = ราคาขาย 2
             'fixed_price' => $prices['price_1'] ?? null,
             'price2'      => $prices['price_2'] ?? null,
@@ -575,6 +584,45 @@ class OrderController extends Controller
     // ─────────────────────────────────────────────────────────────
     //  บันทึกใบสั่งซื้อ
     // ─────────────────────────────────────────────────────────────
+
+    /**
+     * POST — ปุ่ม "เพิ่มใบสั่งซื้อใหม่" ในฟอร์ม: สร้างใบสั่งซื้อทันที (12/09/2569)
+     *   type=WM  →  { status: true, orderno: "WM24565" }
+     *
+     * ออกเลขที่จาก orderrun แล้ว insert morder เลย (แบบเดียวกับ save() โหมด insert)
+     * เพื่อไม่ให้เลขที่ชนกันเมื่อหลายคนเปิดฟอร์มพร้อมกัน — จากนั้นฟอร์มบันทึกใบนี้ด้วยโหมด update
+     */
+    public function create(Request $request)
+    {
+        $type = strtoupper(trim((string) $request->input('type')));
+        if (!isset(self::ORDER_TYPES[$type])) {
+            return response()->json(['status' => false, 'message' => 'ประเภทใบสั่งไม่ถูกต้อง'], 422);
+        }
+
+        try {
+            $orderno = DB::transaction(function () use ($type) {
+                $orderno = $this->allocateOrderno($type);
+                DB::table('morder')->insert([
+                    'Orderno' => $orderno,
+                    'Mdate'   => now(),
+                    'Emp'     => $this->nullIfBlank(optional(Auth::user())->empno),
+                ]);
+
+                return $orderno;
+            });
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'สร้างใบสั่งซื้อไม่สำเร็จ: ' . $e->getMessage(),
+            ], 500);
+        }
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'สร้างใบสั่งซื้อใหม่เรียบร้อย',
+            'orderno' => $orderno,
+        ]);
+    }
 
     /**
      * POST — บันทึกใบสั่งซื้อ (สร้างใหม่ / แก้ไขใบเดิม)
@@ -902,6 +950,10 @@ class OrderController extends Controller
             'Spec'     => $this->flag($request->input('Spec')),
             'Cer'      => $this->flag($request->input('Cer')),
             'MSDS'     => $this->flag($request->input('MSDS')),
+            // itype — รับเฉพาะ key ที่มีใน config/order.php → itypes (ไม่ติ๊ก/ค่าแปลก = null)
+            'itype'    => in_array((string) $request->input('itype'), array_column(config('order.itypes', []), 'key'), true)
+                ? (string) $request->input('itype')
+                : null,
         ]);
     }
 

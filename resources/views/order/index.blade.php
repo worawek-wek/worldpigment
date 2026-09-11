@@ -733,17 +733,25 @@
             return;
         }
 
-        clearOrderForm();                              // ล้างข้อมูลใบเดิมออกก่อน
-        $('#o_type_' + type).prop('checked', true);    // คงประเภทที่เลือกไว้
-        $('#orderModalTitle').text('บันทึกคำสั่งซื้อ — ใบใหม่');
-        setOrderFormMode('new');           // ปลดล็อกช่องที่เหลือ
+        // สร้างใบสั่งซื้อที่ server ทันที (12/09/2569) กันเลขที่ชนกัน
+        // แล้วเปิดใบนั้นขึ้นมาในโหมดแก้ไข — แบบเดียวกับตอนกดบันทึกสำเร็จ
+        var $btn = $('.of-btn-new').prop('disabled', true);
 
-        $.getJSON("{{ $page_url }}/next-orderno", {type: type}, function(res){
-            if (res.found && res.orderno){ $('#o_Orderno').val(res.orderno); syncItypeRequired(); }
-            else Swal.fire('เจนเลขที่ใบสั่งไม่สำเร็จ', 'ไม่พบเลขรันของประเภท ' + type, 'error');
-        }).fail(function(){
-            Swal.fire('เจนเลขที่ใบสั่งไม่สำเร็จ', 'ลองใหม่อีกครั้ง', 'error');
-        });
+        $.post("{{ $page_url }}/create", {_token: '{{ csrf_token() }}', type: type})
+            .done(function(res){
+                if (!res.status){
+                    Swal.fire('สร้างใบสั่งซื้อไม่สำเร็จ', res.message || '', 'error');
+                    return;
+                }
+                Swal.fire({icon: 'success', title: res.message, text: 'เลขที่ใบสั่ง ' + res.orderno});
+                orderOpen(res.orderno);
+                loadData(page);
+            })
+            .fail(function(xhr){
+                var body = xhr.responseJSON || {};
+                Swal.fire('สร้างใบสั่งซื้อไม่สำเร็จ', body.message || 'ลองใหม่อีกครั้ง', 'error');
+            })
+            .always(function(){ $btn.prop('disabled', false); });
     }
 
     // ── itype: ใบสั่งที่เลขที่ขึ้นต้นด้วย W ต้องมี itype ──
@@ -819,8 +827,8 @@
         $('#o_RsvNo').val(o.RsvNo || '');
         $('#o_netqty').val(commaFmt(o.netqty, 2));
 
-        // itype ไม่ได้เติมจากข้อมูลลูกค้าแล้ว — เปลี่ยนเป็น "ประเภทสินค้าที่สั่ง" ที่ผู้ใช้เลือกเอง
-        // (ยังไม่มีที่เก็บใน DB → เปิดใบเดิมขึ้นมาช่องนี้จะว่างเสมอ)
+        // itype = ประเภทสินค้าที่สั่ง เก็บที่ morder.itype (12/09/2569)
+        if (o.itype) $('#o_itype_' + o.itype).prop('checked', true);
 
         // สถานที่ส่ง — รายการของลูกค้ารายนี้
         fillDvpoints(res.dvpoints, o.DVpoint);
@@ -872,7 +880,9 @@
             .attr('title', p.min_from === 'approved'
                 ? 'เทียบกับราคาอนุมัติของลูกค้ารายนี้ (ยังไม่เลยวันยืนราคา)'
                 : 'เทียบกับราคาช่อง 2');
-        $('#o_price_group').val(p.group ? p.group + ' — ' + (p.group_label || '') : '');
+        $('#o_price_group').val(p.group || '');   // แสดงแค่ A / B / C
+        // ขั้นต่ำ = ค่าของกลุ่มราคานั้นจาก zcolorrate
+        $('#o_min_qty').val(fmtNum(p.min_rate, 2));
         $('#o_appv_price').val(fmtNum(p.appv_price, 2));
         $('#o_valid_to').val(fmtDate(p.valid_to));
 
@@ -1242,8 +1252,8 @@
             return;
         }
         // ใบที่เลขที่ขึ้นต้นด้วย W ต้องเลือก itype
-        // ⚠ ตอนนี้กันได้แค่ฝั่งจอ — itype ยังไม่มีที่เก็บใน DB จึงไม่ได้ส่งไปให้ server ตรวจ
-        //   (ด่านฝั่ง server ใน OrderController::save() ถูกคอมเมนต์ไว้ รอที่เก็บ)
+        // ⚠ ตอนนี้กันได้แค่ฝั่งจอ — ด่านฝั่ง server ใน OrderController::save() ยังคอมเมนต์ไว้
+        //   (itype บันทึกลง morder.itype ได้แล้ว 12/09/2569)
         if (itypeRequired() && !$('.o-itype-opt:checked').length){
             syncItypeRequired();
             Swal.fire({
@@ -1281,6 +1291,7 @@
             Spec:       $('#o_Spec').is(':checked')  ? 1 : 0,
             Cer:        $('#o_Cer').is(':checked')   ? 1 : 0,
             MSDS:       $('#o_MSDS').is(':checked')  ? 1 : 0,
+            itype:      $('.o-itype-opt:checked').val() || '',
             items:      items
         };
 
