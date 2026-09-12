@@ -216,6 +216,18 @@
     $(document).on('click', '#btn_product_save', function(e) {
         e.preventDefault();
         var $btn = $(this);
+
+        // ตรวจฝั่ง client ก่อนยิง (UX) — server ยังเป็นด่านตัดสินจริง (รวมเช็คซ้ำที่ client ทำไม่ได้)
+        var code = $('#product_code').val() || '';
+        if (code === '') {
+            Swal.fire({ icon: 'warning', title: 'ข้อมูลไม่ถูกต้อง', text: 'กรุณากรอกรหัสสินค้า' });
+            return;
+        }
+        if (/\s/.test(code)) {
+            Swal.fire({ icon: 'warning', title: 'ข้อมูลไม่ถูกต้อง', text: 'รหัสสินค้าต้องไม่มีช่องว่าง' });
+            return;
+        }
+
         var formData = $('#product_master_form').serialize();
 
         $btn.prop('disabled', true);

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Yajra\DataTables\Facades\DataTables;
 use App\Services\AccessControl;
 use App\Models\Product;
@@ -104,7 +105,12 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'product_code' => 'required|string|max:255',
+            // รหัสสินค้า: บังคับกรอก, ห้ามมีช่องว่างทุกตำแหน่ง (regex /^\S+$/u — ไม่ trim ให้ตีกลับ),
+            // และต้องไม่ซ้ำ (ignore id ตัวเอง เพราะ updateOrCreate ใช้ id ตัดสิน — แก้ไขแถวเดิมจะได้ไม่ชนตัวเอง)
+            'product_code' => [
+                'required', 'string', 'max:255', 'regex:/^\S+$/u',
+                Rule::unique('tb_products', 'product_code')->ignore($request->id),
+            ],
             'resin'        => 'nullable|string|max:255',
             'temp_id'      => 'nullable|integer|exists:temp,id',
             'code'         => 'nullable|string|max:255',
@@ -113,6 +119,8 @@ class ProductController extends Controller
             'sampling'     => 'nullable|string|max:255',
         ], [
             'product_code.required' => 'กรุณากรอกรหัสสินค้า',
+            'product_code.regex'    => 'รหัสสินค้าต้องไม่มีช่องว่าง',
+            'product_code.unique'   => 'รหัสสินค้านี้มีอยู่แล้ว',
         ]);
 
         if ($validator->fails()) {

@@ -8,7 +8,7 @@
                 รหัสสินค้า <span class="text-danger">*</span>
             </label>
             <input type="text" class="form-control" id="product_code" name="product_code"
-                value="{{ $product?->product_code }}" placeholder="กรอกรหัสสินค้า">
+                value="{{ $product?->product_code }}" placeholder="กรอกรหัสสินค้า" maxlength="255">
         </div>
 
         <div class="col-md-6 mb-3">
