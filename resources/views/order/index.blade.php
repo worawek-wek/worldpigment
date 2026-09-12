@@ -1652,6 +1652,15 @@
             icon: approve ? 'question' : 'warning',
             title: approve ? 'อนุมัติใบสั่งซื้อนี้?' : 'ยกเลิกการอนุมัติ?',
             html: html,
+            // ต้องกรอกรหัสผ่านก่อนถึงจะอนุมัติได้ (12/09/2569) — **รหัสผ่านของบัญชีที่ล็อกอินอยู่**
+            // (พนักงาน/แอดมิน) ตรวจที่ server เสมอด้วย Hash::check
+            // ต้อง render ใน #orderApprovalModal ไม่งั้น focus trap ของ modal ดึงโฟกัสกลับ พิมพ์ไม่ได้
+            target: document.getElementById('orderApprovalModal') || 'body',
+            heightAuto: false,
+            input: 'password',
+            inputLabel: 'รหัสผ่านของคุณ (รหัสผ่านที่ใช้เข้าระบบ)',
+            inputAttributes: {autocomplete: 'off'},
+            inputValidator: function(v){ if (!(v || '')) return 'กรอกรหัสผ่านก่อน'; },
             showCancelButton: true,
             confirmButtonText: approve ? 'อนุมัติ' : 'ยกเลิกการอนุมัติ',
             cancelButtonText: 'ปิด',
@@ -1661,9 +1670,10 @@
 
             $('#oa_appv').prop('disabled', true);
             $.post(OA_URL + '/approve', {
-                _token:  '{{ csrf_token() }}',
-                orderno: o.Orderno,
-                appv:    approve ? 1 : 0
+                _token:   '{{ csrf_token() }}',
+                orderno:  o.Orderno,
+                appv:     approve ? 1 : 0,
+                password: r.value || ''
             })
                 .done(function(res){
                     if (!res.status){ Swal.fire('ทำรายการไม่สำเร็จ', res.message || '', 'error'); return; }

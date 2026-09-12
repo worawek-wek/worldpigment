@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Services\AccessControl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 /**
  * อนุมัติใบสั่งซื้อ — แปลงมาจากฟอร์ม Access "morderAPPV"
@@ -22,6 +24,34 @@ class OrderApprovalController extends Controller
     private static function checked($value): bool
     {
         return (int) $value !== 0 && $value !== null;
+    }
+
+    /**
+     * ตรวจรหัสผ่านก่อนอนุมัติ (12/09/2569 ตามที่ผู้ใช้สั่ง)
+     *
+     * **ใช้รหัสผ่านของบัญชีที่ล็อกอินอยู่** (พนักงาน guard `emp` → `emp.password`
+     * หรือ admin guard `web` → `users.password`) — ไม่ใช่รหัสร่วมใน config แบบฟอร์ม MK
+     * ⇒ คนกดอนุมัติต้องรู้รหัสของตัวเอง และ **ต้องกรอกทุกครั้ง** (ไม่มี session ปลดล็อก)
+     *
+     * ⚠ `emp` มี 2 คอลัมน์รหัสผ่าน: `password` (hash ที่ใช้ล็อกอินจริง) กับ `pwd` (ของระบบเก่า
+     *   varchar(10)) — ที่นี่ตรวจกับ `password` ผ่าน `getAuthPassword()` ตัวเดียวกับตอน login
+     *   พนักงานที่ยังไม่ได้ตั้งรหัส (5 จาก 33 คนเท่านั้นที่มี) ล็อกอินไม่ได้อยู่แล้ว
+     *
+     * @return string|null  ข้อความผิดพลาด (null = ผ่าน)
+     */
+    private function approvePasswordError($input): ?string
+    {
+        $account = AccessControl::currentAccount();
+        if (!$account) {
+            return 'ไม่พบบัญชีที่ล็อกอินอยู่ กรุณาเข้าสู่ระบบใหม่';
+        }
+
+        $hash = (string) $account->getAuthPassword();
+        if ($hash === '') {
+            return 'บัญชีนี้ยังไม่ได้ตั้งรหัสผ่าน จึงอนุมัติไม่ได้';
+        }
+
+        return Hash::check((string) $input, $hash) ? null : 'รหัสผ่านไม่ถูกต้อง';
     }
 
     /**
@@ -155,6 +185,17 @@ class OrderApprovalController extends Controller
 
         if ($orderno === '') {
             return response()->json(['status' => false, 'message' => 'ไม่ได้ระบุเลขที่ใบสั่ง'], 422);
+        }
+
+        // ต้องกรอกรหัสผ่านทุกครั้งที่เปลี่ยนสถานะอนุมัติ (รวมขา "ยกเลิกอนุมัติ" ด้วย
+        // เพราะเป็นการแก้สถานะเอกสารเหมือนกัน แม้ตอนนี้ UI จะยังเข้าไม่ถึงขานั้น)
+        $pwError = $this->approvePasswordError($request->input('password'));
+        if ($pwError !== null) {
+            return response()->json([
+                'status'       => false,
+                'bad_password' => true,
+                'message'      => $pwError,
+            ], 422);
         }
 
         $order = DB::table('morder')->where('Orderno', $orderno)->first(['Orderno', 'appv']);
