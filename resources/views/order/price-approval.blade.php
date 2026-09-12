@@ -70,6 +70,9 @@
 
     <hr class="my-3">
 
+    {{-- ตัวเดินระเบียน "ใบที่รออนุมัติ" ย้ายไปอยู่ใน modal-footer แล้ว (12/09/2569)
+         ดู #approvalModal ใน order/index.blade.php --}}
+
     <div class="row g-3">
 
         {{-- ═══════════ ซ้าย: ข้อมูลใบขอราคา ═══════════ --}}
@@ -125,7 +128,8 @@
                         <span class="text-muted fw-normal small">(คำนวณจากเมนูกำหนดราคา)</span>
                     </label>
                     <div class="d-flex flex-wrap align-items-end gap-2">
-                        {{-- ไม่มีป้ายกำกับ A/B/C ใต้ช่อง — ดูกลุ่มที่ใช้จริงได้จากกรอบที่ถูกเน้น + ช่อง "กลุ่ม" --}}
+                        {{-- ป้ายเกณฑ์ A/B/C อยู่ใต้ช่อง "จำนวนสั่งซื้อ" (ดูท้ายฟอร์ม) — ตรงนี้ดูกลุ่มที่ใช้จริง
+                             ได้จากกรอบที่ถูกเน้น + ช่อง "กลุ่ม" --}}
                         <div class="pa-pricebox" id="a_box1">
                             <input type="text" id="a_price1" class="form-control text-end" readonly>
                         </div>
@@ -185,6 +189,19 @@
                 </div>
             </div>
 
+            {{-- ป้ายเกณฑ์กลุ่มราคา A/B/C ใต้ช่อง "จำนวนสั่งซื้อ" — ตามฟอร์ม Access เดิม (12/09/2569)
+                 ข้อความตรงกับ PriceApprovalController::PRICE_GROUPS
+                 กล่องของกลุ่มที่ตรงกับจำนวนสั่งซื้อจะถูกเน้น (ดู highlightPriceGroup) --}}
+            <div class="row g-3 mt-1">
+                <div class="col-12">
+                    <div class="pa-grouplegend">
+                        <div class="pa-gitem" id="a_glabel1">กลุ่ม A = 1,000 kg. up</div>
+                        <div class="pa-gitem" id="a_glabel2">กลุ่ม B = 500 kg UP</div>
+                        <div class="pa-gitem" id="a_glabel3">กลุ่ม C = under 500 kg.</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="row g-3 mt-1">
                 <div class="col-12">
                     <div class="form-check">
@@ -218,7 +235,9 @@
                     </label>
                     <input type="text" id="a_validto" class="form-control flatpickr-date" autocomplete="off">
                 </div>
-                <div class="col-md-5">
+                {{-- ปุ่มบันทึก/ลบ/พิมพ์ — col-12 เพื่อให้ตกลงแถวใหม่เต็มความกว้าง (12/09/2569)
+                     เดิมเป็น col-md-5 ต่อท้ายแถวเดียวกับช่องอนุมัติ ปุ่มจึงแคบจนข้อความขึ้น 2 บรรทัด --}}
+                <div class="col-12">
                     <div class="d-flex gap-2 justify-content-md-end">
                         <button type="button" id="btnApprovalSave" class="btn btn-primary" onclick="approvalSave()">
                             <i class="ti ti-plus me-1"></i>เพิ่ม / บันทึก

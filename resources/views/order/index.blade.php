@@ -184,6 +184,26 @@
 .pa-pricebox.pa-active .form-control { border-color: #0d6efd; box-shadow: 0 0 0 .18rem rgba(13,110,253,.18); font-weight: 700; }
 .pa-pricebox.pa-active .pa-pricebox-cap { color: #0d6efd; }
 
+/* ป้ายเกณฑ์กลุ่มราคา A/B/C ใต้ช่อง "จำนวนสั่งซื้อ" (12/09/2569) — ตามฟอร์ม Access เดิม */
+.pa-grouplegend { display: flex; flex-wrap: wrap; gap: .5rem; }
+.pa-gitem {
+    width: 150px;
+    padding: .35rem .5rem;
+    text-align: center;
+    font-size: .78rem;
+    font-weight: 600;
+    color: #5a6a78;
+    background: #fff;
+    border: 1px solid #b6d2e6;
+    border-radius: .375rem;
+}
+/* กลุ่มที่ตรงกับจำนวนสั่งซื้อ — เน้นให้เข้าชุดกับกรอบราคาที่ถูกเน้น (.pa-pricebox.pa-active) */
+.pa-gitem.pa-active {
+    color: #0d6efd;
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 .18rem rgba(13, 110, 253, .18);
+}
+
 .pa-hl-yellow { background-color: #fff59d !important; font-weight: 600; }
 .pa-hl-pink   { background-color: #f8bbd0 !important; font-weight: 600; }
 .pa-sell      { background-color: #fff !important; color: #d32f2f; }
@@ -234,6 +254,20 @@
 .oa-hl-blue  { background-color: #cfe9fb !important; }
 .oa-hl-green { background-color: #ccffcc !important; }
 .oa-sell     { background-color: #ffcdd2 !important; color: #c62828; font-size: 1.15rem; }
+
+/* แถบเดินระเบียน "ใบที่รออนุมัติ" ใน modal-footer ของฟอร์มขออนุมัติราคาพิเศษ (12/09/2569)
+   โทนฟ้าให้เข้าชุดกับพื้นฟอร์ม .pa-body (#eef6fb) แต่เข้มกว่าเล็กน้อยให้เห็นเป็นแถบ */
+.pa-nav {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .35rem;
+    padding: .5rem .75rem;
+    background: #d9e9f5;
+    border: 1px solid #b6d2e6;
+    border-radius: .375rem;
+    font-size: .85rem;
+}
 
 /* แถบเดินระเบียนล่างฟอร์ม */
 .oa-nav {
@@ -295,6 +329,8 @@
                         <button class="btn btn-label-primary border" style="color: #1f158e;" onclick="approvalOpen()">
                             <i class="ti ti-discount-check me-1"></i>
                             ขออนุมัติราคาพิเศษ
+                            {{-- จำนวนใบขอราคาที่ยังไม่อนุมัติ (12/09/2569) — อัปเดตใน paLoadQueue() --}}
+                            <span class="badge bg-danger ms-1 d-none" id="paQueueBadge">0</span>
                         </button>
                         <button class="btn btn-primary" onclick="orderOpenNew()">
                             <i class="ti ti-plus me-1"></i>
@@ -501,7 +537,31 @@
 
             @include('order.price-approval')
 
-            <div class="modal-footer">
+            <div class="modal-footer justify-content-between">
+                {{-- ตัวเดินระเบียน: ใบขอราคาที่ยังไม่อนุมัติทั้งหมด (12/09/2569)
+                     เปิดฟอร์มมาจะเด้งเข้าใบแรกให้เอง แล้วกดลูกศรซ้าย/ขวาไล่ดูใบอื่นได้
+                     (ดู paLoadQueue / paGo / paStep ท้ายไฟล์นี้) --}}
+                <div class="pa-nav">
+                    <span class="fw-semibold me-1">ใบที่รออนุมัติ:</span>
+                    <button type="button" class="btn btn-sm btn-label-secondary" onclick="paGo(0)" title="แรกสุด">
+                        <i class="ti ti-chevrons-left"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-label-secondary" onclick="paStep(-1)" title="ก่อนหน้า">
+                        <i class="ti ti-chevron-left"></i>
+                    </button>
+                    <input type="number" id="pa_pos" class="form-control form-control-sm text-center" style="width:80px;"
+                        min="1" onchange="paGo(this.value - 1)">
+                    <button type="button" class="btn btn-sm btn-label-secondary" onclick="paStep(1)" title="ถัดไป">
+                        <i class="ti ti-chevron-right"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-label-secondary" onclick="paGo(-1)" title="ท้ายสุด">
+                        <i class="ti ti-chevrons-right"></i>
+                    </button>
+                    <span>จาก <span id="pa_total" class="fw-bold">0</span></span>
+                    {{-- ลูกค้า / เบอร์ ของระเบียนที่กำลังดูอยู่ --}}
+                    <span id="pa_info" class="text-muted small ms-2"></span>
+                </div>
+
                 <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ปิด</button>
             </div>
 
@@ -879,7 +939,9 @@
         $('#o_min_price').val(fmtNum(p.min_price, 2))
             .attr('title', p.min_from === 'approved'
                 ? 'เทียบกับราคาอนุมัติของลูกค้ารายนี้ (ยังไม่เลยวันยืนราคา)'
-                : 'เทียบกับราคาช่อง 2');
+                : (p.min_from === 'color_rate'
+                    ? 'เทียบกับราคาขั้นต่ำของกลุ่มราคา ' + (p.group || '') + ' (zcolorrate)'
+                    : 'เทียบกับราคาช่อง 2'));
         $('#o_price_group').val(p.group || '');   // แสดงแค่ A / B / C
         // ขั้นต่ำ = ค่าของกลุ่มราคานั้นจาก zcolorrate
         $('#o_min_qty').val(fmtNum(p.min_rate, 2));
@@ -1668,6 +1730,76 @@
         if (e.key === 'Enter'){ e.preventDefault(); approvalUnlock(); }
     });
 
+    // ════════════════════════════════════════════════════════
+    //  ตัวเดินระเบียน: ใบขอราคาที่ "ยังไม่อนุมัติ" ทั้งหมด (12/09/2569)
+    //  เปิดฟอร์มมาเจอใบแรกของคิว แล้วกดลูกศรซ้าย/ขวาไล่ดูใบอื่นได้
+    // ════════════════════════════════════════════════════════
+    var paQueue = [], paIndex = -1;
+
+    // นับใบที่รออนุมัติตั้งแต่เปิดหน้า → โชว์เป็น badge บนปุ่ม "ขออนุมัติราคาพิเศษ"
+    $(function(){ paLoadQueue(); });
+
+    function paLoadQueue(cb){
+        return $.getJSON(APPROVAL_URL + '/pending', function(res){
+            paQueue = res.rows || [];
+            $('#pa_total').text(paQueue.length);
+
+            // ป้ายจำนวนบนปุ่ม "ขออนุมัติราคาพิเศษ" ของหน้ารายการ
+            var $badge = $('#paQueueBadge');
+            if (paQueue.length) $badge.text(paQueue.length).removeClass('d-none');
+            else                $badge.addClass('d-none');
+
+            if (typeof cb === 'function') cb();
+            else paRenderNav();
+        });
+    }
+
+    // ตำแหน่งปัจจุบัน + บอกว่ากำลังดูใบของใคร/เบอร์อะไร
+    function paRenderNav(){
+        var r = paQueue[paIndex];
+        $('#pa_pos').val(r ? paIndex + 1 : '');
+        $('#pa_info').text(r
+            ? (r.custno || '') + ' · ' + (r.itemno || '') + (r.custname ? ' · ' + r.custname : '')
+            : (paQueue.length ? '' : 'ไม่มีใบที่รออนุมัติ'));
+    }
+
+    // เปิดใบลำดับที่ i ในคิว (i < 0 หรือเกินท้าย = ใบท้ายสุด)
+    function paGo(i){
+        if (!paQueue.length){ paIndex = -1; paRenderNav(); return; }
+        i = parseInt(i, 10);
+        if (isNaN(i) || i < 0)          i = paQueue.length - 1;
+        if (i > paQueue.length - 1)     i = paQueue.length - 1;
+        paIndex = i;
+        paRenderNav();
+
+        // เติมลูกค้า+เบอร์ของใบนั้น แล้วให้ flow เดิมโหลดข้อมูลทั้งฟอร์มต่อ
+        var r = paQueue[i];
+        $('#a_custno').val(r.custno || '');
+        onApprovalCustChange(r.custno || '', r.itemno || '');
+    }
+
+    function paStep(delta){
+        if (!paQueue.length) return;
+        var i = (paIndex < 0 ? 0 : paIndex + delta);
+        if (i < 0)                  i = 0;
+        if (i > paQueue.length - 1) i = paQueue.length - 1;
+        paGo(i);
+    }
+
+    // โหลดคิวใหม่แล้วชี้กลับไปที่คู่ที่กำลังดูอยู่
+    // (ใบที่เพิ่งอนุมัติจะหลุดจากคิว → ไม่เจอ = ตำแหน่งว่าง แต่ยังดูใบนั้นบนฟอร์มต่อได้)
+    function paRefreshQueue(){
+        var custno = ($('#a_custno').val() || '').trim();
+        var itemno = $('#a_itemno').val() || '';
+        paLoadQueue(function(){
+            paIndex = -1;
+            paQueue.forEach(function(r, i){
+                if (r.custno === custno && r.itemno === itemno) paIndex = i;
+            });
+            paRenderNav();
+        });
+    }
+
     // เปิดฟอร์ม — ระบุลูกค้า/เบอร์สินค้ามาด้วยก็ได้ (เช่นเรียกจากใบสั่งซื้อในอนาคต)
     function approvalOpen(custno, itemno){
         clearApprovalForm();
@@ -1677,8 +1809,13 @@
         setApprovalMdMode(false);
         $.getJSON(APPROVAL_URL + '/md-state', function(res){ setApprovalMdMode(res.unlocked); });
         if (custno){
+            // เรียกมาพร้อมคู่ (ลูกค้า, เบอร์) เช่นจากด่านราคาในใบสั่งซื้อ → เปิดคู่นั้นเลย
             $('#a_custno').val(custno);
             onApprovalCustChange(custno, itemno);
+            paLoadQueue();
+        } else {
+            // เปิดเปล่า ๆ → แสดงใบที่รออนุมัติใบแรก (ไล่ดูใบอื่นด้วยลูกศรซ้าย/ขวา)
+            paLoadQueue(function(){ paQueue.length ? paGo(0) : paRenderNav(); });
         }
     }
 
@@ -1847,12 +1984,13 @@
     // เน้นช่องราคาที่ตรงกับจำนวนสั่งซื้อ (A ≥1,000 / B ≥500 / C ต่ำกว่า 500)
     function highlightPriceGroup(){
         var w = numVal('#a_weight');                 // ถอดคอมมาก่อน — '1,000' ต้องได้ 1000 ไม่ใช่ 1
-        $('.pa-pricebox').removeClass('pa-active');
+        // เน้นทั้งกล่องราคาและป้ายเกณฑ์กลุ่ม (ป้ายอยู่ใต้ช่องจำนวนสั่งซื้อ)
+        $('.pa-pricebox, .pa-gitem').removeClass('pa-active');
         if (w === null) { $('#a_group').val(''); return; }
-        var box = (w >= 1000) ? {id: '#a_box1', g: 'A'}
-                : (w >= 500)  ? {id: '#a_box2', g: 'B'}
-                :               {id: '#a_box3', g: 'C'};
-        $(box.id).addClass('pa-active');
+        var box = (w >= 1000) ? {id: '#a_box1', cap: '#a_glabel1', g: 'A'}
+                : (w >= 500)  ? {id: '#a_box2', cap: '#a_glabel2', g: 'B'}
+                :               {id: '#a_box3', cap: '#a_glabel3', g: 'C'};
+        $(box.id).add(box.cap).addClass('pa-active');
         $('#a_group').val(box.g);
     }
 
@@ -2000,6 +2138,7 @@
                 if (!res.status){ Swal.fire('บันทึกไม่สำเร็จ', res.message || '', 'error'); return; }
                 Swal.fire({icon: 'success', title: res.message});
                 loadApprovalData();     // โหลดค่าที่บันทึกจริงกลับมา
+                paRefreshQueue();       // อนุมัติแล้วใบจะหลุดจากคิว → นับใหม่
             })
             .fail(function(xhr){
                 var body = xhr.responseJSON || {};
@@ -2037,6 +2176,7 @@
                 if (!res.status){ Swal.fire('ลบไม่สำเร็จ', res.message || '', 'error'); return; }
                 Swal.fire({icon: 'success', title: res.message});
                 loadApprovalData();
+                paRefreshQueue();       // ใบถูกลบ → หลุดจากคิว
             }).fail(function(xhr){
                 var msg = (xhr.responseJSON && xhr.responseJSON.message) || 'เกิดข้อผิดพลาดในการลบ';
                 Swal.fire('ลบไม่สำเร็จ', msg, 'error');

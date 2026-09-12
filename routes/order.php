@@ -29,6 +29,8 @@ Route::prefix('order')->group(function () {
     // ─── ฟอร์มขออนุมัติราคาพิเศษ (MD) — ฟอร์มลูกของเมนูนี้ ─────────────
     Route::prefix('price-approval')->group(function () {
         Route::get('/items',           [PriceApprovalController::class, 'items'])->name('order.approval.items');
+        // ใบที่ยังไม่อนุมัติทั้งหมด — ตัวเดินระเบียนบนหัวฟอร์ม (12/09/2569)
+        Route::get('/pending',         [PriceApprovalController::class, 'pending'])->name('order.approval.pending');
         Route::get('/data',            [PriceApprovalController::class, 'data'])->name('order.approval.data');
         Route::get('/other-items',     [PriceApprovalController::class, 'otherItems'])->name('order.approval.other_items');
         Route::get('/other-customers', [PriceApprovalController::class, 'otherCustomers'])->name('order.approval.other_customers');

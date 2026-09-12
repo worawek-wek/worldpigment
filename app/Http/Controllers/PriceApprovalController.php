@@ -100,6 +100,34 @@ class PriceApprovalController extends Controller
     }
 
     /**
+     * GET — ใบขอราคาที่ยังไม่อนุมัติทั้งหมด (12/09/2569)
+     *
+     * ใช้กับตัวเดินระเบียน (ลูกศรซ้าย/ขวา) บนหัวฟอร์ม — เปิดฟอร์มมาแล้วไล่ดูใบที่รออนุมัติได้เลย
+     * โดยไม่ต้องรู้ว่าต้องกรอกลูกค้า/เบอร์ไหน
+     *
+     * ยังไม่อนุมัติ = `Appv` เป็น NULL หรือ 0 (Access เก็บ -1 = ติ๊กอนุมัติแล้ว)
+     */
+    public function pending()
+    {
+        $rows = DB::table('appvreq')
+            ->leftJoin('customer as c', 'appvreq.custno', '=', 'c.code')
+            ->where(function ($q) {
+                $q->whereNull('appvreq.Appv')->orWhere('appvreq.Appv', 0);
+            })
+            ->orderByDesc('appvreq.ReqDate')
+            ->get([
+                'appvreq.ReqDate', 'appvreq.custno', 'appvreq.itemno',
+                'appvreq.price', 'appvreq.weight',
+                DB::raw('c.name as custname'),
+            ]);
+
+        return response()->json([
+            'count' => $rows->count(),
+            'rows'  => $rows,
+        ]);
+    }
+
+    /**
      * GET — ข้อมูลทั้งฟอร์มของคู่ (ลูกค้า, เบอร์สินค้า)
      *   ?custno=29231&itemno=213E456
      */

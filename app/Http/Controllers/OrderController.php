@@ -447,9 +447,21 @@ class OrderController extends Controller
         $message = $prices ? null : ($calc['reason'] ?? 'คำนวณราคาไม่ได้');
 
         /* "ราคาต้องไม่ต่ำกว่า" ต้องเป็นตัวเดียวกับที่ checkPriceFloor() ใช้จริงตอนบันทึก (28/08/2569)
-           มีราคาอนุมัติที่ยังไม่เลยวันยืนราคา → ใช้ราคาอนุมัติ · ไม่มี → ราคาช่อง 2 */
+           มีราคาอนุมัติที่ยังไม่เลยวันยืนราคา → ใช้ราคาอนุมัติ
+           ไม่มี แต่รหัสอยู่ในตารางกลุ่มราคา   → ใช้ราคาของกลุ่มนั้น (12/09/2569)
+           ไม่มีทั้งคู่                        → ราคาช่อง 2 เหมือนเดิม */
         $approvedFloor = $this->approvedFloor($custno, $itemno);
-        $minPrice      = $approvedFloor ? round($approvedFloor->price, 2) : ($prices['price_2'] ?? null);
+
+        if ($approvedFloor) {
+            $minPrice = round($approvedFloor->price, 2);
+            $minFrom  = 'approved';
+        } elseif ($minRate !== null && $minRate != 0) {
+            $minPrice = round((float) $minRate, 2);
+            $minFrom  = 'color_rate';
+        } else {
+            $minPrice = $prices['price_2'] ?? null;
+            $minFrom  = 'price_2';
+        }
 
         return [
             'found'       => (bool) $prices,
@@ -461,9 +473,9 @@ class OrderController extends Controller
             // ราคาที่กำหนดไว้ = ราคาขาย 1 · ราคาช่อง 2 = ราคาขาย 2
             'fixed_price' => $prices['price_1'] ?? null,
             'price2'      => $prices['price_2'] ?? null,
-            // ราคาต้องไม่ต่ำกว่า = ราคาอนุมัติ (ถ้ายังยืนราคาอยู่) ไม่งั้นราคาช่อง 2
+            // ราคาต้องไม่ต่ำกว่า = ราคาอนุมัติ → ราคากลุ่ม (zcolorrate) → ราคาช่อง 2
             'min_price'   => $minPrice,
-            'min_from'    => $approvedFloor ? 'approved' : 'price_2',
+            'min_from'    => $minFrom,
             'price1'      => $prices['price_1'] ?? null,
             'price3'      => $prices['price_3'] ?? null,
             // ที่มาของราคา — ราคาทุน + เงื่อนไขที่จับคู่ได้ + สูตร (โชว์ใต้กล่องราคา)
@@ -700,7 +712,13 @@ class OrderController extends Controller
         // }
 
         // ด่านราคา — บังคับทั้งตอนสร้างใหม่และตอนแก้ไขใบเดิม
-        $blocked = $this->checkPriceFloor($custno, $items, $this->numOrNull($request->input('price')));
+        // ส่งน้ำหนักรวมไปด้วย — ใช้หากลุ่มราคา (A/B/C) ของเกณฑ์จาก zcolorrate
+        $blocked = $this->checkPriceFloor(
+            $custno,
+            $items,
+            $this->numOrNull($request->input('price')),
+            $this->numOrNull($request->input('netqty'))
+        );
         if ($blocked) {
             return response()->json($blocked, 422);
         }
@@ -766,7 +784,7 @@ class OrderController extends Controller
      *
      * @return array|null  null = ผ่าน · array = ไม่ผ่าน (ใช้เป็น response body ได้เลย)
      */
-    private function checkPriceFloor(string $custno, array $items, $price): ?array
+    private function checkPriceFloor(string $custno, array $items, $price, $weight = null): ?array
     {
         $itemno = trim((string) ($items[0]['Itemno'] ?? ''));
         if ($itemno === '') {
@@ -778,11 +796,16 @@ class OrderController extends Controller
              ไม่มี                              → ใช้ราคาช่อง 2 เหมือนเดิม
            เดิมใช้ราคาช่อง 2 เป็นหลักแล้วให้ราคาอนุมัติเป็นทางรอดสำรอง — ต่างกันตรงกรณีที่
            ราคาอนุมัติ "สูงกว่า" ราคาช่อง 2 ซึ่งตอนนี้จะยึดราคาอนุมัติ (เกณฑ์เข้มขึ้น) */
-        $approved = $this->approvedFloor($custno, $itemno);
+        $approved  = $this->approvedFloor($custno, $itemno);
+        $colorRate = $this->colorRateFloor($itemno, $weight);
 
         if ($approved) {
             $floor     = (float) $approved->price;
             $floorFrom = 'approved';
+        } elseif ($colorRate !== null) {
+            // รหัสที่มีในตารางกลุ่มราคา → เทียบกับราคาของกลุ่มนั้นแทนราคาช่อง 2 (12/09/2569)
+            $floor     = $colorRate;
+            $floorFrom = 'color_rate';
         } else {
             $calc = app(ProductPriceService::class)->lookup($itemno)['prices']['price_2'] ?? null;
             if ($calc === null) {
@@ -813,6 +836,27 @@ class OrderController extends Controller
             ] : null,
             'message'       => $this->priceBlockedMessage($price, $floor, $custno, $itemno, $approved, $floorFrom),
         ];
+    }
+
+    /**
+     * ราคาขั้นต่ำของ "กลุ่มราคา" — `zcolorrate.rate_A/B/C` ของรหัสสินค้า (12/09/2569)
+     *
+     * กลุ่ม (A/B/C) มาจากน้ำหนักรวมของใบ (`morder.netqty`) ตาม PriceApprovalController::groupOf()
+     * รหัสที่มีในตารางนี้จะใช้ค่านี้เป็นเกณฑ์ "ราคาต้องไม่ต่ำกว่า" แทนราคาช่อง 2
+     *
+     * คืน null เมื่อ: ไม่ได้กรอกน้ำหนักรวม (หากลุ่มไม่ได้) · รหัสไม่มีในตาราง · ค่าในกลุ่มนั้นว่าง/0
+     */
+    private function colorRateFloor(string $itemno, $weight): ?float
+    {
+        $group = PriceApprovalController::groupOf($weight);
+        if ($itemno === '' || !$group) {
+            return null;
+        }
+
+        $row = DB::table('zcolorrate')->where('colorno', $itemno)->first(['rate_A', 'rate_B', 'rate_C']);
+        $rate = $row->{'rate_' . $group['group']} ?? null;
+
+        return ($rate === null || (float) $rate == 0.0) ? null : (float) $rate;
     }
 
     /**
@@ -898,9 +942,10 @@ class OrderController extends Controller
     private function priceBlockedMessage($price, float $floor, string $custno, string $itemno, $approved, string $floorFrom = 'price_2'): string
     {
         // ชื่อเกณฑ์ที่ใช้เทียบ — ต้องตรงกับช่องที่ผู้ใช้เห็นในกล่องราคา จะได้ไม่งงว่าตัวเลขมาจากไหน
-        $label = $floorFrom === 'approved'
-            ? 'ราคาอนุมัติ'
-            : 'ราคาช่อง 2';
+        $label = [
+            'approved'   => 'ราคาอนุมัติ',
+            'color_rate' => 'ราคาขั้นต่ำของกลุ่มราคา',
+        ][$floorFrom] ?? 'ราคาช่อง 2';
 
         if ($price === null) {
             return 'ต้องกรอกราคาขาย และต้องไม่ต่ำกว่า ' . number_format($floor, 2)
