@@ -40,6 +40,15 @@
         .text-center { text-align: center; }
         .text-end { text-align: right; }
         .price-req { font-size: 11px; font-weight: bold; }
+        /* ช่อง "อนุมัติ" วาดเป็นกล่องติ๊กแบบฟอร์มกระดาษ (12/09/2569)
+           ใช้ตารางซ้อน 1 ช่องแทน inline-block เพราะ mPDF คุมความสูง/เส้นขอบของ span ได้ไม่แน่นอน */
+        table.chk { width: 11px; border-collapse: collapse; margin: 0 auto; }
+        table.chk td { border: 1px solid #000; padding: 0; height: 11px; text-align: center;
+                       font-size: 9px; line-height: 11px; }
+        /* 🔴 ฟอนต์ไทยที่ mPDF ใช้ (Garuda) **ไม่มี glyph ของ ✔ U+2714** — ตรวจ cmap แล้วไม่มีทั้ง
+           U+2713/U+2714/U+2717 ⇒ ปล่อยไว้จะได้กล่องทึบ (tofu) แทนเครื่องหมายถูก
+           จึงบังคับใช้ dejavusanscondensed (ฟอนต์ที่มากับ mPDF และมี glyph นี้) เฉพาะตัวเครื่องหมาย */
+        .chk-mark { font-family: dejavusanscondensed, sans-serif; font-size: 8px; }
         .empty { text-align: center; padding: 14px; }
     </style>
 </head>
@@ -84,8 +93,11 @@
                     <td class="text-center">{{ $fmtNum($r->price2, 0) }}</td>
                     <td class="text-center">{{ $fmtNum($r->price3, 0) }}</td>
                     <td>{{ $r->remark }}</td>
-                    {{-- Access เก็บ -1 = ติ๊ก (แปลงมาเป็น bool แล้วฝั่ง controller) --}}
-                    <td class="text-center">{!! $r->Appv ? '&#10004;' : '' !!}</td>
+                    {{-- Access เก็บ -1 = ติ๊ก (แปลงมาเป็น bool แล้วฝั่ง controller)
+                         วาดกล่องติ๊กทุกแถว — แถวที่ยังไม่อนุมัติ = กล่องว่าง --}}
+                    <td class="text-center">
+                        <table class="chk"><tr><td>{!! $r->Appv ? '<span class="chk-mark">&#10004;</span>' : '&nbsp;' !!}</td></tr></table>
+                    </td>
                 </tr>
             @empty
                 <tr>

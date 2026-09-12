@@ -293,7 +293,7 @@ class PriceApprovalController extends Controller
 
         $mpdf = new Mpdf([
             'mode'          => 'utf-8',
-            'format'        => 'A4-L',   // คอลัมน์เยอะ + หมายเหตุยาว
+            'format'        => 'A4',   // แนวตั้งตามที่ผู้ใช้สั่ง (12/09/2569 — ให้ตรงกับปุ่ม "ตรวจสอบ เบอร์อื่น ...")
             'margin_left'   => 10,
             'margin_right'  => 10,
             'margin_top'    => 10,
