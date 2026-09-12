@@ -2008,6 +2008,8 @@
         {key: 'enddate',  label: 'ยืนราคาถึงวันที่', date: true},
         {key: 'remark',   label: 'หมายเหตุ', wide: true}
     ];
+    // ⚠ ไม่ถูกเรียกแล้วตั้งแต่ 12/09/2569 — ปุ่ม "ประวัติของเบอร์นี้" เปลี่ยนไปเปิดรายงาน PDF แทน
+    //    (เก็บไว้คู่กับ endpoint JSON `/history` เผื่อกลับมาแสดงในตารางล่างอีก)
     var HISTORY_COLS = [
         {key: 'ReqDate', label: 'วันที่ขอราคา', datetime: true},
         {key: 'weight',  label: 'จำนวนสั่งซื้อ', num: 2},
@@ -2019,6 +2021,7 @@
         {key: 'Appv',    label: 'อนุมัติ', bool: true},
         {key: 'remark',  label: 'หมายเหตุ', wide: true}
     ];
+    // ⚠ ไม่ถูกเรียกแล้วตั้งแต่ 12/09/2569 — ปุ่ม "ประวัติ ราคาเม็ด CP" เปลี่ยนไปเปิดรายงาน PDF แทน
     var RESIN_COLS = [
         {key: 'Orderno',     label: 'เลขที่ใบสั่ง'},
         {key: 'Qdate',       label: 'วันที่', date: true},
@@ -2064,11 +2067,31 @@
     }
 
     // ── ปุ่มตรวจสอบ / ประวัติ ──
+    // ปุ่ม "ตรวจสอบ เบอร์อื่น ..." → ถามรหัสสินค้าก่อน แล้วเปิดรายงาน PDF ผังเดียวกับ
+    // "ประวัติของเบอร์นี้" แต่เป็น **ทุกลูกค้า ทั้งอนุมัติและไม่อนุมัติ** (12/09/2569)
+    // เดิมโหลดราคาที่ยืนไว้ (zcustprice) ของลูกค้ารายนี้ลงตารางล่าง — endpoint JSON `/other-items`
+    // ยังอยู่ แต่ไม่มีคนเรียกแล้ว
     function approvalOtherItems(){
-        var custno = $('#a_custno').val().trim();
-        if (!custno) return;
-        $.getJSON(APPROVAL_URL + '/other-items', {custno: custno}, function(res){
-            renderApprovalGrid(res.title, ZCUST_COLS, res.rows || []);
+        Swal.fire({
+            title: 'ประวัติการขออนุมัติราคา',
+            // ต้อง render ไว้ใน #approvalModal — ไม่งั้น focus trap ของ Bootstrap modal
+            // จะดึงโฟกัสกลับ ทำให้พิมพ์ในช่องของ Swal ไม่ได้
+            target: document.getElementById('approvalModal') || 'body',
+            heightAuto: false,
+            input: 'text',
+            inputLabel: 'รหัสสินค้า (เบอร์)',
+            inputValue: $('#a_itemno').val() || '',
+            showCancelButton: true,
+            confirmButtonText: 'ดูรายงาน',
+            cancelButtonText: 'ยกเลิก',
+            inputValidator: function(v){
+                if (!(v || '').trim()) return 'กรอกรหัสสินค้าก่อน';
+            }
+        }).then(function(res){
+            if (!res.isConfirmed) return;
+            var itemno = (res.value || '').trim();
+            if (!itemno) return;
+            window.open(APPROVAL_URL + '/other-items-pdf?itemno=' + encodeURIComponent(itemno), '_blank');
         });
     }
     function approvalOtherCustomers(){
@@ -2078,20 +2101,27 @@
             renderApprovalGrid(res.title, OTHERCUST_COLS, res.rows || []);
         });
     }
+    // ปุ่ม "ประวัติของเบอร์นี้" → เปิดรายงาน PDF ตามผังรายงานกระดาษเดิม (12/09/2569)
+    // เดิมโหลดผลลงตารางล่างในฟอร์ม — endpoint JSON `/history` + HISTORY_COLS ยังอยู่ แต่ไม่มีคนเรียกแล้ว
     function approvalHistory(){
         var custno = $('#a_custno').val().trim();
         var itemno = $('#a_itemno').val() || '';
-        if (!custno || !itemno) return;
-        $.getJSON(APPROVAL_URL + '/history', {custno: custno, itemno: itemno}, function(res){
-            renderApprovalGrid(res.title, HISTORY_COLS, res.rows || []);
-        });
+        if (!custno || !itemno){
+            Swal.fire('ยังไม่ได้เลือกลูกค้า/เบอร์สินค้า', 'เลือกลูกค้าและรหัสสินค้าก่อนดูประวัติ', 'warning');
+            return;
+        }
+        window.open(APPROVAL_URL + '/history-pdf?custno=' + encodeURIComponent(custno)
+            + '&itemno=' + encodeURIComponent(itemno), '_blank');
     }
+    // ปุ่ม "ประวัติ ราคาเม็ด CP" → เปิดรายงาน PDF ของเบอร์นี้ ทุกลูกค้า (12/09/2569)
+    // เดิมโหลดผลลงตารางล่างในฟอร์ม — endpoint JSON `/resin-history` + RESIN_COLS ยังอยู่ แต่ไม่มีคนเรียกแล้ว
     function approvalResinHistory(){
         var itemno = $('#a_itemno').val() || '';
-        if (!itemno) return;
-        $.getJSON(APPROVAL_URL + '/resin-history', {itemno: itemno}, function(res){
-            renderApprovalGrid(res.title, RESIN_COLS, res.rows || []);
-        });
+        if (!itemno){
+            Swal.fire('ยังไม่ได้เลือกเบอร์สินค้า', 'เลือกรหัสสินค้าก่อนดูประวัติราคาเม็ด CP', 'warning');
+            return;
+        }
+        window.open(APPROVAL_URL + '/resin-history-pdf?itemno=' + encodeURIComponent(itemno), '_blank');
     }
     function approvalRefresh(){ loadApprovalData(); }
 

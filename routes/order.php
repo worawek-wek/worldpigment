@@ -33,9 +33,15 @@ Route::prefix('order')->group(function () {
         Route::get('/pending',         [PriceApprovalController::class, 'pending'])->name('order.approval.pending');
         Route::get('/data',            [PriceApprovalController::class, 'data'])->name('order.approval.data');
         Route::get('/other-items',     [PriceApprovalController::class, 'otherItems'])->name('order.approval.other_items');
+        // พิมพ์ประวัติการขออนุมัติราคาของเบอร์ที่กรอก — ทุกลูกค้า ทั้งอนุมัติและไม่อนุมัติ (12/09/2569)
+        Route::get('/other-items-pdf', [PriceApprovalController::class, 'otherItemsPdf'])->name('order.approval.other_items_pdf');
         Route::get('/other-customers', [PriceApprovalController::class, 'otherCustomers'])->name('order.approval.other_customers');
         Route::get('/history',         [PriceApprovalController::class, 'history'])->name('order.approval.history');
+        // พิมพ์ประวัติของเบอร์นี้เป็น PDF ตามผังรายงานกระดาษเดิม (12/09/2569)
+        Route::get('/history-pdf',     [PriceApprovalController::class, 'historyPdf'])->name('order.approval.history_pdf');
         Route::get('/resin-history',   [PriceApprovalController::class, 'resinHistory'])->name('order.approval.resin_history');
+        // พิมพ์ประวัติราคาเม็ด CP ของเบอร์นี้ (ทุกลูกค้า) เป็น PDF (12/09/2569)
+        Route::get('/resin-history-pdf', [PriceApprovalController::class, 'resinHistoryPdf'])->name('order.approval.resin_history_pdf');
 
         // โหมดอนุมัติ (MD) — ปลดล็อกด้วยรหัสผ่านก่อนจึงจะติ๊ก "อนุมัติ" ได้
         Route::get('/md-state', [PriceApprovalController::class, 'mdState'])->name('order.approval.md_state');

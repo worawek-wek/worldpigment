@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Mpdf\Mpdf;
 
 /**
  * ขออนุมัติราคาพิเศษ (MD) — แปลงมาจากฟอร์ม Access "MK ขออนุมัติราคาพิเศษ"
@@ -262,6 +263,104 @@ class PriceApprovalController extends Controller
     }
 
     /**
+     * GET — ปุ่มพิมพ์ประวัติของเบอร์นี้เป็น PDF (12/09/2569)
+     *   ?custno=41008&itemno=CP8F247B
+     *
+     * ผังตามรายงานกระดาษของระบบเดิม — ข้อมูลชุดเดียวกับ history() (คู่ ลูกค้า+เบอร์ ที่เลือกอยู่)
+     * เรียงใบล่าสุด → เก่าสุด ("เรียงจากปัจจุบัน ==> อดีต" ตามหัวรายงาน)
+     */
+    public function historyPdf(Request $request)
+    {
+        $custno = trim((string) $request->query('custno', ''));
+        $itemno = trim((string) $request->query('itemno', ''));
+
+        $rows = ($custno === '' || $itemno === '') ? collect() : DB::table('appvreq')
+            ->where('custno', $custno)
+            ->where('itemno', $itemno)
+            ->orderByDesc('ReqDate')
+            ->get(['ReqDate', 'custno', 'itemno', 'weight', 'price', 'price1', 'price2', 'price3', 'remark', 'Appv'])
+            ->map(function ($r) {
+                $r->Appv = self::checked($r->Appv);
+
+                return $r;
+            });
+
+        $html = view('order.price-approval-history-pdf', [
+            'custno' => $custno,
+            'itemno' => $itemno,
+            'rows'   => $rows,
+        ])->render();
+
+        $mpdf = new Mpdf([
+            'mode'          => 'utf-8',
+            'format'        => 'A4-L',   // คอลัมน์เยอะ + หมายเหตุยาว
+            'margin_left'   => 10,
+            'margin_right'  => 10,
+            'margin_top'    => 10,
+            'margin_bottom' => 10,
+        ]);
+
+        $mpdf->autoScriptToLang = true;
+        $mpdf->autoLangToFont   = true;
+        $mpdf->SetFont('sarabun');
+        $mpdf->WriteHTML($html);
+
+        return response($mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="price-approval-history.pdf"',
+        ]);
+    }
+
+    /**
+     * GET — ปุ่ม "ตรวจสอบ เบอร์อื่น ..." → รายงาน PDF (12/09/2569)
+     *   ?itemno=CP8F247B
+     *
+     * **เฉพาะเบอร์ที่กรอก แต่ของลูกค้าทุกคน ทั้งใบที่อนุมัติแล้วและยังไม่อนุมัติ**
+     * ต่างจาก historyPdf() ที่กรองคู่ (ลูกค้า, เบอร์) ของใบที่เปิดอยู่ — ตรงนี้ไม่กรอง custno
+     * ผังรายงานใช้ blade ตัวเดียวกับ "ประวัติของเบอร์นี้" (มีคอลัมน์รหัสลูกค้าอยู่แล้ว)
+     */
+    public function otherItemsPdf(Request $request)
+    {
+        $itemno = trim((string) $request->query('itemno', ''));
+
+        $rows = $itemno === '' ? collect() : DB::table('appvreq')
+            ->where('itemno', $itemno)
+            ->orderByDesc('ReqDate')
+            ->orderBy('custno')
+            ->get(['ReqDate', 'custno', 'itemno', 'weight', 'price', 'price1', 'price2', 'price3', 'remark', 'Appv'])
+            ->map(function ($r) {
+                $r->Appv = self::checked($r->Appv);
+
+                return $r;
+            });
+
+        $html = view('order.price-approval-history-pdf', [
+            'custno'  => '',
+            'itemno'  => $itemno,
+            'rows'    => $rows,
+        ])->render();
+
+        $mpdf = new Mpdf([
+            'mode'          => 'utf-8',
+            'format'        => 'A4',   // แนวตั้งตามที่ผู้ใช้สั่ง (12/09/2569)
+            'margin_left'   => 10,
+            'margin_right'  => 10,
+            'margin_top'    => 10,
+            'margin_bottom' => 10,
+        ]);
+
+        $mpdf->autoScriptToLang = true;
+        $mpdf->autoLangToFont   = true;
+        $mpdf->SetFont('sarabun');
+        $mpdf->WriteHTML($html);
+
+        return response($mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="price-approval-item-history.pdf"',
+        ]);
+    }
+
+    /**
      * GET — ปุ่ม "ประวัติ ราคาเม็ด CP" → ราคาเม็ด/ค่าแรงรายใบสั่งของเบอร์นี้
      *   ?itemno=CP8E152B
      */
@@ -281,6 +380,60 @@ class PriceApprovalController extends Controller
         return response()->json([
             'title' => 'ประวัติราคาเม็ด CP — ' . $itemno,
             'rows'  => $rows,
+        ]);
+    }
+
+    /**
+     * GET — ปุ่ม "ประวัติ ราคาเม็ด CP" → รายงาน PDF (12/09/2569)
+     *   ?itemno=CP8F247B
+     *
+     * **เฉพาะเบอร์นี้ ของลูกค้าทุกคน** — `cp_itemprice` ผูกกับเลขที่ใบสั่ง ไม่มีคอลัมน์ลูกค้า
+     * จึงไม่ต้องกรอง custno · พิมพ์ทุกแถวของเบอร์นั้น (ต่างจากตารางบนจอเดิมที่จำกัด 50 แถว)
+     *
+     * ผังรายงาน = 1 ระเบียน 1 บล็อก (ป้าย: ค่า) ตามกระดาษเดิม — ต้องใช้ `Mdate` กับ `Custno`
+     * ซึ่ง **ไม่มีใน `cp_itemprice`** จึง `leftJoin morder` ด้วยเลขที่ใบสั่ง
+     * ⚠ ใบเก่าหลายใบไม่มีอยู่ใน `morder` (247 จาก 482 แถว) → 2 ช่องนั้นเว้นว่าง และการเรียง
+     *   ต้องถอยไปใช้ `Qdate` ไม่งั้นแถวที่ไม่มีใบจะหล่นไปท้ายสุดผิดลำดับเวลา
+     */
+    public function resinHistoryPdf(Request $request)
+    {
+        $itemno = trim((string) $request->query('itemno', ''));
+
+        $rows = $itemno === '' ? collect() : DB::table('cp_itemprice as c')
+            ->leftJoin('morder as m', 'm.Orderno', '=', 'c.Orderno')
+            ->where('c.itemno', $itemno)
+            ->orderByRaw('COALESCE(m.Mdate, c.Qdate) DESC')
+            ->orderByDesc('c.Orderno')
+            ->get([
+                'c.Orderno', 'c.itemno', 'c.OrderPrice', 'c.Qdate', 'c.wage', 'c.ResinFrom',
+                'c.Resin1Code', 'c.Resin1Price', 'c.Resin1Per',
+                'c.Resin2Code', 'c.Resin2Price', 'c.Resin2Per',
+                'c.wageCal', 'c.Diff', 'c.status',
+                'm.Mdate', 'm.Custno',
+            ]);
+
+        $html = view('order.price-approval-resin-history-pdf', [
+            'itemno' => $itemno,
+            'rows'   => $rows,
+        ])->render();
+
+        $mpdf = new Mpdf([
+            'mode'          => 'utf-8',
+            'format'        => 'A4-L',
+            'margin_left'   => 10,
+            'margin_right'  => 10,
+            'margin_top'    => 10,
+            'margin_bottom' => 10,
+        ]);
+
+        $mpdf->autoScriptToLang = true;
+        $mpdf->autoLangToFont   = true;
+        $mpdf->SetFont('sarabun');
+        $mpdf->WriteHTML($html);
+
+        return response($mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="cp-resin-history.pdf"',
         ]);
     }
 

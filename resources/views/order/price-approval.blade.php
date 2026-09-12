@@ -49,9 +49,11 @@
         </div>
         <div class="col-md-7">
             <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                {{-- ถามรหัสสินค้าก่อน แล้วเปิดรายงาน PDF ประวัติการขอราคาของเบอร์นั้น ทุกลูกค้า (12/09/2569) --}}
                 <button type="button" class="btn btn-sm btn-label-primary" onclick="approvalOtherItems()">
                     <i class="ti ti-list-search me-1"></i>ตรวจสอบ เบอร์อื่น ...
                 </button>
+                {{-- กดแล้วเปิดรายงาน PDF ประวัติของเบอร์นี้ (12/09/2569 — เดิมโหลดผลลงตารางล่าง) --}}
                 <button type="button" class="btn btn-sm btn-label-primary" onclick="approvalHistory()">
                     <i class="ti ti-history me-1"></i>ประวัติของเบอร์นี้
                 </button>
