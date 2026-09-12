@@ -545,9 +545,15 @@ class ReportController extends Controller
             'sections' => $sections,
         ])->render();
 
+        // แนวหน้าแรก = ตาม section แรก (หน้าแรกไม่มี <pagebreak> นำหน้า จึงต้องตั้งที่ constructor)
+        //   CP = แนวนอน (A4-L, 17 คอลัมน์) · แผนกอื่น = แนวตั้ง (A4, 11 คอลัมน์) (2026-09-12)
+        $first     = $sections->first();
+        $firstIsCp = is_array($first) && (($first['dept'] ?? '') === 'CP');
+        $format    = $firstIsCp ? 'A4-L' : 'A4';
+
         $mpdf = new \Mpdf\Mpdf([
             'mode'          => 'utf-8',
-            'format'        => 'A4-L', // แนวนอน (คอลัมน์เยอะตามฟอร์ม)
+            'format'        => $format, // แนวหน้าแรกตาม section แรก (สลับแนวต่อ section ด้วย <pagebreak> ใน blade)
             'margin_left'   => 6,
             'margin_right'  => 6,
             'margin_top'    => 8,
