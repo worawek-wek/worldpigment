@@ -60,7 +60,8 @@
                 <span class="doc-title">ประวัติการขออนุมัติราคาของเบอร์ ...</span>
             </td>
             <td style="width: 28%;" class="text-center">
-                <span class="doc-itemno">{{ $itemno }}</span>
+                {{-- ค่าที่ใช้กรองรายงานใบนี้ — ปุ่มประวัติ/เบอร์อื่น = รหัสสินค้า · ปุ่มเฉพาะร้าน = รหัสลูกค้า --}}
+                <span class="doc-itemno">{{ $doc_subject ?? $itemno }}</span>
             </td>
             <td style="width: 30%;" class="order-note">เรียงจากปัจจุบัน ==&gt; อดีต</td>
         </tr>

@@ -110,6 +110,11 @@
 /* กลุ่ม checkbox ของ itype — ขึ้นกรอบแดงเมื่อใบ W ยังไม่ได้ติ๊ก (syncItypeRequired) */
 .of-itype-box { border: 1px solid transparent; border-radius: .375rem; padding: .1rem .5rem .35rem; }
 .of-itype-box.is-invalid { border-color: var(--bs-danger); background-color: rgba(var(--bs-danger-rgb), .04); }
+    /* ม่านโหลดข้อมูลของฟอร์มขออนุมัติราคา (12/09/2569)
+       .modal-content เป็น position:relative อยู่แล้ว จึงคลุมได้ทั้งใบรวมหัว/ท้าย modal */
+    .pa-loading { position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 10;
+                  display: flex; align-items: center; justify-content: center;
+                  background: rgba(255, 255, 255, .75); border-radius: inherit; }
 
 /* ตารางรายการในใบสั่งซื้อ — ช่องกรอก (พื้นเหลืองอ่อนตามฟอร์ม Access เดิม) */
 #orderItemsTable { background: #fffdf0; }
@@ -529,6 +534,14 @@
 <div class="modal modalHeadDecor fade" id="approvalModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
+
+            {{-- ม่านโหลดข้อมูล — ขึ้นตอนกด Refresh (ดู apvOverlay ท้ายไฟล์) --}}
+            <div id="approvalLoading" class="pa-loading d-none">
+                <div class="text-center">
+                    <div class="spinner-border text-primary"></div>
+                    <div class="mt-2 small fw-semibold">กำลังโหลดข้อมูล...</div>
+                </div>
+            </div>
 
             <div class="modal-header">
                 <h5 class="modal-title">MK ขออนุมัติราคาพิเศษ</h5>
@@ -2094,12 +2107,17 @@
             window.open(APPROVAL_URL + '/other-items-pdf?itemno=' + encodeURIComponent(itemno), '_blank');
         });
     }
+    // ปุ่ม "ตรวจสอบเฉพาะร้าน ..." → เปิดรายงาน PDF ผังเดียวกับ "ประวัติของเบอร์นี้"
+    // แต่เป็น **ลูกค้ารายที่เปิดอยู่ ทุกเบอร์ ทั้งอนุมัติและไม่อนุมัติ** (12/09/2569)
+    // เดิมโหลดลูกค้ารายอื่นที่ใช้เบอร์นี้ (zcustprice) ลงตารางล่าง — endpoint JSON `/other-customers`
+    // ยังอยู่ แต่ไม่มีคนเรียกแล้ว
     function approvalOtherCustomers(){
-        var itemno = $('#a_itemno').val() || '';
-        if (!itemno) return;
-        $.getJSON(APPROVAL_URL + '/other-customers', {itemno: itemno}, function(res){
-            renderApprovalGrid(res.title, OTHERCUST_COLS, res.rows || []);
-        });
+        var custno = ($('#a_custno').val() || '').trim();
+        if (!custno){
+            Swal.fire('ยังไม่ได้เลือกลูกค้า', 'เลือกรหัสลูกค้าก่อนดูประวัติ', 'warning');
+            return;
+        }
+        window.open(APPROVAL_URL + '/customer-history-pdf?custno=' + encodeURIComponent(custno), '_blank');
     }
     // ปุ่ม "ประวัติของเบอร์นี้" → เปิดรายงาน PDF ตามผังรายงานกระดาษเดิม (12/09/2569)
     // เดิมโหลดผลลงตารางล่างในฟอร์ม — endpoint JSON `/history` + HISTORY_COLS ยังอยู่ แต่ไม่มีคนเรียกแล้ว
@@ -2123,7 +2141,38 @@
         }
         window.open(APPROVAL_URL + '/resin-history-pdf?itemno=' + encodeURIComponent(itemno), '_blank');
     }
-    function approvalRefresh(){ loadApprovalData(); }
+    // ── ม่านโหลดข้อมูลของฟอร์มขออนุมัติราคา (12/09/2569) ──
+    // ปิดม่านเมื่อ ajax ของหน้าเงียบจริง ๆ — ต้องเงียบติดกัน 2 รอบ (~600ms) เพราะ
+    // onApprovalCustChange หน่วง 350ms ก่อนยิง /items ⇒ ถ้าดูรอบเดียวจะเห็นว่า "ว่าง"
+    // ทั้งที่ยังไม่เริ่มโหลด แล้วม่านจะหายก่อนข้อมูลมา · มีเพดานเวลากันม่านค้างถ้า ajax พัง
+    var apvIdleTimer = null, apvIdleHits = 0, apvIdleDeadline = 0;
+
+    function apvOverlay(on){ $('#approvalLoading').toggleClass('d-none', !on); }
+
+    // ปิด modal ระหว่างโหลด = ไม่ต้องรอต่อ (กันม่านค้างไว้รอบหน้า)
+    $(document).on('hidden.bs.modal', '#approvalModal', function(){
+        clearTimeout(apvIdleTimer);
+        apvOverlay(false);
+    });
+
+    function apvWaitIdle(){
+        clearTimeout(apvIdleTimer);
+        apvIdleTimer = setTimeout(function(){
+            apvIdleHits = ($.active > 0) ? 0 : apvIdleHits + 1;
+            if (apvIdleHits >= 2 || Date.now() > apvIdleDeadline){ apvOverlay(false); return; }
+            apvWaitIdle();
+        }, 300);
+    }
+    // ปุ่ม "Refresh" = เหมือนปิดแล้วกดเปิดฟอร์มใหม่ (ผู้ใช้สั่ง 12/09/2569 — เดิมแค่โหลดข้อมูล
+    // ของคู่ ลูกค้า+เบอร์ ที่ค้างอยู่ใหม่): ล้างฟอร์ม + ถามสถานะโหมดอนุมัติจาก server ใหม่
+    // + โหลดคิวใบที่รออนุมัติแล้วเด้งเข้าใบแรก · `modal('show')` กับ modal ที่เปิดอยู่แล้ว = no-op
+    function approvalRefresh(){
+        apvOverlay(true);
+        apvIdleHits = 0;
+        apvIdleDeadline = Date.now() + 20000;   // เพดาน 20 วิ กันม่านค้าง
+        apvWaitIdle();
+        approvalOpen();
+    }
 
     // ── เพิ่ม / บันทึกใบขออนุมัติราคา ──
     function approvalSave(){
@@ -2214,9 +2263,10 @@
         });
     }
 
-    // พิมพ์ — ยังไม่มีแบบฟอร์มกระดาษให้อ้างอิง จึงใช้พิมพ์หน้าจอไปก่อน
+    // พิมพ์ — รายการที่อนุมัติราคาแล้วใน 3 วันล่าสุด ตามผังกระดาษเดิม (12/09/2569)
+    // เดิมเป็น window.print() เพราะยังไม่มีแบบฟอร์มให้อ้างอิง
     function approvalPrint(){
-        window.print();
+        window.open(APPROVAL_URL + '/approved-pdf', '_blank');
     }
 
     // ────────────────────────────────────────────────────────

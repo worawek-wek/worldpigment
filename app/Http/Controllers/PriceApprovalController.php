@@ -361,6 +361,121 @@ class PriceApprovalController extends Controller
     }
 
     /**
+     * GET — ปุ่ม "ตรวจสอบเฉพาะร้าน ..." → รายงาน PDF (12/09/2569)
+     *   ?custno=30034
+     *
+     * **เฉพาะลูกค้ารายนี้ แต่ทุกเบอร์ ทั้งใบที่อนุมัติแล้วและยังไม่อนุมัติ**
+     * = คู่ตรงข้ามของ otherItemsPdf() (เบอร์เดียว ทุกลูกค้า) — ใช้ผัง blade ตัวเดียวกัน
+     */
+    public function customerHistoryPdf(Request $request)
+    {
+        $custno = trim((string) $request->query('custno', ''));
+
+        $rows = $custno === '' ? collect() : DB::table('appvreq')
+            ->where('custno', $custno)
+            ->orderByDesc('ReqDate')
+            ->orderBy('itemno')
+            ->get(['ReqDate', 'custno', 'itemno', 'weight', 'price', 'price1', 'price2', 'price3', 'remark', 'Appv'])
+            ->map(function ($r) {
+                $r->Appv = self::checked($r->Appv);
+
+                return $r;
+            });
+
+        $html = view('order.price-approval-history-pdf', [
+            'custno'      => $custno,
+            'itemno'      => '',
+            // หัวรายงานใบนี้กรองด้วยรหัสลูกค้า จึงโชว์รหัสลูกค้าแทนรหัสสินค้า
+            'doc_subject' => $custno,
+            'rows'        => $rows,
+        ])->render();
+
+        // 🔴 ลูกค้ารายใหญ่มีประวัติหลักพันแถว (สูงสุดตอนนี้ 1,896 แถว = HTML ~1.4 MB)
+        //    mPDF จะโยน MpdfException ทันทีถ้า HTML ยาวเกิน pcre.backtrack_limit (ค่า default 1,000,000)
+        //    จึงต้องขยายก่อนเรียก WriteHTML — รายงานอีก 2 ใบไม่เจอเพราะแถวน้อยกว่ามาก
+        if ((int) ini_get('pcre.backtrack_limit') < 10000000) {
+            ini_set('pcre.backtrack_limit', '10000000');
+        }
+
+        $mpdf = new Mpdf([
+            'mode'          => 'utf-8',
+            'format'        => 'A4',   // แนวตั้ง ให้ตรงกับรายงานอีก 2 ใบที่ใช้ผังเดียวกัน
+            'margin_left'   => 10,
+            'margin_right'  => 10,
+            'margin_top'    => 10,
+            'margin_bottom' => 10,
+        ]);
+
+        $mpdf->autoScriptToLang = true;
+        $mpdf->autoLangToFont   = true;
+        $mpdf->SetFont('sarabun');
+        $mpdf->WriteHTML($html);
+
+        return response($mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="price-approval-customer-history.pdf"',
+        ]);
+    }
+
+    /**
+     * GET — ปุ่ม "พิมพ์" ท้ายฟอร์ม → รายการที่ **อนุมัติราคาแล้วใน 3 วันล่าสุด** (12/09/2569)
+     *
+     * ผังตามกระดาษของระบบเดิม (1 ระเบียน = 1 บล็อก) ดู blade order/price-approval-approved-pdf
+     *
+     * ⚠ "3 วันล่าสุด" = **3 วันปฏิทินย้อนหลัง** (วันนี้ + 2 วันก่อนหน้า) ตามที่ผู้ใช้เลือก
+     *   ⇒ ช่วงไหนไม่มีใครอนุมัติ รายงานจะว่าง (ถูกต้องตามนิยาม)
+     * ⚠ "เวลาอนุมัติ" ใช้ค่าเดียวกับ "วันที่ขอ" (`ReqDate`) เพราะ **`appvreq` ไม่มีคอลัมน์เวลาที่กดอนุมัติ**
+     *   (ผู้ใช้เลือกแนวทางนี้ 12/09/2569 แทนการเพิ่มคอลัมน์ appvDT) ⇒ การกรอง 3 วันก็นับจาก ReqDate
+     */
+    public const PRINT_RECENT_DAYS = 3;
+
+    public function approvedRecentPdf(Request $request)
+    {
+        $since = now()->startOfDay()->subDays(self::PRINT_RECENT_DAYS - 1);
+
+        $rows = DB::table('appvreq as a')
+            ->leftJoin('customer as c', 'a.custno', '=', 'c.code')
+            ->where('a.Appv', '<>', 0)
+            ->whereNotNull('a.Appv')          // Access เก็บ -1 = อนุมัติแล้ว
+            ->where('a.ReqDate', '>=', $since)
+            ->orderByDesc('a.ReqDate')
+            ->get([
+                'a.ReqDate', 'a.custno', 'a.itemno', 'a.weight', 'a.price', 'a.remark',
+                'c.name as custname',
+            ])
+            ->map(function ($r) {
+                // ไม่มีคอลัมน์เวลาอนุมัติจริง — ใช้วันที่ขอไปก่อน (ดูหมายเหตุหัวเมธอด)
+                $r->appv_at = $r->ReqDate;
+
+                return $r;
+            });
+
+        $html = view('order.price-approval-approved-pdf', [
+            'rows'  => $rows,
+            'since' => $since,
+        ])->render();
+
+        $mpdf = new Mpdf([
+            'mode'          => 'utf-8',
+            'format'        => 'A4',
+            'margin_left'   => 12,
+            'margin_right'  => 12,
+            'margin_top'    => 12,
+            'margin_bottom' => 12,
+        ]);
+
+        $mpdf->autoScriptToLang = true;
+        $mpdf->autoLangToFont   = true;
+        $mpdf->SetFont('sarabun');
+        $mpdf->WriteHTML($html);
+
+        return response($mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="price-approval-approved.pdf"',
+        ]);
+    }
+
+    /**
      * GET — ปุ่ม "ประวัติ ราคาเม็ด CP" → ราคาเม็ด/ค่าแรงรายใบสั่งของเบอร์นี้
      *   ?itemno=CP8E152B
      */

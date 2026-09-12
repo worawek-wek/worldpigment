@@ -36,10 +36,14 @@ Route::prefix('order')->group(function () {
         // พิมพ์ประวัติการขออนุมัติราคาของเบอร์ที่กรอก — ทุกลูกค้า ทั้งอนุมัติและไม่อนุมัติ (12/09/2569)
         Route::get('/other-items-pdf', [PriceApprovalController::class, 'otherItemsPdf'])->name('order.approval.other_items_pdf');
         Route::get('/other-customers', [PriceApprovalController::class, 'otherCustomers'])->name('order.approval.other_customers');
+        // พิมพ์ประวัติการขออนุมัติราคาของลูกค้ารายนี้ — ทุกเบอร์ ทั้งอนุมัติและไม่อนุมัติ (12/09/2569)
+        Route::get('/customer-history-pdf', [PriceApprovalController::class, 'customerHistoryPdf'])->name('order.approval.customer_history_pdf');
         Route::get('/history',         [PriceApprovalController::class, 'history'])->name('order.approval.history');
         // พิมพ์ประวัติของเบอร์นี้เป็น PDF ตามผังรายงานกระดาษเดิม (12/09/2569)
         Route::get('/history-pdf',     [PriceApprovalController::class, 'historyPdf'])->name('order.approval.history_pdf');
         Route::get('/resin-history',   [PriceApprovalController::class, 'resinHistory'])->name('order.approval.resin_history');
+        // ปุ่ม "พิมพ์" ท้ายฟอร์ม — รายการที่อนุมัติราคาแล้วใน 3 วันล่าสุด (12/09/2569)
+        Route::get('/approved-pdf', [PriceApprovalController::class, 'approvedRecentPdf'])->name('order.approval.approved_pdf');
         // พิมพ์ประวัติราคาเม็ด CP ของเบอร์นี้ (ทุกลูกค้า) เป็น PDF (12/09/2569)
         Route::get('/resin-history-pdf', [PriceApprovalController::class, 'resinHistoryPdf'])->name('order.approval.resin_history_pdf');
 
