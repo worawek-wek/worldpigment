@@ -38,9 +38,10 @@
                 <td>{{ $dept ?: '-' }}</td>
                 <td class="text-center">{{ $it->red_bill_code ?: '-' }}</td>
                 <td class="text-center" data-order="{{ $it->senddate ? \Carbon\Carbon::parse($it->senddate)->format('Y-m-d') : '' }}">{{ $it->senddate ? \Carbon\Carbon::parse($it->senddate)->format('d/m/Y') : '-' }}</td>
-                <td class="col-lack">{{ $it->lack_pigment ?: '' }}</td>
-                <td class="col-lack">{{ $it->lack_semi ?: '' }}</td>
-                <td class="text-center col-custdue" data-order="{{ $custDue ? \Carbon\Carbon::parse($custDue)->format('Y-m-d') : '' }}">{{ $custDue ? \Carbon\Carbon::parse($custDue)->format('d/m/Y') : '-' }}</td>
+                {{-- data-order นำหน้าด้วย 0=มีค่า / 1=ว่าง เพื่อให้ค่าว่างเรียงลงท้ายสุด (14/09/2569) --}}
+                <td class="col-lack" data-order="{{ $it->lack_pigment ? '0'.$it->lack_pigment : '1' }}">{{ $it->lack_pigment ?: '' }}</td>
+                <td class="col-lack" data-order="{{ $it->lack_semi ? '0'.$it->lack_semi : '1' }}">{{ $it->lack_semi ?: '' }}</td>
+                <td class="text-center col-custdue" data-order="{{ $custDue ? '0'.\Carbon\Carbon::parse($custDue)->format('Y-m-d') : '1' }}">{{ $custDue ? \Carbon\Carbon::parse($custDue)->format('d/m/Y') : '-' }}</td>
                 {{-- <td class="text-center">{{ $it->custno ?: '-' }}</td> --}}
                 <td style="max-width: 200px;" data-order="{{ $it->cust_name }}">
                     <span class="d-inline-block text-truncate" style="max-width: 200px; vertical-align: middle;" title="{{ $it->cust_name }}">{{ $it->cust_name ?: '-' }}</span>

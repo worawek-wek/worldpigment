@@ -774,6 +774,28 @@ class ReportController extends Controller
             ->filter(fn ($row) => $row->lack_semi !== '' || $row->lack_pigment !== '')
             ->values();
 
+        // ── เรียงให้ตรงกับตารางฝั่งเว็บ (DataTables) — 14/09/2569 ─────────────────
+        //    ขาดวัตถุดิบ → ขาด semi → Cust Due (ascending ตามตัวอักษร/วันที่)
+        //    ค่าว่าง/NULL ตกไปท้ายสุดในทุกระดับ
+        //    PHP 8 sort เสถียร ⇒ ลำดับ SQL เดิม (สถานะ→เครื่อง→inplan) เป็น tiebreaker เมื่อ 3 คีย์เท่ากัน
+        $emptyLast = function (string $a, string $b): int {
+            $ae = $a === '';
+            $be = $b === '';
+            if ($ae !== $be) {
+                return $ae ? 1 : -1; // ค่าว่างไปท้ายสุด
+            }
+            return strcmp($a, $b);
+        };
+        $custDueKey = function ($row): string {
+            $due = $row->item_custwant ?: $row->header_custwant;
+            return $due ? \Carbon\Carbon::parse($due)->format('Y-m-d') : '';
+        };
+        $rows = $rows->sort(function ($a, $b) use ($emptyLast, $custDueKey) {
+            return $emptyLast((string) $a->lack_pigment, (string) $b->lack_pigment)
+                ?: $emptyLast((string) $a->lack_semi, (string) $b->lack_semi)
+                ?: $emptyLast($custDueKey($a), $custDueKey($b));
+        })->values();
+
         return [
             'rows'    => $rows,
             'total'   => $rows->count(),

@@ -138,7 +138,8 @@
         }
         msTable = $('#materialShortageTable').DataTable({
             autoWidth: false,
-            order: [],                 // คงลำดับเริ่มต้นจาก server (สถานะ → เครื่อง → inplan)
+            // เรียงเริ่มต้นตามตัวอักษร: ขาดวัตถุดิบ (4) → ขาด semi (5) → Cust Due (6) — 14/09/2569
+            order: [[4, 'asc'], [5, 'asc'], [6, 'asc']],
             columnDefs: [
                 { targets: 0, orderable: false } // คอลัมน์ # (เลขลำดับ)
             ]
