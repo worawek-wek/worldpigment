@@ -101,7 +101,7 @@ class SemiPigmentController extends Controller
             'Semi No.',
             'วันที่สั่ง',
             'วันที่ต้องการ',
-            'แผนกที่สั่ง',
+            'แผนกที่ผลิต',
             'ใช้กับ',
             'แม่สี',
             'ยอดคงเหลือ',

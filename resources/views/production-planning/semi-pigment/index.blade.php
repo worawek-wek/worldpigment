@@ -39,7 +39,7 @@
                             <div class="col-md-4">
                                 <label class="form-label mb-1 small text-muted">ค้นหา</label>
                                 <input id="searchInput" type="text" class="form-control"
-                                    placeholder="ค้นหา Item No., รหัสลูกค้า, Order No., Company">
+                                    placeholder="ค้นหา Item No., แผนกที่ใช้, Order No., แผนกที่ผลิต">
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label mb-1 small text-muted">แผนก</label>
@@ -93,11 +93,11 @@
                                     <tr>
                                         <th>#</th>
                                         <th>Order No.</th>
-                                        <th>Company</th>
+                                        <th>แผนกที่ผลิต</th>
                                         <th>วันที่ขอ</th>
                                         <th>วันที่สั่ง</th>
                                         <th>วันที่ต้องการรับ</th>
-                                        <th>รหัสลูกค้า</th>
+                                        <th>แผนกที่ใช้</th>
                                         <th>Item No.</th>
                                         <th>น้ำหนักที่จะใช้</th>
                                         <th>น้ำหนักที่ผลิต</th>

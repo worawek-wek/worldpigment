@@ -715,6 +715,26 @@ class ProductionPlanController extends Controller
         // (คอลัมน์เป็น BIGINT UNSIGNED หลัง migration เปลี่ยนจาก enum)
         $fields['qc_status'] = $request->filled('qc_status') ? (int) $request->qc_status : null;
 
+        // เลขที่ใบเบิกออกใบแดง (red_bill_code) ต้องไม่ซ้ำกันทุก item (unique index บน tb_planning, 14/09/2569)
+        //   - normalize ค่าว่าง/เว้นวรรค → NULL (unique index ยอม NULL ซ้ำได้ แต่ '' ซ้ำไม่ได้)
+        //   - ถ้ามีค่า → เช็คว่าซ้ำกับแถวอื่นไหม (แก้ไข = ยกเว้นแถวตัวเอง) ซ้ำ → บล็อก 422
+        $red_bill = trim((string) ($fields['red_bill_code'] ?? ''));
+        $fields['red_bill_code'] = $red_bill === '' ? null : $red_bill;
+
+        if ($fields['red_bill_code'] !== null) {
+            $red_bill_dup = Planning::where('red_bill_code', $fields['red_bill_code'])
+                ->when(!empty($request->planning_id), fn ($q) => $q->where('id', '!=', $request->planning_id))
+                ->exists();
+
+            if ($red_bill_dup) {
+                return response()->json([
+                    'status'             => 422,
+                    'message'            => 'เลขที่ใบเบิกออกใบแดง (Red Bill) "' . $fields['red_bill_code'] . '" ถูกใช้ไปแล้ว กรุณาใช้เลขที่ไม่ซ้ำ',
+                    'red_bill_duplicate' => true,
+                ]);
+            }
+        }
+
         // หมายเหตุ: Semi / Pigment ไม่ถูกบันทึกที่นี่อีกต่อไป
         // ย้ายไปบันทึกลงฐานข้อมูลทันทีผ่าน modal เพิ่ม/แก้ไข Semi (SemiPigmentController::entryStore/entryUpdate)
 

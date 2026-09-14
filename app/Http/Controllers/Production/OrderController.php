@@ -166,22 +166,49 @@ class OrderController extends Controller
             'plan_type' => 'ORDER',
         ];
 
-        $planning_header = PlanningHeader::create($data_planning_header);
+        // red_bill_code ต้องไม่ซ้ำกันทุก item (unique index บน tb_planning.red_bill_code, 14/09/2569)
+        // ออเดอร์ที่มีหลาย suborder จึง stamp orderno เปล่า ๆ ให้ทุก item ไม่ได้ (จะชนกัน)
+        // → มีหลาย item: ต่อท้าย /R1, /R2, ... ตาม convention เลขใบเบิกจริง (เช่น HE1576/R1..R3)
+        //   มี item เดียว: ใช้ orderno เปล่าเหมือนเดิม
+        $suborders   = $order->suborders;
+        $multi_items = $suborders->count() > 1;
 
-        foreach($order->suborders as $suborder){
-            $planning = [
-                'planning_header_id' => $planning_header->id,
-                'itemno'             => $suborder->Itemno,
-                'plan_type'          => 'ORDER',
-                'mdate'              => $order->Mdate ?: null,
-                'custwant'           => $suborder->custwant ?: null,
-                'senddate'           => $suborder->senddate ?: null, // กำหนดส่งทบทวนจาก suborder → tb_planning.senddate
-                'remark'             => $suborder->Remark ?: null,
-                'red_bill_code'      => $order->Orderno, // เลขที่ Order → ใส่เป็นเลขที่ใบเบิก
-                'quantity'           => $order->netqty, // น้ำหนักสั่งตาม Order
-            ];
+        // ครอบ transaction: ถ้า item ใดชน unique (เช่น orderno ถูกใช้ที่อื่นแล้ว) ให้ rollback ทั้งชุด
+        // (tb_planning / tb_planning_header เป็น InnoDB จึง rollback ได้จริง)
+        DB::beginTransaction();
+        try {
+            $planning_header = PlanningHeader::create($data_planning_header);
 
-            Planning::create($planning);
+            $seq = 1;
+            foreach ($suborders as $suborder) {
+                $red_bill = $multi_items
+                    ? $order->Orderno . '/R' . $seq   // หลาย item → เติม suffix กันซ้ำ
+                    : $order->Orderno;                // item เดียว → เลข Order เปล่า
+
+                $planning = [
+                    'planning_header_id' => $planning_header->id,
+                    'itemno'             => $suborder->Itemno,
+                    'plan_type'          => 'ORDER',
+                    'mdate'              => $order->Mdate ?: null,
+                    'custwant'           => $suborder->custwant ?: null,
+                    'senddate'           => $suborder->senddate ?: null, // กำหนดส่งทบทวนจาก suborder → tb_planning.senddate
+                    'remark'             => $suborder->Remark ?: null,
+                    'red_bill_code'      => $red_bill, // เลขที่ Order (+ /Rn ถ้าหลาย item) → เลขที่ใบเบิก
+                    'quantity'           => $order->netqty, // น้ำหนักสั่งตาม Order
+                ];
+
+                Planning::create($planning);
+                $seq++;
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'status'  => 500,
+                'message' => 'สร้างแผนไม่สำเร็จ (เลขที่ใบเบิกอาจซ้ำ): ' . $e->getMessage(),
+            ]);
         }
 
         return response()->json([
