@@ -21,8 +21,14 @@ class EmpController extends Controller
             ->orderBy('name', 'asc')
             ->get(['id', 'name']);
 
+        // role สำหรับ dropdown ค้นหา (เฉพาะที่เปิดใช้งาน)
+        $roles = Role::where('is_active', 'Y')
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name']);
+
         return view('employee.index', [
             'departments' => $departments,
+            'roles'       => $roles,
         ]);
     }
 
@@ -50,6 +56,11 @@ class EmpController extends Controller
         // กรองตามแผนก (emp.dept เก็บเป็นชื่อแผนก — ตรงกับ value ของ dropdown)
         if ($request->filled('dept')) {
             $employees->where('emp.dept', $request->dept);
+        }
+
+        // กรองตาม role (emp.role_id — ตรงกับ value ของ dropdown)
+        if ($request->filled('role_id')) {
+            $employees->where('emp.role_id', $request->role_id);
         }
 
         // หมายเหตุ: ไม่ hard-code orderBy ที่นี่แล้ว — ให้ Yajra จัดการเรียงตามที่คลิกหัวคอลัมน์

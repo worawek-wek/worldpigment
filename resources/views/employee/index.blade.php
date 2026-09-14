@@ -33,7 +33,7 @@
                                 <input id="searchInput" type="text" class="form-control"
                                 placeholder="ค้นหา รหัส / ชื่อ / นามสกุล...">
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <select id="searchDept" class="form-select">
                                     <option value="">ทุกแผนก</option>
                                     @foreach($departments as $department)
@@ -41,7 +41,15 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-3 ms-auto text-end">
+                            <div class="col-md-2">
+                                <select id="searchRole" class="form-select">
+                                    <option value="">ทุก Role</option>
+                                    @foreach($roles as $role)
+                                        <option value="{{ $role->id }}">{{ $role->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-2 ms-auto text-end">
                                 <button type="button" class="btn btn-primary" id="btn_add"
                                     data-bs-target="#employeeModal">
                                     <i class="ti ti-plus me-1"></i> เพิ่มพนักงาน
@@ -112,6 +120,7 @@
                 data: function(d) {
                     d.search = $('#searchInput').val();
                     d.dept = $('#searchDept').val();
+                    d.role_id = $('#searchRole').val();
                 },
                 error: function(xhr, error, thrown) {
                     console.error('AJAX Error:', error, thrown);
@@ -146,6 +155,12 @@
 
     // เปลี่ยนแผนกใน dropdown → ค้นหาใหม่
     $(document).on('change', '#searchDept', function(e){
+        e.preventDefault();
+        oTable.draw();
+    });
+
+    // เปลี่ยน role ใน dropdown → ค้นหาใหม่
+    $(document).on('change', '#searchRole', function(e){
         e.preventDefault();
         oTable.draw();
     });
