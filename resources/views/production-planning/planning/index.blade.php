@@ -378,7 +378,7 @@
                 // { 'className': "text-left", data: 'quantity', name: 'quantity', orderable: false },
                 { 'className': "text-left", data: 'machine_no', name: 'tb_planning.machine_no', orderable: true },
                 // สถานะภายในรวมจาก planning หลายแถว (คำนวณฝั่ง PHP) → sort ที่ SQL ไม่ได้
-                { 'className': "text-center", data: 'inner_status', name: 'inner_status', orderable: false, searchable: false },
+                { 'className': "text-center", data: 'inner_status', name: 'tb_planning.planning_status', orderable: true, searchable: false },
                 { 'className': "text-center", data: 'btnedit', name: 'btnedit', orderable: false, searchable: false },
             ],
             // order: [] = ไม่ส่ง order เริ่มต้น → controller ใช้ default (id ล่าสุด / packing เมื่อกรอง) ให้เอง

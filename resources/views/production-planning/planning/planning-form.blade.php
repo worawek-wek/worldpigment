@@ -47,7 +47,8 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-3 mb-2">
-                        <div class="text-muted small">Planning Code</div>
+                        {{-- <div class="text-muted small">Planning Code</div> --}}
+                        <div class="text-muted small">Item No.</div>
                         <div class="fw-semibold">{{ $planning_header->planning_code ?? '-' }}</div>
                     </div>
                     <div class="col-md-3 mb-2">
@@ -121,17 +122,17 @@
                                    data-planning_header_id="{{ $planning_header->id }}"
                                    value="Y"
                                    {{ $end_closed ? 'checked' : '' }}>
-                            <label class="form-check-label fw-semibold" for="planning_end_close">ปิดจบงาน (End Close)</label>
+                            <label class="form-check-label fw-semibold" for="planning_end_close">ตัดจบ Order (End Close)</label>
                             @if($planning_header->end_close_date)
                                 <span class="small fw-normal text-muted">({{ \Carbon\Carbon::parse($planning_header->end_close_date)->format('d/m/Y H:i') }})</span>
                             @endif
                         </div>
                         <div class="form-text text-muted mb-2">
-                            <i class="ti ti-info-circle me-1"></i>เมื่อปิดจบงาน ระบบจะปิดออเดอร์ (End Order) ให้อัตโนมัติ และต้องระบุหมายเหตุ
+                            <i class="ti ti-info-circle me-1"></i>เมื่อตัดจบ Order ระบบจะปิดออเดอร์ (End Order) ให้อัตโนมัติ และต้องระบุหมายเหตุ
                         </div>
                         <div class="mb-2">
                             <label class="form-label small text-muted mb-1" for="planning_end_close_remark">
-                                หมายเหตุการปิดจบงาน
+                                หมายเหตุการตัดจบ Order
                                 <span class="text-danger" id="end_close_remark_required" style="{{ $end_closed ? '' : 'display:none;' }}">*</span>
                             </label>
                             {{-- พิมพ์ได้เสมอ (ไม่ disable) — บังคับกรอกเฉพาะเมื่อติ๊กปิดจบงาน ตรวจทั้งฝั่ง client และ server --}}
