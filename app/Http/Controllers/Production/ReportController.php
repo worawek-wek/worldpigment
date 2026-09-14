@@ -357,14 +357,15 @@ class ReportController extends Controller
         // คอลัมน์ตามฟอร์ม — คอลัมน์ที่ยังไม่มีข้อมูลใน tb_planning เว้นค่าว่างไว้ก่อน
         // (Revise, TP, Resin, CODE, Packaging, Batch, สุ่มตัวอย่าง)
         // Speed (RPM) ย้ายไปแสดงต่อท้ายหัวกลุ่มเครื่องจักรแทน (2026-08-13)
+        // รอบการผลิต ย้ายมาไว้ก่อน Remark (2026-09-14) → คอลัมน์ P (เดิม F); PRODUCT NO..สุ่มตัวอย่าง เลื่อนซ้าย 1 ช่อง
         $headers = [
-            '#', 'วันที่ลงแผน', 'Revise', 'Cust Name', 'เลขที่ใบเบิก', 'รอบการผลิต', 'PRODUCT NO', 'LOT',
+            '#', 'วันที่ลงแผน', 'Revise', 'Cust Name', 'เลขที่ใบเบิก', 'PRODUCT NO', 'LOT',
             'น้ำหนักออเดอร์', 'TP', 'Resin', 'Temp', 'CODE', 'Packaging', 'Batch',
-            'สุ่มตัวอย่าง', 'Remark',
+            'สุ่มตัวอย่าง', 'รอบการผลิต', 'Remark',
         ];
         $cols    = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q'];
         $lastCol = 'Q';
-        $weightCol = 'I'; // คอลัมน์น้ำหนักออเดอร์ (ใช้ทำผลรวมต่อเครื่อง) — เลื่อนจาก H เพราะแทรกคอลัมน์รอบการผลิต (F)
+        $weightCol = 'H'; // คอลัมน์น้ำหนักออเดอร์ (ใช้ทำผลรวมต่อเครื่อง) — เลื่อนจาก I เพราะย้ายรอบการผลิตไปก่อน Remark
 
         // แบ่งเป็น section ต่อ (แผนก + หน่วยย่อย/group) เหมือน PDF — group ต่างกัน = คนละ section
         $sections = $this->machineSections($groups);
@@ -474,27 +475,28 @@ class ReportController extends Controller
                         $sheet->setCellValue("C{$r}", $it->senddate ? \Carbon\Carbon::parse($it->senddate)->format('d/m/Y') : '');  // Revise = senddate (กำหนดส่งทบทวน)
                         $sheet->setCellValue("D{$r}", $it->cust_name ?: '-');
                         $sheet->setCellValue("E{$r}", $it->red_bill_code ?: '-');
-                        $sheet->setCellValueExplicit("F{$r}", $it->cycles ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING); // รอบการผลิต (tb_planning.cycles)
-                        $sheet->setCellValueExplicit("G{$r}", $it->itemno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-                        $sheet->setCellValue("H{$r}", $it->lot ?: '-');
-                        $sheet->setCellValue("I{$r}", $it->quantity !== null ? number_format($it->quantity, 2) : '-');
-                        $sheet->setCellValue("J{$r}", $it->weight !== null ? number_format($it->weight, 2) : '');  // TP = น้ำหนัก TP (Weight)
-                        $sheet->setCellValueExplicit("K{$r}", $it->product_resin ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);   // Resin (tb_products.resin)
-                        $sheet->setCellValueExplicit("L{$r}", $it->product_temp ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);   // Temp (temp.Temp1 via tb_products.temp_id)
-                        $sheet->setCellValueExplicit("M{$r}", $it->product_code_val ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING); // CODE (tb_products.code)
-                        $sheet->setCellValueExplicit("N{$r}", $it->product_pack ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);   // Packaging (tb_products.pack)
-                        $sheet->setCellValueExplicit("O{$r}", $it->product_batch ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);  // Batch (tb_products.batch)
-                        $sheet->setCellValueExplicit("P{$r}", $it->product_sampling ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING); // สุ่มตัวอย่าง (tb_products.sampling)
+                        $sheet->setCellValueExplicit("F{$r}", $it->itemno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                        $sheet->setCellValue("G{$r}", $it->lot ?: '-');
+                        $sheet->setCellValue("H{$r}", $it->quantity !== null ? number_format($it->quantity, 2) : '-');
+                        $sheet->setCellValue("I{$r}", $it->weight !== null ? number_format($it->weight, 2) : '');  // TP = น้ำหนัก TP (Weight)
+                        $sheet->setCellValueExplicit("J{$r}", $it->product_resin ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);   // Resin (tb_products.resin)
+                        $sheet->setCellValueExplicit("K{$r}", $it->product_temp ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);   // Temp (temp.Temp1 via tb_products.temp_id)
+                        $sheet->setCellValueExplicit("L{$r}", $it->product_code_val ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING); // CODE (tb_products.code)
+                        $sheet->setCellValueExplicit("M{$r}", $it->product_pack ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);   // Packaging (tb_products.pack)
+                        $sheet->setCellValueExplicit("N{$r}", $it->product_batch ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);  // Batch (tb_products.batch)
+                        $sheet->setCellValueExplicit("O{$r}", $it->product_sampling ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING); // สุ่มตัวอย่าง (tb_products.sampling)
+                        $sheet->setCellValueExplicit("P{$r}", $it->cycles ?: '', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING); // รอบการผลิต (tb_planning.cycles) — ย้ายมาก่อน Remark (2026-09-14)
                         $sheet->setCellValue("Q{$r}", $it->planning_remark ?: '');  // Remark = หมายเหตุวางแผน (tb_planning.planning_remark)
                         $groupSum += (float) ($it->quantity ?? 0);
                         $r++;
                     }
 
-                    // แถวรวมต่อเครื่องจักร
+                    // แถวรวมต่อเครื่องจักร — คอลัมน์เลื่อนเพราะย้ายรอบการผลิตไปก่อน Remark (2026-09-14):
+                    // "N รายการ" ใต้ PRODUCT NO (F) · ผลรวมน้ำหนักใต้ น้ำหนักออเดอร์ (H)
                     $sheet->setCellValue("A{$r}", 'รวม '.$machineLabel);
-                    $sheet->mergeCells("A{$r}:H{$r}"); // ครอบถึงคอลัมน์ LOT (เลื่อนจาก G เพราะแทรกคอลัมน์รอบการผลิต)
+                    $sheet->mergeCells("A{$r}:E{$r}"); // ครอบ # ถึง เลขที่ใบเบิก
+                    $sheet->setCellValue("F{$r}", $group['items']->count().' รายการ');
                     $sheet->setCellValue("{$weightCol}{$r}", number_format($groupSum, 2));
-                    $sheet->setCellValue("G{$r}", $group['items']->count().' รายการ');
                     $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setBold(true);
                     $r++;
                 }

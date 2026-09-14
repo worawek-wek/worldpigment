@@ -50,7 +50,6 @@
                 <th style="width: {{ $showProd ? '18mm' : '9%' }};">Revise</th>
                 <th style="width: {{ $showProd ? '28mm' : '16%' }};">Cust Name</th>
                 <th style="width: {{ $showProd ? '18mm' : '9%' }};">เลขที่ใบเบิก</th>
-                <th style="width: {{ $showProd ? '13mm' : '6%' }};">รอบการผลิต</th>
                 <th style="width: {{ $showProd ? '24mm' : '12%' }};">PRODUCT NO</th>
                 <th style="width: {{ $showProd ? '16mm' : '8%' }};">LOT</th>
                 <th style="width: {{ $showProd ? '18mm' : '9%' }};">น้ำหนักออเดอร์</th>
@@ -63,6 +62,8 @@
                 <th style="width: 11mm;">Batch</th>
                 <th style="width: 16mm;">สุ่มตัวอย่าง</th>
                 @endif
+                {{-- รอบการผลิต ย้ายมาไว้ก่อน Remark (2026-09-14) --}}
+                <th style="width: {{ $showProd ? '13mm' : '6%' }};">รอบการผลิต</th>
                 {{-- Remark = คอลัมน์ยืดหยุ่น (ไม่กำหนดความกว้าง) รับพื้นที่ที่เหลือของตาราง
                      — กันคอลัมน์สุดท้ายหายเมื่อผลรวมความกว้างคอลัมน์อื่นชนขอบตาราง (2026-09-12) --}}
                 <th>Remark</th>
@@ -95,7 +96,6 @@
                         <td class="text-center">{{ $it->senddate ? \Carbon\Carbon::parse($it->senddate)->format('d/m/Y') : '' }}</td> {{-- Revise = senddate (กำหนดส่งทบทวน) --}}
                         <td>{{ $it->cust_name ?: '-' }}</td>
                         <td class="text-center">{{ $it->red_bill_code ?: '-' }}</td>
-                        <td class="text-center">{{ $it->cycles ?: '-' }}</td> {{-- รอบการผลิต (tb_planning.cycles) --}}
                         <td>{{ $it->itemno ?: '-' }}</td>
                         <td class="text-center">{{ $it->lot ?: '-' }}</td>
                         <td class="text-end">{{ $it->quantity !== null ? number_format($it->quantity, 2) : '-' }}</td>
@@ -108,15 +108,18 @@
                         <td class="text-center">{{ $it->product_batch ?: '' }}</td> {{-- Batch (tb_products.batch) --}}
                         <td>{{ $it->product_sampling ?: '' }}</td> {{-- สุ่มตัวอย่าง (tb_products.sampling) --}}
                         @endif
+                        <td class="text-center">{{ $it->cycles ?: '-' }}</td> {{-- รอบการผลิต (tb_planning.cycles) — ย้ายมาก่อน Remark (2026-09-14) --}}
                         <td>{{ $it->planning_remark ?: '' }}</td> {{-- Remark = หมายเหตุวางแผน (tb_planning.planning_remark) --}}
                     </tr>
                 @endforeach
+                {{-- แถวรวม — เลื่อน colspan เพราะรอบการผลิตย้ายออกจากคอลัมน์ที่ 6 (2026-09-14):
+                     "N รายการ" อยู่ใต้ PRODUCT NO (คอลัมน์ 6) · ผลรวมน้ำหนักอยู่ใต้ น้ำหนักออเดอร์ (คอลัมน์ 8) --}}
                 <tr class="sum-row">
-                    <td colspan="6" class="text-end">รวม {{ $machineLabel }}</td>
+                    <td colspan="5" class="text-end">รวม {{ $machineLabel }}</td>
                     <td class="text-center">{{ number_format($group['items']->count()) }} รายการ</td>
                     <td></td>
                     <td class="text-end">{{ number_format($groupSum, 2) }}</td>
-                    <td colspan="{{ $showProd ? 8 : 2 }}"></td>
+                    <td colspan="{{ $showProd ? 9 : 3 }}"></td>
                 </tr>
             @empty
                 <tr>
