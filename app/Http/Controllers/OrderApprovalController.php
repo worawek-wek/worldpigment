@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Services\AccessControl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -27,31 +26,47 @@ class OrderApprovalController extends Controller
     }
 
     /**
-     * ตรวจรหัสผ่านก่อนอนุมัติ (12/09/2569 ตามที่ผู้ใช้สั่ง)
+     * ตรวจรหัสผ่านก่อนอนุมัติ (12/09/2569 · เปลี่ยนเป็น "รหัสของใครก็ได้" 16/09/2569)
      *
-     * **ใช้รหัสผ่านของบัญชีที่ล็อกอินอยู่** (พนักงาน guard `emp` → `emp.password`
-     * หรือ admin guard `web` → `users.password`) — ไม่ใช่รหัสร่วมใน config แบบฟอร์ม MK
-     * ⇒ คนกดอนุมัติต้องรู้รหัสของตัวเอง และ **ต้องกรอกทุกครั้ง** (ไม่มี session ปลดล็อก)
+     * **รับรหัสผ่านของบัญชีใดก็ได้ในระบบ** — พนักงาน (`emp.password`) หรือแอดมิน
+     * (`users.password`) ตรงกับคนใดคนหนึ่ง = ผ่าน (ตามที่ผู้ใช้สั่ง 16/09/2569)
+     * ⇒ **ไม่ผูกกับบัญชีที่ล็อกอินอยู่** (เดิมตรวจกับบัญชีที่ล็อกอินเท่านั้น) และยัง
+     * **ต้องกรอกทุกครั้ง** ที่เปลี่ยนสถานะอนุมัติ (ไม่มี session ปลดล็อกแบบฟอร์ม MK)
      *
      * ⚠ `emp` มี 2 คอลัมน์รหัสผ่าน: `password` (hash ที่ใช้ล็อกอินจริง) กับ `pwd` (ของระบบเก่า
-     *   varchar(10)) — ที่นี่ตรวจกับ `password` ผ่าน `getAuthPassword()` ตัวเดียวกับตอน login
-     *   พนักงานที่ยังไม่ได้ตั้งรหัส (5 จาก 33 คนเท่านั้นที่มี) ล็อกอินไม่ได้อยู่แล้ว
+     *   varchar(10)) — ที่นี่เทียบกับ `password` ตัวเดียวกับตอน login เท่านั้น
+     * ⚠ bcrypt เทียบเป็นชุดไม่ได้ ต้องวน `Hash::check` ทีละ hash — ปัจจุบันมี 19 hash
+     *   (emp 5 จาก 33 คน + users 14) ≈ 1.2 วินาทีเมื่อรหัสผิด (ต้องวนครบทุกตัว)
+     * ⚠ ตรวจแค่ "รหัสตรงกับใครสักคน" ไม่ได้บอกว่าเป็นใคร ⇒ ยังไม่มี audit trail ว่าใครอนุมัติ
+     *   (`morder` ไม่มีคอลัมน์ผู้อนุมัติ)
      *
      * @return string|null  ข้อความผิดพลาด (null = ผ่าน)
      */
     private function approvePasswordError($input): ?string
     {
-        $account = AccessControl::currentAccount();
-        if (!$account) {
-            return 'ไม่พบบัญชีที่ล็อกอินอยู่ กรุณาเข้าสู่ระบบใหม่';
+        $input = (string) $input;
+        if ($input === '') {
+            return 'กรุณากรอกรหัสผ่าน';
         }
 
-        $hash = (string) $account->getAuthPassword();
-        if ($hash === '') {
-            return 'บัญชีนี้ยังไม่ได้ตั้งรหัสผ่าน จึงอนุมัติไม่ได้';
+        $hashes = DB::table('emp')
+            ->whereNotNull('password')
+            ->where('password', '<>', '')
+            ->pluck('password')
+            ->merge(
+                DB::table('users')
+                    ->whereNotNull('password')
+                    ->where('password', '<>', '')
+                    ->pluck('password')
+            );
+
+        foreach ($hashes as $hash) {
+            if (Hash::check($input, (string) $hash)) {
+                return null;
+            }
         }
 
-        return Hash::check((string) $input, $hash) ? null : 'รหัสผ่านไม่ถูกต้อง';
+        return 'รหัสผ่านไม่ถูกต้อง';
     }
 
     /**

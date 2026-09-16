@@ -394,8 +394,16 @@
                 </div>
             </div>
 
-            {{-- แถวตัวกรอง 2: ประเภทใบสั่ง + ผลิตที่ --}}
+            {{-- แถวตัวกรอง 2: รหัสสินค้า + ประเภทใบสั่ง + ผลิตที่ --}}
             <div class="row g-3 align-items-end mt-1">
+                {{-- ช่องค้นหารหัสสินค้าแยกจากช่องค้นหารวม (16/09/2569) — ค้น suborder.Itemno แบบ LIKE --}}
+                <div class="col-md-4">
+                    <label class="form-label small fw-medium mb-1">รหัสสินค้า</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="ti ti-package"></i></span>
+                        <input type="text" name="itemno" class="form-control p_search" oninput="loadData(page)">
+                    </div>
+                </div>
                 <div class="col-md-4">
                     <label class="form-label small fw-medium mb-1">ประเภทใบสั่ง</label>
                     <select name="order_type" class="form-select p_search" onchange="loadData(page)">
@@ -595,6 +603,7 @@
     //   ถ้าไปประกาศท้ายไฟล์ ตัวแปรจะยังเป็น undefined ตอนโหลดหน้า → throw แล้ว spinner ค้าง
     var FILTER_LABELS = {
         search:     'ค้นหา',
+        itemno:     'รหัสสินค้า',
         date_from:  'วันที่สั่ง ตั้งแต่',
         date_to:    'ถึง',
         order_type: 'ประเภทใบสั่ง',
@@ -1078,7 +1087,7 @@
         $('#orderItems').html(items.map(orderItemRow).join(''));
         initRowPickers('#orderItems');
         renumberOrderItems();
-        recalcOrderTotals();
+        recalcOrderTotals(false);        // โหลดใบเดิม → คงค่า netqty ที่บันทึกไว้ ไม่คำนวณทับ
         oiAutoGrowAll();                 // ค่าที่โหลดมาจากใบเดิมต้องขยายช่องให้พอดีด้วย
     }
 
@@ -1155,8 +1164,10 @@
         $('#orderItems tr').each(function(i){ $(this).find('.oi-no').text(i + 1); });
     }
 
-    // ยอดรวม S / P ท้ายตาราง
-    function recalcOrderTotals(){
+    /* ยอดรวม S / P ท้ายตาราง + เติม 'น้ำหนักรวม' (morder.netqty) ให้อัตโนมัติ (14/09/2569)
+       netqty = ผลรวม S + P ของทุกแถว — ตรงกับข้อมูลจริง 3,218 จาก 3,481 ใบ (92.4%)
+       ส่ง syncNet = false ตอนโหลดใบเดิม เพื่อไม่ทับค่า netqty ที่บันทึกไว้ */
+    function recalcOrderTotals(syncNet){
         var s = 0, p = 0;
         $('#orderItems tr').each(function(){
             s += numOf($(this).find('[data-f="Stock"]').val());
@@ -1164,6 +1175,10 @@
         });
         $('#o_total_stock').text(commaFmt(s, 2));
         $('#o_total_prod').text(commaFmt(p, 2));
+
+        if (syncNet === false) return;
+        $('#o_netqty').val(commaFmt(s + p, 2));
+        refreshOrderPrice();   // กลุ่มราคา / ขั้นต่ำ / ราคาต้องไม่ต่ำกว่า อิงน้ำหนักรวม
     }
 
     // ── กรอกรหัสสินค้า → เติมชื่อสินค้า + ผูกกล่องราคา + เตือน Match ใหม่ ──
@@ -1652,13 +1667,14 @@
             icon: approve ? 'question' : 'warning',
             title: approve ? 'อนุมัติใบสั่งซื้อนี้?' : 'ยกเลิกการอนุมัติ?',
             html: html,
-            // ต้องกรอกรหัสผ่านก่อนถึงจะอนุมัติได้ (12/09/2569) — **รหัสผ่านของบัญชีที่ล็อกอินอยู่**
-            // (พนักงาน/แอดมิน) ตรวจที่ server เสมอด้วย Hash::check
+            // ต้องกรอกรหัสผ่านก่อนถึงจะอนุมัติได้ (12/09/2569) — **รหัสผ่านของบัญชีใดก็ได้ในระบบ**
+            // (พนักงาน/แอดมินคนไหนก็ได้ ไม่ต้องเป็นคนที่ล็อกอินอยู่ — 16/09/2569)
+            // ตรวจที่ server เสมอด้วย Hash::check (ดู OrderApprovalController::approvePasswordError)
             // ต้อง render ใน #orderApprovalModal ไม่งั้น focus trap ของ modal ดึงโฟกัสกลับ พิมพ์ไม่ได้
             target: document.getElementById('orderApprovalModal') || 'body',
             heightAuto: false,
             input: 'password',
-            inputLabel: 'รหัสผ่านของคุณ (รหัสผ่านที่ใช้เข้าระบบ)',
+            inputLabel: 'รหัสผ่าน (รหัสผ่านที่ใช้เข้าระบบ ของผู้ใช้คนใดก็ได้)',
             inputAttributes: {autocomplete: 'off'},
             inputValidator: function(v){ if (!(v || '')) return 'กรอกรหัสผ่านก่อน'; },
             showCancelButton: true,

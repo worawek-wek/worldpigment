@@ -147,6 +147,8 @@ class OrderController extends Controller
     private function applyFilters($query, Request $request): void
     {
         // ค้นหารวมช่องเดียว: เลขที่ใบสั่ง / P.O. / รหัสลูกค้า / ชื่อลูกค้า / รหัสสินค้าในใบ
+        // ⚠ รหัสสินค้ายังค้นจากช่องนี้ได้เหมือนเดิม — ช่อง "รหัสสินค้า" ที่แยกออกมา (16/09/2569)
+        //   เป็นช่องเพิ่ม ไม่ได้ย้ายออกจากช่องนี้
         if ($search = trim((string) $request->input('search'))) {
             $like = '%' . $search . '%';
             $query->where(function ($q) use ($like) {
@@ -160,6 +162,15 @@ class OrderController extends Controller
                             ->whereColumn('suborder.Orderno', 'morder.Orderno')
                             ->where('suborder.Itemno', 'like', $like);
                     });
+            });
+        }
+
+        // ค้นหาด้วยรหัสสินค้าในใบ (suborder.Itemno) — ช่องแยกของตัวเอง (16/09/2569)
+        if ($itemno = trim((string) $request->input('itemno'))) {
+            $query->whereExists(function ($sub) use ($itemno) {
+                $sub->from('suborder')
+                    ->whereColumn('suborder.Orderno', 'morder.Orderno')
+                    ->where('suborder.Itemno', 'like', '%' . $itemno . '%');
             });
         }
 
