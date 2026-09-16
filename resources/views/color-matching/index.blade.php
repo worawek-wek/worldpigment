@@ -609,6 +609,7 @@
 
             var seq = ++dtSeq;
             if (dtXhr) dtXhr.abort();        // ตัด request ก่อนหน้าที่ยังค้าง
+            showTableLoading();              // server ช้า — บอกผู้ใช้ว่ากำลังดึงข้อมูล (16/09/2569)
 
             dtXhr = $.ajax({
                 type: "GET",
@@ -618,6 +619,10 @@
                     if (seq !== dtSeq) return;   // มี request ใหม่กว่าแล้ว → ทิ้งผลเก่า
                     $("#table-data").html(data);
                     // loadSummary(); // ⏸ ปิด summary ไว้ก่อน — ค่อยเปิดเมื่อต้องใช้
+                },
+                error: function(xhr, status) {
+                    if (seq !== dtSeq || status === 'abort') return;   // request เก่าถูกตัดทิ้ง = ปกติ
+                    showTableError();
                 },
                 complete: function() {
                     if (seq === dtSeq) dtXhr = null;

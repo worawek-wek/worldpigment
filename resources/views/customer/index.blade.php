@@ -528,9 +528,14 @@
         page = pages;
         var seq = ++dtSeq;
         if (dtXhr) dtXhr.abort();
+        showTableLoading();   // server ช้า — บอกผู้ใช้ว่ากำลังดึงข้อมูล (16/09/2569)
         dtXhr = $.ajax({
             type: "GET", url: pages, data: searchData,
             success: function(data){ if (seq === dtSeq) $("#table-data").html(data); },
+            error: function(xhr, status){
+                if (seq !== dtSeq || status === 'abort') return;   // request เก่าถูกตัดทิ้ง = ปกติ
+                showTableError();
+            },
             complete: function(){ if (seq === dtSeq) dtXhr = null; }
         });
     }
