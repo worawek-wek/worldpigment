@@ -35,6 +35,9 @@
                     <br>
                     <small class="text-body-secondary fw-normal">ก.ก.</small>
                 </th>
+                {{-- สถานะการอนุมัติ (19/09/2569) — คิดที่ SQL เป็น alias `appv_status`
+                     ไม่ได้ทำ sort เพราะยังไม่มีใน whitelist ของ datatable() --}}
+                <th class="align-middle text-center" style="width: 110px;">สถานะ</th>
                 <th class="align-middle text-center" width="110">จัดการ</th>
             </tr>
         </thead>
@@ -98,6 +101,24 @@
                     </td>
 
                     <td class="text-center">
+                        @php
+                            // ป้าย/สี มาจาก OrderController::APPV_STATUSES (ส่งมาเป็น $appv_statuses)
+                            $st = $appv_statuses[$row->appv_status] ?? null;
+                        @endphp
+                        @if ($st)
+                            <span class="badge {{ $st['badge'] }}">{{ $st['label'] }}</span>
+                            @if ($row->appv_status === 'approved' && $row->appvDT)
+                                <br>
+                                <small class="text-muted">
+                                    {{ \Carbon\Carbon::parse($row->appvDT)->format('d/m/Y') }}
+                                </small>
+                            @endif
+                        @else
+                            <span class="text-muted">-</span>
+                        @endif
+                    </td>
+
+                    <td class="text-center">
                         <button class="btn btn-sm btn-icon btn-label-primary" title="เปิดฟอร์มบันทึกใบสั่งซื้อ"
                             onclick="orderOpen('{{ $row->Orderno }}')">
                             <i class="ti ti-edit"></i>
@@ -106,7 +127,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="9" class="text-center py-5 text-muted">
+                    <td colspan="10" class="text-center py-5 text-muted">
                         <i class="ti ti-database-off fs-2 d-block mb-2 opacity-50"></i>
                         ไม่พบข้อมูลที่ตรงกับเงื่อนไข
                     </td>

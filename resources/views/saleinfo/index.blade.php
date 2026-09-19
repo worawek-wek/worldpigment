@@ -297,6 +297,12 @@
                             <i class="ti ti-search me-1"></i>
                             ค้นหาราคาสินค้า
                         </button>
+                        {{-- ดูกลุ่มราคา (zcolorrate) แบบอ่านอย่างเดียว — 19/09/2569
+                             แก้ไขได้ที่เมนู "จัดการกลุ่มราคา" (/color-rate) --}}
+                        <button class="btn btn-label-secondary" onclick="openColorRateLookup()">
+                            <i class="ti ti-layers-difference me-1"></i>
+                            ดูกลุ่มราคา
+                        </button>
                         {{-- ปุ่ม "ตั้งค่าเงื่อนไขราคา" ปิดไปแล้ว — ใช้เมนู "ตั้งค่าเงื่อนไขราคา" (/price-rule) แทน 21/08/2569 --}}
                         <button class="btn btn-theme-saleinfo"
                             data-bs-toggle="modal"
@@ -485,6 +491,7 @@
     @include('saleinfo.modal-price')
     @include('saleinfo.modal-newprice')
     @include('saleinfo.modal-testprice')
+    @include('color-rate.lookup-modal')   {{-- modal "ดูกลุ่มราคา" (อ่านอย่างเดียว) — 19/09/2569 --}}
     {{-- modal-pricerule ถูกย้ายไปเป็นหน้า /price-rule (resources/views/pricerule/index.blade.php) — 21/08/2569 --}}
 
     @include('layout/inc_js')

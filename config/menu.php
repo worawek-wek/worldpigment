@@ -172,6 +172,14 @@ return [
         'permission' => 'pricerule read',
     ],
 
+    // จัดการกลุ่มราคา (master) — ตาราง zcolorrate = ราคาขั้นต่ำกลุ่ม A/B/C ต่อรหัสสินค้า — 19/09/2569
+    'ColorRate' => [
+        'title' => 'จัดการกลุ่มราคา',
+        'icon' => 'ti-layers-difference',
+        'route_name' => 'colorrate.index',
+        'permission' => 'colorrate read',
+    ],
+
     // ตารางวันหยุดนักขัตฤกษ์ (master data) — เพิ่ม 01/09/2569
     'Holiday' => [
         'title' => 'วันหยุดนักขัตฤกษ์',

@@ -197,9 +197,20 @@
             <div class="row g-3 mt-1">
                 <div class="col-12">
                     <div class="pa-grouplegend">
-                        <div class="pa-gitem" id="a_glabel1">กลุ่ม A = 1,000 kg. up</div>
-                        <div class="pa-gitem" id="a_glabel2">กลุ่ม B = 500 kg UP</div>
-                        <div class="pa-gitem" id="a_glabel3">กลุ่ม C = under 500 kg.</div>
+                        {{-- บรรทัดล่างของแต่ละป้าย = ราคาของกลุ่มนั้น (19/09/2569 ตามที่ผู้ใช้สั่ง)
+                             ตัวเลขชุดเดียวกับช่องราคา 3 ช่องด้านบน — เติมโดย setApprovalGroupPrices() --}}
+                        <div class="pa-gitem" id="a_glabel1">
+                            <span class="pa-gitem-cap">กลุ่ม A = 1,000 kg. up</span>
+                            <span class="pa-gitem-price" id="a_gprice1">—</span>
+                        </div>
+                        <div class="pa-gitem" id="a_glabel2">
+                            <span class="pa-gitem-cap">กลุ่ม B = 500 kg UP</span>
+                            <span class="pa-gitem-price" id="a_gprice2">—</span>
+                        </div>
+                        <div class="pa-gitem" id="a_glabel3">
+                            <span class="pa-gitem-cap">กลุ่ม C = under 500 kg.</span>
+                            <span class="pa-gitem-price" id="a_gprice3">—</span>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -26,6 +26,9 @@ Route::prefix('order')->group(function () {
     // ปุ่ม "เพิ่มใบสั่งซื้อใหม่" ในฟอร์ม — สร้างใบสั่งซื้อทันที (12/09/2569)
     Route::post('/create', [OrderController::class, 'create'])->name('order.create');
 
+    // ปุ่ม "+ เพิ่ม" ข้างช่องสถานที่ส่ง — เขียนลง naddress ของลูกค้ารายนั้น (19/09/2569)
+    Route::post('/dvpoint', [OrderController::class, 'addDvpoint'])->name('order.dvpoint_add');
+
     // ─── ฟอร์มขออนุมัติราคาพิเศษ (MD) — ฟอร์มลูกของเมนูนี้ ─────────────
     Route::prefix('price-approval')->group(function () {
         Route::get('/items',           [PriceApprovalController::class, 'items'])->name('order.approval.items');

@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 
 /**
  * อนุมัติใบสั่งซื้อ — แปลงมาจากฟอร์ม Access "morderAPPV"
@@ -26,47 +25,35 @@ class OrderApprovalController extends Controller
     }
 
     /**
-     * ตรวจรหัสผ่านก่อนอนุมัติ (12/09/2569 · เปลี่ยนเป็น "รหัสของใครก็ได้" 16/09/2569)
+     * ตรวจ "รหัสพนักงาน" ก่อนอนุมัติ (16/09/2569 ตามที่ผู้ใช้สั่ง)
      *
-     * **รับรหัสผ่านของบัญชีใดก็ได้ในระบบ** — พนักงาน (`emp.password`) หรือแอดมิน
-     * (`users.password`) ตรงกับคนใดคนหนึ่ง = ผ่าน (ตามที่ผู้ใช้สั่ง 16/09/2569)
-     * ⇒ **ไม่ผูกกับบัญชีที่ล็อกอินอยู่** (เดิมตรวจกับบัญชีที่ล็อกอินเท่านั้น) และยัง
-     * **ต้องกรอกทุกครั้ง** ที่เปลี่ยนสถานะอนุมัติ (ไม่มี session ปลดล็อกแบบฟอร์ม MK)
+     * เดิม (12/09/2569) ให้กรอก **รหัสผ่าน** — ตอนแรกเทียบกับบัญชีที่ล็อกอินอยู่
+     * แล้วเปลี่ยนเป็น "รหัสผ่านของใครก็ได้" (16/09/2569) · ตอนนี้เปลี่ยนเป็นกรอก
+     * **รหัสพนักงาน (`emp.empno`)** แทน ไม่ใช่รหัสผ่านแล้ว
      *
-     * ⚠ `emp` มี 2 คอลัมน์รหัสผ่าน: `password` (hash ที่ใช้ล็อกอินจริง) กับ `pwd` (ของระบบเก่า
-     *   varchar(10)) — ที่นี่เทียบกับ `password` ตัวเดียวกับตอน login เท่านั้น
-     * ⚠ bcrypt เทียบเป็นชุดไม่ได้ ต้องวน `Hash::check` ทีละ hash — ปัจจุบันมี 19 hash
-     *   (emp 5 จาก 33 คน + users 14) ≈ 1.2 วินาทีเมื่อรหัสผิด (ต้องวนครบทุกตัว)
-     * ⚠ ตรวจแค่ "รหัสตรงกับใครสักคน" ไม่ได้บอกว่าเป็นใคร ⇒ ยังไม่มี audit trail ว่าใครอนุมัติ
-     *   (`morder` ไม่มีคอลัมน์ผู้อนุมัติ)
+     * ผ่านเมื่อรหัสที่กรอกตรงกับพนักงานที่ยังใช้งานอยู่ (`is_active = 'Y'`) — ข้อมูลจริง
+     * ตอนนี้มีพนักงาน 33 คน ทุกคน active และ `empno` ไม่ซ้ำ/ไม่ว่าง (varchar(4))
+     *
+     * ⚠ รหัสพนักงานเป็นข้อมูลที่เดาง่ายกว่ารหัสผ่านมาก — ด่านนี้จึงเป็นแค่การ
+     *   "ยืนยันตัวผู้กด" ตามที่ผู้ใช้ต้องการ ไม่ใช่การพิสูจน์ตัวตนจริง
+     * ⚠ ระบบยัง **ไม่บันทึกว่าใครอนุมัติ** — `morder` ไม่มีคอลัมน์ผู้อนุมัติ
+     *   (ถ้าจะเก็บ ต้องเพิ่มคอลัมน์ก่อน แล้วเขียนค่า empno ที่กรอกลงไปใน approve())
      *
      * @return string|null  ข้อความผิดพลาด (null = ผ่าน)
      */
-    private function approvePasswordError($input): ?string
+    private function approveEmpnoError($input): ?string
     {
-        $input = (string) $input;
-        if ($input === '') {
-            return 'กรุณากรอกรหัสผ่าน';
+        $empno = trim((string) $input);
+        if ($empno === '') {
+            return 'กรุณากรอกรหัสพนักงาน';
         }
 
-        $hashes = DB::table('emp')
-            ->whereNotNull('password')
-            ->where('password', '<>', '')
-            ->pluck('password')
-            ->merge(
-                DB::table('users')
-                    ->whereNotNull('password')
-                    ->where('password', '<>', '')
-                    ->pluck('password')
-            );
+        $exists = DB::table('emp')
+            ->where('empno', $empno)
+            ->where('is_active', 'Y')
+            ->exists();
 
-        foreach ($hashes as $hash) {
-            if (Hash::check($input, (string) $hash)) {
-                return null;
-            }
-        }
-
-        return 'รหัสผ่านไม่ถูกต้อง';
+        return $exists ? null : 'รหัสพนักงานไม่ถูกต้อง';
     }
 
     /**
@@ -202,14 +189,14 @@ class OrderApprovalController extends Controller
             return response()->json(['status' => false, 'message' => 'ไม่ได้ระบุเลขที่ใบสั่ง'], 422);
         }
 
-        // ต้องกรอกรหัสผ่านทุกครั้งที่เปลี่ยนสถานะอนุมัติ (รวมขา "ยกเลิกอนุมัติ" ด้วย
+        // ต้องกรอกรหัสพนักงานทุกครั้งที่เปลี่ยนสถานะอนุมัติ (รวมขา "ยกเลิกอนุมัติ" ด้วย
         // เพราะเป็นการแก้สถานะเอกสารเหมือนกัน แม้ตอนนี้ UI จะยังเข้าไม่ถึงขานั้น)
-        $pwError = $this->approvePasswordError($request->input('password'));
-        if ($pwError !== null) {
+        $empError = $this->approveEmpnoError($request->input('empno'));
+        if ($empError !== null) {
             return response()->json([
-                'status'       => false,
-                'bad_password' => true,
-                'message'      => $pwError,
+                'status'    => false,
+                'bad_empno' => true,
+                'message'   => $empError,
             ], 422);
         }
 

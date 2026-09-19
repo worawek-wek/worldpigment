@@ -46,6 +46,29 @@ class OrderController extends Controller
         ['CE', 'CR', 'HE', 'HR', 'WE', 'WR'],
     ];
 
+    /**
+     * สถานะการอนุมัติของใบสั่งซื้อ — คอลัมน์ "สถานะ" ในตารางรายการ + ตัวกรอง (19/09/2569)
+     *
+     * กติกาเดียวกับ OrderApprovalController::approvableQuery():
+     *   - ใบจอง R (ตัวอักษรที่ 2 ของ Orderno = R) ไม่ต้องอนุมัติ
+     *   - ที่เหลือ: appv = -1 คือ อนุมัติแล้ว · NULL/0 คือ รออนุมัติ
+     *     (ข้อมูลจริงมีแค่ -1 กับ NULL — เผื่อ 0 ไว้ให้ตรงกับที่ approve() เขียนได้)
+     */
+    public const APPV_STATUSES = [
+        'waiting'  => ['label' => 'รออนุมัติ',    'badge' => 'bg-label-warning'],
+        'approved' => ['label' => 'อนุมัติแล้ว',   'badge' => 'bg-label-success'],
+        'reserve'  => ['label' => 'ใบจอง',        'badge' => 'bg-label-secondary'],
+    ];
+
+    /**
+     * นิพจน์ SQL ของสถานะ — **แหล่งความจริงเดียว** ใช้ทั้งคอลัมน์ที่แสดงและตัวกรอง
+     * ถ้าแก้กติกา ต้องแก้ที่นี่ที่เดียว (ไม่งั้นตัวกรองกับสิ่งที่เห็นจะไม่ตรงกัน)
+     */
+    private const APPV_STATUS_SQL = "CASE
+            WHEN SUBSTRING(morder.Orderno, 2, 1) = 'R' THEN 'reserve'
+            WHEN morder.appv IS NULL OR morder.appv = 0 THEN 'waiting'
+            ELSE 'approved' END";
+
     /** คอลัมน์ checkbox ของ Access เก็บ -1 = ติ๊ก, 0/NULL = ไม่ติ๊ก */
     private static function checked($value): bool
     {
@@ -77,6 +100,9 @@ class OrderController extends Controller
             ->distinct()
             ->orderBy('nold')
             ->pluck('nold');
+
+        // ตัวเลือกของตัวกรอง "สถานะ" (การอนุมัติใบสั่งซื้อ)
+        $data['appv_statuses'] = self::APPV_STATUSES;
 
         // ผู้บันทึก = พนักงานที่ล็อกอินอยู่ (เติมให้อัตโนมัติเมื่อเปิดใบใหม่)
         $data['current_emp'] = optional(Auth::user())->empno;
@@ -124,6 +150,8 @@ class OrderController extends Controller
             ->selectRaw('COALESCE(agg.total_prod, 0) as total_prod')
             ->selectRaw('COALESCE(agg.total_stock, 0) as total_stock')
             ->addSelect('agg.first_senddate', 'agg.itemno_list')
+            // สถานะการอนุมัติ — คิดที่ SQL ด้วยนิพจน์ตัวเดียวกับที่ตัวกรองใช้ (19/09/2569)
+            ->selectRaw(self::APPV_STATUS_SQL . ' as appv_status')
             ->orderBy($sortable[$sortKey], $sortDir);
 
         // เรียงรองด้วยเลขที่ใบสั่ง ให้ลำดับคงที่เมื่อค่าคอลัมน์หลักซ้ำกัน
@@ -136,9 +164,10 @@ class OrderController extends Controller
         $limit = $request->input('limit') ?: 15;
         $results = $results->paginate($limit);
 
-        $data['list_data'] = $results;
-        $data['sort_col']  = $sortKey;
-        $data['sort_dir']  = $sortDir;
+        $data['list_data']     = $results;
+        $data['sort_col']      = $sortKey;
+        $data['sort_dir']      = $sortDir;
+        $data['appv_statuses'] = self::APPV_STATUSES;   // ป้าย/สี badge ของคอลัมน์สถานะ
 
         return view('order.table', $data);
     }
@@ -183,6 +212,13 @@ class OrderController extends Controller
         // ผลิตที่
         if ($company = trim((string) $request->input('company'))) {
             $query->where('morder.Company', $company);
+        }
+
+        // สถานะการอนุมัติ — เทียบกับนิพจน์ตัวเดียวกับที่ใช้คิดคอลัมน์ "สถานะ" (19/09/2569)
+        // ⇒ สิ่งที่กรองได้ตรงกับ badge ที่เห็นในตารางเสมอ
+        $appvStatus = (string) $request->input('appv_status');
+        if (isset(self::APPV_STATUSES[$appvStatus])) {
+            $query->whereRaw(self::APPV_STATUS_SQL . ' = ?', [$appvStatus]);
         }
 
         // ช่วงวันที่สั่ง (ช่องกรอกเป็น d/m/Y จาก flatpickr)
@@ -352,7 +388,23 @@ class OrderController extends Controller
             'CER'       => self::checked($cust->CER),
             'PO'        => self::checked($cust->PO),
             'MSDS'      => self::checked($cust->MSDS),
+            // สถานะ Blacklist — ฝั่งจอใช้เตือนแล้วล้างรหัสลูกค้าทิ้ง (19/09/2569)
+            'is_black'  => self::isBlacklisted($cust->black),
+            'blackrem'  => $cust->blackrem,
+            'blackdate' => $cust->blackdate,
         ];
+    }
+
+    /**
+     * ลูกค้าติด Blacklist หรือไม่ — **`customer.black` ไม่ใช่ 0** (ผู้ใช้ยืนยัน 19/09/2569)
+     *
+     * ⚠ ไม่ใช่แค่ `-1` อย่างที่เคยเข้าใจ — ค่าจริงในตารางมี -3 (2,734 ราย) · 0 (1,088) ·
+     *   -1 (220) · 2 (49) · 5 (2) · NULL (1)
+     * ⚠ **NULL ถือว่า "ไม่ติด"** (ข้อมูลว่าง ไม่ใช่การขึ้นบัญชีดำ) — ยังไม่ได้ยืนยันกับผู้ใช้
+     */
+    private static function isBlacklisted($black): bool
+    {
+        return $black !== null && (int) $black !== 0;
     }
 
     /** สถานที่ส่งของลูกค้ารายนี้ (dropdown "สถานที่ส่ง") */
@@ -368,6 +420,65 @@ class OrderController extends Controller
             ->orderBy('DVpoint')
             ->pluck('DVpoint')
             ->all();
+    }
+
+    /**
+     * POST — เพิ่ม "สถานที่ส่ง" ให้ลูกค้ารายนี้จากฟอร์มใบสั่งซื้อ (19/09/2569)
+     *
+     * เขียนลง `naddress` (PK = Custno + DVpoint) ซึ่งเป็น**ตารางเดียวกับที่เมนู "ฐานข้อมูลลูกค้า" ดูแล**
+     * ⇒ ค่าที่เพิ่มจากตรงนี้จะไปโผล่ในฟอร์มลูกค้าด้วย (ตั้งใจ — เป็นสถานที่ส่งประจำของลูกค้า)
+     *
+     * ⚠ มีอยู่แล้ว = ไม่ error แต่ตอบกลับพร้อมธง `existed` ให้ฝั่งจอเลือกตัวนั้นให้เลย
+     */
+    public function addDvpoint(Request $request)
+    {
+        $custno  = trim((string) $request->input('custno'));
+        $dvpoint = trim((string) $request->input('dvpoint'));
+
+        if ($custno === '') {
+            return response()->json(['status' => false, 'message' => 'ต้องระบุลูกค้าก่อนเพิ่มสถานที่ส่ง'], 422);
+        }
+
+        if (!DB::table('customer')->where('code', $custno)->exists()) {
+            return response()->json(['status' => false, 'message' => 'ไม่พบรหัสลูกค้า '.$custno], 422);
+        }
+
+        if ($dvpoint === '') {
+            return response()->json(['status' => false, 'message' => 'กรุณากรอกสถานที่ส่ง'], 422);
+        }
+
+        /* naddress.DVpoint เป็น varchar สั้น (ตอนนี้ 20) — อ่านความยาวจริงจาก schema ไม่ hardcode
+           ⚠ ที่นี่ "ตีกลับให้ผู้ใช้แก้เอง" ไม่ใช่ตัดเงียบ ๆ แบบ clampToColumns() ที่ใช้ตอนบันทึกใบสั่งซื้อ
+             เพราะอันนั้นเป็นค่าที่ระบบเติมให้ ส่วนอันนี้ผู้ใช้พิมพ์เองและกำลังสร้างค่าใหม่ในตาราง master */
+        $max = 20;
+        foreach (DB::select("SHOW COLUMNS FROM naddress LIKE 'DVpoint'") as $col) {
+            if (preg_match('/^(?:var)?char\((\d+)\)/i', $col->Type, $m)) {
+                $max = (int) $m[1];
+            }
+        }
+
+        if (mb_strlen($dvpoint) > $max) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'สถานที่ส่งยาวเกิน '.$max.' ตัวอักษร (กรอกมา '.mb_strlen($dvpoint).')',
+            ], 422);
+        }
+
+        $existed = DB::table('naddress')
+            ->where(['Custno' => $custno, 'DVpoint' => $dvpoint])
+            ->exists();
+
+        if (!$existed) {
+            DB::table('naddress')->insert(['Custno' => $custno, 'DVpoint' => $dvpoint]);
+        }
+
+        return response()->json([
+            'status'   => true,
+            'existed'  => $existed,
+            'message'  => $existed ? 'สถานที่ส่งนี้มีอยู่แล้ว — เลือกให้แล้ว' : 'เพิ่มสถานที่ส่งเรียบร้อย',
+            'dvpoint'  => $dvpoint,
+            'dvpoints' => $this->dvpoints($custno),
+        ]);
     }
 
     /**
@@ -739,7 +850,7 @@ class OrderController extends Controller
                 if ($mode === 'insert') {
                     $orderno = $this->allocateOrderno($type);
                     DB::table('morder')->insert(
-                        ['Orderno' => $orderno] + $this->headerPayload($request, $custno, $cust)
+                        ['Orderno' => $orderno] + $this->headerPayload($request, $custno, $cust, 'insert')
                     );
                 } else {
                     $orderno = trim((string) $request->input('Orderno'));
@@ -747,7 +858,7 @@ class OrderController extends Controller
                         throw new \RuntimeException('ไม่พบใบสั่งซื้อเลขที่ ' . $orderno);
                     }
                     DB::table('morder')->where('Orderno', $orderno)
-                        ->update($this->headerPayload($request, $custno, $cust));
+                        ->update($this->headerPayload($request, $custno, $cust, 'update'));
                 }
 
                 $this->syncItems($orderno, $items);
@@ -979,11 +1090,11 @@ class OrderController extends Controller
     }
 
     /** ค่าที่จะเขียนลง morder (ใช้ร่วมทั้ง insert / update) */
-    private function headerPayload(Request $request, string $custno, $cust): array
+    private function headerPayload(Request $request, string $custno, $cust, string $mode = 'insert'): array
     {
         // ตัดข้อความให้พอดีคอลัมน์ก่อนเขียน (ตาราง legacy คอลัมน์สั้น + MySQL strict mode)
-        return $this->clampToColumns('morder', [
-            // วันที่เปิดใบ — ฟอร์มตั้งค่าปัจจุบันให้ แต่ผู้ใช้แก้ได้ (ว่าง/รูปแบบผิด = ใช้เวลาปัจจุบัน)
+        $data = $this->clampToColumns('morder', [
+            // วันที่เปิดใบ — ใช้เฉพาะขา insert (ขา update ถูก unset ทิ้งท้ายเมธอด)
             'Mdate'    => $this->parseDateTime($request->input('Mdate')) ?? now(),
             'Company'  => $this->nullIfBlank($request->input('Company')),
             'PO'       => $this->nullIfBlank($request->input('PO')),
@@ -1011,6 +1122,15 @@ class OrderController extends Controller
                 ? (string) $request->input('itype')
                 : null,
         ]);
+
+        /* 19/09/2569: แก้ใบเดิม = ห้ามแตะ "วันที่เปิดใบ"
+           ช่องบนฟอร์มเป็น readonly แล้ว แต่ต้องกันฝั่ง server ด้วย (ยิง POST ตรงยังส่งค่ามาได้)
+           ขา insert ยังต้องมี Mdate ไม่งั้นคอลัมน์จะว่าง */
+        if ($mode === 'update') {
+            unset($data['Mdate']);
+        }
+
+        return $data;
     }
 
     /**

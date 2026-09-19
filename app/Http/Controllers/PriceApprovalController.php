@@ -36,6 +36,15 @@ class PriceApprovalController extends Controller
         ['key' => 'price3', 'group' => 'C', 'label' => 'กลุ่ม C = under 500 kg.', 'min' => 0],
     ];
 
+    /**
+     * ตารางเกณฑ์กลุ่มราคา (อ่านอย่างเดียว) — ให้หน้าอื่นใช้ได้โดยไม่ต้อง hard-code ซ้ำ (19/09/2569)
+     * ใช้ที่เมนู "จัดการกลุ่มราคา" (ColorRateController) และ modal "ดูกลุ่มราคา"
+     */
+    public static function priceGroups(): array
+    {
+        return self::PRICE_GROUPS;
+    }
+
     /** session ที่บอกว่า "โหมดอนุมัติ (MD)" ถูกปลดล็อกไว้ถึงเมื่อไหร่ */
     private const MD_SESSION_KEY = 'price_approval_md_until';
 

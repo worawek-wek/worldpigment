@@ -208,6 +208,16 @@
     border-color: #0d6efd;
     box-shadow: 0 0 0 .18rem rgba(13, 110, 253, .18);
 }
+/* ราคาของกลุ่มนั้น ๆ = บรรทัดล่างของป้าย (19/09/2569) */
+.pa-gitem-cap   { display: block; }
+.pa-gitem-price {
+    display: block;
+    margin-top: .15rem;
+    font-size: .95rem;
+    font-weight: 700;
+    color: #1f2d3a;
+}
+.pa-gitem.pa-active .pa-gitem-price { color: #0d6efd; }
 
 .pa-hl-yellow { background-color: #fff59d !important; font-weight: 600; }
 .pa-hl-pink   { background-color: #f8bbd0 !important; font-weight: 600; }
@@ -337,6 +347,12 @@
                             {{-- จำนวนใบขอราคาที่ยังไม่อนุมัติ (12/09/2569) — อัปเดตใน paLoadQueue() --}}
                             <span class="badge bg-danger ms-1 d-none" id="paQueueBadge">0</span>
                         </button>
+                        {{-- ดูกลุ่มราคา (zcolorrate) แบบอ่านอย่างเดียว — 19/09/2569
+                             ค่าชุดเดียวกับช่อง "ขั้นต่ำ" ในกล่องราคาของฟอร์มใบสั่งซื้อ --}}
+                        <button class="btn btn-label-secondary border" onclick="openColorRateLookup()">
+                            <i class="ti ti-layers-difference me-1"></i>
+                            ดูกลุ่มราคา
+                        </button>
                         <button class="btn btn-primary" onclick="orderOpenNew()">
                             <i class="ti ti-plus me-1"></i>
                             เพิ่มใบสั่งซื้อใหม่
@@ -421,6 +437,17 @@
                         <option value="">ทั้งหมด</option>
                         @foreach ($companies as $c)
                             <option value="{{ $c }}">{{ $c }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                {{-- ตัวกรองสถานะการอนุมัติ (19/09/2569) — class p_search ทำให้เข้าระบบตัวกรองกลางเอง
+                     (ส่งเข้า query · นับจำนวนบนปุ่มล้างตัวกรอง · ปุ่มล้าง · แถบสรุป) --}}
+                <div class="col-md-4">
+                    <label class="form-label small fw-medium mb-1">สถานะ</label>
+                    <select name="appv_status" class="form-select p_search" onchange="loadData(page)">
+                        <option value="">ทั้งหมด</option>
+                        @foreach ($appv_statuses as $key => $st)
+                            <option value="{{ $key }}">{{ $st['label'] }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -591,6 +618,7 @@
 </div>
 
     <!-- / Layout wrapper -->
+    @include('color-rate.lookup-modal')   {{-- modal "ดูกลุ่มราคา" (อ่านอย่างเดียว) — 19/09/2569 --}}
     @include('layout/inc_js')
 <script>
     var page = "{{ $page_url }}/datatable";
@@ -606,8 +634,9 @@
         itemno:     'รหัสสินค้า',
         date_from:  'วันที่สั่ง ตั้งแต่',
         date_to:    'ถึง',
-        order_type: 'ประเภทใบสั่ง',
-        company:    'ผลิตที่'
+        order_type:  'ประเภทใบสั่ง',
+        company:     'ผลิตที่',
+        appv_status: 'สถานะ'
     };
 
     loadData(page);
@@ -630,11 +659,15 @@
             }
         });
         // ช่องวันที่ที่มีเวลาด้วย (วันที่เปิดใบสั่ง)
+        // 19/09/2569: อ่านอย่างเดียว — Mdate ถูกกำหนดที่ server ตอนสร้างใบ (OrderController::create)
+        //   clickOpens:false = คลิกแล้วปฏิทินไม่เด้ง · allowInput:false = พิมพ์เองไม่ได้
+        //   ยังต้อง init อยู่ เพราะ setFpDateTime() ใช้ instance นี้จัดรูปแบบค่าที่โหลดมาจากใบเดิม
         flatpickr('.flatpickr-datetime', {
             dateFormat: 'd/m/Y H:i',
             enableTime: true,
             time_24hr: true,
-            allowInput: true,
+            allowInput: false,
+            clickOpens: false,
             static: true,
             disableMobile: true
         });
@@ -950,6 +983,66 @@
         $('#o_DVpoint').html(html).val(selected || '');
     }
 
+    // ── ปุ่ม "+ เพิ่ม" ข้างช่องสถานที่ส่ง (19/09/2569) ──
+    // เขียนลง naddress ของลูกค้ารายนั้น แล้วเติมรายการใหม่ + เลือกอันที่เพิ่งเพิ่มให้เลย
+    // ⚠ Swal ที่มีช่องกรอกต้องตั้ง target = #orderModal + heightAuto:false
+    //   ไม่งั้น focus trap ของ Bootstrap modal ดึงโฟกัสกลับ พิมพ์ไม่ได้
+    function addDvpointPrompt(){
+        var target = document.getElementById('orderModal') || 'body';
+        var custno = ($('#o_Custno').val() || '').trim();
+
+        if (!custno){
+            Swal.fire({
+                icon: 'warning', title: 'ยังไม่ได้ระบุลูกค้า',
+                text: 'กรอกรหัสลูกค้าก่อน แล้วค่อยเพิ่มสถานที่ส่ง',
+                target: target, heightAuto: false
+            });
+            return;
+        }
+
+        Swal.fire({
+            title: 'เพิ่มสถานที่ส่ง',
+            input: 'text',
+            inputLabel: 'สถานที่ส่งใหม่ของลูกค้า ' + custno + ' (สูงสุด 20 ตัวอักษร)',
+            inputAttributes: { maxlength: 20, autocomplete: 'off' },
+            showCancelButton: true,
+            confirmButtonText: 'เพิ่ม',
+            cancelButtonText: 'ยกเลิก',
+            target: target,
+            heightAuto: false,
+            inputValidator: function(v){
+                if (!(v || '').trim()) return 'กรุณากรอกสถานที่ส่ง';
+            }
+        }).then(function(r){
+            if (!r.isConfirmed) return;
+
+            $.post("{{ $page_url }}/dvpoint", {
+                _token:  '{{ csrf_token() }}',
+                custno:  custno,
+                dvpoint: (r.value || '').trim()
+            })
+            .done(function(res){
+                // fillDvpoints() วาด option ใหม่ด้วย .html() — ตัวช่วยกลาง enhanceSelects เฝ้าดูอยู่แล้ว
+                // จึง init ดรอปดาวน์ใหม่ให้เอง (ดูหัวข้อ optionsSig ใน CLAUDE.md)
+                fillDvpoints(res.dvpoints, res.dvpoint);
+                // เขียนข้อมูลลง naddress แล้ว → โหลดตารางรายการใหม่ตามกติกา (19/09/2569)
+                // (คอลัมน์ในตารางยังไม่มีสถานที่ส่ง แต่ทำให้ครบทุกจุดที่เขียนข้อมูล)
+                if (!res.existed) loadData(page);
+                Swal.fire({
+                    icon: res.existed ? 'info' : 'success', title: res.message,
+                    toast: true, position: 'top-end', timer: 2000, showConfirmButton: false
+                });
+            })
+            .fail(function(xhr){
+                Swal.fire({
+                    icon: 'error', title: 'เพิ่มไม่สำเร็จ',
+                    text: (xhr.responseJSON && xhr.responseJSON.message) || 'เกิดข้อผิดพลาด กรุณาลองใหม่',
+                    target: target, heightAuto: false
+                });
+            });
+        });
+    }
+
     // กล่องราคา — ทุกช่องอ่านอย่างเดียว ยกเว้น "ราคาขาย" ที่ผู้ใช้พิมพ์เอง (ไม่แตะที่นี่)
     function fillPriceBox(p){
         p = p || {};
@@ -1040,6 +1133,22 @@
     // ผู้ใช้แก้ชื่อสินค้าเอง → เลิกถือว่าเป็นค่าที่ระบบเติม จะได้ไม่ถูกทับตอนเปลี่ยนรหัสสินค้ารอบหน้า
     $(document).on('input', '#orderItems [data-f="prodname"]', function(){
         $(this).removeAttr('data-autofill');
+    });
+
+    // ── ห้ามวางข้อมูลในช่อง "เลขที่ใบส่ง" และ "หมายเหตุ" (19/09/2569 ตามที่ผู้ใช้สั่ง) ──
+    // event `paste` ครอบทั้ง Ctrl+V / Cmd+V และคลิกขวา → วาง
+    // ⚠ บล็อก `drop` ด้วย ไม่งั้นลากข้อความมาปล่อยใส่ช่องก็ยังเข้าได้ (เลี่ยง paste ได้)
+    // ⚠ กันได้แค่ฝั่งจอ — ค่าที่ส่งมาตอนบันทึกยังเป็นอะไรก็ได้ (ยิง POST ตรงไม่ผ่านด่านนี้)
+    var OI_NO_PASTE = '#orderItems [data-f="outno"], #orderItems [data-f="Remark"]';
+
+    $(document).on('paste drop', OI_NO_PASTE, function(e){
+        e.preventDefault();
+        Swal.fire({
+            icon: 'warning',
+            title: 'ช่องนี้ไม่อนุญาตให้วางข้อมูล',
+            text:  'กรุณาพิมพ์เอง',
+            toast: true, position: 'top-end', timer: 2000, showConfirmButton: false
+        });
     });
 
     // ตอน modal ยังซ่อนอยู่วัดความกว้างไม่ได้ — วัดใหม่ตอนเปิด (ทั้งใบเดิมและใบใหม่)
@@ -1285,6 +1394,11 @@
                     return;
                 }
                 var c = res.customer;
+
+                // ลูกค้าติด Blacklist → เตือน แล้วล้างรหัสลูกค้าทิ้ง (19/09/2569 ตามที่ผู้ใช้สั่ง)
+                // return ก่อนเติมค่าใด ๆ ⇒ ไม่มีข้อมูลของลูกค้ารายนี้หลุดขึ้นฟอร์มเลย
+                if (c.is_black){ orderBlacklistBlock(code, c); return; }
+
                 $('#o_Custname').val(c.name || '');
                 fillDvpoints(res.dvpoints, '');
                 // itype ไม่ได้ผูกกับลูกค้าแล้ว (เป็นประเภทสินค้าที่สั่ง ผู้ใช้เลือกเอง) จึงไม่แตะที่นี่
@@ -1301,6 +1415,46 @@
                 refreshOrderPrice();   // เปลี่ยนลูกค้า → ราคาของคู่ (ลูกค้า, สินค้า) เปลี่ยนตาม
             });
         }, 350);
+    }
+
+    // ล้างทุกช่องที่ถูกเติมจากข้อมูลลูกค้า — ใช้ตอนเจอ Blacklist (19/09/2569)
+    // ⚠ ต้องล้างเองทั้งหมด: การ .val('') ที่ช่องรหัสลูกค้าไม่ยิง event `input`
+    //   ⇒ lookupOrderCustomer() ไม่ถูกเรียกซ้ำ ช่องอื่นจึงไม่ถูกล้างให้เอง
+    function clearOrderCustomerFields(){
+        $('#o_Custname').val('');
+        fillDvpoints([], '');
+        $('#o_supno').val('');
+        $('#o_RP').prop('checked', false);
+        $('#o_Cer').prop('checked', false);
+        $('#o_MSDS').prop('checked', false);
+        refreshOrderPrice();     // กล่องราคาผูกกับคู่ (ลูกค้า, สินค้า) — ไม่มีลูกค้าแล้วต้องล้างตาม
+    }
+
+    // แจ้งเตือนลูกค้าติด Blacklist แล้วล้างรหัสลูกค้าเมื่อกดตกลง
+    // ⚠ Swal ต้องตั้ง target = #orderModal + heightAuto:false ไม่งั้นโดน focus trap ของ modal
+    function orderBlacklistBlock(code, c){
+        var detail = '';
+        if ((c.blackrem || '').trim() !== ''){
+            detail += '<div class="mt-2">เหตุผล: <strong>' + escHtml(c.blackrem) + '</strong></div>';
+        }
+        if (c.blackdate){
+            detail += '<div class="text-muted small">ขึ้นบัญชีเมื่อ ' + fmtDate(c.blackdate, true) + '</div>';
+        }
+
+        Swal.fire({
+            icon:  'error',
+            title: 'ลูกค้าติด Blacklist',
+            html:  'รหัส <strong>' + escHtml(code) + '</strong> — ' + escHtml(c.name || '') + detail
+                 + '<div class="mt-3">กรุณากรอกรหัสลูกค้ารายอื่น</div>',
+            confirmButtonText: 'ตกลง',
+            allowOutsideClick: false,
+            target: document.getElementById('orderModal') || 'body',
+            heightAuto: false
+        }).then(function(){
+            $('#o_Custno').val('');
+            clearOrderCustomerFields();
+            $('#o_Custno').trigger('focus');
+        });
     }
 
     // ════════════════════════════════════════════════════════
@@ -1667,16 +1821,16 @@
             icon: approve ? 'question' : 'warning',
             title: approve ? 'อนุมัติใบสั่งซื้อนี้?' : 'ยกเลิกการอนุมัติ?',
             html: html,
-            // ต้องกรอกรหัสผ่านก่อนถึงจะอนุมัติได้ (12/09/2569) — **รหัสผ่านของบัญชีใดก็ได้ในระบบ**
-            // (พนักงาน/แอดมินคนไหนก็ได้ ไม่ต้องเป็นคนที่ล็อกอินอยู่ — 16/09/2569)
-            // ตรวจที่ server เสมอด้วย Hash::check (ดู OrderApprovalController::approvePasswordError)
+            // ต้องกรอก **รหัสพนักงาน** ก่อนถึงจะอนุมัติได้ (16/09/2569 ตามที่ผู้ใช้สั่ง —
+            // เดิม 12/09/2569 เป็นรหัสผ่าน) ตรวจที่ server เสมอว่ามีใน `emp` และยังใช้งานอยู่
+            // (ดู OrderApprovalController::approveEmpnoError)
             // ต้อง render ใน #orderApprovalModal ไม่งั้น focus trap ของ modal ดึงโฟกัสกลับ พิมพ์ไม่ได้
             target: document.getElementById('orderApprovalModal') || 'body',
             heightAuto: false,
-            input: 'password',
-            inputLabel: 'รหัสผ่าน (รหัสผ่านที่ใช้เข้าระบบ ของผู้ใช้คนใดก็ได้)',
-            inputAttributes: {autocomplete: 'off'},
-            inputValidator: function(v){ if (!(v || '')) return 'กรอกรหัสผ่านก่อน'; },
+            input: 'text',
+            inputLabel: 'รหัสพนักงาน',
+            inputAttributes: {autocomplete: 'off', maxlength: 4},
+            inputValidator: function(v){ if (!((v || '').trim())) return 'กรอกรหัสพนักงานก่อน'; },
             showCancelButton: true,
             confirmButtonText: approve ? 'อนุมัติ' : 'ยกเลิกการอนุมัติ',
             cancelButtonText: 'ปิด',
@@ -1686,10 +1840,10 @@
 
             $('#oa_appv').prop('disabled', true);
             $.post(OA_URL + '/approve', {
-                _token:   '{{ csrf_token() }}',
-                orderno:  o.Orderno,
-                appv:     approve ? 1 : 0,
-                password: r.value || ''
+                _token:  '{{ csrf_token() }}',
+                orderno: o.Orderno,
+                appv:    approve ? 1 : 0,
+                empno:   (r.value || '').trim()
             })
                 .done(function(res){
                     if (!res.status){ Swal.fire('ทำรายการไม่สำเร็จ', res.message || '', 'error'); return; }
@@ -1711,6 +1865,8 @@
             oaClear();
             oaShowList();
         });
+        // อนุมัติแล้ว คอลัมน์ "สถานะ" ของใบนั้นในตารางรายการเปลี่ยน → โหลดตารางใหม่ (19/09/2569)
+        loadData(page);
     }
 
     // ════════════════════════════════════════════════════════
@@ -1864,6 +2020,7 @@
         $('#approvalModal input[type="checkbox"]').prop('checked', false);
         $('#a_itemno').html('<option value="">— เลือกลูกค้าก่อน —</option>');
         setFp('a_validto', defaultValidToYmd());   // ค่าเริ่มต้น "อนุมัติราคาถึง" = วันทำการถัดไป
+        setApprovalGroupPrices(null, null, null);  // <span> ไม่ถูกล้างด้วย selector input ด้านบน
         highlightPriceGroup();
         renderApprovalReqState(null);
         renderApprovalGrid('ราคาที่ยืนไว้ของเบอร์นี้', ZCUST_COLS, []);
@@ -1994,13 +2151,13 @@
             $('#a_price3').val(fmtNum(p.price_3, 2));
             $('#a_price_34').val(fmtNum(p.db_3_4, 2));
             $('#a_price_12').val(fmtNum(p.db_1_2, 2));
+            setApprovalGroupPrices(p.price_1, p.price_2, p.price_3);
 
-            // ที่มาของราคา: ราคาทุน → เงื่อนไขที่จับคู่ได้ → สูตรคูณ/หาร/บวก
-            var src = [];
-            if (calc.base_price != null) src.push('ราคาทุน ' + fmtNum(calc.base_price, 2));
-            if (calc.rule && calc.rule.label) src.push(calc.rule.label);
-            if (calc.rule) src.push('× ' + calc.rule.mul + ' ÷ ' + calc.rule.div + ' + ' + calc.rule.add);
-            $note.text(src.join('  ·  '));
+            /* 19/09/2569: เอาบรรทัดบอกที่มาของราคาออกตามที่ผู้ใช้สั่ง
+               (เดิมโชว์ "ราคาทุน … · <เงื่อนไขที่เข้า> · × mul ÷ div + add")
+               ⚠ ต้องล้างข้อความด้วย ไม่งั้นค่าของเบอร์ก่อนหน้าค้างบนจอ
+               ⚠ อย่าลบ #a_price_note ทิ้ง — ขา else ยังใช้บอกเหตุผลที่คำนวณราคาไม่ได้ */
+            $note.text('');
             return;
         }
 
@@ -2010,6 +2167,7 @@
         $('#a_price3').val(fmtNum(req.price3, 2));
         $('#a_price_34').val('');
         $('#a_price_12').val('');
+        setApprovalGroupPrices(req.price1, req.price2, req.price3);
 
         var msg = calc.reason || '';
         if (msg && (req.price1 != null || req.price2 != null || req.price3 != null)){
@@ -2018,6 +2176,15 @@
         // ยังไม่ได้เลือกรหัสสินค้า = ไม่มีเหตุผลให้บอก ปล่อยว่างไว้ อย่าขึ้นกรอบเตือนเปล่า ๆ
         $note.text(msg);
         if (msg) $note.addClass('of-price-note-warn');
+    }
+
+    // ราคาของแต่ละกลุ่มบนป้ายเกณฑ์ A/B/C ใต้ช่องจำนวนสั่งซื้อ (19/09/2569)
+    //   A = ราคาขาย 1 · B = ราคาขาย 2 · C = ราคาขาย 3 — ตัวเลขชุดเดียวกับช่องราคา 3 ช่อง
+    //   ไม่มีค่า (ยังไม่เลือกเบอร์ / คำนวณไม่ได้) = ขีด — ไม่ปล่อยว่างให้ป้ายเตี้ยลง
+    function setApprovalGroupPrices(p1, p2, p3){
+        $('#a_gprice1').text(fmtNum(p1, 2) || '—');
+        $('#a_gprice2').text(fmtNum(p2, 2) || '—');
+        $('#a_gprice3').text(fmtNum(p3, 2) || '—');
     }
 
     // เน้นช่องราคาที่ตรงกับจำนวนสั่งซื้อ (A ≥1,000 / B ≥500 / C ต่ำกว่า 500)
@@ -2244,6 +2411,7 @@
                 Swal.fire({icon: 'success', title: res.message});
                 loadApprovalData();     // โหลดค่าที่บันทึกจริงกลับมา
                 paRefreshQueue();       // อนุมัติแล้วใบจะหลุดจากคิว → นับใหม่
+                loadData(page);         // โหลดตารางรายการใหม่ทุกครั้งที่บันทึก (19/09/2569)
             })
             .fail(function(xhr){
                 var body = xhr.responseJSON || {};
@@ -2282,6 +2450,7 @@
                 Swal.fire({icon: 'success', title: res.message});
                 loadApprovalData();
                 paRefreshQueue();       // ใบถูกลบ → หลุดจากคิว
+                loadData(page);         // โหลดตารางรายการใหม่ทุกครั้งที่มีการเขียนข้อมูล (19/09/2569)
             }).fail(function(xhr){
                 var msg = (xhr.responseJSON && xhr.responseJSON.message) || 'เกิดข้อผิดพลาดในการลบ';
                 Swal.fire('ลบไม่สำเร็จ', msg, 'error');

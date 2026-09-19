@@ -56,8 +56,10 @@
                     </div>
                     <div class="col-sm-6">
                         <label class="form-label">วันที่</label>
+                        {{-- 19/09/2569: วันที่เปิดใบ server กำหนดตอนสร้างใบ (create → now()) ผู้ใช้แก้ไม่ได้
+                             readonly กันพิมพ์/วาง · clickOpens:false ตอน init flatpickr กันปฏิทินเด้ง --}}
                         <input type="text" id="o_Mdate" class="form-control flatpickr-datetime"
-                            autocomplete="off" placeholder="วว/ดด/ปปปป ชม:นท">
+                            autocomplete="off" readonly>
                     </div>
 
                     <div class="col-sm-6">
@@ -87,10 +89,20 @@
                     </div>
 
                     <div class="col-12">
-                        <label class="form-label">
-                            สถานที่ส่ง
-                            <span class="text-muted fw-normal small">(ไม่ระบุ = ส่งตามที่อยู่ลูกค้า)</span>
-                        </label>
+                        {{-- ปุ่ม "+ เพิ่ม" วางข้าง label ไม่ใช่ใน input-group (19/09/2569)
+                             เพราะ enhanceSelects() แปลง select เป็น select2/bootstrap-select
+                             ซึ่งห่อ element ใหม่ ทำให้ input-group เพี้ยน --}}
+                        <div class="d-flex align-items-center justify-content-between">
+                            <label class="form-label mb-1" for="o_DVpoint">
+                                สถานที่ส่ง
+                                <span class="text-muted fw-normal small">(ไม่ระบุ = ส่งตามที่อยู่ลูกค้า)</span>
+                            </label>
+                            <button type="button" class="btn btn-link btn-sm p-0 mb-1 text-decoration-none"
+                                id="o_btn_add_dvpoint" onclick="addDvpointPrompt()"
+                                title="เพิ่มสถานที่ส่งใหม่ให้ลูกค้ารายนี้ (บันทึกลงข้อมูลลูกค้าด้วย)">
+                                <i class="ti ti-plus"></i> เพิ่ม
+                            </button>
+                        </div>
                         <select id="o_DVpoint" class="form-select">
                             <option value="">— ไม่ระบุ —</option>
                         </select>
@@ -349,8 +361,13 @@
                         <th rowspan="2" style="min-width:120px;">กำหนดส่ง<br>ทบทวน</th>
                         <th rowspan="2" style="min-width:120px;">วันที่ผลิตเสร็จ</th>
                         <th rowspan="2" style="min-width:120px;">วันที่ลูกค้าได้รับ</th>
-                        <th rowspan="2" style="min-width:110px;">เลขที่ใบส่ง</th>
-                        <th rowspan="2" style="min-width:260px;">หมายเหตุ</th>
+                        {{-- 19/09/2569: ลด min-width ของ 2 คอลัมน์นี้ให้ขยายตามข้อความได้จริง
+                             ตัว oiAutoGrow() ผูกกับช่องพวกนี้อยู่แล้ว (มี class oi-input เหมือนช่องรหัสสินค้า)
+                             แต่เดิม <th> ตั้งพื้นไว้กว้างเกินข้อความที่กรอกจริง คอลัมน์เลยนิ่งอยู่ที่พื้นนั้น
+                             — โดยเฉพาะหมายเหตุที่เคยเป็น 260px ⇒ ต้องพิมพ์เกิน ~35 ตัวถึงจะเห็นขยาย
+                             ⚠ min-width ที่นี่ = "พื้นล่าง" ของคอลัมน์ ⇒ ขยายได้แต่ไม่หดต่ำกว่าค่านี้ --}}
+                        <th rowspan="2" style="min-width:90px;">เลขที่ใบส่ง</th>
+                        <th rowspan="2" style="min-width:150px;">หมายเหตุ</th>
                         <th rowspan="2" style="width:46px;">ลบ</th>
                     </tr>
                     <tr>
