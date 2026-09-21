@@ -31,6 +31,16 @@
     border-right: 65px solid transparent;
 }
 
+/* badge สถานะบนหัว modal ใบสั่งซื้อ — ชิดขวา (21/09/2569 ตามที่ผู้ใช้สั่ง)
+   margin-left:auto ดันไปขวาสุด (จึงพ้นสามเหลี่ยมเฉียง ::after ของ .modal-title ไปเอง)
+   ⚠ margin-right เว้นที่ให้ปุ่มปิด ซึ่ง theme ตั้งเป็น position:absolute; right:1rem
+      (absolute จึงไม่กินที่ในแนว flex — ถ้าไม่เว้น badge จะมุดไปอยู่ใต้ปุ่มปิด) */
+#orderModal .modal-header #o_appv_status {
+    margin-left: auto;
+    margin-right: 4.5rem;
+    white-space: nowrap;
+}
+
 /* ── เรียงตาม — คลิกหัวตาราง + เน้นคอลัมน์ที่กำลังเรียง (เหมือนหน้าใบเสนอราคา) ── */
 #table-data th.th-sort { cursor: pointer; user-select: none; }
 #table-data th.th-sort:hover { background-color: #e9ecef; }
@@ -43,30 +53,71 @@
 
 /* ══ ฟอร์มบันทึกใบสั่งซื้อ — คงผังและโทนสีของฟอร์ม Access เดิมไว้ ══ */
 
-/* แถบประเภทใบสั่ง (ม่วง เหมือนหัวฟอร์มเดิม) */
+/* ══ แถบประเภทใบสั่ง — ปุ่มกลุ่ม (segmented) 21/09/2569 ══
+   เดิมเป็น radio วงกลม 12 ตัวในกล่องพื้นม่วง — เปลี่ยนเป็นปุ่มติดกันกลุ่มละ 4 (C / H / W)
+   ⚠ ตัว <input> ยังเป็น radio ตัวเดิม เพียงซ่อนด้วย .btn-check แล้วใช้ <label> เป็นปุ่ม
+     ⇒ JS ที่อ่าน :checked / ตั้งค่าผ่าน #o_type_XX ทำงานเหมือนเดิมทุกอย่าง */
 .of-typebar {
-    background: #e8e4f5;
-    border: 1px solid #c9c0e6;
+    /* พื้นหลังไล่สีม่วง — ค่าสีนี้ผู้ใช้เป็นคนกำหนดมาเอง (21/09/2569)
+       เข้มทางซ้าย (#c8c1ff) จางไปทางขวา (#ecebfd) */
+    background: linear-gradient(135deg, #c8c1ff 0%, #ecebfd 100%);
+    border: 1px solid #ddd9f8;
     border-radius: .6rem;
-    padding: .85rem 1rem;
+    padding: .85rem 1.1rem;
+    /* กว้างพอดีเนื้อหา ไม่ยืดเต็มแนว (21/09/2569 ตามที่ผู้ใช้สั่ง)
+       max-width กันล้นเมื่อจอแคบ — เนื้อหาจะตัดขึ้นบรรทัดใหม่เองด้วย flex-wrap */
+    width: fit-content;
+    max-width: 100%;
 }
-.of-typegrid { display: flex; flex-direction: column; gap: .35rem; }
-/* 1 แถว = 3 กลุ่ม (C / H / W) กลุ่มละ 2 ปุ่ม — เว้นช่องไฟระหว่างกลุ่มให้กว้างกว่าในกลุ่ม */
-.of-typerow { display: flex; flex-wrap: wrap; gap: 8rem; }
-.of-typepair { display: flex; gap: 1rem; }
-/* ตรึงความกว้างแต่ละปุ่ม เพื่อให้คอลัมน์ของแถวบน-ล่างตรงกัน */
-.of-typepair .form-check { min-width: 72px; margin-bottom: 0; }
-.of-typerow .form-check-label { font-weight: 600; letter-spacing: .3px; }
-/* ปุ่ม "เพิ่มใบสั่งซื้อใหม่" ในแถบม่วง — สีเข้มให้ตัดกับพื้นแถบ */
+.of-typebar-inner { display: flex; align-items: center; flex-wrap: wrap; gap: .85rem 1.75rem; }
+
+/* ช่องไฟระหว่างชุด C / H / W — เว้นให้กว้าง จะได้เห็นชัดว่าเป็นคนละกลุ่ม (21/09/2569) */
+.of-typegrid { display: flex; flex-wrap: wrap; gap: .6rem 4rem; }
+
+/* 1 ชุด = ปุ่มของตัวอักษรเดียวกันติดกันเป็นก้อน (CM CI CE CR) */
+.of-typeset {
+    display: inline-flex;
+    background: #fff;
+    border: 1px solid #d8d5ee;
+    border-radius: .5rem;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(58, 53, 65, .05);
+}
+/* ซ่อน radio เอง — ไม่ใช้ display:none เพราะจะกด Tab เข้าไม่ถึง (คุม focus ด้วย :focus-visible ข้างล่าง) */
+.of-typebar .btn-check { position: absolute; clip: rect(0, 0, 0, 0); pointer-events: none; }
+.of-tbtn {
+    min-width: 54px;
+    margin: 0;
+    padding: .34rem .75rem;
+    text-align: center;
+    cursor: pointer;
+    font-size: .82rem;
+    font-weight: 600;
+    letter-spacing: .3px;
+    color: #5d5870;
+    border-right: 1px solid #e7e6ec;
+    transition: background-color .12s, color .12s;
+}
+.of-typeset .of-tbtn:last-of-type { border-right: 0; }
+.of-tbtn:hover { background: #eeedff; color: #696cff; }
+.btn-check:checked + .of-tbtn { background: #696cff; color: #fff; }
+.btn-check:focus-visible + .of-tbtn { box-shadow: inset 0 0 0 2px rgba(105, 108, 255, .45); }
+/* ⚠ radio ชุดนี้ไม่ถูก setOrderFormMode() สั่ง disable (มี .not ไว้) — กฎนี้เผื่อกรณีอื่นเท่านั้น */
+.btn-check:disabled + .of-tbtn { opacity: .5; pointer-events: none; }
+
+/* ปุ่ม "เพิ่มใบสั่งซื้อใหม่" — ดันไปชิดขวาสุดของแถบ */
 .of-btn-new {
-    background-color: #5c4bb3;
-    border-color: #5c4bb3;
+    margin-left: auto;
+    background-color: #696cff;
+    border-color: #696cff;
     color: #fff;
     font-weight: 600;
+    font-size: .82rem;
+    box-shadow: 0 2px 6px rgba(105, 108, 255, .3);
 }
 .of-btn-new:hover, .of-btn-new:focus {
-    background-color: #4b3f8f;
-    border-color: #4b3f8f;
+    background-color: #5a5ef0;
+    border-color: #5a5ef0;
     color: #fff;
 }
 
@@ -75,27 +126,41 @@
     border: 1px solid #e2e7ea;
     border-radius: .6rem;
     padding: 1rem 1.15rem 1.15rem;
-    background: #fff;
+    /* พื้นไล่สีแบบเดียวกับแถบประเภทใบสั่ง (21/09/2569 ตามที่ผู้ใช้สั่ง "ใส่ bg ให้โปรเหมือนกัน")
+       เข้มมุมซ้ายบน → จางไปมุมขวาล่าง · กล่องที่มีโทนสีของตัวเอง (stock/price/item)
+       เขียนทับด้วย gradient โทนนั้น ๆ ด้านล่าง */
+    background: linear-gradient(135deg, #eae7ff 0%, #fafaff 55%);
 }
 .of-sec-title {
     font-size: 1.05rem;
     font-weight: 700;
-    color: #2f7a78;
+    /* หัวกล่องโทนม่วงให้เข้ากับพื้นไล่สีม่วงของ .of-sec (เดิมเป็นเขียวอมฟ้า #2f7a78)
+       กล่อง stock / price / item มีสีหัวของตัวเอง override อยู่ด้านล่าง */
+    color: #4b45c9;
     margin-bottom: .9rem;
     padding-bottom: .5rem;
-    border-bottom: 2px solid #d9e6e6;
+    border-bottom: 2px solid #ddd9f8;
     display: flex;
     align-items: center;
     gap: .5rem;
 }
+/* หัวข้อของกล่อง "รายการในใบสั่งซื้อ" ห่อไอคอน+ข้อความไว้ใน <span> เดียวกัน (เพราะต้องดันปุ่มไปขวา)
+   ⇒ gap ของ .of-sec-title ใช้กับคู่ span/ปุ่ม ไม่ได้ผลกับไอคอนข้างใน ต้องตั้ง gap ให้ span เองด้วย
+   ไม่งั้นไอคอนจะชิดข้อความ ต่างจากหัวข้อกล่องอื่น (21/09/2569) */
+.of-sec-title > span { display: inline-flex; align-items: center; gap: .5rem; }
 .of-sec .form-label { margin-bottom: .25rem; font-size: .85rem; font-weight: 600; }
 
-/* กล่อง "กรณีสั่งทำสต๊อก" + "ราคา" — แยกโทนตามฟอร์มเดิม */
-.of-sec-stock { background: #f7fbff; border-color: #cfe2f3; }
+/* กล่อง "รายการในใบสั่งซื้อ" — ไม่เอาพื้นไล่สี (21/09/2569 ตามที่ผู้ใช้สั่ง) ให้เป็นขาวล้วน
+   ⚠ ชื่อ .of-sec-plain ตั้งไม่ให้ใกล้ .of-sec-item (กล่องสินค้า) เกินไป จะได้ไม่สับสนเวลาแก้ */
+.of-sec-plain { background: #fff; border-color: #e2e7ea; }
+
+/* กล่อง "กรณีสั่งทำสต๊อก" / "ราคา" / "สินค้า" — คงโทนสีประจำกล่องตามฟอร์มเดิม
+   แต่เปลี่ยนเป็นพื้นไล่สีทิศทางเดียวกับแถบประเภทใบสั่ง (135deg เข้มซ้ายบน → จางขวาล่าง) */
+.of-sec-stock { background: linear-gradient(135deg, #dfeefc 0%, #f9fcff 55%); border-color: #c4dcf2; }
 .of-sec-stock .of-sec-title { color: #2c6ea4; border-bottom-color: #cfe2f3; }
-.of-sec-price { background: #fdfaf4; border-color: #ecdfc4; }
+.of-sec-price { background: linear-gradient(135deg, #fff3d5 0%, #fffdf6 55%); border-color: #ebdcbb; }
 .of-sec-price .of-sec-title { color: #a3781f; border-bottom-color: #ecdfc4; }
-.of-sec-item  { background: #f8fbf7; border-color: #d6e7cf; }
+.of-sec-item  { background: linear-gradient(135deg, #ddffe5 0%, #f9fdfa 55%); border-color: #cae3d1; }
 .of-sec-item .of-sec-title { color: #4c7c3b; border-bottom-color: #d6e7cf; }
 
 /* ช่องเน้นสีตามฟอร์ม Access */
@@ -525,6 +590,12 @@
 
             <div class="modal-header">
                 <h5 class="modal-title" id="orderModalTitle">บันทึกคำสั่งซื้อ</h5>
+                {{-- สถานะการอนุมัติของใบที่เปิดอยู่ (21/09/2569 ตามที่ผู้ใช้สั่ง)
+                     วางไว้ "นอก" .modal-title โดยตั้งใจ — ให้อยู่บนพื้นขาวถัดจากแถบ teal
+                     ⚠ ต้องเว้นระยะให้พ้นสามเหลี่ยม ::after ของ .modal-title (ดู CSS #o_appv_status)
+                     ป้าย/สี มาจาก OrderController::APPV_STATUSES ชุดเดียวกับคอลัมน์ "สถานะ" ในตารางรายการ
+                     (อย่า hard-code ซ้ำ) · เติมค่าโดย fillOrderStatus() --}}
+                <span id="o_appv_status" class="badge bg-label-secondary">—</span>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
@@ -750,6 +821,9 @@
     // เดิม (29/08/2569) คำนวณ "พรุ่งนี้" เองใน JS — เลิกใช้แล้ว 01/09/2569
     var APPROVAL_DEFAULT_VALID_TO = @json($default_valid_to ?? null);
 
+    // ป้าย/สี badge ของสถานะอนุมัติ — มาจาก OrderController::APPV_STATUSES (แหล่งเดียวกับตารางรายการ)
+    var APPV_STATUSES = @json($appv_statuses ?? []);
+
     function defaultValidToYmd(){
         if (APPROVAL_DEFAULT_VALID_TO) return APPROVAL_DEFAULT_VALID_TO;
 
@@ -918,8 +992,50 @@
         $('#o_match_warn').addClass('d-none');
         // ผู้บันทึก = พนักงานที่ล็อกอินอยู่
         $('#o_Emp').val('{{ $current_emp }}');
+        setOrderPriceLocked(false);       // ฟอร์มเปล่า = ยังไม่มีใบให้อนุมัติ
+        fillOrderStatus(null);            // ล้างสถานะ กันค้างจากใบก่อนหน้า
         renderOrderItems([]);
         syncItypeRequired();
+    }
+
+    /**
+     * ใบที่อนุมัติแล้ว = ห้ามแก้ "ราคาขาย" (21/09/2569 ตามที่ผู้ใช้สั่ง)
+     *
+     * ใช้ readonly ไม่ใช่ disabled — ค่ายังถูกส่งไปกับ saveOrder() ตามปกติ และไม่ชนกับ
+     * setOrderFormMode() ที่คุม disabled ของทุกช่องในฟอร์ม
+     * (ด่านจริงอยู่ฝั่ง server ที่ OrderController::headerPayload — ตรงนี้กันแค่บนจอ)
+     */
+    function setOrderPriceLocked(locked){
+        $('#o_price').prop('readonly', !!locked).toggleClass('bg-light', !!locked);
+        $('#o_price_locked').toggleClass('d-none', !locked);
+    }
+
+    /**
+     * ช่อง "สถานะ" บนฟอร์ม (21/09/2569 ตามที่ผู้ใช้สั่ง)
+     *
+     * status = key ของ APPV_STATUSES ที่ server คิดมาให้ (นิพจน์เดียวกับคอลัมน์สถานะในตารางรายการ)
+     * ฟอร์มเปล่า/ยังไม่เปิดใบ = ขีด — เพื่อไม่ให้ค้างสถานะของใบก่อนหน้า
+     */
+    function fillOrderStatus(status, appvDT){
+        var st = APPV_STATUSES[status];
+
+        // วันเวลาอนุมัติ — โชว์เฉพาะใบที่อนุมัติแล้วและมีค่าจริง (อยู่ใน badge เดียวกัน)
+        var dt = (status === 'approved' && appvDT) ? ' เมื่อ ' + fmtDateTime(appvDT) + ' น.' : '';
+
+        // สีเข้มกว่าตารางรายการ (21/09/2569 ตามที่ผู้ใช้สั่ง) — แปลงโทนอ่อน `bg-label-*` ของ
+        // APPV_STATUSES เป็นสีทึบ `bg-*` เฉพาะ badge ตัวนี้ (ยังยึด APPV_STATUSES เป็นแหล่งเดียว
+        // ไม่ได้ hard-code สี และไม่กระทบคอลัมน์สถานะในตารางที่ยังใช้โทนอ่อนเหมือนเดิม)
+        var cls = (st ? st.badge : 'bg-label-secondary').replace('bg-label-', 'bg-');
+        if (cls === 'bg-warning') cls += ' text-dark';   // เหลืองทึบ + ตัวอักษรขาว อ่านยาก
+
+        // ไอคอนมาจาก APPV_STATUSES เช่นกัน — เครื่องหมายถูกใช้เฉพาะ "อนุมัติแล้ว"
+        // (เดิมใส่ ti-circle-check ให้ทุกสถานะ ทำให้ "รออนุมัติ" ขึ้นเครื่องหมายถูกไปด้วย)
+        var icon = (st && st.icon) ? '<i class="ti ' + st.icon + ' me-1"></i>' : '';
+
+        // ⚠ ตั้งคลาสด้วย attr ไม่ใช่ addClass — ไม่งั้นคลาสสีจะสะสมทับกันเมื่อเปิดใบที่สถานะต่างกันติด ๆ กัน
+        $('#o_appv_status')
+            .attr('class', 'badge ' + cls)
+            .html(icon + escHtml((st ? st.label : '—') + dt));
     }
 
     function fillOrderForm(res){
@@ -964,6 +1080,8 @@
         // สินค้า + ราคา (ราคาขายเป็นค่าที่ผู้ใช้พิมพ์ไว้เอง ไม่ได้มาจากกล่องราคา)
         $('#o_itemno').val(res.itemno || '');
         $('#o_price').val(commaFmt(o.price, 2));
+        setOrderPriceLocked(!!o.appv);   // อนุมัติแล้ว = ล็อกช่องราคาขาย
+        fillOrderStatus(o.appv_status, o.appvDT);
         fillPriceBox(res.price);
 
         renderOrderItems(res.items || []);

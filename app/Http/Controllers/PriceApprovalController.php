@@ -433,8 +433,13 @@ class PriceApprovalController extends Controller
      *
      * ⚠ "3 วันล่าสุด" = **3 วันปฏิทินย้อนหลัง** (วันนี้ + 2 วันก่อนหน้า) ตามที่ผู้ใช้เลือก
      *   ⇒ ช่วงไหนไม่มีใครอนุมัติ รายงานจะว่าง (ถูกต้องตามนิยาม)
-     * ⚠ "เวลาอนุมัติ" ใช้ค่าเดียวกับ "วันที่ขอ" (`ReqDate`) เพราะ **`appvreq` ไม่มีคอลัมน์เวลาที่กดอนุมัติ**
-     *   (ผู้ใช้เลือกแนวทางนี้ 12/09/2569 แทนการเพิ่มคอลัมน์ appvDT) ⇒ การกรอง 3 วันก็นับจาก ReqDate
+     *
+     * "เวลาอนุมัติ" = **`appvreq.AppvDT`** (21/09/2569) — คอลัมน์นี้ได้มาตอนนำเข้า appvreq
+     * ชุดใหม่จาก DB ของลูกค้า; ก่อนหน้านั้นตารางไม่มีคอลัมน์เวลาที่กดอนุมัติ จึงใช้ `ReqDate` แทนไปก่อน
+     *
+     * ⚠ ทั้ง**การแสดงผล**และ**การกรองช่วง 3 วัน** นับจาก `AppvDT` ⇒ ใบที่ `AppvDT` ว่างจะไม่เข้ารายงาน
+     *   (NULL เทียบกับ `>=` ได้ NULL = ไม่ผ่าน) ซึ่งถูกต้อง: ใบเก่าที่ระบบเดิมยังไม่เก็บเวลาอนุมัติ
+     *   มีอยู่ 22,600 จาก 22,891 แถว — ระบบเดิมเริ่มเก็บ AppvDT เมื่อ 12/06/2569
      */
     public const PRINT_RECENT_DAYS = 3;
 
@@ -446,15 +451,14 @@ class PriceApprovalController extends Controller
             ->leftJoin('customer as c', 'a.custno', '=', 'c.code')
             ->where('a.Appv', '<>', 0)
             ->whereNotNull('a.Appv')          // Access เก็บ -1 = อนุมัติแล้ว
-            ->where('a.ReqDate', '>=', $since)
-            ->orderByDesc('a.ReqDate')
+            ->where('a.AppvDT', '>=', $since)
+            ->orderByDesc('a.AppvDT')
             ->get([
-                'a.ReqDate', 'a.custno', 'a.itemno', 'a.weight', 'a.price', 'a.remark',
+                'a.ReqDate', 'a.AppvDT', 'a.custno', 'a.itemno', 'a.weight', 'a.price', 'a.remark',
                 'c.name as custname',
             ])
             ->map(function ($r) {
-                // ไม่มีคอลัมน์เวลาอนุมัติจริง — ใช้วันที่ขอไปก่อน (ดูหมายเหตุหัวเมธอด)
-                $r->appv_at = $r->ReqDate;
+                $r->appv_at = $r->AppvDT;
 
                 return $r;
             });
@@ -707,6 +711,16 @@ class PriceApprovalController extends Controller
             'costup'  => $request->boolean('costup') ? -1 : 0,
             'Appv'    => $appv ? -1 : 0,
         ];
+
+        // เวลาที่กดอนุมัติ (`appvreq.AppvDT`) — 21/09/2569
+        // เพิ่งอนุมัติ = ประทับเวลาปัจจุบัน · ยกเลิกอนุมัติ = ล้างทิ้ง
+        // ⚠ ใบที่ "อนุมัติไปแล้ว" แล้ว MK แก้หมายเหตุ/ราคาต่อ → **ไม่แตะ** เพื่อคงเวลาอนุมัติเดิมไว้
+        //   (ขานี้ช่องอนุมัติถูก disabled ค่าที่ส่งมาจึงเป็นสถานะเดิม ไม่ใช่การอนุมัติใหม่)
+        if ($appv && !$alreadyApproved) {
+            $row['AppvDT'] = now()->format('Y-m-d H:i:s');
+        } elseif (!$appv) {
+            $row['AppvDT'] = null;
+        }
 
         try {
             DB::transaction(function () use ($custno, $itemno, $reqDate, $row, $writeZcust, $validTo, $request) {

@@ -54,10 +54,15 @@ class OrderController extends Controller
      *   - ที่เหลือ: appv = -1 คือ อนุมัติแล้ว · NULL/0 คือ รออนุมัติ
      *     (ข้อมูลจริงมีแค่ -1 กับ NULL — เผื่อ 0 ไว้ให้ตรงกับที่ approve() เขียนได้)
      */
+    /**
+     * `icon` = ไอคอน tabler ของ badge สถานะบนหัวฟอร์มใบสั่งซื้อ (21/09/2569)
+     * — ต้องสื่อความหมายให้ตรงสถานะ (เครื่องหมายถูกใช้ได้เฉพาะ "อนุมัติแล้ว")
+     * คอลัมน์ "สถานะ" ในตารางรายการไม่ได้ใช้ key นี้ (ไม่มีไอคอน) จึงไม่กระทบ
+     */
     public const APPV_STATUSES = [
-        'waiting'  => ['label' => 'รออนุมัติ',    'badge' => 'bg-label-warning'],
-        'approved' => ['label' => 'อนุมัติแล้ว',   'badge' => 'bg-label-success'],
-        'reserve'  => ['label' => 'ใบจอง',        'badge' => 'bg-label-secondary'],
+        'waiting'  => ['label' => 'รออนุมัติ',    'badge' => 'bg-label-warning',   'icon' => 'ti-clock'],
+        'approved' => ['label' => 'อนุมัติแล้ว',   'badge' => 'bg-label-success',   'icon' => 'ti-circle-check'],
+        'reserve'  => ['label' => 'ใบจอง',        'badge' => 'bg-label-secondary', 'icon' => 'ti-bookmark'],
     ];
 
     /**
@@ -68,6 +73,23 @@ class OrderController extends Controller
             WHEN SUBSTRING(morder.Orderno, 2, 1) = 'R' THEN 'reserve'
             WHEN morder.appv IS NULL OR morder.appv = 0 THEN 'waiting'
             ELSE 'approved' END";
+
+    /**
+     * สถานะอนุมัติของใบเดียว (คืน key ของ APPV_STATUSES) — ใช้ตอนเปิดใบในฟอร์ม (21/09/2569)
+     *
+     * คิดด้วย APPV_STATUS_SQL ตัวเดียวกับตารางรายการ/ตัวกรอง — **ห้ามเขียนกติกาซ้ำใน PHP**
+     * ไม่งั้นสถานะบนฟอร์มกับที่เห็นในตารางจะไม่ตรงกัน
+     */
+    private static function appvStatusOf(?string $orderno): ?string
+    {
+        if (!$orderno) {
+            return null;
+        }
+
+        return DB::table('morder')->where('Orderno', $orderno)
+            ->selectRaw(self::APPV_STATUS_SQL . ' as s')
+            ->value('s');
+    }
 
     /** คอลัมน์ checkbox ของ Access เก็บ -1 = ติ๊ก, 0/NULL = ไม่ติ๊ก */
     private static function checked($value): bool
@@ -304,6 +326,11 @@ class OrderController extends Controller
             'RsvNo'    => $order->RsvNo,
             'netqty'   => $order->netqty,
             'price'    => $order->price,
+            // อนุมัติใบสั่งซื้อแล้วหรือยัง — ฝั่งจอใช้ล็อกช่อง "ราคาขาย" (21/09/2569)
+            'appv'     => self::checked($order->appv),
+            // สถานะอนุมัติ (key ของ APPV_STATUSES) + เวลาที่อนุมัติ — ช่อง "สถานะ" บนฟอร์ม (21/09/2569)
+            'appv_status' => self::appvStatusOf($order->Orderno),
+            'appvDT'      => $order->appvDT,
             // กรณีสั่งทำสต๊อก
             'sendend'  => $order->sendend,
             'SendCust' => $order->SendCust,
@@ -833,20 +860,34 @@ class OrderController extends Controller
         //     ], 422);
         // }
 
-        // ด่านราคา — บังคับทั้งตอนสร้างใหม่และตอนแก้ไขใบเดิม
-        // ส่งน้ำหนักรวมไปด้วย — ใช้หากลุ่มราคา (A/B/C) ของเกณฑ์จาก zcolorrate
-        $blocked = $this->checkPriceFloor(
-            $custno,
-            $items,
-            $this->numOrNull($request->input('price')),
-            $this->numOrNull($request->input('netqty'))
-        );
-        if ($blocked) {
-            return response()->json($blocked, 422);
+        /* ใบนี้อนุมัติแล้วหรือยัง — ยึดค่าจริงใน DB ไม่ใช่ค่าที่ฟอร์มส่งมา (21/09/2569)
+           ใช้ 2 ที่: ข้ามด่านราคาด้านล่าง + สั่ง headerPayload ไม่เขียนทับ price */
+        $approved = false;
+        if ($mode === 'update') {
+            $current  = DB::table('morder')->where('Orderno', trim((string) $request->input('Orderno')))->first(['appv']);
+            $approved = $current && self::checked($current->appv);
+        }
+
+        /* ด่านราคา — บังคับตอนสร้างใหม่ และตอนแก้ใบที่ "ยังไม่อนุมัติ"
+           ส่งน้ำหนักรวมไปด้วย — ใช้หากลุ่มราคา (A/B/C) ของเกณฑ์จาก zcolorrate
+
+           ⚠ ใบที่อนุมัติแล้วข้ามด่านนี้ (21/09/2569 ตามที่ผู้ใช้สั่ง) เพราะราคาขายถูกล็อกไม่ให้แก้
+           อยู่แล้ว การตรวจราคาที่ส่งมาจึงไม่มีผลกับค่าที่จะเขียน — ถ้าไม่ข้าม ใบที่ราคาเดิมต่ำกว่า
+           เกณฑ์ปัจจุบัน (วัดได้ 33.7% ของใบที่อนุมัติแล้ว) จะแก้ช่องอื่นแล้วบันทึกไม่ได้เลย */
+        if (!$approved) {
+            $blocked = $this->checkPriceFloor(
+                $custno,
+                $items,
+                $this->numOrNull($request->input('price')),
+                $this->numOrNull($request->input('netqty'))
+            );
+            if ($blocked) {
+                return response()->json($blocked, 422);
+            }
         }
 
         try {
-            $orderno = DB::transaction(function () use ($request, $mode, $type, $custno, $cust, $items) {
+            $orderno = DB::transaction(function () use ($request, $mode, $type, $custno, $cust, $items, $approved) {
                 if ($mode === 'insert') {
                     $orderno = $this->allocateOrderno($type);
                     DB::table('morder')->insert(
@@ -857,8 +898,11 @@ class OrderController extends Controller
                     if (!DB::table('morder')->where('Orderno', $orderno)->exists()) {
                         throw new \RuntimeException('ไม่พบใบสั่งซื้อเลขที่ ' . $orderno);
                     }
+
+                    // $approved = อ่านจาก DB ไว้ก่อนเข้าทรานแซกชัน (ดูหัวข้อด่านราคาด้านบน)
+                    // อนุมัติแล้ว = headerPayload จะไม่เขียนทับ price
                     DB::table('morder')->where('Orderno', $orderno)
-                        ->update($this->headerPayload($request, $custno, $cust, 'update'));
+                        ->update($this->headerPayload($request, $custno, $cust, 'update', $approved));
                 }
 
                 $this->syncItems($orderno, $items);
@@ -1089,8 +1133,12 @@ class OrderController extends Controller
         return $msg;
     }
 
-    /** ค่าที่จะเขียนลง morder (ใช้ร่วมทั้ง insert / update) */
-    private function headerPayload(Request $request, string $custno, $cust, string $mode = 'insert'): array
+    /**
+     * ค่าที่จะเขียนลง morder (ใช้ร่วมทั้ง insert / update)
+     *
+     * @param bool $approved ใบนี้อนุมัติแล้วหรือยัง (ขา update เท่านั้น) — อนุมัติแล้ว = ไม่เขียนทับ `price`
+     */
+    private function headerPayload(Request $request, string $custno, $cust, string $mode = 'insert', bool $approved = false): array
     {
         // ตัดข้อความให้พอดีคอลัมน์ก่อนเขียน (ตาราง legacy คอลัมน์สั้น + MySQL strict mode)
         $data = $this->clampToColumns('morder', [
@@ -1128,6 +1176,13 @@ class OrderController extends Controller
            ขา insert ยังต้องมี Mdate ไม่งั้นคอลัมน์จะว่าง */
         if ($mode === 'update') {
             unset($data['Mdate']);
+
+            /* 21/09/2569: ใบที่อนุมัติแล้ว = ห้ามแก้ "ราคาขาย" (morder.price)
+               ช่องบนฟอร์มเป็น readonly แล้ว แต่ต้องกันฝั่ง server ด้วย (ยิง POST ตรงยังส่งค่ามาได้)
+               ⚠ ยกเลิกอนุมัติแล้วใบกลับเข้าคิว → แก้ราคาได้อีกครั้ง (ยึดสถานะ ณ ตอนบันทึก) */
+            if ($approved) {
+                unset($data['price']);
+            }
         }
 
         return $data;

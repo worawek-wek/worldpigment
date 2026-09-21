@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ใบสั่งซื้อ (แบบใหม่) — UI Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ──────────────────────────────────────────────────────────────
+   UI Mockup ฟอร์มใบสั่งซื้อ (แบบใหม่) — วางผังตามภาพที่ผู้ใช้ส่งมา
+   *** เป็น UI อย่างเดียว ไม่ได้ต่อฐานข้อมูล ไม่มีการบันทึกใด ๆ ***
+   ────────────────────────────────────────────────────────────── */
+:root{
+  --pri:#6C5CE7; --pri-dark:#5B4CD6; --pri-soft:#EEEBFD; --pri-line:#D9D3F8;
+  --ink:#3A3541; --muted:#6F6B7D; --label:#5D5870;
+  --line:#E4E2E9; --field:#DBDADE; --bg:#F3F2F7;
+  --green:#28C76F;
+  --warn-soft:#FDE7D3; --warn-line:#F3C89C;
+  --yellow-soft:#FFF6DC; --yellow-line:#F0DFAE;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans Thai",Tahoma,"Segoe UI",sans-serif;
+  font-size:13px; padding:18px 14px 40px;
+}
+.wrap{max-width:1200px;margin:0 auto}
+
+/* ── แถบหัว (ไล่สีม่วง) ── */
+.topbar{
+  height:26px;border-radius:12px 12px 0 0;
+  background:linear-gradient(95deg,#7B6BF0 0%,#6C5CE7 45%,#8E7BF5 100%);
+}
+.sheet{background:var(--bg);border-radius:0 0 12px 12px;padding:14px}
+
+/* ── ผังคอลัมน์ ── */
+.grid{display:grid;grid-template-columns:1fr 1.06fr 268px;gap:13px;align-items:start}
+.g-doctype{grid-column:1/3;grid-row:1}
+.g-info   {grid-column:1;grid-row:2}
+.g-mid    {grid-column:2;grid-row:2;display:flex;flex-direction:column;gap:13px}
+.g-sum    {grid-column:3;grid-row:1/3}
+
+/* ── การ์ด ── */
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:13px 14px 15px;
+      box-shadow:0 1px 2px rgba(58,53,65,.04)}
+.card-title{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;
+            color:#453C6B;margin:0 0 12px}
+.card-title .ic{width:20px;height:20px;flex:0 0 20px;color:var(--pri)}
+.card-title.green .ic{color:var(--green)}
+.card-title.amber .ic{color:#E9A83A}
+.card-title.blue  .ic{color:#5C9CE6}
+.card.price{background:#FFFDF7;border-color:var(--yellow-line)}
+
+/* ── ฟอร์ม ── */
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.fld{margin-bottom:10px}
+.fld:last-child{margin-bottom:0}
+label.lb{display:block;font-size:12px;color:var(--label);margin:0 0 5px;font-weight:500}
+label.lb .hint{color:#A5A2B3;font-weight:400}
+.inp{
+  width:100%;height:36px;border:1px solid var(--field);border-radius:6px;
+  padding:0 10px;font:inherit;font-size:13px;color:var(--ink);background:#fff;outline:none;
+}
+.inp:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(108,92,231,.12)}
+.inp[readonly]{background:#F6F5F9}
+.inp.ta{text-align:right}
+select.inp{appearance:none;padding-right:28px;
+  background-image:url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236F6B7D' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 9px center}
+textarea.inp{height:auto;padding:8px 10px;resize:vertical;min-height:74px;line-height:1.5}
+.inp.code{color:var(--pri);font-weight:600}
+.inp.cust{color:var(--pri);font-weight:600;border-color:var(--pri-line)}
+.inp.hl-yellow{background:var(--yellow-soft);border-color:var(--yellow-line);font-weight:600}
+.inp.hl-warn{background:var(--warn-soft);border-color:var(--warn-line);font-weight:700}
+.inp.hl-pri{background:var(--pri-soft);border-color:var(--pri-line);color:var(--pri-dark);font-weight:700}
+
+/* input + ปุ่ม/หน่วย ต่อท้าย */
+.ig{display:flex}
+.ig .inp{border-radius:6px 0 0 6px}
+.ig .unit,.ig .sbtn{
+  display:flex;align-items:center;justify-content:center;height:36px;min-width:42px;padding:0 10px;
+  border:1px solid var(--field);border-left:0;border-radius:0 6px 6px 0;
+  background:#F6F5F9;color:var(--muted);font-size:12px;white-space:nowrap
+}
+.ig .sbtn{background:#fff;cursor:pointer}
+.ig .sbtn:hover{background:#F2F0FD;color:var(--pri);border-color:var(--pri-line)}
+.ig .unit.green{background:var(--green);border-color:var(--green);color:#fff;font-weight:500}
+.ig .unit.ic{padding:0 9px}
+
+/* ── ปุ่มประเภทเอกสาร ── */
+.typebar{display:flex;gap:34px;flex-wrap:wrap}
+.typegrp{display:flex;gap:6px}
+.tbtn{
+  min-width:64px;height:32px;padding:0 14px;border:1px solid var(--field);border-radius:7px;
+  background:#fff;color:#57536B;font:inherit;font-size:13px;font-weight:500;cursor:pointer
+}
+.tbtn:hover{border-color:var(--pri-line);background:#FAF9FE;color:var(--pri)}
+.tbtn.on{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:600;
+         box-shadow:0 2px 6px rgba(108,92,231,.35)}
+
+/* ── checkbox ── */
+.chk{display:flex;align-items:center;gap:7px;font-size:12.5px;color:#4F4B5F;cursor:pointer}
+.chk input{
+  appearance:none;width:15px;height:15px;flex:0 0 15px;border:1.5px solid #C6C3D2;border-radius:4px;
+  background:#fff;cursor:pointer;position:relative;margin:0
+}
+.chk input:checked{background:var(--pri);border-color:var(--pri)}
+.chk input:checked::after{
+  content:"";position:absolute;left:4.3px;top:1px;width:4px;height:8px;
+  border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)
+}
+.chkgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.chkrow{display:flex;flex-wrap:wrap;gap:8px 16px;justify-content:flex-end;align-items:center}
+
+/* ── กล่องราคา (label ซ้าย / ช่องขวา) ── */
+.prow{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:8px;margin-bottom:7px}
+.prow .plb{font-size:12.5px;color:var(--label);white-space:nowrap}
+.prow .inp{height:32px;font-size:13px}
+.pnote{margin-top:9px;font-size:11.5px;color:#9A96A8;line-height:1.5}
+
+/* ── ปุ่มหลัก ── */
+.btn{
+  width:100%;height:42px;border-radius:8px;border:1px solid transparent;font:inherit;font-size:13.5px;
+  font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px
+}
+.btn-pri{background:var(--pri);color:#fff;box-shadow:0 3px 10px rgba(108,92,231,.3)}
+.btn-pri:hover{background:var(--pri-dark)}
+.btn-out{background:#fff;border-color:var(--pri-line);color:var(--pri)}
+.btn-out:hover{background:#F6F4FE}
+.btn-link{background:none;border:0;color:var(--pri);font:inherit;font-size:12px;font-weight:500;
+          cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:3px}
+.btn-link:hover{text-decoration:underline}
+
+.badge-ok{display:inline-flex;align-items:center;gap:4px;background:var(--green);color:#fff;
+  font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;line-height:1.6}
+.lbrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.lbrow label.lb{margin:0}
+.ico-i{width:13px;height:13px;color:#B4B1C0;vertical-align:-2px}
+.bigval{height:40px;font-size:17px}
+
+/* ── ตารางรายการ ── */
+.tbl-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.btn-sm{height:30px;padding:0 12px;border-radius:6px;border:1px solid var(--yellow-line);
+  background:var(--yellow-soft);color:#9A7418;font:inherit;font-size:12.5px;font-weight:600;
+  cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table.items{width:100%;border-collapse:collapse;font-size:12.5px;min-width:1150px}
+table.items th,table.items td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px 7px}
+table.items th:last-child,table.items td:last-child{border-right:0}
+table.items thead th{background:#F6F5F9;color:var(--label);font-weight:600;text-align:center;font-size:12px}
+table.items tbody .inp{height:32px;font-size:12.5px;padding:0 8px}
+table.items tfoot th{background:#FAFAFC;font-weight:600;text-align:right;color:var(--label)}
+.del{width:28px;height:28px;border:1px solid #F3C2C2;background:#FDEDED;color:#D9534F;border-radius:6px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;margin:0 auto}
+.mockup-note{max-width:1200px;margin:0 auto 12px;font-size:12px;color:var(--muted);
+  background:#fff;border:1px dashed var(--pri-line);border-radius:8px;padding:8px 12px}
+
+@media(max-width:1100px){
+  .grid{grid-template-columns:1fr}
+  .g-doctype,.g-info,.g-mid,.g-sum{grid-column:1;grid-row:auto}
+}
+</style>
+</head>
+<body>
+
+<div class="mockup-note">
+  <b>UI Mockup</b> — ฟอร์มใบสั่งซื้อแบบใหม่ ตามภาพที่ส่งมา · เป็นหน้าจอเปล่า ไม่ได้ต่อฐานข้อมูล กดปุ่มแล้วไม่มีอะไรเกิดขึ้น
+</div>
+
+<div class="wrap">
+  <div class="topbar"></div>
+  <div class="sheet">
+    <div class="grid">
+
+      <!-- ═══════════ ประเภทเอกสาร ═══════════ -->
+      <div class="g-doctype">
+        <div class="card">
+          <div class="card-title">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
+            ประเภทเอกสาร
+          </div>
+          <div class="typebar">
+            <div class="typegrp">
+              <button class="tbtn">CM</button>
+              <button class="tbtn on">CI</button>
+              <button class="tbtn">CE</button>
+              <button class="tbtn">CR</button>
+            </div>
+            <div class="typegrp">
+              <button class="tbtn">HM</button>
+              <button class="tbtn">HE</button>
+              <button class="tbtn">HI</button>
+              <button class="tbtn">HR</button>
+            </div>
+            <div class="typegrp">
+              <button class="tbtn">WM</button>
+              <button class="tbtn">WE</button>
+              <button class="tbtn">WI</button>
+              <button class="tbtn">WR</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ ข้อมูลใบสั่งซื้อ ═══════════ -->
+      <div class="g-info">
+        <div class="card">
+          <div class="card-title">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h4"/></svg>
+            ข้อมูลใบสั่งซื้อ
+          </div>
+
+          <div class="row2">
+            <div class="fld">
+              <label class="lb">เลขที่ใบสั่งซื้อ</label>
+              <input class="inp code" value="CI43205" readonly>
+            </div>
+            <div class="fld">
+              <label class="lb">วันที่</label>
+              <div class="ig">
+                <input class="inp" value="21/09/2026 13:51" readonly>
+                <span class="unit ic">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                </span>
+              </div>
+            </div>
+
+            <div class="fld">
+              <label class="lb">ผลิตที่</label>
+              <select class="inp"><option>—</option><option>CP</option><option>DB</option><option>MB</option><option>SPP</option></select>
+            </div>
+            <div class="fld">
+              <label class="lb">P.O. No.</label>
+              <input class="inp" value="รอ">
+            </div>
+
+            <div class="fld">
+              <label class="lb">รหัสลูกค้า</label>
+              <div class="ig">
+                <input class="inp" value="36018">
+                <button class="sbtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+              </div>
+            </div>
+            <div class="fld">
+              <label class="lb">ชื่อลูกค้า</label>
+              <input class="inp cust" value="บริษัท วราพรพลาสติก จำกัด" readonly>
+            </div>
+          </div>
+
+          <div class="fld">
+            <div class="lbrow">
+              <label class="lb">สถานที่ส่ง <span class="hint">( ไม่ระบุ = ส่งตามที่อยู่ลูกค้า )</span></label>
+              <button class="btn-link">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> เพิ่ม
+              </button>
+            </div>
+            <select class="inp"><option>-- ไม่ระบุ --</option></select>
+          </div>
+
+          <div class="row2">
+            <div class="fld">
+              <label class="lb">ผู้บันทึก</label>
+              <input class="inp" value="5797">
+            </div>
+            <div class="fld">
+              <label class="lb">รหัสผู้ขาย
+                <svg class="ico-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01" stroke-linecap="round"/></svg>
+              </label>
+              <div class="ig">
+                <input class="inp" value="8" readonly>
+                <button class="sbtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="fld">
+            <label class="lb">Type
+              <svg class="ico-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01" stroke-linecap="round"/></svg>
+            </label>
+            <div class="chkgrid">
+              <label class="chk"><input type="checkbox"> ค่าแรงผสมสี ( เม็ดลูกค้า )</label>
+              <label class="chk"><input type="checkbox"> เนื้อพลาสติก ( Natural )</label>
+              <label class="chk"><input type="checkbox"> เนื้อพลาสติก ( เนื้อ WPI )</label>
+              <label class="chk"><input type="checkbox" checked> ผสมพลาสติก MB</label>
+              <label class="chk"><input type="checkbox"> แม่สี</label>
+              <label class="chk"><input type="checkbox"> เนื้อพลาสติกที่มีรีไซเคิลผสมสี</label>
+            </div>
+          </div>
+
+          <div class="row2" style="align-items:end">
+            <div class="fld">
+              <label class="lb">เลขที่ใบจอง</label>
+              <input class="inp">
+            </div>
+            <div class="fld">
+              <div class="chkrow" style="margin-bottom:6px">
+                <span style="font-size:12px;color:var(--label);margin-right:auto">เงื่อนไขบนใบสั่งซื้อ
+                  <svg class="ico-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01" stroke-linecap="round"/></svg>
+                </span>
+                <label class="chk"><input type="checkbox"> RP</label>
+              </div>
+              <div class="chkrow">
+                <label class="chk"><input type="checkbox" checked> SPEC</label>
+                <label class="chk"><input type="checkbox" checked> CER</label>
+                <label class="chk"><input type="checkbox"> MSDS</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════ กรณีสั่งทำสต๊อก + ราคา ═══════════ -->
+      <div class="g-mid">
+
+        <div class="card">
+          <div class="card-title blue">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-7h6v7"/></svg>
+            กรณีสั่งทำสต๊อก
+          </div>
+
+          <div class="row2">
+            <div class="fld">
+              <label class="lb">กำหนดส่งครบ วันที่</label>
+              <div class="ig">
+                <input class="inp" placeholder="วว/ดด/ปปปป">
+                <span class="unit ic">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                </span>
+              </div>
+            </div>
+            <div></div>
+
+            <div class="fld">
+              <label class="lb">ส่งลูกค้าภายใน</label>
+              <input class="inp ta" value="0">
+            </div>
+            <div class="fld">
+              <label class="lb">&nbsp;</label>
+              <div class="ig">
+                <input class="inp ta" value="0.00">
+                <span class="unit green">เดือน</span>
+              </div>
+            </div>
+
+            <div class="fld">
+              <label class="lb">นน.ในคลังคงเหลือ</label>
+              <input class="inp ta">
+            </div>
+            <div class="fld">
+              <label class="lb">&nbsp;</label>
+              <div class="ig">
+                <input class="inp ta" value="0.00">
+                <span class="unit">ก.ก.</span>
+              </div>
+            </div>
+
+            <div class="fld">
+              <label class="lb">จะส่งมอบเดือนละ</label>
+              <input class="inp ta">
+            </div>
+            <div class="fld">
+              <label class="lb">&nbsp;</label>
+              <div class="ig">
+                <input class="inp ta" value="0.00">
+                <span class="unit">ก.ก.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card price">
+          <div class="card-title amber">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 12 22l-9-9V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg>
+            ราคา
+          </div>
+
+          <div class="prow">
+            <span class="plb">ราคาต้องไม่ต่ำกว่า
+              <svg class="ico-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01" stroke-linecap="round"/></svg>
+            </span>
+            <input class="inp ta hl-warn" value="659.83" readonly>
+          </div>
+          <div class="prow">
+            <span class="plb">ราคาอนุมัติ</span>
+            <input class="inp ta" readonly>
+          </div>
+          <div class="prow">
+            <span class="plb">ยืนราคาถึง</span>
+            <input class="inp ta" readonly>
+          </div>
+          <div class="prow">
+            <span class="plb">ราคาที่กำหนดไว้
+              <svg class="ico-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01" stroke-linecap="round"/></svg>
+            </span>
+            <input class="inp ta" value="578.80" readonly>
+          </div>
+          <div class="prow">
+            <span class="plb">ราคาช่อง 2</span>
+            <input class="inp ta" value="659.83" readonly>
+          </div>
+          <div class="prow">
+            <span class="plb">ราคาขาย <span class="badge-ok">อนุมัติแล้ว</span></span>
+            <input class="inp ta hl-pri" value="700.00" readonly>
+          </div>
+
+          <div class="pnote">ราคาทุน 458.00 · MB ทั่วไป · × 110 ÷ 100 + 75</div>
+        </div>
+      </div>
+
+      <!-- ═══════════ สรุปยอดค่าสั่งซื้อ ═══════════ -->
+      <div class="g-sum">
+        <div class="card">
+          <div class="card-title green">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 14h8"/></svg>
+            สรุปยอดค่าสั่งซื้อ
+          </div>
+
+          <div class="fld">
+            <label class="lb">รหัสสินค้า
+              <svg class="ico-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01" stroke-linecap="round"/></svg>
+            </label>
+            <div class="ig">
+              <input class="inp hl-yellow" value="2104627" readonly>
+              <button class="sbtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+            </div>
+          </div>
+
+          <div class="fld">
+            <label class="lb">น้ำหนักรวม</label>
+            <div class="ig">
+              <input class="inp ta" value="10.00">
+              <span class="unit">ก.ก.</span>
+            </div>
+          </div>
+
+          <div class="fld">
+            <label class="lb">ราคาต่อหน่วย (บาท)</label>
+            <select class="inp"><option>659.83</option><option>700.00</option><option>578.80</option></select>
+          </div>
+
+          <div class="fld">
+            <label class="lb">ราคารวม (บาท)</label>
+            <input class="inp ta hl-pri bigval" value="6,598.30" readonly>
+          </div>
+
+          <div class="fld">
+            <label class="lb">หมายเหตุ</label>
+            <textarea class="inp" placeholder="ระบุหมายเหตุเพิ่มเติม..."></textarea>
+          </div>
+
+          <button class="btn btn-pri" style="margin-top:14px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+            บันทึกคำสั่งซื้อ
+          </button>
+          <button class="btn btn-out" style="margin-top:9px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            พิมพ์เอกสาร
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ═══════════ รายการในใบสั่งซื้อ (ส่วนที่ถูกครอปในภาพ) ═══════════ -->
+    <div class="card" style="margin-top:13px">
+      <div class="tbl-head">
+        <div class="card-title" style="margin:0">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+          รายการในใบสั่งซื้อ
+        </div>
+        <button class="btn-sm">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> เพิ่มแถว
+        </button>
+      </div>
+
+      <div class="tblwrap">
+        <table class="items">
+          <thead>
+            <tr>
+              <th rowspan="2" style="width:38px">#</th>
+              <th rowspan="2" style="min-width:130px">รหัสสินค้า</th>
+              <th rowspan="2" style="width:70px">รหัส</th>
+              <th rowspan="2" style="min-width:150px">ชื่อสินค้า</th>
+              <th rowspan="2" style="min-width:100px">Lotno.</th>
+              <th colspan="2">น้ำหนัก (ก.ก.)</th>
+              <th rowspan="2" style="min-width:110px">กำหนดที่ลูกค้า<br>ต้องการ</th>
+              <th rowspan="2" style="min-width:110px">กำหนดส่ง<br>ทบทวน</th>
+              <th rowspan="2" style="min-width:110px">วันที่ผลิตเสร็จ</th>
+              <th rowspan="2" style="min-width:110px">วันที่ลูกค้าได้รับ</th>
+              <th rowspan="2" style="min-width:90px">เลขที่ใบส่ง</th>
+              <th rowspan="2" style="min-width:140px">หมายเหตุ</th>
+              <th rowspan="2" style="width:44px">ลบ</th>
+            </tr>
+            <tr><th style="width:95px">S</th><th style="width:95px">P</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="text-align:center;color:var(--muted)">1</td>
+              <td><input class="inp" value="2104627"></td>
+              <td><input class="inp" value="N"></td>
+              <td><input class="inp" value="MB ฟ้า 2104627"></td>
+              <td><input class="inp"></td>
+              <td><input class="inp ta" value="0.00"></td>
+              <td><input class="inp ta" value="10.00"></td>
+              <td><input class="inp" value="25/09/2026"></td>
+              <td><input class="inp"></td>
+              <td><input class="inp"></td>
+              <td><input class="inp"></td>
+              <td><input class="inp"></td>
+              <td><input class="inp"></td>
+              <td><button class="del"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button></td>
+            </tr>
+            <tr>
+              <td style="text-align:center;color:var(--muted)">2</td>
+              <td><input class="inp"></td>
+              <td><input class="inp"></td>
+              <td><input class="inp"></td>
+              <td><input class="inp"></td>
+              <td><input class="inp ta"></td>
+              <td><input class="inp ta"></td>
+              <td><input class="inp"></td>
+              <td><input class="inp"></td>
+              <td><input class="inp"></td>
+              <td><input class="inp"></td>
+              <td><input class="inp"></td>
+              <td><input class="inp"></td>
+              <td><button class="del"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button></td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <th colspan="5">รวม</th>
+              <th>0.00</th>
+              <th>10.00</th>
+              <th colspan="7"></th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

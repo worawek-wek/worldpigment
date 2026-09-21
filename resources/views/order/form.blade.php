@@ -5,35 +5,46 @@
 --}}
 <div class="modal-body px-4 py-4">
 
-    {{-- ── แถบประเภทใบสั่งซื้อ (radio) — 2 ตัวอักษรหน้าเลขที่ใบสั่ง ── --}}
-    {{-- of-narrow = จำกัดความกว้างส่วนหัวฟอร์มไม่ให้ยืดตาม modal ที่กว้าง 95vw
+    {{-- ── แถบประเภทใบสั่งซื้อ (radio) — 2 ตัวอักษรหน้าเลขที่ใบสั่ง ──
+         ปรับหน้าตาเป็นปุ่มกลุ่ม (segmented) 21/09/2569 ตามที่ผู้ใช้สั่ง — เดิมเป็น radio วงกลม 12 ตัว
+         ⚠ <input> ยังเป็น radio name="order_type_form" id="o_type_XX" + onchange เดิมทุกประการ
+           แค่ซ่อนตัว input ด้วย .btn-check แล้วให้ <label> เป็นตัวปุ่มแทน ⇒ JS เดิมทำงานต่อได้เลย
+           (onOrderTypeChange / orderNew / fillOrderForm / setOrderFormMode ที่ยกเว้น name นี้ไม่ให้ disable)
+
+         of-narrow = จำกัดความกว้างส่วนหัวฟอร์มไม่ให้ยืดตาม modal ที่กว้าง 95vw
          (ตารางรายการด้านล่างไม่ใส่ class นี้ จึงยังกว้างเต็ม modal) --}}
-    <div class="of-typebar of-narrow">
-        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
-            <div>
-                {{-- จัดปุ่มเป็นกลุ่มละ 2 (C / H / W) แล้วเว้นช่องไฟระหว่างกลุ่ม --}}
-                <div class="of-typegrid">
-                    @foreach ($type_rows as $types)
-                        <div class="of-typerow">
-                            @foreach (array_chunk($types, 2) as $pair)
-                                <div class="of-typepair">
-                                    @foreach ($pair as $t)
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="order_type_form"
-                                                id="o_type_{{ $t }}" value="{{ $t }}" onchange="onOrderTypeChange('{{ $t }}')">
-                                            <label class="form-check-label" for="o_type_{{ $t }}">{{ $t }}</label>
-                                        </div>
-                                    @endforeach
-                                </div>
+    @php
+        /* จัดปุ่มเป็น 3 กลุ่มตามตัวอักษรแรก (C / H / W) โดยไล่ลำดับเดิมใน OrderController::TYPE_ROWS
+           (M → I → E → R) — คำนวณที่นี่ ไม่ได้แก้ controller */
+        $type_groups = [];
+        foreach ($type_rows as $__row) {
+            foreach ($__row as $__t) {
+                $type_groups[substr($__t, 0, 1)][] = $__t;
+            }
+        }
+    @endphp
+    {{-- ครอบด้วย of-narrow อีกชั้น แล้วให้ตัวแถบกว้างพอดีเนื้อหา (21/09/2569 ตามที่ผู้ใช้สั่ง
+         "ไม่อยากให้กว้าง 100%") — ถ้าใส่ of-narrow ที่ตัวแถบเอง แถบที่หดแล้วจะถูก margin:auto
+         ดันไปอยู่กึ่งกลางจอ ไม่ตรงขอบซ้ายกับการ์ดด้านล่าง --}}
+    <div class="of-narrow">
+        <div class="of-typebar">
+            <div class="of-typebar-inner">
+                <div class="of-typegrid me-4">
+                    @foreach ($type_groups as $group)
+                        <div class="of-typeset" role="group">
+                            @foreach ($group as $t)
+                                <input class="btn-check" type="radio" name="order_type_form" id="o_type_{{ $t }}"
+                                    value="{{ $t }}" autocomplete="off" onchange="onOrderTypeChange('{{ $t }}')">
+                                <label class="of-tbtn" for="o_type_{{ $t }}">{{ $t }}</label>
                             @endforeach
                         </div>
                     @endforeach
                 </div>
-            </div>
 
-            <button type="button" class="btn of-btn-new" onclick="orderNew()">
-                <i class="ti ti-plus me-1"></i>เพิ่มใบสั่งซื้อใหม่
-            </button>
+                <button type="button" class="btn of-btn-new" onclick="orderNew()">
+                    <i class="ti ti-plus me-1"></i>เพิ่มใบสั่งซื้อใหม่
+                </button>
+            </div>
         </div>
     </div>
 
@@ -268,8 +279,13 @@
                         <input type="text" id="o_price2" class="form-control form-control-sm text-end" readonly>
                     </div>
 
-                    {{-- ราคาขาย = ช่องเดียวในกล่องนี้ที่ผู้ใช้พิมพ์เอง --}}
-                    <div class="col-6"><label class="form-label mb-0 fw-bold" for="o_price">ราคาขาย</label></div>
+                    {{-- ราคาขาย = ช่องเดียวในกล่องนี้ที่ผู้ใช้พิมพ์เอง
+                         ⚠ ใบที่อนุมัติแล้วจะถูกล็อก (readonly) โดย setOrderPriceLocked() — 21/09/2569 --}}
+                    <div class="col-6">
+                        <label class="form-label mb-0 fw-bold" for="o_price">ราคาขาย</label>
+                        <span id="o_price_locked" class="badge bg-success d-none"
+                            data-bs-toggle="tooltip" data-bs-title="ใบสั่งซื้อนี้อนุมัติแล้ว จึงแก้ราคาขายไม่ได้">อนุมัติแล้ว</span>
+                    </div>
                     <div class="col-6">
                         <input type="text" id="o_price" class="form-control form-control-sm text-end fw-bold js-comma"
                             inputmode="decimal" autocomplete="off" placeholder="0.00">
@@ -333,7 +349,8 @@
     </div>
 
     {{-- ═══════════ ตารางรายการ (suborder) — ช่องกรอก เพิ่ม/ลบแถวได้ ═══════════ --}}
-    <div class="of-sec mt-3">
+    {{-- of-sec-plain = ไม่เอาพื้นไล่สีแบบการ์ดอื่น (21/09/2569 ตามที่ผู้ใช้สั่ง) — กล่องนี้พื้นขาวล้วน --}}
+    <div class="of-sec of-sec-plain mt-3">
         <div class="of-sec-title d-flex justify-content-between align-items-center">
             <span><i class="ti ti-list-details"></i>รายการในใบสั่งซื้อ</span>
             <button type="button" class="btn btn-sm btn-label-warning" onclick="addOrderItem()">
