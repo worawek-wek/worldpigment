@@ -103,4 +103,8 @@
         <label class="form-label">น้ำหนักที่จะผลิต (W Production)</label>
         <input type="number" step="any" class="form-control" id="{{ $prefix }}_weight_production" placeholder="0.00">
     </div>
+    <div class="col-12 mb-3">
+        <label class="form-label">หมายเหตุ (Remark)</label>
+        <textarea class="form-control" rows="2" id="{{ $prefix }}_remark" placeholder="หมายเหตุ"></textarea>
+    </div>
 </div>

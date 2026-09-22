@@ -373,7 +373,7 @@
                 { 'className': "text-center", data: 'company', name: 'company', orderable: true },
                 { 'className': "text-center col-inplan", data: 'inplan', name: 'tb_planning.inplan', orderable: true },
                 { 'className': "text-center col-custwant", data: 'custwant', name: 'tb_planning.custwant', orderable: true },
-                { 'className': "text-center", data: 'packing_display', name: 'packing_display', orderable: false, searchable: false },
+                { 'className': "text-center", data: 'packing_display', name: 'packing_display', orderable: true, searchable: false },
                 { 'className': "text-left", data: 'itemno', name: 'tb_planning.itemno', orderable: true },
                 // { 'className': "text-left", data: 'quantity', name: 'quantity', orderable: false },
                 { 'className': "text-left", data: 'machine_no', name: 'tb_planning.machine_no', orderable: true },
@@ -565,7 +565,8 @@
             retrospective:       $('#cs_retrospective').val()       || '',
             weight_request:      $('#cs_weight_request').val()      || '',
             increase_production: $('#cs_increase_production').val()  || '',
-            weight_production:   $('#cs_weight_production').val()    || ''
+            weight_production:   $('#cs_weight_production').val()    || '',
+            remark:              $('#cs_remark').val()               || ''
         };
 
         $btn.prop('disabled', true).html('<i class="ti ti-loader me-1"></i>กำลังบันทึก...');
@@ -640,11 +641,8 @@
                     $('#result_planning_item').html(response.data);
                     var itemModal = new bootstrap.Modal(document.getElementById('planningItemModal'));
                     itemModal.show();
-                    // ยกระดับเฉพาะช่อง "หมายเหตุวางแผน" เป็น select2-tags (เลือกจาก master ได้ + พิมพ์เองได้)
-                    // ส่ง element เดี่ยวเข้า enhanceSelects → .addBack() enhance เฉพาะตัวนี้ ไม่แตะ select อื่นในฟอร์ม
-                    if (typeof enhanceSelects === 'function') {
-                        enhanceSelects($('#result_planning_item select[name="planning_remark"]'));
-                    }
+                    // ช่อง "หมายเหตุวางแผน" เปลี่ยนเป็น input + datalist แล้ว (เลือกจาก master + พิมพ์ต่อได้)
+                    // จึงไม่ต้อง init select2/enhanceSelects ให้ช่องนี้อีก
                 }
             },
             error: function(response) {

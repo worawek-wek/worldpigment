@@ -89,9 +89,34 @@ class OrderController extends Controller
                 $query->select('Orderno', 'Itemno');
             }])
             ->where('morder.appv', '-1') // เฉพาะ order ที่อนุมัติแล้ว
-            // มี suborder อย่างน้อย 1 ตัวที่ EndP เป็นค่าว่าง (ใช้ EXISTS กัน row ซ้ำกรณี suborder มีหลายตัว)
-            ->whereHas('suborders', function ($query) {
-                $query->whereNull('EndP');
+            // เงื่อนไขการแสดงผล (22/09/2569): ต้องมี suborder ที่ยังไม่ปิดงาน (EndP เป็นค่าว่าง)
+            // และ suborder ตัวนั้นต้องมีน้ำหนักที่ต้องทำ ตามแผนกที่ผลิต:
+            //   - Company = DB   → Stock > 0 หรือ Production > 0
+            //   - Company ≠ DB   → Production > 0 เท่านั้น (Company ที่เป็น NULL นับเป็น "ไม่ใช่ DB")
+            // ใช้ whereHas (EXISTS) กัน row ซ้ำกรณี suborder มีหลายตัว
+            ->where(function ($outer) {
+                // สาขา DB — Stock หรือ Production มากกว่า 0
+                $outer->where(function ($q) {
+                    $q->where('morder.Company', 'DB')
+                        ->whereHas('suborders', function ($sq) {
+                            $sq->whereNull('EndP')
+                                ->where(function ($cond) {
+                                    $cond->where('Stock', '>', 0)
+                                        ->orWhere('Production', '>', 0);
+                                });
+                        });
+                })
+                // สาขาไม่ใช่ DB (รวม Company ที่เป็น NULL) — Production มากกว่า 0 เท่านั้น
+                ->orWhere(function ($q) {
+                    $q->where(function ($c) {
+                        $c->where('morder.Company', '!=', 'DB')
+                            ->orWhereNull('morder.Company');
+                    })
+                        ->whereHas('suborders', function ($sq) {
+                            $sq->whereNull('EndP')
+                                ->where('Production', '>', 0);
+                        });
+                });
             })
             ->when(!empty($search), function ($query) use ($search) {
 

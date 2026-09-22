@@ -41,6 +41,7 @@
                 <th style="width: 5%;">น้ำหนักที่จะผลิต</th>
                 <th style="width: 6%;">เลขที่ออกใบแดง</th>
                 <th style="width: 5%;">ผลการอนุมัติ</th>
+                <th style="width: 6%;">หมายเหตุ</th>
                 <th class="col-job" style="width: 6%;">เลขที่ใบเบิก Red Bill (งาน)</th>
                 <th class="col-job" style="width: 7%;">รหัสสินค้า Item No. (งาน)</th>
             </tr>
@@ -65,12 +66,13 @@
                     <td class="text-end">{{ $row->weight_production !== null ? number_format($row->weight_production, 2) : '' }}</td>
                     <td class="text-center">{{ $row->red_bill_code ?: '' }}</td>
                     <td class="text-center">{{ $row->statusLabel() }}</td>
+                    <td>{{ $row->remark ?: '' }}</td>
                     <td class="text-center col-job">{{ optional($row->planning)->red_bill_code ?: '' }}</td>
                     <td class="col-job">{{ optional($row->planning)->itemno ?: '' }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="19" class="text-center" style="padding: 14px;">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td>
+                    <td colspan="20" class="text-center" style="padding: 14px;">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td>
                 </tr>
             @endforelse
         </tbody>

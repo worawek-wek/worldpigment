@@ -46,11 +46,10 @@
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-3 mb-2">
-                        {{-- <div class="text-muted small">Planning Code</div> --}}
-                        <div class="text-muted small">Item No.</div>
+                    {{-- <div class="col-md-3 mb-2">
+                        <div class="text-muted small">Planning Code</div>
                         <div class="fw-semibold">{{ $planning_header->planning_code ?? '-' }}</div>
-                    </div>
+                    </div> --}}
                     <div class="col-md-3 mb-2">
                         <div class="text-muted small">Order No.</div>
                         <div class="fw-semibold">{{ $planning_header->orderno ?? '-' }}</div>

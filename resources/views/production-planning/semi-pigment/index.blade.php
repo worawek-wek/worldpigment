@@ -39,7 +39,7 @@
                             <div class="col-md-4">
                                 <label class="form-label mb-1 small text-muted">ค้นหา</label>
                                 <input id="searchInput" type="text" class="form-control"
-                                    placeholder="ค้นหา Item No., แผนกที่ใช้, Order No., แผนกที่ผลิต">
+                                    placeholder="ค้นหา Item No., แผนกที่ใช้, เลขที่ใบเบิก Red Bill (งาน), Order No., แผนกที่ผลิต">
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label mb-1 small text-muted">แผนก</label>
@@ -92,7 +92,7 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th>#</th>
-                                        <th>Order No.</th>
+                                        <th>เลขที่ใบเบิก Red Bill (งาน)</th>
                                         <th>แผนกที่ผลิต</th>
                                         <th>วันที่ขอ</th>
                                         <th>วันที่สั่ง</th>
@@ -177,7 +177,8 @@
             columns: [
                 // # ใช้ DT_RowIndex (จาก addIndexColumn) เรียงตามลำดับที่แสดงจริง จึง sort เองไม่ได้
                 { className: "text-center", data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
-                { className: "text-center", data: 'orderno',      name: 'orderno',      orderable: true },
+                // เลขที่ใบเบิก Red Bill ของงานผลิต (tb_planning) ที่ผูกกับ Semi — มาจาก relation จึง sort/search ที่ SQL ไม่ได้
+                { className: "text-center", data: 'job_red_bill', name: 'job_red_bill', orderable: false, searchable: false },
                 { className: "text-center", data: 'company',      name: 'company',      orderable: true },
                 { className: "text-center", data: 'created_at',   name: 'created_at',   orderable: true },
                 { className: "text-center", data: 'order_date',   name: 'order_date',   orderable: true },

@@ -184,22 +184,20 @@
             <div class="col-md-12 mb-3">
                 <label class="form-label">หมายเหตุวางแผน (Planning Remark)</label>
                 @php
-                    // เก็บลง tb_planning.planning_remark เป็น "ข้อความ" (snapshot) — dropdown เป็นแค่ตัวช่วยกรอกให้เป็นมาตรฐาน
+                    // เก็บลง tb_planning.planning_remark เป็น "ข้อความ" (snapshot) — datalist เป็นแค่ตัวช่วยกรอกให้เป็นมาตรฐาน
                     $current_remark = $planning_item?->planning_remark ?? '';
-                    $remark_in_master = ($planning_remarks ?? collect())->contains($current_remark);
                 @endphp
-                {{-- select2-tags: เลือกจาก master ได้ + พิมพ์ค่าเองได้ (ยืดหยุ่นกว่า แต่หลุดจากมาตรฐาน master) --}}
-                <select name="planning_remark" class="form-select select2-tags"
-                        data-placeholder="เลือกหรือพิมพ์หมายเหตุ">
-                    <option value=""></option>
+                {{-- input + datalist: คลิกช่องเด้งรายการจาก master ให้เลือก พอเลือกแล้วพิมพ์ต่อ/แก้ได้ทันที
+                     ค่าเดิม/ค่าที่พิมพ์เองที่ไม่มีใน master คงไว้ในช่องตรง ๆ (value) — ส่งเป็น string เหมือนเดิม --}}
+                <input type="text" name="planning_remark" class="form-control"
+                       list="planning_remark_options"
+                       value="{{ $current_remark }}"
+                       placeholder="เลือกหรือพิมพ์หมายเหตุ" autocomplete="off">
+                <datalist id="planning_remark_options">
                     @foreach(($planning_remarks ?? collect()) as $rm)
-                        <option value="{{ $rm }}" {{ $current_remark === $rm ? 'selected' : '' }}>{{ $rm }}</option>
+                        <option value="{{ $rm }}"></option>
                     @endforeach
-                    {{-- ค่าเดิม/ค่าที่พิมพ์เองซึ่งไม่มีใน master → คงไว้เป็นตัวเลือกที่เลือกอยู่ กันข้อมูลหาย --}}
-                    @if($current_remark !== '' && !$remark_in_master)
-                        <option value="{{ $current_remark }}" selected>{{ $current_remark }}</option>
-                    @endif
-                </select>
+                </datalist>
             </div>
         </div>
 
@@ -1125,7 +1123,7 @@ window.wpBindHolidayWarn = function (el, label) {
 
     // ฟิลด์ที่เก็บไว้ใน hidden input (ไม่แสดงเป็นคอลัมน์ในตาราง)
     var HIDDEN_FIELDS = ['semi_code', 'primary_color', 'balance', 'lot_no',
-        'retrospective', 'increase_production', 'weight_production', 'red_bill_code'];
+        'retrospective', 'increase_production', 'weight_production', 'red_bill_code', 'remark'];
 
     // แปลงวันที่ YYYY-MM-DD → DD/MM/YYYY สำหรับแสดงผล (ค่าจริงยังเก็บใน hidden input เป็น YYYY-MM-DD)
     function fmtDate(s) {
@@ -1252,6 +1250,7 @@ window.wpBindHolidayWarn = function (el, label) {
         $('#sp_primary_color').val(d.primary_color || '');
         $('#sp_lot_no').val(d.lot_no || '');
         $('#sp_red_bill_code').val(d.red_bill_code || '');
+        $('#sp_remark').val(d.remark || '');
         $('#sp_balance').val(d.balance || '');
         $('#sp_retrospective').val(d.retrospective || '');
         $('#sp_weight_request').val(d.weight_request || '');
@@ -1345,7 +1344,8 @@ window.wpBindHolidayWarn = function (el, label) {
             retrospective:       $('#sp_retrospective').val() || '',
             weight_request:      weightRequest,
             increase_production: $('#sp_increase_production').val() || '',
-            weight_production:   weightProduction
+            weight_production:   weightProduction,
+            remark:              $('#sp_remark').val() || ''
         };
 
         var url = URL_ENTRY_STORE;

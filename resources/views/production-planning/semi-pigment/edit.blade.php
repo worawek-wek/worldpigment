@@ -96,6 +96,10 @@
             <label class="form-label">น้ำหนักที่จะผลิต (weight_production)</label>
             <input type="number" step="any" class="form-control" name="weight_production" value="{{ $sp->weight_production }}" {{ $ro }}>
         </div>
+        <div class="col-12 mb-3">
+            <label class="form-label">หมายเหตุ (Remark)</label>
+            <textarea class="form-control" rows="2" name="remark" placeholder="หมายเหตุ" {{ $ro }}>{{ $sp->remark }}</textarea>
+        </div>
     </div>
 
     {{-- ── ข้อมูลการอนุมัติ (แสดงเฉพาะรายการที่ดำเนินการแล้ว — ย้ายมาจาก detail modal เดิม) ── --}}

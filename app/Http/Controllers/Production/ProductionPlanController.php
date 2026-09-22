@@ -97,6 +97,8 @@ class ProductionPlanController extends Controller
             })
             // sort คอลัมน์แผนก = ตามแผนกจริงของ item (COALESCE item→header) ให้ตรงกับที่แสดง
             ->orderColumn('company', 'COALESCE(tb_planning.company, tb_planning_header.company) $1')
+            // sort คอลัมน์วันเวลาบรรจุเสร็จ = ตามวันเวลาบรรจุล่าสุด (subquery เดียวกับที่ใช้แสดง pk_last)
+            ->orderColumn('packing_display', '(SELECT MAX(packing_datetime) FROM tb_planning_packing WHERE tb_planning_packing.planning_id = tb_planning.id) $1')
             ->rawColumns(['inplan', 'inner_status', 'packing_display', 'btnedit']) // 👈 บอกให้ column นี้ render HTML
             ->make(true);
     }

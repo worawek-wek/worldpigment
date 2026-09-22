@@ -65,13 +65,17 @@ class SemiPigmentController extends Controller
 
     public function datatable()
     {
-        $data = $this->semiListQuery();
+        // eager-load planning เพื่อดึง "เลขที่ใบเบิก Red Bill (งาน)" ของแผนที่ Semi นี้ผูกอยู่ (กัน N+1)
+        $data = $this->semiListQuery()->with('planning');
 
         return DataTables::of($data)
             // # ใช้ DT_RowIndex จาก addIndexColumn() — เรียงตามลำดับที่แสดงจริง (รองรับ sort + pagination)
             ->addIndexColumn()
             ->addColumn('type_badge', fn ($row) => $this->typeBadge($row))
             ->addColumn('status_badge', fn ($row) => $this->statusBadge($row))
+            // เลขที่ใบเบิก Red Bill ของ "งานผลิต" (tb_planning) ที่ผูกกับ Semi นี้ — ค่าเดียวกับคอลัมน์ (งาน) ใน PDF/Excel
+            // มาจาก relation จึง sort/search ที่ระดับ SQL ไม่ได้ (ตั้ง orderable/searchable=false ฝั่ง DataTables)
+            ->addColumn('job_red_bill', fn ($row) => optional($row->planning)->red_bill_code ?: '-')
             ->editColumn('order_date', fn ($row) => $row->order_date ? \Carbon\Carbon::parse($row->order_date)->format('d/m/Y') : '-')
             // วันที่ขอ = วันที่สร้างรายการ (created_at)
             ->editColumn('created_at', fn ($row) => $row->created_at ? \Carbon\Carbon::parse($row->created_at)->format('d/m/Y') : '-')
@@ -113,6 +117,7 @@ class SemiPigmentController extends Controller
             'น้ำหนักที่จะผลิต',
             'เลขที่ออกใบแดง',
             'ผลการอนุมัติ',
+            'หมายเหตุ',
             // 2 คอลัมน์ท้าย: ค่าจาก "งานผลิต" (tb_planning) ที่ Semi นี้ผูกอยู่ — คนละตัวกับของ Semi เอง
             'เลขที่ใบเบิก Red Bill (งาน)',
             'รหัสสินค้า Item No. (งาน)',
@@ -125,7 +130,7 @@ class SemiPigmentController extends Controller
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('ใบขอสั่งทำ SEMI');
 
-        $lastCol = 'R'; // 18 คอลัมน์ = A..R (P + 2 คอลัมน์งานผลิต Q,R)
+        $lastCol = 'S'; // 19 คอลัมน์ = A..S (หมายเหตุ = Q, คอลัมน์งานผลิต = R,S)
 
         // แถวที่ 1: หัวเรื่อง
         $sheet->setCellValue('A1', 'ใบขอสั่งทำ SEMI');
@@ -151,8 +156,8 @@ class SemiPigmentController extends Controller
             ->setVertical(Alignment::VERTICAL_CENTER)
             ->setWrapText(true);
 
-        // 2 คอลัมน์ท้าย (Q,R = ค่าจาก "งานผลิต") เน้นพื้นสีเหลืองให้ต่างจากคอลัมน์อื่น (ตรงกับ PDF)
-        $sheet->getStyle('Q'.$headerRow.':R'.$headerRow)->getFill()
+        // 2 คอลัมน์ท้าย (R,S = ค่าจาก "งานผลิต") เน้นพื้นสีเหลืองให้ต่างจากคอลัมน์อื่น (ตรงกับ PDF)
+        $sheet->getStyle('R'.$headerRow.':S'.$headerRow)->getFill()
             ->setFillType(Fill::FILL_SOLID)
             ->getStartColor()->setARGB('FFFFE699');
 
@@ -176,6 +181,7 @@ class SemiPigmentController extends Controller
                 $row->weight_production,
                 $row->red_bill_code,
                 $row->statusLabel(),
+                $row->remark,
                 // งานผลิตที่ผูกอยู่ (อาจว่างถ้าเป็น Semi แบบสร้างเองไม่ผูกแผน)
                 optional($row->planning)->red_bill_code,
                 optional($row->planning)->itemno,
@@ -206,8 +212,8 @@ class SemiPigmentController extends Controller
                 $sheet->getStyle($range)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
             }
 
-            // 2 คอลัมน์ท้าย (Q,R = ค่าจาก "งานผลิต") พื้นสีเหลืองอ่อนในแถวข้อมูล (ตรงกับ PDF)
-            $sheet->getStyle('Q'.($headerRow + 1).':R'.$lastRow)->getFill()
+            // 2 คอลัมน์ท้าย (R,S = ค่าจาก "งานผลิต") พื้นสีเหลืองอ่อนในแถวข้อมูล (ตรงกับ PDF)
+            $sheet->getStyle('R'.($headerRow + 1).':S'.$lastRow)->getFill()
                 ->setFillType(Fill::FILL_SOLID)
                 ->getStartColor()->setARGB('FFFFF2CC');
         } else {
@@ -604,6 +610,7 @@ class SemiPigmentController extends Controller
             'increase_production' => $val('increase_production'),
             'weight_production'   => $weightProduction,
             'red_bill_code'       => $val('red_bill_code'),
+            'remark'              => $val('remark'),
         ];
     }
 
@@ -628,6 +635,7 @@ class SemiPigmentController extends Controller
             'increase_production' => $sp->increase_production,
             'weight_production'   => $sp->weight_production,
             'red_bill_code'       => $sp->red_bill_code,
+            'remark'              => $sp->remark,
         ];
     }
 
@@ -741,7 +749,11 @@ class SemiPigmentController extends Controller
                     $q->where('itemno', 'LIKE', '%'.$search.'%')
                       ->orWhere('custno', 'LIKE', '%'.$search.'%')
                       ->orWhere('orderno', 'LIKE', '%'.$search.'%')
-                      ->orWhere('company', 'LIKE', '%'.$search.'%');
+                      ->orWhere('company', 'LIKE', '%'.$search.'%')
+                      // ค้นตามเลขที่ใบเบิก Red Bill ของ "งานผลิต" (tb_planning) ที่ผูกกับ Semi นี้ — คอลัมน์ (งาน) ที่แสดงในตาราง
+                      ->orWhereHas('planning', function ($q) use ($search) {
+                          $q->where('red_bill_code', 'LIKE', '%'.$search.'%');
+                      });
                 });
             })
             ->when(!empty($type), fn ($q) => $q->where('type', $type))
@@ -852,6 +864,7 @@ class SemiPigmentController extends Controller
             'mdate'              => $sp->order_date,
             'custwant'           => $sp->want_date,
             'red_bill_code'      => $sp->red_bill_code, // นำเลขใบเบิก (Red Bill) ของ semi มาใส่ให้แผนที่สร้าง (24/08/2569)
+            'planning_remark'    => $sp->remark,        // นำหมายเหตุจาก semi มาใส่เป็นหมายเหตุวางแผน — เฉพาะตอนสร้างแผนใหม่ (22/09/2569)
         ]);
     }
 }
