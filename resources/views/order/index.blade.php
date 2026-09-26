@@ -2229,6 +2229,10 @@
         // (ค่าที่เคยบันทึกใน appvreq ใช้เป็นค่าสำรองเฉพาะตอนคำนวณไม่ได้ จะได้ไม่โชว์ช่องว่างเปล่า)
         fillApprovalPrices(res.calc, r);
 
+        // ป้ายกลุ่ม A/B/C: รหัสที่มีในกลุ่มราคา (zcolorrate) ให้โชว์ราคาของกลุ่มนั้นแทนราคาขาย 1/2/3 (26/09/2569)
+        var cr = res.color_rate;
+        if (cr) setApprovalGroupPrices(cr.rate_A, cr.rate_B, cr.rate_C);
+
         // ลบได้เฉพาะใบที่มีอยู่จริง
         $('#btnApprovalDelete').prop('disabled', !r.ReqDate);
 
@@ -2298,6 +2302,7 @@
 
     // ราคาของแต่ละกลุ่มบนป้ายเกณฑ์ A/B/C ใต้ช่องจำนวนสั่งซื้อ (19/09/2569)
     //   A = ราคาขาย 1 · B = ราคาขาย 2 · C = ราคาขาย 3 — ตัวเลขชุดเดียวกับช่องราคา 3 ช่อง
+    //   ยกเว้นรหัสที่มีใน zcolorrate → ใช้ rate_A/B/C แทน (ทับหลัง fillApprovalPrices ใน fillApprovalForm, 26/09/2569)
     //   ไม่มีค่า (ยังไม่เลือกเบอร์ / คำนวณไม่ได้) = ขีด — ไม่ปล่อยว่างให้ป้ายเตี้ยลง
     function setApprovalGroupPrices(p1, p2, p3){
         $('#a_gprice1').text(fmtNum(p1, 2) || '—');

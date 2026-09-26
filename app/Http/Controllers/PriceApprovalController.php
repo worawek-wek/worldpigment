@@ -194,6 +194,11 @@ class PriceApprovalController extends Controller
             // กลุ่มราคาที่ตรงกับปริมาณสั่งซื้อในใบนี้ (ใช้เน้นช่องราคาที่เกี่ยวข้อง)
             'group'    => $group,
             'groups'   => self::PRICE_GROUPS,
+            // ราคาของกลุ่มราคา A/B/C จาก zcolorrate (26/09/2569) — ป้ายกลุ่มใต้ช่องจำนวนสั่งซื้อใช้ค่านี้
+            // ถ้ารหัสไม่มีในตาราง = null → ป้ายกลับไปใช้ราคาขาย 1/2/3 ตามเดิม
+            'color_rate' => $itemno === '' ? null : DB::table('zcolorrate')
+                ->where('colorno', $itemno)
+                ->first(['rate_A', 'rate_B', 'rate_C']),
             'uprice'   => $uprice,
             // ตารางล่าง — ราคาที่ยืนไว้ของเบอร์ที่เลือก
             'rows'     => $this->zcustRows($custno, $itemno),
