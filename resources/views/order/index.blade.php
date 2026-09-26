@@ -2229,9 +2229,9 @@
         // (ค่าที่เคยบันทึกใน appvreq ใช้เป็นค่าสำรองเฉพาะตอนคำนวณไม่ได้ จะได้ไม่โชว์ช่องว่างเปล่า)
         fillApprovalPrices(res.calc, r);
 
-        // ป้ายกลุ่ม A/B/C: รหัสที่มีในกลุ่มราคา (zcolorrate) ให้โชว์ราคาของกลุ่มนั้นแทนราคาขาย 1/2/3 (26/09/2569)
-        var cr = res.color_rate;
-        if (cr) setApprovalGroupPrices(cr.rate_A, cr.rate_B, cr.rate_C);
+        // ป้ายกลุ่ม A/B/C = ราคาของกลุ่มราคา (zcolorrate) เท่านั้น — รหัสที่ไม่มีในตาราง = ขีด (26/09/2569)
+        var cr = res.color_rate || {};
+        setApprovalGroupPrices(cr.rate_A, cr.rate_B, cr.rate_C);
 
         // ลบได้เฉพาะใบที่มีอยู่จริง
         $('#btnApprovalDelete').prop('disabled', !r.ReqDate);
@@ -2273,7 +2273,6 @@
             $('#a_price3').val(fmtNum(p.price_3, 2));
             $('#a_price_34').val(fmtNum(p.db_3_4, 2));
             $('#a_price_12').val(fmtNum(p.db_1_2, 2));
-            setApprovalGroupPrices(p.price_1, p.price_2, p.price_3);
 
             /* 19/09/2569: เอาบรรทัดบอกที่มาของราคาออกตามที่ผู้ใช้สั่ง
                (เดิมโชว์ "ราคาทุน … · <เงื่อนไขที่เข้า> · × mul ÷ div + add")
@@ -2289,7 +2288,6 @@
         $('#a_price3').val(fmtNum(req.price3, 2));
         $('#a_price_34').val('');
         $('#a_price_12').val('');
-        setApprovalGroupPrices(req.price1, req.price2, req.price3);
 
         var msg = calc.reason || '';
         if (msg && (req.price1 != null || req.price2 != null || req.price3 != null)){
@@ -2301,9 +2299,8 @@
     }
 
     // ราคาของแต่ละกลุ่มบนป้ายเกณฑ์ A/B/C ใต้ช่องจำนวนสั่งซื้อ (19/09/2569)
-    //   A = ราคาขาย 1 · B = ราคาขาย 2 · C = ราคาขาย 3 — ตัวเลขชุดเดียวกับช่องราคา 3 ช่อง
-    //   ยกเว้นรหัสที่มีใน zcolorrate → ใช้ rate_A/B/C แทน (ทับหลัง fillApprovalPrices ใน fillApprovalForm, 26/09/2569)
-    //   ไม่มีค่า (ยังไม่เลือกเบอร์ / คำนวณไม่ได้) = ขีด — ไม่ปล่อยว่างให้ป้ายเตี้ยลง
+    //   A/B/C = zcolorrate.rate_A/B/C ของรหัสสินค้า (26/09/2569 — เดิมใช้ราคาขาย 1/2/3) เรียกจาก fillApprovalForm
+    //   ไม่มีค่า (ยังไม่เลือกเบอร์ / รหัสไม่มีในกลุ่มราคา) = ขีด — ไม่ปล่อยว่างให้ป้ายเตี้ยลง
     function setApprovalGroupPrices(p1, p2, p3){
         $('#a_gprice1').text(fmtNum(p1, 2) || '—');
         $('#a_gprice2').text(fmtNum(p2, 2) || '—');
