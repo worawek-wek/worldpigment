@@ -9,16 +9,10 @@
 <link rel="icon" type="image/x-icon" href="assets/img/illustrations/main.png" />
 
 <!-- Fonts -->
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link
-    href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&ampdisplay=swap"
-    rel="stylesheet" />
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@100;200;300;400;500;600;700&display=swap"
-    rel="stylesheet">
-<link
-    href="https://fonts.googleapis.com/css2?family=Lexend:wght@100;200;300;400;500;600;700;800;900&display=swap"
-    rel="stylesheet" />
+{{-- ฟอนต์ Public Sans / IBM Plex Sans Thai / Lexend เก็บไว้ในเครื่องแล้ว (02/10/2569)
+     เดิมโหลดจาก fonts.googleapis.com → ไม่มีเน็ตฟอนต์เพี้ยน + หน้าโหลดช้าเพราะรอ timeout
+     ไฟล์ woff2 อยู่ที่ assets/vendor/fonts/google/ --}}
+<link rel="stylesheet" href="assets/vendor/fonts/google-fonts.css" />
 
 <!-- Icons -->
 <link rel="stylesheet" href="assets/vendor/fonts/fontawesome.css" />
@@ -43,7 +37,9 @@
 {{-- <link rel="stylesheet" href="assets/vendor/libs/select2/select2.css" />
 <link rel="stylesheet" href="assets/vendor/libs/bootstrap-select/bootstrap-select.css" /> --}}
 {{-- <link rel="stylesheet" href="assets/vendor/libs/sweetalert2/sweetalert2.css" /> --}}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+{{-- SweetAlert2 v11.26.25 เก็บไว้ในเครื่องแล้ว (02/10/2569) — เดิมโหลดจาก cdn.jsdelivr.net
+     ไฟล์เดียวกับที่ CDN ส่ง (ไม่ใช่ตัวของธีมในโฟลเดอร์ sweetalert2/ ที่หน้าตาต่างกัน) --}}
+<link rel="stylesheet" href="assets/vendor/libs/sweetalert2-v11/sweetalert2.min.css">
 
 <link rel="stylesheet" href="assets/vendor/libs/select2/select2.css" />
 <link rel="stylesheet" href="assets/vendor/libs/bootstrap-select/bootstrap-select.css" />

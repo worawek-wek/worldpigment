@@ -944,6 +944,11 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 
 ## ข้อตกลงและข้อควรระวัง (Conventions & Gotchas)
 
+- **ระบบใช้งานได้โดยไม่ต้องต่อเน็ต — ห้ามโหลด asset จาก CDN ใน layout** (02/10/2569): เดิม `inc_header` / `inc_js` โหลด **SweetAlert2** จาก `cdn.jsdelivr.net` และ **ฟอนต์** จาก `fonts.googleapis.com` ⇒ ไม่มีเน็ต = `Swal` ไม่ถูกนิยาม กล่องยืนยัน/แจ้งเตือนใช้ไม่ได้ทั้งระบบ. ตอนนี้เก็บไว้ในเครื่องทั้งหมด (ทุก layout — main/worker/qc/login — โหลดผ่าน 2 ไฟล์นี้)
+  - **SweetAlert2 v11.26.25** → `public/assets/vendor/libs/sweetalert2-v11/` (`sweetalert2.all.min.js` + `sweetalert2.min.css`) — ไฟล์เดียวกับที่ CDN ส่ง (เทียบ hash แล้ว) · ⚠ **ไม่ใช่** โฟลเดอร์ `sweetalert2/` ของธีม (v11.10.5 dev build + CSS ที่ธีมแต่ง หน้าตาต่างกัน) — บรรทัดที่คอมเมนต์ไว้ใน layout ชี้ไปตัวนั้น อย่าเปิดคืน
+  - **ฟอนต์ Public Sans / IBM Plex Sans Thai / Lexend** → `public/assets/vendor/fonts/google-fonts.css` + woff2 37 ไฟล์ใน `public/assets/vendor/fonts/google/` (url ใน CSS เป็น relative `google/...`)
+  - เพิ่มไลบรารี/ฟอนต์ใหม่ ให้ดาวน์โหลดมาเก็บใน `public/assets/vendor/` แล้วอ้าง path local เสมอ
+  - ⚠ **ยังเหลือ CDN ใน view ที่ไม่มี controller/route เรียกแล้ว** (ของเหลือจาก template): `user/news` · `report-2/*` · `position/index` — ไม่ได้แก้ · `.env` ยังตั้ง `MAIL_HOST=smtp.gmail.com` แต่ไม่มีโค้ดส่งอีเมล
 - **ช่องกรอกตัวเลขแบบใส่คอมมาอัตโนมัติ** (`resources/views/layout/inc_js.blade.php`, 18/08/2569): ช่องกรอกราคา/น้ำหนัก/จำนวน **ห้ามใช้ `type="number"`** (แสดงคอมมาไม่ได้) ให้ใช้ `type="text" class="js-comma"` แทน — ตัวช่วยกลางอยู่ใน `inc_js` จึงใช้ได้ทุกหน้าโดยไม่ต้อง include เพิ่ม
   - `data-decimals="0"` = จำนวนเต็ม (ไม่ระบุ = ทศนิยม 2 ตำแหน่ง)
   - **ค่าที่แสดงในช่องมีคอมมาเสมอ** → อ่านค่าด้วย `numVal(sel)` / `numOf(value)` และเรียก `stripCommaFields(form)` **ก่อน** `serialize()` / `new FormData()` ทุกครั้ง ไม่งั้น `'1,234.50'` จะลง DB เป็น `1.00`

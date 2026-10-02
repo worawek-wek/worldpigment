@@ -54,7 +54,9 @@
     <script src="assets/vendor/libs/select2/select2.js"></script>
     <script src="assets/vendor/libs/bootstrap-select/bootstrap-select.js"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    {{-- SweetAlert2 v11.26.25 เก็บไว้ในเครื่องแล้ว (02/10/2569) — เดิมโหลดจาก cdn.jsdelivr.net
+         ไม่มีเน็ต = Swal ไม่ถูกนิยาม กล่องยืนยัน/แจ้งเตือนใช้ไม่ได้ทั้งระบบ --}}
+    <script src="assets/vendor/libs/sweetalert2-v11/sweetalert2.all.min.js"></script>
     <script src="../../assets/vendor/js/dropdown-hover.js"></script>
 
     {{-- <script src="assets/vendor/libs/sweetalert2/sweetalert2.js"></script>
