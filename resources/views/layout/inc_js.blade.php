@@ -48,6 +48,8 @@
     <script src="assets/vendor/libs/apex-charts/apexcharts.js"></script>
     <script src="assets/vendor/libs/moment/moment.js"></script>
     <script src="assets/vendor/libs/flatpickr/flatpickr.js"></script>
+    {{-- หมุนล้อเมาส์ปรับชั่วโมง/นาทีใน flatpickr — ทำงานเฉพาะช่องที่ใส่ plugins: [scrollPlugin()] (05/10/2569) --}}
+    <script src="assets/vendor/libs/flatpickr/plugins/scrollPlugin.js"></script>
     <script src="assets/vendor/libs/bootstrap-datepicker/bootstrap-datepicker.js"></script>
     {{-- <script src="assets/vendor/libs/bootstrap-daterangepicker/bootstrap-daterangepicker.js"></script> --}}
     <script src="assets/vendor/libs/datatables-bs5/datatables-bootstrap5.js"></script>

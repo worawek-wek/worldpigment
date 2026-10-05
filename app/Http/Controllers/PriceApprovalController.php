@@ -176,6 +176,10 @@ class PriceApprovalController extends Controller
                 'sale' => $cust->sale,      // เลข "# 15" ข้างรหัสลูกค้า
                 'term' => $cust->term,
                 'type' => $cust->type,
+                // สถานะ Blacklist — ฝั่งจอใช้เตือนแล้วล้างรหัสลูกค้าทิ้ง แบบเดียวกับฟอร์มใบสั่งซื้อ (05/10/2569)
+                'is_black'  => OrderController::isBlacklisted($cust->black),
+                'blackrem'  => $cust->blackrem,
+                'blackdate' => $cust->blackdate,
             ],
             'request'  => $req ? [
                 'ReqDate' => $req->ReqDate,
@@ -706,6 +710,45 @@ class PriceApprovalController extends Controller
         // — ไม่งั้น MK ที่แก้ใบซึ่งอนุมัติไปแล้วจะเผลอทับ enddate ด้วยช่องที่ถูกล็อกไว้ (ค่าว่าง)
         $writeZcust = $appv && $mdMode;
 
+        // ใบที่ "ยังไม่อนุมัติ" แต่ผู้ใช้แก้ช่อง "อนุมัติราคาถึง" เองในโหมดอนุมัติ → เก็บวันที่ลง zcustprice.enddate ด้วย
+        // (05/10/2569 ตามที่ผู้ใช้สั่ง — เดิมวันที่ถูกเก็บเฉพาะตอนอนุมัติ แก้แล้วบันทึกจึงเด้งกลับเป็นวันเดิม)
+        // เขียน enddate + exprice (ราคาขายครั้งนี้) — ไม่แตะ remark
+        // ต้องมีธง valid_to_changed จากจอ (ผู้ใช้แตะช่องจริง) ไม่งั้นค่าเริ่มต้นที่ฟอร์มเติมให้เองจะถูกเขียนทุกครั้งที่บันทึก
+        // ⚠ ผลข้างเคียง: คู่ที่เคยมีราคาอนุมัติเก่า ราคานั้นจะกลับมาใช้ผ่านด่านราคาในใบสั่งซื้อได้จนถึงวันที่ตั้งใหม่
+        $writeEndOnly = !$appv && $mdMode && $request->boolean('valid_to_changed')
+            && $this->parseDate($request->input('valid_to')) !== null;
+
+        // "อนุมัติราคาถึง" ห้ามน้อยกว่า "วันที่ขอราคา" (05/10/2569 ตามที่ผู้ใช้สั่ง)
+        // ตรวจเฉพาะรอบที่จะเขียนวันที่ลง zcustprice จริง — MK ที่แก้ใบโดยไม่แตะวันที่ไม่โดนด่านนี้
+        // ใบใหม่ $reqDate = เวลาปัจจุบัน ⇒ วันที่ต้องไม่ก่อนวันนี้
+        if (($writeZcust || $writeEndOnly) && $validTo < substr($reqDate, 0, 10)) {
+            return response()->json([
+                'status'  => false,
+                'message' => '"อนุมัติราคาถึง" ต้องไม่น้อยกว่าวันที่ขอราคา ('
+                    . Carbon::parse($reqDate)->format('d/m/Y') . ')',
+            ], 422);
+        }
+
+        // แก้ "อนุมัติราคาถึง" ของใบที่อนุมัติแล้ว ทั้งที่ไม่ได้อยู่ในโหมดอนุมัติ → ตีกลับ ไม่บันทึกเงียบ ๆ (05/10/2569)
+        // เกิดได้เมื่อโหมดอนุมัติหมดอายุ (MD_UNLOCK_MINUTES) ระหว่างเปิดฟอร์มค้างไว้ — จอยังปลดล็อกช่องวันที่อยู่
+        // เดิมขานี้ตอบ "แก้ไขเรียบร้อย" แต่ไม่เขียน zcustprice ⇒ ผู้ใช้เห็นวันที่เด้งกลับเป็นค่าเดิมโดยไม่รู้สาเหตุ
+        // เทียบกับค่าที่เก็บอยู่: MK ที่แก้หมายเหตุ/ราคาเฉย ๆ (ช่องวันที่ถูกล็อก = ส่งค่าเดิมมา) ยังผ่านตามปกติ
+        if ($appv && !$mdMode) {
+            $sentValidTo = $this->parseDate($request->input('valid_to'));
+            $curEnd      = DB::table('zcustprice')
+                ->where('custno', $custno)
+                ->where('colorno', $itemno)
+                ->value('enddate');
+
+            if ($sentValidTo && $curEnd && substr((string) $curEnd, 0, 10) !== $sentValidTo) {
+                return response()->json([
+                    'status'    => false,
+                    'md_locked' => true,
+                    'message'   => 'แก้ "อนุมัติราคาถึง" ต้องอยู่ในโหมดอนุมัติ — โหมดอนุมัติหมดอายุแล้ว กรุณากรอกรหัสเข้าโหมดอนุมัติใหม่แล้วบันทึกอีกครั้ง (ยังไม่ได้บันทึก)',
+                ], 422);
+            }
+        }
+
         $row = [
             'weight'  => $this->numOrNull($request->input('weight')),
             'price'   => $price,
@@ -728,7 +771,7 @@ class PriceApprovalController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($custno, $itemno, $reqDate, $row, $writeZcust, $validTo, $request) {
+            DB::transaction(function () use ($custno, $itemno, $reqDate, $row, $writeZcust, $writeEndOnly, $validTo, $request) {
                 $key = ['ReqDate' => $reqDate, 'custno' => $custno, 'itemno' => $itemno];
 
                 if (DB::table('appvreq')->where($key)->exists()) {
@@ -744,6 +787,21 @@ class PriceApprovalController extends Controller
                         'exprice' => $this->numOrNull($request->input('price')),
                         'enddate' => $validTo,
                         'remark'  => $this->nullIfBlank($request->input('remark')),
+                    ];
+
+                    if (DB::table('zcustprice')->where($zkey)->exists()) {
+                        DB::table('zcustprice')->where($zkey)->update($zrow);
+                    } else {
+                        DB::table('zcustprice')->insert($zkey + $zrow);
+                    }
+                } elseif ($writeEndOnly) {
+                    // ยังไม่อนุมัติ — เก็บวันที่ยืนราคา + ราคาขาย (= "ราคาขายครั้งนี้") ไม่แตะ remark
+                    // exprice เขียนด้วยตามที่ผู้ใช้สั่ง 05/10/2569 — ไม่งั้นคอลัมน์ "ราคาขาย" ในตารางล่างของฟอร์มว่าง
+                    // (ด่านราคาในใบสั่งซื้อไม่ได้อ่าน exprice — ใช้ appvreq.price ของใบที่ติ๊ก Appv)
+                    $zkey = ['custno' => $custno, 'colorno' => $itemno];
+                    $zrow = [
+                        'exprice' => $this->numOrNull($request->input('price')),
+                        'enddate' => $validTo,
                     ];
 
                     if (DB::table('zcustprice')->where($zkey)->exists()) {

@@ -429,7 +429,7 @@ class OrderController extends Controller
      *   -1 (220) · 2 (49) · 5 (2) · NULL (1)
      * ⚠ **NULL ถือว่า "ไม่ติด"** (ข้อมูลว่าง ไม่ใช่การขึ้นบัญชีดำ) — ยังไม่ได้ยืนยันกับผู้ใช้
      */
-    private static function isBlacklisted($black): bool
+    public static function isBlacklisted($black): bool   // public — ฟอร์ม MK (PriceApprovalController) ใช้เกณฑ์เดียวกัน (05/10/2569)
     {
         return $black !== null && (int) $black !== 0;
     }

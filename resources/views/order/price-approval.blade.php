@@ -3,22 +3,29 @@
     ค่าทั้งหมดเติมด้วย JS (ดู fillApprovalForm ใน order/index.blade.php)
 
     2 ขั้นตอนของฟอร์มนี้:
-      1) ขอราคา  — เลือกลูกค้า+สินค้า แล้วกรอกใบขอราคา
+      1) ขอราคา  — เปิดมาเป็นโหมด "แก้ไข" (ดู/แก้ใบเดิม) · จะขอราคาใบใหม่ต้องกดปุ่ม
+                   "สร้างราคาพิเศษใหม่" ก่อน (05/10/2569 — ดู setApprovalFormMode ใน order/index.blade.php)
                    คู่ที่เคยขอไว้แล้วจะดึงใบล่าสุดมาแสดงให้แก้ทับ (1 คู่ = 1 ใบ)
       2) อนุมัติ — กรอกรหัส → กดปลดล็อก → เลือกลูกค้า+สินค้า
                    ดูใบที่ขอไว้แล้วตัดสินใจติ๊ก "อนุมัติ"
 
     ⚠ ยังไม่ยืนยันว่ารหัสที่ใช้ปลดล็อกเป็นของ MD โดยเฉพาะ (ฟอร์ม Access เดิมเขียนว่า "รหัสผ่าน MD"
       แต่หาที่เก็บจริงไม่เจอ) — บนจอจึงเรียกแค่ "รหัส" ไม่ผูกกับตำแหน่งใด
-    ปุ่ม "พิมพ์" ยังเป็น window.print() — ยังไม่มีแบบฟอร์มกระดาษให้อ้างอิง
+
+    ผังช่องกรอก (05/10/2569 ตามที่ผู้ใช้สั่ง "ปรับให้กระชับเหมือนฟอร์ม Order"):
+      label อยู่ซ้าย ต่อด้วยช่องกรอก ด้วยโครง .of-row / .of-ctl ตัวเดียวกับฟอร์มใบสั่งซื้อ
+      (CSS อยู่ใน order/index.blade.php — ความกว้าง label ของฟอร์มนี้ตั้งที่ .pa-body { --of-lw })
+      ⚠ ช่องกรอกต้องอยู่ใน .of-ctl เสมอ (enhanceSelects ห่อ select ด้วย element ใหม่)
+      แต่ละแถวเป็น .row ของตัวเอง — แถวที่ 2 เป็นต้นไปใส่ mt-0 ให้ระยะระหว่างแถว = gy-2 พอดี
+      แถวที่ไม่มี label (ป้ายกลุ่ม / checkbox) ใส่ .form-label เปล่าไว้เป็นตัวเว้นระยะ ให้ตรงแนวช่องกรอก
 --}}
-<div class="modal-body px-4 py-4 pa-body">
+<div class="modal-body px-4 py-3 pa-body">
 
     {{-- ── แถวบน: ช่องรหัส (ปลดล็อกโหมดอนุมัติ) + ปุ่มตรวจสอบ/ประวัติ ──
          ฟอร์มนี้มี 2 โหมด: "ขอราคา"  = ค่าเริ่มต้น ช่องอนุมัติถูกล็อก
                             "อนุมัติ" = กรอกรหัสแล้วกดปลดล็อกก่อน
          การปลดล็อกตรวจที่ server + เก็บใน session (ดู PriceApprovalController::unlock) --}}
-    <div class="row g-3 align-items-end">
+    <div class="row g-2 align-items-end">
         <div class="col-md-5">
             <label class="form-label">
                 กรอกรหัสเพื่อเข้าสู่โหมดอนุมัติ
@@ -49,6 +56,7 @@
         </div>
         <div class="col-md-7">
             <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                {{-- ปุ่ม "สร้างราคาพิเศษใหม่" อยู่บนหัว modal (มุมขวาบน) — ดู #approvalModal ใน order/index.blade.php --}}
                 {{-- ถามรหัสสินค้าก่อน แล้วเปิดรายงาน PDF ประวัติการขอราคาของเบอร์นั้น ทุกลูกค้า (12/09/2569) --}}
                 <button type="button" class="btn btn-sm btn-label-primary" onclick="approvalOtherItems()">
                     <i class="ti ti-list-search me-1"></i>ตรวจสอบ เบอร์อื่น ...
@@ -70,7 +78,7 @@
         </div>
     </div>
 
-    <hr class="my-3">
+    <hr class="my-2">
 
     {{-- ตัวเดินระเบียน "ใบที่รออนุมัติ" ย้ายไปอยู่ใน modal-footer แล้ว (12/09/2569)
          ดู #approvalModal ใน order/index.blade.php --}}
@@ -80,186 +88,218 @@
         {{-- ═══════════ ซ้าย: ข้อมูลใบขอราคา ═══════════ --}}
         <div class="col-xl-8">
 
-            {{-- บอกว่าคู่ (ลูกค้า, เบอร์) นี้อยู่ขั้นตอนไหน — ยังไม่เคยขอ / รออนุมัติ / อนุมัติแล้ว
-                 1 คู่ = 1 ใบที่แก้ได้ (ใบล่าสุด) กดบันทึกจะแก้ทับใบเดิมเสมอ --}}
-            <div id="a_reqState" class="alert py-2 px-3 mb-3 small"></div>
+            {{-- แถบบอกขั้นตอนของคู่ (ลูกค้า, เบอร์) #a_reqState ย้ายขึ้นไปอยู่บนหัว modal แล้ว (05/10/2569)
+                 ดู #approvalModal ใน order/index.blade.php --}}
 
-            <div class="row g-3">
-                <div class="col-md-5">
-                    <label class="form-label">วันที่ขอราคา</label>
-                    <input type="text" id="a_ReqDate" class="form-control" readonly>
+            <div class="row gx-3 gy-2">
+                <div class="col-md-5 of-row">
+                    <label class="form-label" for="a_ReqDate">วันที่ขอราคา</label>
+                    <div class="of-ctl">
+                        <input type="text" id="a_ReqDate" class="form-control" readonly>
+                    </div>
                 </div>
             </div>
 
-            <div class="row g-3 mt-1 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label">รหัสลูกค้า</label>
-                    <input type="text" id="a_custno" class="form-control" maxlength="10"
-                        oninput="onApprovalCustChange(this.value)">
+            <div class="row gx-3 gy-2 mt-0">
+                <div class="col-md-5 of-row">
+                    <label class="form-label" for="a_custno">รหัสลูกค้า</label>
+                    <div class="of-ctl">
+                        <input type="text" id="a_custno" class="form-control" maxlength="10"
+                            oninput="onApprovalCustChange(this.value)">
+                    </div>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">
-                        # <span class="text-muted fw-normal small">พนักงานขาย</span>
-                    </label>
-                    <input type="text" id="a_sale" class="form-control bg-light text-center" readonly>
+                <div class="col-md-2 of-row of-row-auto">
+                    <label class="form-label" for="a_sale" title="รหัสพนักงานขาย">#</label>
+                    <div class="of-ctl">
+                        <input type="text" id="a_sale" class="form-control bg-light text-center" readonly>
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label">ชื่อลูกค้า</label>
-                    <input type="text" id="a_custname" class="form-control text-primary fw-semibold" readonly>
+                {{-- รหัสสินค้าอยู่แถวเดียวกับรหัสลูกค้า ส่วนชื่อลูกค้าลงไปแถวล่างเต็มความกว้าง
+                     (สลับที่กัน 05/10/2569 ตามที่ผู้ใช้สั่ง — ชื่อลูกค้าต้องแสดงยาว ๆ) --}}
+                <div class="col-md-5 of-row of-row-auto">
+                    <label class="form-label" for="a_itemno">รหัสสินค้า</label>
+                    <div class="of-ctl">
+                        {{-- force-select2: รายการรหัสสินค้าของลูกค้ารายหนึ่งมักยาว (uprice + zcustprice)
+                             จึงบังคับให้เป็นช่องค้นหาตั้งแต่แรก ไม่ต้องรอสลับชนิดตอนโหลดตัวเลือกเสร็จ --}}
+                        <select id="a_itemno" class="form-select force-select2" onchange="loadApprovalData()">
+                            <option value="">— เลือกลูกค้าก่อน —</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
-            <div class="row g-3 mt-1">
-                <div class="col-md-6">
-                    <label class="form-label">รหัสสินค้า</label>
-                    {{-- force-select2: รายการรหัสสินค้าของลูกค้ารายหนึ่งมักยาว (uprice + zcustprice)
-                         จึงบังคับให้เป็นช่องค้นหาตั้งแต่แรก ไม่ต้องรอสลับชนิดตอนโหลดตัวเลือกเสร็จ --}}
-                    <select id="a_itemno" class="form-select force-select2" onchange="loadApprovalData()">
-                        <option value="">— เลือกลูกค้าก่อน —</option>
-                    </select>
+            <div class="row gx-3 gy-2 mt-0">
+                <div class="col-12 of-row">
+                    <label class="form-label" for="a_custname">ชื่อลูกค้า</label>
+                    <div class="of-ctl">
+                        <input type="text" id="a_custname" class="form-control text-primary fw-semibold" readonly>
+                    </div>
                 </div>
             </div>
 
             {{-- ราคา 3 ช่อง (กลุ่ม A / B / C ตามปริมาณสั่งซื้อ)
                  = ราคาขาย 1/2/3 ที่คำนวณจากเมนู "กำหนดราคา" (ProductPriceService) ตามรหัสสินค้า
                  — ไม่ได้เอาค่าที่เคยบันทึกไว้ใน appvreq มาโชว์ --}}
-            <div class="row g-3 mt-1 align-items-end">
-                <div class="col-12">
+            <div class="row gx-3 gy-2 mt-0">
+                <div class="col-12 of-row">
                     <label class="form-label">
                         ราคา 3 ช่อง
-                        <span class="text-muted fw-normal small">(คำนวณจากเมนูกำหนดราคา)</span>
+                        <span class="text-muted fw-normal small d-block">(คำนวณจากเมนูกำหนดราคา)</span>
                     </label>
-                    <div class="d-flex flex-wrap align-items-end gap-2">
-                        {{-- ป้ายเกณฑ์ A/B/C อยู่ใต้ช่อง "จำนวนสั่งซื้อ" (ดูท้ายฟอร์ม) — ตรงนี้ดูกลุ่มที่ใช้จริง
-                             ได้จากกรอบที่ถูกเน้น + ช่อง "กลุ่ม" --}}
-                        <div class="pa-pricebox" id="a_box1">
-                            <input type="text" id="a_price1" class="form-control text-end" readonly>
-                        </div>
-                        <div class="pa-pricebox" id="a_box2">
-                            <input type="text" id="a_price2" class="form-control text-end" readonly>
-                        </div>
-                        <div class="pa-pricebox" id="a_box3">
-                            <input type="text" id="a_price3" class="form-control text-end" readonly>
+                    <div class="of-ctl">
+                        <div class="d-flex flex-wrap align-items-end gap-2">
+                            {{-- ป้ายเกณฑ์ A/B/C อยู่ใต้ช่อง "จำนวนสั่งซื้อ" (ดูท้ายฟอร์ม) — ตรงนี้ดูกลุ่มที่ใช้จริง
+                                 ได้จากกรอบที่ถูกเน้น + ช่อง "กลุ่ม" --}}
+                            <div class="pa-pricebox" id="a_box1">
+                                <input type="text" id="a_price1" class="form-control text-end" readonly>
+                            </div>
+                            <div class="pa-pricebox" id="a_box2">
+                                <input type="text" id="a_price2" class="form-control text-end" readonly>
+                            </div>
+                            <div class="pa-pricebox" id="a_box3">
+                                <input type="text" id="a_price3" class="form-control text-end" readonly>
+                            </div>
+
+                            {{-- 2 ช่องขวาของฟอร์มเดิม = ขั้น DB 3-4 Kg. / DB 1-2 Kg. ของระบบกำหนดราคา
+                                 ⚠ ตัวคูณยังเป็นค่าเดา (ดู config/product_price.php → tier) --}}
+                            <div class="pa-pricebox">
+                                <div class="pa-pricebox-cap">
+                                    DB 3-4 Kg.
+                                    <i class="ti ti-info-circle text-danger" title="ตัวคูณยังเป็นค่าเดา — รอสูตรจริงจากลูกค้า"></i>
+                                </div>
+                                <input type="text" id="a_price_34" class="form-control text-end pa-hl-yellow" readonly>
+                            </div>
+                            <div class="pa-pricebox">
+                                <div class="pa-pricebox-cap">
+                                    DB 1-2 Kg.
+                                    <i class="ti ti-info-circle text-danger" title="ตัวคูณยังเป็นค่าเดา — รอสูตรจริงจากลูกค้า"></i>
+                                </div>
+                                <input type="text" id="a_price_12" class="form-control text-end pa-hl-pink" readonly>
+                            </div>
                         </div>
 
-                        {{-- 2 ช่องขวาของฟอร์มเดิม = ขั้น DB 3-4 Kg. / DB 1-2 Kg. ของระบบกำหนดราคา
-                             ⚠ ตัวคูณยังเป็นค่าเดา (ดู config/product_price.php → tier) --}}
-                        <div class="pa-pricebox">
-                            <div class="pa-pricebox-cap">
-                                DB 3-4 Kg.
-                                <i class="ti ti-info-circle text-danger" title="ตัวคูณยังเป็นค่าเดา — รอสูตรจริงจากลูกค้า"></i>
-                            </div>
-                            <input type="text" id="a_price_34" class="form-control text-end pa-hl-yellow" readonly>
-                        </div>
-                        <div class="pa-pricebox">
-                            <div class="pa-pricebox-cap">
-                                DB 1-2 Kg.
-                                <i class="ti ti-info-circle text-danger" title="ตัวคูณยังเป็นค่าเดา — รอสูตรจริงจากลูกค้า"></i>
-                            </div>
-                            <input type="text" id="a_price_12" class="form-control text-end pa-hl-pink" readonly>
-                        </div>
+                        {{-- เหตุผลที่คำนวณไม่ได้ (ขาคำนวณได้จะว่าง) — ⚠ อย่าลบ ดู fillApprovalPrices --}}
+                        <div id="a_price_note" class="of-price-note"></div>
                     </div>
-
-                    {{-- ที่มาของราคา (ราคาทุน · เงื่อนไขที่เข้า · สูตร) หรือเหตุผลที่คำนวณไม่ได้
-                         — รูปแบบเดียวกับใต้กล่องราคาในใบสั่งซื้อ / หน้าค้นหาราคาสินค้า --}}
-                    <div id="a_price_note" class="of-price-note"></div>
                 </div>
             </div>
 
-            <div class="row g-3 mt-1 align-items-end">
-                <div class="col-md-5">
-                    <label class="form-label fw-bold text-danger">ราคาขายครั้งนี้</label>
-                    <div class="input-group">
-                        {{-- input ธรรมดา (ไม่ใช่ type=number) เพื่อให้ใส่คอมมาคั่นหลักพันได้ — อ่านค่าด้วย numVal() --}}
-                        <input type="text" id="a_price" class="form-control text-end fw-bold pa-sell js-comma"
-                            inputmode="decimal" autocomplete="off">
-                        <span class="input-group-text">บาท</span>
+            <div class="row gx-3 gy-2 mt-0">
+                <div class="col-md-5 of-row">
+                    <label class="form-label fw-bold text-danger" for="a_price">ราคาขายครั้งนี้</label>
+                    <div class="of-ctl">
+                        <div class="input-group">
+                            {{-- input ธรรมดา (ไม่ใช่ type=number) เพื่อให้ใส่คอมมาคั่นหลักพันได้ — อ่านค่าด้วย numVal() --}}
+                            <input type="text" id="a_price" class="form-control text-end fw-bold pa-sell js-comma"
+                                inputmode="decimal" autocomplete="off">
+                            <span class="input-group-text">บาท</span>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-5">
-                    <label class="form-label">จำนวนสั่งซื้อ</label>
-                    <div class="input-group">
-                        <input type="text" id="a_weight" class="form-control text-end js-comma"
-                            inputmode="decimal" autocomplete="off"
-                            oninput="highlightPriceGroup()">
-                        <span class="input-group-text">ก.ก.</span>
+                <div class="col-md-5 of-row of-row-auto">
+                    <label class="form-label" for="a_weight">จำนวนสั่งซื้อ</label>
+                    <div class="of-ctl">
+                        <div class="input-group">
+                            <input type="text" id="a_weight" class="form-control text-end js-comma"
+                                inputmode="decimal" autocomplete="off"
+                                oninput="highlightPriceGroup()">
+                            <span class="input-group-text">ก.ก.</span>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">กลุ่ม</label>
-                    <input type="text" id="a_group" class="form-control text-center fw-bold bg-light" readonly>
+                <div class="col-md-2 of-row of-row-auto">
+                    <label class="form-label" for="a_group">กลุ่ม</label>
+                    <div class="of-ctl">
+                        <input type="text" id="a_group" class="form-control text-center fw-bold bg-light" readonly>
+                    </div>
                 </div>
             </div>
 
             {{-- ป้ายเกณฑ์กลุ่มราคา A/B/C ใต้ช่อง "จำนวนสั่งซื้อ" — ตามฟอร์ม Access เดิม (12/09/2569)
                  ข้อความตรงกับ PriceApprovalController::PRICE_GROUPS
                  กล่องของกลุ่มที่ตรงกับจำนวนสั่งซื้อจะถูกเน้น (ดู highlightPriceGroup) --}}
-            <div class="row g-3 mt-1">
-                <div class="col-12">
-                    <div class="pa-grouplegend">
-                        {{-- บรรทัดล่างของแต่ละป้าย = ราคาของกลุ่มนั้น (19/09/2569 ตามที่ผู้ใช้สั่ง)
-                             ตัวเลขชุดเดียวกับช่องราคา 3 ช่องด้านบน — เติมโดย setApprovalGroupPrices() --}}
-                        <div class="pa-gitem" id="a_glabel1">
-                            <span class="pa-gitem-cap">กลุ่ม A = 1,000 kg. up</span>
-                            <span class="pa-gitem-price" id="a_gprice1">—</span>
-                        </div>
-                        <div class="pa-gitem" id="a_glabel2">
-                            <span class="pa-gitem-cap">กลุ่ม B = 500 kg UP</span>
-                            <span class="pa-gitem-price" id="a_gprice2">—</span>
-                        </div>
-                        <div class="pa-gitem" id="a_glabel3">
-                            <span class="pa-gitem-cap">กลุ่ม C = under 500 kg.</span>
-                            <span class="pa-gitem-price" id="a_gprice3">—</span>
+            <div class="row gx-3 gy-2 mt-0">
+                <div class="col-12 of-row">
+                    <div class="form-label" aria-hidden="true"></div>
+                    <div class="of-ctl">
+                        <div class="pa-grouplegend">
+                            {{-- บรรทัดล่างของแต่ละป้าย = ราคาของกลุ่มราคา (zcolorrate) — เติมโดย setApprovalGroupPrices() --}}
+                            <div class="pa-gitem" id="a_glabel1">
+                                <span class="pa-gitem-cap">กลุ่ม A = 1,000 kg. up</span>
+                                <span class="pa-gitem-price" id="a_gprice1">—</span>
+                            </div>
+                            <div class="pa-gitem" id="a_glabel2">
+                                <span class="pa-gitem-cap">กลุ่ม B = 500 kg UP</span>
+                                <span class="pa-gitem-price" id="a_gprice2">—</span>
+                            </div>
+                            <div class="pa-gitem" id="a_glabel3">
+                                <span class="pa-gitem-cap">กลุ่ม C = under 500 kg.</span>
+                                <span class="pa-gitem-price" id="a_gprice3">—</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="row g-3 mt-1">
-                <div class="col-12">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="a_costup">
-                        <label class="form-check-label" for="a_costup">
-                            ต้นทุนวัตถุดิบปรับขึ้น จึงปรับราคาขาย
-                            <i class="ti ti-info-circle text-muted" title="ยังไม่ยืนยันคอลัมน์ที่เก็บ — รอผู้ใช้ระบุ"></i>
-                        </label>
+            <div class="row gx-3 gy-2 mt-0">
+                <div class="col-12 of-row">
+                    <div class="form-label" aria-hidden="true"></div>
+                    <div class="of-ctl">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="a_costup">
+                            <label class="form-check-label" for="a_costup">
+                                ต้นทุนวัตถุดิบปรับขึ้น จึงปรับราคาขาย
+                                <i class="ti ti-info-circle text-muted" title="ยังไม่ยืนยันคอลัมน์ที่เก็บ — รอผู้ใช้ระบุ"></i>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="row g-3 mt-1">
-                <div class="col-12">
-                    <label class="form-label">หมายเหตุ การปรับราคา</label>
-                    <textarea id="a_remark" class="form-control" rows="3" maxlength="100"></textarea>
+            <div class="row gx-3 gy-2 mt-0">
+                <div class="col-12 of-row">
+                    <label class="form-label" for="a_remark">หมายเหตุ การปรับราคา</label>
+                    <div class="of-ctl">
+                        <textarea id="a_remark" class="form-control" rows="2" maxlength="100"></textarea>
+                    </div>
                 </div>
             </div>
 
-            <div class="row g-3 mt-1 align-items-end">
-                <div class="col-md-3">
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="a_Appv">
-                        <label class="form-check-label fw-bold" for="a_Appv">อนุมัติ</label>
+            <div class="row gx-3 gy-2 mt-0">
+                <div class="col-md-5 of-row">
+                    <div class="form-label" aria-hidden="true"></div>
+                    <div class="of-ctl">
+                        <div class="form-check pt-2">
+                            <input class="form-check-input" type="checkbox" id="a_Appv">
+                            <label class="form-check-label fw-bold" for="a_Appv">อนุมัติ</label>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label">
+                {{-- ช่องนี้ "ซ่อน" เมื่อยังไม่ได้กรอกรหัสเข้าโหมดอนุมัติ (05/10/2569 ตามที่ผู้ใช้สั่ง — เดิมแค่ disabled)
+                     สลับ d-none โดย setApprovalMdMode() --}}
+                <div class="col-md-5 of-row of-row-auto d-none" id="a_validtoBox">
+                    <label class="form-label" for="a_validto">
                         อนุมัติราคาถึง
                         <i class="ti ti-info-circle text-muted" title="เก็บที่ zcustprice.enddate (ยืนราคาถึงวันที่)"></i>
                     </label>
-                    <input type="text" id="a_validto" class="form-control flatpickr-date" autocomplete="off">
+                    <div class="of-ctl">
+                        <input type="text" id="a_validto" class="form-control flatpickr-date" autocomplete="off">
+                    </div>
                 </div>
                 {{-- ปุ่มบันทึก/ลบ/พิมพ์ — col-12 เพื่อให้ตกลงแถวใหม่เต็มความกว้าง (12/09/2569)
                      เดิมเป็น col-md-5 ต่อท้ายแถวเดียวกับช่องอนุมัติ ปุ่มจึงแคบจนข้อความขึ้น 2 บรรทัด --}}
                 <div class="col-12">
-                    <div class="d-flex gap-2 justify-content-md-end">
-                        <button type="button" id="btnApprovalSave" class="btn btn-primary" onclick="approvalSave()">
-                            <i class="ti ti-plus me-1"></i>เพิ่ม / บันทึก
+                    <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                        {{-- ข้อความ + ไอคอนเปลี่ยนตามโหมด (setApprovalFormMode):
+                             โหมดสร้างใหม่ = "เพิ่ม" · โหมดแก้ไข = "บันทึกการแก้ไข" (05/10/2569) --}}
+                        <button type="button" id="btnApprovalSave" class="btn btn-success" onclick="approvalSave()">
+                            <i class="ti ti-device-floppy me-1" id="btnApprovalSaveIcon"></i><span id="btnApprovalSaveText">บันทึกการแก้ไข</span>
                         </button>
                         <button type="button" id="btnApprovalDelete" class="btn btn-label-danger" onclick="approvalDelete()">
                             <i class="ti ti-trash me-1"></i>ลบ รายการ
                         </button>
                         <button type="button" class="btn btn-label-info" onclick="approvalPrint()">
-                            <i class="ti ti-printer me-1"></i>พิมพ์
+                            <i class="ti ti-printer me-1"></i>พิมพ์ที่อนุมัติแล้ว ย้อนหลัง 3 วัน
                         </button>
                     </div>
                 </div>
@@ -271,28 +311,36 @@
             <div class="pa-sidebox h-100">
                 <div class="pa-sidebox-title"><i class="ti ti-receipt"></i>ราคาที่ตกลงไว้ล่าสุด</div>
 
-                <div class="mb-2">
-                    <label class="form-label small mb-1">ราคา (uprice)</label>
-                    <input type="text" id="a_uprice" class="form-control form-control-sm text-end" readonly>
+                <div class="mb-2 of-row">
+                    <label class="form-label small" for="a_uprice">ราคา (uprice)</label>
+                    <div class="of-ctl">
+                        <input type="text" id="a_uprice" class="form-control form-control-sm text-end" readonly>
+                    </div>
                 </div>
-                <div class="mb-2">
-                    <label class="form-label small mb-1">วันที่</label>
-                    <input type="text" id="a_uprice_date" class="form-control form-control-sm" readonly>
+                <div class="mb-2 of-row">
+                    <label class="form-label small" for="a_uprice_date">วันที่</label>
+                    <div class="of-ctl">
+                        <input type="text" id="a_uprice_date" class="form-control form-control-sm" readonly>
+                    </div>
                 </div>
-                <div class="mb-2">
-                    <label class="form-label small mb-1">หมายเหตุ 1</label>
-                    <textarea id="a_uprice_rem1" class="form-control form-control-sm" rows="2" readonly></textarea>
+                <div class="mb-2 of-row">
+                    <label class="form-label small" for="a_uprice_rem1">หมายเหตุ 1</label>
+                    <div class="of-ctl">
+                        <textarea id="a_uprice_rem1" class="form-control form-control-sm" rows="2" readonly></textarea>
+                    </div>
                 </div>
-                <div>
-                    <label class="form-label small mb-1">หมายเหตุ 2</label>
-                    <textarea id="a_uprice_rem2" class="form-control form-control-sm" rows="3" readonly></textarea>
+                <div class="of-row">
+                    <label class="form-label small" for="a_uprice_rem2">หมายเหตุ 2</label>
+                    <div class="of-ctl">
+                        <textarea id="a_uprice_rem2" class="form-control form-control-sm" rows="3" readonly></textarea>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     {{-- ═══════════ ตารางล่าง (zcustprice) + ผลของปุ่มตรวจสอบ/ประวัติ ═══════════ --}}
-    <div class="mt-4">
+    <div class="mt-3">
         <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
             <h6 class="mb-0 fw-bold text-primary" id="a_gridTitle">ราคาที่ยืนไว้ของเบอร์นี้</h6>
             <span class="text-muted small" id="a_gridCount"></span>

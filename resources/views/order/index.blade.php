@@ -41,6 +41,51 @@
     white-space: nowrap;
 }
 
+/* ปุ่ม "สร้างราคาพิเศษใหม่" บนหัว modal ฟอร์ม MK — ชิดขวา (05/10/2569)
+   margin-right เว้นที่ให้ปุ่มปิดซึ่งเป็น position:absolute (ไม่กินที่ในแนว flex) แบบเดียวกับ #o_appv_status */
+/* แถบบอกโหมด/ขั้นตอน (#a_reqState) บนหัว modal ฟอร์ม MK — อยู่ระหว่างชื่อฟอร์มกับปุ่มสร้างใหม่ (05/10/2569)
+   margin-left 77px = พ้นสามเหลี่ยมเฉียง ::after ของ .modal-title (ยื่นออกขวา 65px ไม่กินที่ในแนว flex)
+   หดได้ (flex-shrink) + ข้อความตัดบรรทัดได้ เมื่อที่ไม่พอ */
+#approvalModal .modal-header #a_reqState {
+    margin: .25rem .75rem .25rem 77px;
+    flex: 0 1 auto;
+    min-width: 0;
+    line-height: 1.35;
+}
+#approvalModal .modal-header #btnApprovalNew {
+    margin-left: auto;
+    margin-right: 4.5rem;
+    white-space: nowrap;
+}
+
+/* หัว modal ใบสั่งซื้อ = ชื่อฟอร์ม · แถบประเภทใบสั่ง · badge สถานะ ในแถวเดียว (05/10/2569 ตามที่ผู้ใช้สั่ง)
+   แถบประเภทย้ายมาจากตัวฟอร์ม จึงย่อขนาดลงให้สูงไม่เกินแถบ teal (65px) — กฎชุดนี้ทับค่าของ .of-typebar ด้านล่าง
+   ⚠ margin-left ของแถบต้องพ้นสามเหลี่ยมเฉียง ::after ของ .modal-title (ยื่นออกขวา 65px และไม่กินที่ในแนว flex)
+   flex-wrap เผื่อจอแคบ — ไม่พอแถวเดียวจะตกลงบรรทัดถัดไปแทนที่จะล้นออกนอก modal */
+#orderModal .modal-header { flex-wrap: wrap; column-gap: .75rem; }
+/* ลด padding ของแถบชื่อฟอร์ม (05/10/2569 ตามที่ผู้ใช้สั่ง) — เฉพาะ modal ใบสั่งซื้อ modal อื่นยังเท่าเดิม
+   align-self:stretch ให้แถบ teal สูงเต็มหัว modal เสมอ (ความสูงหัวมาจากแถบประเภทใบสั่ง)
+   ⚠ สามเหลี่ยมเฉียงของ modal นี้วาดด้วย clip-path สูง 100% ของแถบ แทน border 65px ตายตัวของ .modalHeadDecor
+     ไม่งั้นพอแถบเตี้ยลง สามเหลี่ยมจะยื่นเลยขอบล่างของหัว modal */
+#orderModal .modal-header .modal-title {
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    padding: .5rem 1.25rem;
+}
+#orderModal .modal-header .modal-title::after {
+    right: -48px;
+    width: 48px;
+    height: 100%;
+    border: 0;
+    background-color: #54BAB9;
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+#orderModal .modal-header .of-typebar { margin: .25rem 0 .25rem 54px; padding: .4rem .7rem; }
+#orderModal .modal-header .of-typebar-inner { gap: .5rem 1.25rem; }
+#orderModal .modal-header .of-typegrid { gap: .4rem 1.25rem; }
+#orderModal .modal-header .of-tbtn { min-width: 46px; padding: .3rem .6rem; }
+
 /* ── เรียงตาม — คลิกหัวตาราง + เน้นคอลัมน์ที่กำลังเรียง (เหมือนหน้าใบเสนอราคา) ── */
 #table-data th.th-sort { cursor: pointer; user-select: none; }
 #table-data th.th-sort:hover { background-color: #e9ecef; }
@@ -150,6 +195,38 @@
 .of-sec-title > span { display: inline-flex; align-items: center; gap: .5rem; }
 .of-sec .form-label { margin-bottom: .25rem; font-size: .85rem; font-weight: 600; }
 
+/* แถวช่องกรอกแบบ "label อยู่ซ้าย ต่อด้วย input" ตามฟอร์ม Access เดิม (05/10/2569 ตามที่ผู้ใช้สั่ง
+   — เดิม label อยู่บน input) · โครง: <div class="of-row"><label class="form-label"> + <div class="of-ctl">
+   ⚠ ช่องกรอกต้องอยู่ใน .of-ctl เสมอ — enhanceSelects() ห่อ <select> ด้วย element ใหม่ ถ้าวาง select
+     เป็นลูกตรงของ .of-row ตัวห่อจะกลายเป็น flex item แทนแล้วความกว้างเพี้ยน
+   ความกว้าง label ตั้งต่อกล่องด้วยตัวแปร --of-lw ให้ช่องกรอกในกล่องเดียวกันตรงแนวกัน
+   .of-row-auto = label กว้างเท่าข้อความ (ช่องที่ 2 ของแถว เช่น วันที่ / P/O No. / รหัสผู้ขาย) */
+.of-row { display: flex; align-items: flex-start; gap: .5rem; }
+.of-sec .of-row > .form-label {
+    flex: 0 0 var(--of-lw, 92px);
+    margin-bottom: 0;
+    padding-top: .5rem;      /* ให้ข้อความ label ตรงแนวกับข้อความในช่องกรอก */
+    line-height: 1.25;
+}
+.of-sec .of-row.of-row-auto > .form-label { flex-basis: auto; white-space: nowrap; }
+.of-row > .of-ctl { flex: 1 1 0; min-width: 0; }
+.of-sec-stock { --of-lw: 122px; }
+.of-sec-item  { --of-lw: 84px; }
+
+/* ฟอร์ม MK ขออนุมัติราคาพิเศษ ใช้โครง .of-row ตัวเดียวกัน (05/10/2569 ตามที่ผู้ใช้สั่ง "ปรับให้กระชับเหมือนฟอร์ม Order")
+   ⚠ selector ต้องมี .pa-body นำหน้า + ลึกกว่า `.pa-body .form-label` ด้านล่าง ไม่งั้น margin-bottom ของกฎนั้นชนะ */
+.pa-body { --of-lw: 112px; }
+.pa-body .of-row > .form-label {
+    flex: 0 0 var(--of-lw);
+    margin-bottom: 0;
+    padding-top: .5rem;
+    line-height: 1.25;
+}
+.pa-body .of-row.of-row-auto > .form-label { flex-basis: auto; white-space: nowrap; }
+/* กล่อง "ราคาที่ตกลงไว้ล่าสุด" — ช่องเป็น form-control-sm จึงลด padding-top ของ label ให้ตรงแนว */
+.pa-body .pa-sidebox { --of-lw: 84px; }
+.pa-body .pa-sidebox .of-row > .form-label { padding-top: .3rem; }
+
 /* กล่อง "รายการในใบสั่งซื้อ" — ไม่เอาพื้นไล่สี (21/09/2569 ตามที่ผู้ใช้สั่ง) ให้เป็นขาวล้วน
    ⚠ ชื่อ .of-sec-plain ตั้งไม่ให้ใกล้ .of-sec-item (กล่องสินค้า) เกินไป จะได้ไม่สับสนเวลาแก้ */
 .of-sec-plain { background: #fff; border-color: #e2e7ea; }
@@ -170,7 +247,8 @@
 .of-sell      { background-color: #e8e8e8 !important; }
 
 /* แถว checkbox ท้ายกล่องซ้าย */
-.of-checkrow { display: flex; flex-wrap: wrap; gap: 1.25rem; padding-top: .35rem; }
+/* gap แนวตั้ง .2rem (เดิม 1.25rem เท่าแนวนอน) — itype ตัดขึ้นหลายบรรทัดหลัง label ย้ายมาอยู่ซ้าย (05/10/2569) */
+.of-checkrow { display: flex; flex-wrap: wrap; gap: .2rem 1.25rem; padding-top: .35rem; }
 
 /* กลุ่ม checkbox ของ itype — ขึ้นกรอบแดงเมื่อใบ W ยังไม่ได้ติ๊ก (syncItypeRequired) */
 .of-itype-box { border: 1px solid transparent; border-radius: .375rem; padding: .1rem .5rem .35rem; }
@@ -242,7 +320,8 @@
 .pa-body .form-label { margin-bottom: .25rem; font-size: .85rem; font-weight: 600; }
 
 /* ช่องราคา 3 ช่อง + ช่องพิเศษ — กล่องเล็กเรียงแนวนอน */
-.pa-pricebox { width: 130px; }
+/* 108px (เดิม 130) — ให้ 5 กล่องพอในแถวเดียวหลัง label ย้ายมาอยู่ซ้าย (05/10/2569) */
+.pa-pricebox { width: 108px; }
 .pa-pricebox-cap {
     font-size: .72rem;
     font-weight: 600;
@@ -257,8 +336,8 @@
 /* ป้ายเกณฑ์กลุ่มราคา A/B/C ใต้ช่อง "จำนวนสั่งซื้อ" (12/09/2569) — ตามฟอร์ม Access เดิม */
 .pa-grouplegend { display: flex; flex-wrap: wrap; gap: .5rem; }
 .pa-gitem {
-    width: 150px;
-    padding: .35rem .5rem;
+    min-width: 180px;   /* เดิม width:150px ตายตัว — ข้อความ "กลุ่ม C = under 500 kg." ตกบรรทัด (05/10/2569) */
+    padding: .35rem .6rem;
     text-align: center;
     font-size: .78rem;
     font-weight: 600;
@@ -274,7 +353,8 @@
     box-shadow: 0 0 0 .18rem rgba(13, 110, 253, .18);
 }
 /* ราคาของกลุ่มนั้น ๆ = บรรทัดล่างของป้าย (19/09/2569) */
-.pa-gitem-cap   { display: block; }
+/* nowrap = กล่องกว้างตามข้อความ ไม่ให้ตกบรรทัด (05/10/2569 ตามที่ผู้ใช้สั่ง — "กลุ่ม C = under 500 kg." เคยขึ้น 2 บรรทัด) */
+.pa-gitem-cap   { display: block; white-space: nowrap; }
 .pa-gitem-price {
     display: block;
     margin-top: .15rem;
@@ -590,6 +670,44 @@
 
             <div class="modal-header">
                 <h5 class="modal-title" id="orderModalTitle">บันทึกคำสั่งซื้อ</h5>
+
+                {{-- ── แถบประเภทใบสั่งซื้อ (radio) — 2 ตัวอักษรหน้าเลขที่ใบสั่ง ──
+                     05/10/2569: ย้ายจากบนสุดของตัวฟอร์ม (order/form.blade.php) ขึ้นมาอยู่บนหัว modal
+                     ให้ ชื่อฟอร์ม · แถบประเภท · badge สถานะ อยู่แถวเดียวกัน ตามที่ผู้ใช้สั่ง
+                     ⚠ <input> ยังเป็น radio name="order_type_form" id="o_type_XX" + onchange เดิมทุกประการ
+                       แค่ซ่อนตัว input ด้วย .btn-check แล้วให้ <label> เป็นตัวปุ่มแทน ⇒ JS เดิมทำงานต่อได้เลย
+                       (onOrderTypeChange / orderNew / fillOrderForm / setOrderFormMode ที่ยกเว้น name นี้ไม่ให้ disable)
+                       และยังอยู่ใต้ #orderModal จึงโดน selector เดิมครบ --}}
+                @php
+                    /* จัดปุ่มเป็น 3 กลุ่มตามตัวอักษรแรก (C / H / W) โดยไล่ลำดับเดิมใน OrderController::TYPE_ROWS
+                       (M → I → E → R) — คำนวณที่นี่ ไม่ได้แก้ controller */
+                    $type_groups = [];
+                    foreach ($type_rows as $__row) {
+                        foreach ($__row as $__t) {
+                            $type_groups[substr($__t, 0, 1)][] = $__t;
+                        }
+                    }
+                @endphp
+                <div class="of-typebar">
+                    <div class="of-typebar-inner">
+                        <div class="of-typegrid">
+                            @foreach ($type_groups as $group)
+                                <div class="of-typeset" role="group">
+                                    @foreach ($group as $t)
+                                        <input class="btn-check" type="radio" name="order_type_form" id="o_type_{{ $t }}"
+                                            value="{{ $t }}" autocomplete="off" onchange="onOrderTypeChange('{{ $t }}')">
+                                        <label class="of-tbtn" for="o_type_{{ $t }}">{{ $t }}</label>
+                                    @endforeach
+                                </div>
+                            @endforeach
+                        </div>
+
+                        <button type="button" class="btn btn-sm of-btn-new" onclick="orderNew()">
+                            <i class="ti ti-plus me-1"></i>เพิ่มใบสั่งซื้อใหม่
+                        </button>
+                    </div>
+                </div>
+
                 {{-- สถานะการอนุมัติของใบที่เปิดอยู่ (21/09/2569 ตามที่ผู้ใช้สั่ง)
                      วางไว้ "นอก" .modal-title โดยตั้งใจ — ให้อยู่บนพื้นขาวถัดจากแถบ teal
                      ⚠ ต้องเว้นระยะให้พ้นสามเหลี่ยม ::after ของ .modal-title (ดู CSS #o_appv_status)
@@ -651,6 +769,16 @@
 
             <div class="modal-header">
                 <h5 class="modal-title">MK ขออนุมัติราคาพิเศษ</h5>
+                {{-- แถบบอกโหมด/ขั้นตอนของคู่ (ลูกค้า, เบอร์) — ยังไม่มีใบ / รออนุมัติ / อนุมัติแล้ว / กำลังสร้างใหม่
+                     ย้ายจากบนสุดของตัวฟอร์มขึ้นมาอยู่บนหัว modal (05/10/2569 ตามที่ผู้ใช้สั่ง)
+                     เติมโดย renderApprovalReqState() · ระยะซ้ายเว้นให้พ้นสามเหลี่ยม ::after ของ .modal-title (ดู CSS) --}}
+                <div id="a_reqState" class="alert py-1 px-3 mb-0 small"></div>
+                {{-- เข้าโหมด "สร้างใหม่" — ต้องกดปุ่มนี้ก่อนถึงจะเพิ่มใบขอราคาใบใหม่ได้ (05/10/2569)
+                     ย้ายจากแถวปุ่มในตัวฟอร์มมาไว้มุมขวาบนของหัว modal ตามที่ผู้ใช้สั่ง
+                     ดู setApprovalFormMode() / approvalNew() · ระยะขวาเว้นให้ปุ่มปิด (position:absolute) ดู CSS #btnApprovalNew --}}
+                <button type="button" id="btnApprovalNew" class="btn btn-primary" onclick="approvalNew()">
+                    <i class="ti ti-plus me-1"></i>สร้างราคาพิเศษใหม่
+                </button>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
@@ -834,6 +962,13 @@
         return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
     }
 
+    // วันนี้ (เวลาเครื่องผู้ใช้) รูปแบบ Y-m-d — ใช้เทียบว่าวันยืนราคาเดิมเลยมาแล้วหรือยัง
+    function todayYmd(){
+        var d = new Date();
+        var p = function(n){ return (n < 10 ? '0' : '') + n; };
+        return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+    }
+
     // ตั้งค่าให้ flatpickr (รับ Y-m-d / datetime); ว่าง = เคลียร์
 
     function setFp(id, val){
@@ -888,7 +1023,6 @@
 
         // เลขที่ใบสั่ง — พิมพ์ได้เฉพาะตอน idle
         $('#o_Orderno').prop('readonly', !idle);
-        $('#o_orderno_hint').toggleClass('d-none', !idle);
     }
 
     // เปิดฟอร์มเปล่า (ปุ่มบนหัวหน้ารายการ) — เข้าโหมด idle
@@ -2010,6 +2144,8 @@
 
         // ช่องที่แตะได้เฉพาะโหมดอนุมัติ
         $('#a_Appv, #a_validto').prop('disabled', !unlocked);
+        // "อนุมัติราคาถึง" — ไม่ได้อยู่ในโหมดอนุมัติ = ไม่ให้เห็นเลย (05/10/2569 ตามที่ผู้ใช้สั่ง)
+        $('#a_validtoBox').toggleClass('d-none', !unlocked);
         $('#a_Appv').closest('.form-check')
             .attr('title', unlocked ? '' : 'ต้องกรอกรหัสเพื่อเข้าสู่โหมดอนุมัติก่อน');
     }
@@ -2042,6 +2178,50 @@
     $(document).on('keydown', '#a_mdpass', function(e){
         if (e.key === 'Enter'){ e.preventDefault(); approvalUnlock(); }
     });
+
+    // ── โหมด "แก้ไข" / "สร้างใหม่" ของใบขอราคา (05/10/2569 ตามที่ผู้ใช้สั่ง) ──────────
+    // เดิมปุ่มเดียว "เพิ่ม / บันทึก" ทำทั้งสองอย่าง — เลือกคู่ที่ยังไม่เคยขอ = ขึ้นใบใหม่เงียบ ๆ จึงกำกวม
+    //   edit = ค่าเริ่มต้น: ดู/แก้ใบเดิม ปุ่ม = "บันทึกการแก้ไข"
+    //          คู่ (ลูกค้า, เบอร์) ที่ยังไม่มีใบ → ช่องกรอก + ปุ่มบันทึกถูกปิด ต้องกด "สร้างราคาพิเศษใหม่" ก่อน
+    //   new  = หลังกดปุ่ม "สร้างราคาพิเศษใหม่": ฟอร์มว่าง ปุ่ม = "เพิ่ม"
+    //          เลือกคู่ที่มีใบอยู่แล้ว → เด้งกลับเป็น edit เอง (server เก็บ 1 คู่ = 1 ใบ จะแก้ทับใบเดิมอยู่ดี)
+    // ⚠ เป็นการคุมฝั่งจอล้วน — PriceApprovalController::save() ยังตัดสินเองว่าแก้ทับหรือขึ้นใบใหม่
+    var apvMode = 'edit';
+    var apvReq = null;          // ใบขอราคาที่โหลดมาล่าสุด (null = ยังไม่มีใบ)
+    var apvAutoNew = false;     // เปิดฟอร์มมาพร้อมคู่ (เช่นจากด่านราคาในใบสั่งซื้อ) — ไม่มีใบ = เข้าโหมดสร้างใหม่ให้เลย
+
+    // ผู้ใช้แก้ช่อง "อนุมัติราคาถึง" เองหรือยัง (05/10/2569) — ส่งไปกับ save เป็น valid_to_changed
+    // setFp() ตั้งค่าด้วย triggerChange=false จึงไม่ยิง event นี้ ⇒ ธงขึ้นเฉพาะตอนผู้ใช้เลือก/พิมพ์วันเอง
+    // ล้างธงทุกครั้งที่ฟอร์มถูกเติม/ล้างใหม่ (fillApprovalForm / clearApprovalForm)
+    var apvValidToTouched = false;
+    $(document).on('change', '#a_validto', function(){ apvValidToTouched = true; });
+
+    function setApprovalFormMode(mode){
+        apvMode = (mode === 'new') ? 'new' : 'edit';
+        var isNew = apvMode === 'new';
+        $('#btnApprovalSaveText').text(isNew ? 'เพิ่ม' : 'บันทึกการแก้ไข');
+        $('#btnApprovalSaveIcon').attr('class', 'ti me-1 ' + (isNew ? 'ti-plus' : 'ti-device-floppy'));
+        $('#btnApprovalNew').prop('disabled', isNew);
+        syncApprovalEditable();
+        renderApprovalReqState(apvReq);
+    }
+
+    // ช่องกรอกของใบขอราคา + ปุ่มบันทึก ใช้ได้เมื่อ: อยู่โหมดสร้างใหม่ หรือ มีใบเดิมให้แก้
+    function syncApprovalEditable(){
+        var canEdit = apvMode === 'new' || !!(apvReq && apvReq.ReqDate);
+        $('#a_price, #a_weight, #a_remark, #a_costup, #btnApprovalSave').prop('disabled', !canEdit);
+    }
+
+    // ปุ่ม "สร้างราคาพิเศษใหม่" — ล้างฟอร์มแล้วเข้าโหมดสร้างใหม่ (ออกจากโหมดนี้ = กด Refresh หรือเลือกใบจากตัวเดินระเบียน)
+    function approvalNew(){
+        clearTimeout(apvCustTimer);
+        apvAutoNew = false;
+        clearApprovalForm();
+        paIndex = -1;
+        paRenderNav();
+        setApprovalFormMode('new');
+        $('#a_custno').trigger('focus');
+    }
 
     // ════════════════════════════════════════════════════════
     //  ตัวเดินระเบียน: ใบขอราคาที่ "ยังไม่อนุมัติ" ทั้งหมด (12/09/2569)
@@ -2085,10 +2265,14 @@
         paIndex = i;
         paRenderNav();
 
+        // เลือกใบจากคิว = ดู/แก้ใบเดิมเสมอ (ออกจากโหมดสร้างใหม่ถ้าค้างอยู่)
+        apvAutoNew = false;
+        if (apvMode !== 'edit') setApprovalFormMode('edit');
+
         // เติมลูกค้า+เบอร์ของใบนั้น แล้วให้ flow เดิมโหลดข้อมูลทั้งฟอร์มต่อ
         var r = paQueue[i];
         $('#a_custno').val(r.custno || '');
-        onApprovalCustChange(r.custno || '', r.itemno || '');
+        onApprovalCustChange(r.custno || '', r.itemno || '', true);   // true = ใบเดิมจากคิว ไม่ตรวจ Blacklist
     }
 
     function paStep(delta){
@@ -2116,6 +2300,8 @@
     // เปิดฟอร์ม — ระบุลูกค้า/เบอร์สินค้ามาด้วยก็ได้ (เช่นเรียกจากใบสั่งซื้อในอนาคต)
     function approvalOpen(custno, itemno){
         clearApprovalForm();
+        setApprovalFormMode('edit');    // เปิดมาเป็นโหมดแก้ไขเสมอ — จะเพิ่มใบใหม่ต้องกด "สร้างราคาพิเศษใหม่"
+        apvAutoNew = !!custno;
         $('#approvalModal').modal('show');
         // เริ่มที่โหมดขอราคาไว้ก่อน แล้วค่อยถาม server ว่าปลดล็อกค้างไว้จากรอบก่อนหรือเปล่า
         // (ล็อกไว้ระหว่างรอผลดีกว่าปล่อยช่องอนุมัติเปิดค้างชั่วขณะ)
@@ -2137,21 +2323,36 @@
         $('#approvalModal textarea').val('');
         $('#approvalModal input[type="checkbox"]').prop('checked', false);
         $('#a_itemno').html('<option value="">— เลือกลูกค้าก่อน —</option>');
+        // .val('') ไม่ล้าง .data() — ต้องล้างเอง ไม่งั้นปุ่มลบ/การเช็ค "อนุมัติไปแล้ว" จะอ้างใบก่อนหน้า
+        $('#a_ReqDate').data('reqdate', '').data('appv', 0);
+        $('#btnApprovalDelete').prop('disabled', true);
+        apvReq = null;
         setFp('a_validto', defaultValidToYmd());   // ค่าเริ่มต้น "อนุมัติราคาถึง" = วันทำการถัดไป
+        apvValidToTouched = false;
         setApprovalGroupPrices(null, null, null);  // <span> ไม่ถูกล้างด้วย selector input ด้านบน
         highlightPriceGroup();
+        syncApprovalEditable();
         renderApprovalReqState(null);
         renderApprovalGrid('ราคาที่ยืนไว้ของเบอร์นี้', ZCUST_COLS, []);
     }
 
     // แถบบอกขั้นตอนของคู่ (ลูกค้า, เบอร์) — 1 คู่ = 1 ใบที่แก้ได้ (ใบล่าสุด)
     function renderApprovalReqState(r){
-        var $box = $('#a_reqState').removeClass('alert-secondary alert-warning alert-success');
+        var $box = $('#a_reqState').removeClass('alert-secondary alert-warning alert-success alert-info d-none');
 
         if (!r || !r.ReqDate){
-            $box.addClass('alert-secondary')
-                .html('<i class="ti ti-file-plus me-1"></i>ยังไม่เคยขอราคาของคู่ลูกค้า/เบอร์นี้ — '
-                    + 'กด "เพิ่ม / บันทึก" จะขึ้นใบขอราคาใบใหม่');
+            if (apvMode === 'new'){
+                $box.addClass('alert-info')
+                    .html('<i class="ti ti-file-plus me-1"></i><b>สร้างใบขอราคาใหม่</b> — '
+                        + 'เลือกลูกค้าและรหัสสินค้า กรอกราคา แล้วกด "เพิ่ม" · ยกเลิกให้กด Refresh');
+            } else if ($('#a_itemno').val()){
+                $box.addClass('alert-secondary')
+                    .html('<i class="ti ti-file-off me-1"></i>ยังไม่มีใบขอราคาของคู่ลูกค้า/เบอร์นี้ — '
+                        + 'จะขอราคาให้กดปุ่ม "สร้างราคาพิเศษใหม่" ก่อน');
+            } else {
+                // ยังไม่ได้เลือกลูกค้า+เบอร์ (โหมดแก้ไข) — ไม่ต้องขึ้นข้อความ ซ่อนแถบไปเลย (05/10/2569 ตามที่ผู้ใช้สั่ง)
+                $box.addClass('d-none').html('');
+            }
             return;
         }
 
@@ -2169,8 +2370,12 @@
 
     // เปลี่ยนรหัสลูกค้า → โหลดรายการเบอร์สินค้าของลูกค้ารายนั้น
     var apvCustTimer = null;
-    function onApprovalCustChange(code, preselectItem){
+    // ลูกค้าติด Blacklist ขอราคาไม่ได้ (05/10/2569) — ยกเว้นใบเดิมที่เปิดจากคิวรออนุมัติ (fromQueue)
+    // ซึ่งยังต้องเปิดดู/อนุมัติได้ (แบบเดียวกับใบสั่งซื้อเดิมที่ยังเปิดแก้ได้)
+    var apvBlackExempt = false;
+    function onApprovalCustChange(code, preselectItem, fromQueue){
         code = (code || '').trim();
+        apvBlackExempt = !!fromQueue;
         clearTimeout(apvCustTimer);
         if (!code){
             $('#a_itemno').html('<option value="">— เลือกลูกค้าก่อน —</option>');
@@ -2204,7 +2409,38 @@
                 $('#a_sale').val('');
                 return;
             }
+            var c = res.customer || {};
+            if (c.is_black && !apvBlackExempt){ approvalBlacklistBlock(custno, c); return; }
             fillApprovalForm(res);
+        });
+    }
+
+    // แจ้งเตือนลูกค้าติด Blacklist แล้วล้างฟอร์มเมื่อกดตกลง — แบบเดียวกับ orderBlacklistBlock() (05/10/2569)
+    // ⚠ Swal ต้องตั้ง target = #approvalModal + heightAuto:false ไม่งั้นโดน focus trap ของ modal
+    function approvalBlacklistBlock(code, c){
+        var detail = '';
+        if ((c.blackrem || '').trim() !== ''){
+            detail += '<div class="mt-2">เหตุผล: <strong>' + escHtml(c.blackrem) + '</strong></div>';
+        }
+        if (c.blackdate){
+            detail += '<div class="text-muted small">ขึ้นบัญชีเมื่อ ' + fmtDate(c.blackdate, true) + '</div>';
+        }
+
+        Swal.fire({
+            icon:  'error',
+            title: 'ลูกค้าติด Blacklist',
+            html:  'รหัส <strong>' + escHtml(code) + '</strong> — ' + escHtml(c.name || '') + detail
+                 + '<div class="mt-3">ไม่สามารถขอราคาได้ กรุณากรอกรหัสลูกค้ารายอื่น</div>',
+            confirmButtonText: 'ตกลง',
+            allowOutsideClick: false,
+            target: document.getElementById('approvalModal') || 'body',
+            heightAuto: false
+        }).then(function(){
+            // ล้างทั้งฟอร์ม (รวมรหัสลูกค้า + รายการเบอร์) — กันข้อมูลของใบก่อนหน้าค้างคู่กับช่องลูกค้าที่ว่าง
+            clearApprovalForm();
+            paIndex = -1;       // ฟอร์มไม่ได้ชี้ใบไหนในคิวแล้ว (clearApprovalForm ล้างช่องตำแหน่งไปด้วย)
+            paRenderNav();
+            $('#a_custno').trigger('focus');
         });
     }
 
@@ -2214,6 +2450,26 @@
         $('#a_sale').val(c.sale || '');
 
         var r = res.request || {};
+        apvReq = r.ReqDate ? r : null;
+
+        // สลับโหมดให้ตรงกับข้อมูลที่โหลดมา (05/10/2569)
+        var hasItem = !!$('#a_itemno').val();
+        if (apvMode === 'new' && r.ReqDate){
+            // กำลังสร้างใหม่ แต่คู่นี้มีใบอยู่แล้ว (1 คู่ = 1 ใบ) → แก้ใบเดิมแทน
+            apvMode = 'edit';
+            Swal.fire({
+                icon: 'info',
+                title: 'คู่ลูกค้า/เบอร์นี้มีใบขอราคาอยู่แล้ว',
+                text:  'เปลี่ยนเป็นแก้ไขใบเดิม',
+                toast: true, position: 'top-end', timer: 3500, showConfirmButton: false
+            });
+        } else if (apvMode === 'edit' && !r.ReqDate && apvAutoNew && hasItem){
+            // เปิดมาพร้อมคู่ (เช่นจากด่านราคาในใบสั่งซื้อ) และยังไม่มีใบ → เข้าโหมดสร้างใหม่ให้เลย
+            apvMode = 'new';
+        }
+        if (hasItem) apvAutoNew = false;
+        setApprovalFormMode(apvMode);
+
         // เก็บ ReqDate ของใบเดิมไว้ให้ปุ่มลบใช้ — ไม่มี = ยังไม่เคยขอราคาคู่นี้ (ใบใหม่)
         // เก็บสถานะอนุมัติเดิมไว้ด้วย เพื่อแยก "อนุมัติใหม่" (ต้องอยู่ในโหมด MD) ออกจาก "ใบที่อนุมัติไปแล้ว"
         $('#a_ReqDate').val(r.ReqDate ? fmtDateTime(r.ReqDate) : '')
@@ -2252,7 +2508,14 @@
         // รับค่าที่ server คำนวณสด ๆ มาทุกครั้ง กันค่าค้างเมื่อเปิดฟอร์มทิ้งไว้ข้ามวัน/ข้ามวันหยุด
         if (res.default_valid_to) APPROVAL_DEFAULT_VALID_TO = res.default_valid_to;
         var first = (res.rows || [])[0];
-        setFp('a_validto', (first && first.enddate) ? first.enddate : defaultValidToYmd());
+        var endYmd = (first && first.enddate) ? String(first.enddate).substring(0, 10) : '';
+        // ใบที่ "ยังไม่อนุมัติ" แต่วันยืนราคาเดิมของเบอร์นี้เลยมาแล้ว → ใช้ค่าเริ่มต้น (วันทำการถัดไป) แทน (05/10/2569)
+        // เดิมโชว์วันเก่าที่หมดอายุค้างไว้ ผู้อนุมัติกดอนุมัติโดยไม่แก้ ⇒ ราคาที่เพิ่งอนุมัติหมดอายุทันที
+        // และใช้ปลดล็อกด่านราคาในใบสั่งซื้อไม่ได้ (ข้อมูลจริง: ใบที่อนุมัติช่วง 18/09–05/10/2569 ได้ enddate ย้อนหลังทุกใบ)
+        // ใบที่อนุมัติไปแล้วยังโชว์วันที่บันทึกไว้ตามจริง แม้จะเลยมาแล้ว
+        if (endYmd && !r.Appv && endYmd < todayYmd()) endYmd = '';
+        setFp('a_validto', endYmd || defaultValidToYmd());
+        apvValidToTouched = false;
 
         highlightPriceGroup();
         renderApprovalGrid('ราคาที่ยืนไว้ของเบอร์นี้', ZCUST_COLS, res.rows || []);
@@ -2424,13 +2687,30 @@
     // แต่เป็น **ลูกค้ารายที่เปิดอยู่ ทุกเบอร์ ทั้งอนุมัติและไม่อนุมัติ** (12/09/2569)
     // เดิมโหลดลูกค้ารายอื่นที่ใช้เบอร์นี้ (zcustprice) ลงตารางล่าง — endpoint JSON `/other-customers`
     // ยังอยู่ แต่ไม่มีคนเรียกแล้ว
+    // 05/10/2569 ตามที่ผู้ใช้สั่ง: เด้งถามรหัสลูกค้าก่อน (ค่าเริ่มต้น = ลูกค้าที่เปิดอยู่บนฟอร์ม) แล้วพิมพ์ของลูกค้ารายนั้น
+    // — แบบเดียวกับปุ่ม "ตรวจสอบ เบอร์อื่น ..." ที่ถามรหัสสินค้า · เดิมใช้ลูกค้าบนฟอร์มทันทีโดยไม่ถาม
     function approvalOtherCustomers(){
-        var custno = ($('#a_custno').val() || '').trim();
-        if (!custno){
-            Swal.fire('ยังไม่ได้เลือกลูกค้า', 'เลือกรหัสลูกค้าก่อนดูประวัติ', 'warning');
-            return;
-        }
-        window.open(APPROVAL_URL + '/customer-history-pdf?custno=' + encodeURIComponent(custno), '_blank');
+        Swal.fire({
+            title: 'ประวัติการขออนุมัติราคา',
+            // ต้อง render ไว้ใน #approvalModal — ไม่งั้น focus trap ของ Bootstrap modal
+            // จะดึงโฟกัสกลับ ทำให้พิมพ์ในช่องของ Swal ไม่ได้
+            target: document.getElementById('approvalModal') || 'body',
+            heightAuto: false,
+            input: 'text',
+            inputLabel: 'รหัสลูกค้า',
+            inputValue: ($('#a_custno').val() || '').trim(),
+            showCancelButton: true,
+            confirmButtonText: 'ดูรายงาน',
+            cancelButtonText: 'ยกเลิก',
+            inputValidator: function(v){
+                if (!(v || '').trim()) return 'กรอกรหัสลูกค้าก่อน';
+            }
+        }).then(function(res){
+            if (!res.isConfirmed) return;
+            var custno = (res.value || '').trim();
+            if (!custno) return;
+            window.open(APPROVAL_URL + '/customer-history-pdf?custno=' + encodeURIComponent(custno), '_blank');
+        });
     }
     // ปุ่ม "ประวัติของเบอร์นี้" → เปิดรายงาน PDF ตามผังรายงานกระดาษเดิม (12/09/2569)
     // เดิมโหลดผลลงตารางล่างในฟอร์ม — endpoint JSON `/history` + HISTORY_COLS ยังอยู่ แต่ไม่มีคนเรียกแล้ว
@@ -2507,6 +2787,21 @@
             return;
         }
 
+        // "อนุมัติราคาถึง" ห้ามน้อยกว่า "วันที่ขอราคา" (05/10/2569 ตามที่ผู้ใช้สั่ง) — server ตรวจซ้ำใน save()
+        // ตรวจเฉพาะรอบที่วันที่จะถูกบันทึกจริง: อยู่ในโหมดอนุมัติ และ (ติ๊กอนุมัติ หรือ แก้ช่องวันที่เอง)
+        // ใบใหม่ยังไม่มีวันที่ขอราคา → เทียบกับวันนี้ (server จะใช้เวลาปัจจุบันเป็นวันที่ขอ)
+        if (apvMdUnlocked && (approve || apvValidToTouched)){
+            var vm = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(($('#a_validto').val() || '').trim());
+            var validYmd = vm ? vm[3] + '-' + ('0' + vm[2]).slice(-2) + '-' + ('0' + vm[1]).slice(-2) : '';
+            var reqYmd = String($('#a_ReqDate').data('reqdate') || '').substring(0, 10) || todayYmd();
+            if (validYmd && validYmd < reqYmd){
+                Swal.fire('วันที่ไม่ถูกต้อง',
+                    '"อนุมัติราคาถึง" ต้องไม่น้อยกว่าวันที่ขอราคา (' + fmtDate(reqYmd, true) + ')', 'warning');
+                $('#approvalModal .js-comma').trigger('blur');
+                return;
+            }
+        }
+
         var payload = {
             _token:      '{{ csrf_token() }}',
             custno:      custno,
@@ -2519,7 +2814,9 @@
             remark:      $('#a_remark').val(),
             costup:      $('#a_costup').is(':checked') ? 1 : 0,
             Appv:        approve ? 1 : 0,
-            valid_to:    $('#a_validto').val()
+            valid_to:    $('#a_validto').val(),
+            // ผู้ใช้แตะช่อง "อนุมัติราคาถึง" เองไหม — server ใช้ตัดสินว่าจะเก็บวันที่ของใบที่ยังไม่อนุมัติหรือไม่
+            valid_to_changed: apvValidToTouched ? 1 : 0
         };
         // หมายเหตุ: ไม่ต้องส่ง ReqDate — server หาใบล่าสุดของคู่นี้เอง (มี = แก้ทับ, ไม่มี = ใบใหม่)
 
@@ -2529,6 +2826,8 @@
             .done(function(res){
                 if (!res.status){ Swal.fire('บันทึกไม่สำเร็จ', res.message || '', 'error'); return; }
                 Swal.fire({icon: 'success', title: res.message});
+                // เพิ่มใบใหม่สำเร็จ = จากนี้คือการแก้ใบนั้น (ตั้งก่อนโหลด ไม่งั้นจะขึ้นเตือน "มีใบอยู่แล้ว")
+                if (apvMode === 'new') setApprovalFormMode('edit');
                 loadApprovalData();     // โหลดค่าที่บันทึกจริงกลับมา
                 paRefreshQueue();       // อนุมัติแล้วใบจะหลุดจากคิว → นับใหม่
                 loadData(page);         // โหลดตารางรายการใหม่ทุกครั้งที่บันทึก (19/09/2569)
@@ -2541,6 +2840,7 @@
             })
             .always(function(){
                 $btn.prop('disabled', false);
+                syncApprovalEditable();                          // คืนสถานะปุ่มตามโหมด/ใบที่เปิดอยู่
                 $('#approvalModal .js-comma').trigger('blur');   // ใส่คอมมากลับ
             });
     }

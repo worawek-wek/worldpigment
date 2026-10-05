@@ -116,8 +116,8 @@
                             </div>
                         </div>
                         {{-- แถวที่ 3: ค้นหาตามวันเวลาบรรจุเสร็จ — ระบุวันที่บรรจุ และช่วงเวลาเริ่ม–สิ้นสุด --}}
-                        {{-- lang="en-GB" → บังคับช่อง <input type="time"> ด้านล่างให้แสดง 24 ชม. ทุกเครื่อง --}}
-                        <div class="row g-3 align-items-end mt-1" lang="en-GB">
+                        {{-- ช่องเวลาใช้ flatpickr (time_24hr) แทน <input type="time"> ที่แสดง 12/24 ชม. ตาม region ของเครื่อง (05/10/2569) --}}
+                        <div class="row g-3 align-items-end mt-1">
                             <div class="col-md-4">
                                 <label class="form-label mb-1 small text-muted">วันที่บรรจุ (Packing)</label>
                                 <input id="searchPackingDate" type="text" class="form-control flatpickr-date"
@@ -125,11 +125,11 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label mb-1 small text-muted">เวลาเริ่ม</label>
-                                <input id="searchPackingTimeStart" type="time" class="form-control">
+                                <input id="searchPackingTimeStart" type="text" class="form-control" autocomplete="off">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label mb-1 small text-muted">เวลาสิ้นสุด</label>
-                                <input id="searchPackingTimeEnd" type="time" class="form-control">
+                                <input id="searchPackingTimeEnd" type="text" class="form-control" autocomplete="off">
                             </div>
                             <div class="col-md-2">
                                 <button id="btn_clear_packing" type="button" class="btn btn-outline-secondary w-100">
@@ -250,6 +250,8 @@
     var fpDateStart = null;
     var fpDateEnd   = null;
     var fpPacking   = null;
+    var fpPackingTimeStart = null;
+    var fpPackingTimeEnd   = null;
     $(document).ready(function () {
         // flatpickr: แสดง d/m/Y เหมือนกันทุกเครื่อง แต่ค่าจริง (input.value) ยังเป็น Y-m-d
         // → ค่าที่ส่งให้ DataTable/server ยังเป็น Y-m-d เหมือนเดิม ไม่ต้องแก้ฝั่ง PHP
@@ -263,6 +265,16 @@
         fpDateStart = flatpickr('#searchDateStart', fpOptions);
         fpDateEnd   = flatpickr('#searchDateEnd', fpOptions);
         fpPacking   = flatpickr('#searchPackingDate', fpOptions);
+
+        // ช่องเวลาบรรจุ — เวลาอย่างเดียว แสดง 24 ชม. เหมือนกันทุกเครื่อง; ค่าใน input เป็น H:i เหมือน type="time" เดิม
+        var fpTimeOptions = {
+            enableTime: true, noCalendar: true, time_24hr: true,
+            dateFormat: 'H:i', allowInput: true, disableMobile: true,
+            // หมุนล้อเมาส์บนช่องชั่วโมง/นาทีเพื่อปรับค่า (ไฟล์ plugin โหลดที่ layout/inc_js)
+            plugins: (typeof scrollPlugin === 'function') ? [scrollPlugin()] : []
+        };
+        fpPackingTimeStart = flatpickr('#searchPackingTimeStart', fpTimeOptions);
+        fpPackingTimeEnd   = flatpickr('#searchPackingTimeEnd', fpTimeOptions);
 
         // modal "สร้างแผน" (Semi) — partial entry-fields ใช้ class flatpickr-date เช่นกัน
         // scope เฉพาะ #createSemiModal + guard _flatpickr เพื่อไม่ชน/ไม่ init ซ้ำกับช่องค้นหาด้านบน
@@ -493,17 +505,25 @@
     });
 
     // ค้นหาตามวันเวลาบรรจุเสร็จ — redraw เมื่อเปลี่ยนวันที่บรรจุหรือช่วงเวลา
-    $(document).on('change', '#searchPackingDate, #searchPackingTimeStart, #searchPackingTimeEnd', function(e){
+    $(document).on('change', '#searchPackingDate', function(e){
         e.preventDefault();
         oTable.draw();
+    });
+    // ช่องเวลา (flatpickr) ยิง change ทุกครั้งที่เลื่อนชั่วโมง/นาที → หน่วงไว้ก่อน redraw กันยิง request รัว ๆ
+    var packingTimeTimer = null;
+    $(document).on('change', '#searchPackingTimeStart, #searchPackingTimeEnd', function(){
+        clearTimeout(packingTimeTimer);
+        packingTimeTimer = setTimeout(function () { oTable.draw(); }, 500);
     });
 
     // ล้างเงื่อนไขวันเวลาบรรจุแล้วค้นหาใหม่
     $(document).on('click', '#btn_clear_packing', function(e){
         e.preventDefault();
         if (fpPacking) fpPacking.clear(false); else $('#searchPackingDate').val('');
-        $('#searchPackingTimeStart').val('');
-        $('#searchPackingTimeEnd').val('');
+        // ล้างผ่าน instance ของ flatpickr (false = ไม่ยิง change ซ้ำ) — ล้างทั้งค่าในช่องและเวลาที่ picker จำไว้
+        if (fpPackingTimeStart) fpPackingTimeStart.clear(false); else $('#searchPackingTimeStart').val('');
+        if (fpPackingTimeEnd)   fpPackingTimeEnd.clear(false);   else $('#searchPackingTimeEnd').val('');
+        clearTimeout(packingTimeTimer);
         oTable.draw();
     });
 

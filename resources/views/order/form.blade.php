@@ -5,130 +5,110 @@
 --}}
 <div class="modal-body px-4 py-4">
 
-    {{-- ── แถบประเภทใบสั่งซื้อ (radio) — 2 ตัวอักษรหน้าเลขที่ใบสั่ง ──
-         ปรับหน้าตาเป็นปุ่มกลุ่ม (segmented) 21/09/2569 ตามที่ผู้ใช้สั่ง — เดิมเป็น radio วงกลม 12 ตัว
-         ⚠ <input> ยังเป็น radio name="order_type_form" id="o_type_XX" + onchange เดิมทุกประการ
-           แค่ซ่อนตัว input ด้วย .btn-check แล้วให้ <label> เป็นตัวปุ่มแทน ⇒ JS เดิมทำงานต่อได้เลย
-           (onOrderTypeChange / orderNew / fillOrderForm / setOrderFormMode ที่ยกเว้น name นี้ไม่ให้ disable)
+    {{-- แถบประเภทใบสั่งซื้อ + ปุ่ม "เพิ่มใบสั่งซื้อใหม่" ย้ายขึ้นไปอยู่บนหัว modal แล้ว (05/10/2569 ตามที่ผู้ใช้สั่ง
+         ให้อยู่แถวเดียวกับชื่อฟอร์มและ badge สถานะ) — ดู .modal-header ของ #orderModal ใน order/index.blade.php
 
          of-narrow = จำกัดความกว้างส่วนหัวฟอร์มไม่ให้ยืดตาม modal ที่กว้าง 95vw
          (ตารางรายการด้านล่างไม่ใส่ class นี้ จึงยังกว้างเต็ม modal) --}}
-    @php
-        /* จัดปุ่มเป็น 3 กลุ่มตามตัวอักษรแรก (C / H / W) โดยไล่ลำดับเดิมใน OrderController::TYPE_ROWS
-           (M → I → E → R) — คำนวณที่นี่ ไม่ได้แก้ controller */
-        $type_groups = [];
-        foreach ($type_rows as $__row) {
-            foreach ($__row as $__t) {
-                $type_groups[substr($__t, 0, 1)][] = $__t;
-            }
-        }
-    @endphp
-    {{-- ครอบด้วย of-narrow อีกชั้น แล้วให้ตัวแถบกว้างพอดีเนื้อหา (21/09/2569 ตามที่ผู้ใช้สั่ง
-         "ไม่อยากให้กว้าง 100%") — ถ้าใส่ of-narrow ที่ตัวแถบเอง แถบที่หดแล้วจะถูก margin:auto
-         ดันไปอยู่กึ่งกลางจอ ไม่ตรงขอบซ้ายกับการ์ดด้านล่าง --}}
-    <div class="of-narrow">
-        <div class="of-typebar">
-            <div class="of-typebar-inner">
-                <div class="of-typegrid me-4">
-                    @foreach ($type_groups as $group)
-                        <div class="of-typeset" role="group">
-                            @foreach ($group as $t)
-                                <input class="btn-check" type="radio" name="order_type_form" id="o_type_{{ $t }}"
-                                    value="{{ $t }}" autocomplete="off" onchange="onOrderTypeChange('{{ $t }}')">
-                                <label class="of-tbtn" for="o_type_{{ $t }}">{{ $t }}</label>
-                            @endforeach
-                        </div>
-                    @endforeach
-                </div>
-
-                <button type="button" class="btn of-btn-new" onclick="orderNew()">
-                    <i class="ti ti-plus me-1"></i>เพิ่มใบสั่งซื้อใหม่
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-3 mt-1 of-narrow">
+    <div class="row g-3 of-narrow">
 
         {{-- ═══════════ คอลัมน์ซ้าย: ข้อมูลใบสั่งซื้อ ═══════════ --}}
         <div class="col-xl-5">
             <div class="of-sec h-100">
                 <div class="of-sec-title"><i class="ti ti-file-text"></i>ข้อมูลใบสั่งซื้อ</div>
 
-                <div class="row g-3">
-                    <div class="col-sm-6">
-                        <label class="form-label">เลขที่ใบสั่ง</label>
-                        <input type="text" id="o_Orderno" class="form-control fw-bold text-primary" maxlength="15"
-                            autocomplete="off" readonly>
-                        {{-- โชว์เฉพาะตอนเพิ่งเปิดฟอร์ม (โหมด idle) --}}
-                        <div class="form-text d-none" id="o_orderno_hint">
-                            <i class="ti ti-corner-down-left me-1"></i>กรอกเลขที่ใบเดิมแล้วกด Enter เพื่อแก้ไขใบนั้น
+                {{-- 05/10/2569: เปลี่ยนเป็น label อยู่ซ้าย ต่อด้วยช่องกรอก ตามฟอร์ม Access เดิม
+                     (โครง .of-row / .of-ctl — ดู CSS ใน order/index.blade.php) --}}
+                <div class="row gx-3 gy-2">
+                    <div class="col-sm-6 of-row">
+                        <label class="form-label" for="o_Orderno">เลขที่ใบสั่ง</label>
+                        <div class="of-ctl">
+                            <input type="text" id="o_Orderno" class="form-control fw-bold text-primary" maxlength="15"
+                                autocomplete="off" readonly>
                         </div>
                     </div>
-                    <div class="col-sm-6">
-                        <label class="form-label">วันที่</label>
-                        {{-- 19/09/2569: วันที่เปิดใบ server กำหนดตอนสร้างใบ (create → now()) ผู้ใช้แก้ไม่ได้
-                             readonly กันพิมพ์/วาง · clickOpens:false ตอน init flatpickr กันปฏิทินเด้ง --}}
-                        <input type="text" id="o_Mdate" class="form-control flatpickr-datetime"
-                            autocomplete="off" readonly>
+                    <div class="col-sm-6 of-row of-row-auto">
+                        <label class="form-label" for="o_Mdate">วันที่</label>
+                        <div class="of-ctl">
+                            {{-- 19/09/2569: วันที่เปิดใบ server กำหนดตอนสร้างใบ (create → now()) ผู้ใช้แก้ไม่ได้
+                                 readonly กันพิมพ์/วาง · clickOpens:false ตอน init flatpickr กันปฏิทินเด้ง --}}
+                            <input type="text" id="o_Mdate" class="form-control flatpickr-datetime"
+                                autocomplete="off" readonly>
+                        </div>
                     </div>
 
-                    <div class="col-sm-6">
-                        <label class="form-label">ผลิตที่</label>
-                        <select id="o_Company" class="form-select">
-                            <option value="">—</option>
-                            @foreach ($companies as $c)
-                                <option value="{{ $c }}">{{ $c }}</option>
-                            @endforeach
-                        </select>
+                    <div class="col-sm-6 of-row">
+                        <label class="form-label" for="o_Company">ผลิตที่</label>
+                        <div class="of-ctl">
+                            <select id="o_Company" class="form-select">
+                                <option value="">—</option>
+                                @foreach ($companies as $c)
+                                    <option value="{{ $c }}">{{ $c }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
-                    <div class="col-sm-6">
-                        <label class="form-label">P/O No.</label>
-                        <input type="text" id="o_PO" class="form-control" maxlength="25">
+                    <div class="col-sm-6 of-row of-row-auto">
+                        <label class="form-label" for="o_PO">P/O No.</label>
+                        <div class="of-ctl">
+                            <input type="text" id="o_PO" class="form-control" maxlength="25">
+                        </div>
                     </div>
 
                     {{-- รหัสลูกค้า / ชื่อลูกค้า อยู่คนละแถวกัน
-                         (รหัสลูกค้าคง col-sm-4 เท่าเดิม ส่วนชื่อลูกค้าเป็น col-12 จึงตกไปอยู่แถวถัดไปเอง) --}}
-                    <div class="col-sm-4">
-                        <label class="form-label">รหัสลูกค้า</label>
-                        <input type="text" id="o_Custno" class="form-control" maxlength="10"
-                            oninput="lookupOrderCustomer(this.value)">
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label">ชื่อลูกค้า</label>
-                        <input type="text" id="o_Custname" class="form-control text-primary fw-semibold" readonly>
-                    </div>
-
-                    <div class="col-12">
-                        {{-- ปุ่ม "+ เพิ่ม" วางข้าง label ไม่ใช่ใน input-group (19/09/2569)
-                             เพราะ enhanceSelects() แปลง select เป็น select2/bootstrap-select
-                             ซึ่งห่อ element ใหม่ ทำให้ input-group เพี้ยน --}}
-                        <div class="d-flex align-items-center justify-content-between">
-                            <label class="form-label mb-1" for="o_DVpoint">
-                                สถานที่ส่ง
-                                <span class="text-muted fw-normal small">(ไม่ระบุ = ส่งตามที่อยู่ลูกค้า)</span>
-                            </label>
-                            <button type="button" class="btn btn-link btn-sm p-0 mb-1 text-decoration-none"
-                                id="o_btn_add_dvpoint" onclick="addDvpointPrompt()"
-                                title="เพิ่มสถานที่ส่งใหม่ให้ลูกค้ารายนี้ (บันทึกลงข้อมูลลูกค้าด้วย)">
-                                <i class="ti ti-plus"></i> เพิ่ม
-                            </button>
+                         (รหัสลูกค้าเป็น col-sm-6 — ขยายจาก col-sm-4 เพราะ label ย้ายมาอยู่ซ้าย 05/10/2569
+                          ส่วนชื่อลูกค้าเป็น col-12 จึงตกไปอยู่แถวถัดไปเอง) --}}
+                    <div class="col-sm-6 of-row">
+                        <label class="form-label" for="o_Custno">รหัสลูกค้า</label>
+                        <div class="of-ctl">
+                            <input type="text" id="o_Custno" class="form-control" maxlength="10"
+                                oninput="lookupOrderCustomer(this.value)">
                         </div>
-                        <select id="o_DVpoint" class="form-select">
-                            <option value="">— ไม่ระบุ —</option>
-                        </select>
+                    </div>
+                    <div class="col-12 of-row">
+                        <label class="form-label" for="o_Custname">ชื่อลูกค้า</label>
+                        <div class="of-ctl">
+                            <input type="text" id="o_Custname" class="form-control text-primary fw-semibold" readonly>
+                        </div>
                     </div>
 
-                    <div class="col-sm-4">
-                        <label class="form-label">ผู้บันทึก</label>
-                        <input type="text" id="o_Emp" class="form-control" maxlength="20">
+                    <div class="col-12 of-row">
+                        <label class="form-label" for="o_DVpoint">สถานที่ส่ง</label>
+                        <div class="of-ctl">
+                            {{-- ปุ่ม "+ เพิ่ม" วางข้าง select ไม่ใช่ใน input-group (19/09/2569)
+                                 เพราะ enhanceSelects() แปลง select เป็น select2/bootstrap-select
+                                 ซึ่งห่อ element ใหม่ ทำให้ input-group เพี้ยน
+                                 ⇒ ห่อ select ไว้ใน div ของตัวเอง ให้ตัวห่อของ select2 ยังกว้าง 100% ของ div นั้น --}}
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="flex-grow-1" style="min-width:0;">
+                                    <select id="o_DVpoint" class="form-select">
+                                        <option value="">— ไม่ระบุ —</option>
+                                    </select>
+                                </div>
+                                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-nowrap"
+                                    id="o_btn_add_dvpoint" onclick="addDvpointPrompt()"
+                                    title="เพิ่มสถานที่ส่งใหม่ให้ลูกค้ารายนี้ (บันทึกลงข้อมูลลูกค้าด้วย)">
+                                    <i class="ti ti-plus"></i> เพิ่ม
+                                </button>
+                            </div>
+                            <div class="form-text">ไม่ระบุ = ส่งตามที่อยู่ลูกค้า</div>
+                        </div>
                     </div>
-                    <div class="col-sm-3">
-                        <label class="form-label">
+
+                    <div class="col-sm-6 of-row">
+                        <label class="form-label" for="o_Emp">ผู้บันทึก</label>
+                        <div class="of-ctl">
+                            <input type="text" id="o_Emp" class="form-control" maxlength="20">
+                        </div>
+                    </div>
+                    <div class="col-sm-6 of-row of-row-auto">
+                        <label class="form-label" for="o_supno">
                             รหัสผู้ขาย
                             <i class="ti ti-info-circle text-muted" title="ดึงจากพนักงานขายประจำลูกค้า (customer.sale)"></i>
                         </label>
-                        <input type="text" id="o_supno" class="form-control bg-light" maxlength="2" readonly>
+                        <div class="of-ctl">
+                            <input type="text" id="o_supno" class="form-control bg-light" maxlength="2" readonly>
+                        </div>
                     </div>
                     {{--
                         ช่อง itype — ติ๊กเลือกบนฟอร์มได้เลย (เดิมเป็นกล่องหน้าตาเหมือน select ที่กดแล้วกางรายการ, 01/09/2569)
@@ -136,8 +116,8 @@
                         เลือกได้ "ข้อเดียว" ตามที่ผู้ใช้กำหนดไว้เดิม: ติ๊กข้อใหม่แล้วข้อเก่าจะหลุดเอง (จัดการที่ JS)
                         บันทึกลง morder.itype (เก็บ key, 12/09/2569)
                     --}}
-                    <div class="col-12">
-                        <label class="form-label d-block">
+                    <div class="col-12 of-row">
+                        <label class="form-label">
                             itype
                             {{-- ใบสั่งที่ขึ้นต้นด้วย W ต้องมี itype — โชว์ * เฉพาะตอนนั้น (syncItypeRequired) --}}
                             <span id="o_itype_req" class="text-danger fw-bold d-none"
@@ -145,56 +125,62 @@
                             <i class="ti ti-info-circle text-muted"
                                 title="ประเภทสินค้าที่สั่ง — ติ๊กเลือก 1 ข้อ"></i>
                         </label>
-                        <div id="o_itype_box" class="of-itype-box">
-                            <div class="of-checkrow">
-                                @foreach (config('order.itypes', []) as $it)
-                                    <div class="form-check">
-                                        <input class="form-check-input o-itype-opt" type="checkbox"
-                                            id="o_itype_{{ $it['key'] }}" value="{{ $it['key'] }}"
-                                            data-label="{{ $it['label'] }}">
-                                        <label class="form-check-label" for="o_itype_{{ $it['key'] }}">
-                                            {{ $it['label'] }}
-                                        </label>
-                                    </div>
-                                @endforeach
+                        <div class="of-ctl">
+                            <div id="o_itype_box" class="of-itype-box">
+                                <div class="of-checkrow">
+                                    @foreach (config('order.itypes', []) as $it)
+                                        <div class="form-check">
+                                            <input class="form-check-input o-itype-opt" type="checkbox"
+                                                id="o_itype_{{ $it['key'] }}" value="{{ $it['key'] }}"
+                                                data-label="{{ $it['label'] }}">
+                                            <label class="form-check-label" for="o_itype_{{ $it['key'] }}">
+                                                {{ $it['label'] }}
+                                            </label>
+                                        </div>
+                                    @endforeach
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="col-sm-6">
-                        <label class="form-label">เลขที่ใบจอง</label>
-                        <input type="text" id="o_RsvNo" class="form-control" maxlength="20">
+                    <div class="col-sm-8 of-row">
+                        <label class="form-label" for="o_RsvNo">เลขที่ใบจอง</label>
+                        <div class="of-ctl">
+                            <input type="text" id="o_RsvNo" class="form-control" maxlength="20">
+                        </div>
                     </div>
 
                     {{-- checkbox ชุดล่าง — ใน Access เก็บเป็น -1 = ติ๊ก
                          RP / CER / MSDS ติ๊กให้ตามค่าประจำลูกค้า (customer) เมื่อเลือกลูกค้า — แก้ทับได้
                          ส่งก่อนได้ / SPEC ไม่มีค่าประจำลูกค้า ต้องติ๊กเอง --}}
-                    <div class="col-12">
-                        <label class="form-label d-block">
+                    <div class="col-12 of-row">
+                        <label class="form-label">
                             เงื่อนไขบนใบสั่ง
                             <i class="ti ti-info-circle text-muted"
                                 title="RP / CER / MSDS ตั้งให้ตามข้อมูลลูกค้าเมื่อเลือกลูกค้า — แก้ทับได้"></i>
                         </label>
-                        <div class="of-checkrow">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="o_Send">
-                                <label class="form-check-label" for="o_Send">ส่งก่อนได้</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="o_RP">
-                                <label class="form-check-label" for="o_RP">RP</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="o_Spec">
-                                <label class="form-check-label" for="o_Spec">SPEC</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="o_Cer">
-                                <label class="form-check-label" for="o_Cer">CER</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="o_MSDS">
-                                <label class="form-check-label" for="o_MSDS">MSDS</label>
+                        <div class="of-ctl">
+                            <div class="of-checkrow">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="o_Send">
+                                    <label class="form-check-label" for="o_Send">ส่งก่อนได้</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="o_RP">
+                                    <label class="form-check-label" for="o_RP">RP</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="o_Spec">
+                                    <label class="form-check-label" for="o_Spec">SPEC</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="o_Cer">
+                                    <label class="form-check-label" for="o_Cer">CER</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="o_MSDS">
+                                    <label class="form-check-label" for="o_MSDS">MSDS</label>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -207,33 +193,41 @@
             <div class="of-sec of-sec-stock">
                 <div class="of-sec-title"><i class="ti ti-building-warehouse"></i>กรณีสั่งทำสต๊อก</div>
 
-                <div class="row g-3">
-                    <div class="col-12">
-                        <label class="form-label">กำหนดส่งครบ วันที่</label>
-                        <input type="text" id="o_sendend" class="form-control flatpickr-date" autocomplete="off"
-                            placeholder="วว/ดด/ปปปป">
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label">ส่งลูกค้าภายใน</label>
-                        <div class="input-group">
-                            <input type="number" id="o_SendCust" class="form-control text-end" step="1">
-                            <span class="input-group-text bg-success text-white">เดือน</span>
+                <div class="row gx-3 gy-2">
+                    <div class="col-12 of-row">
+                        <label class="form-label" for="o_sendend">กำหนดส่งครบ วันที่</label>
+                        <div class="of-ctl">
+                            <input type="text" id="o_sendend" class="form-control flatpickr-date" autocomplete="off"
+                                placeholder="วว/ดด/ปปปป">
                         </div>
                     </div>
-                    <div class="col-12">
-                        <label class="form-label">นน.ในคลังคงเหลือ</label>
-                        <div class="input-group">
-                            <input type="text" id="o_HMStore" class="form-control text-end js-comma"
-                                inputmode="decimal" autocomplete="off" placeholder="0.00">
-                            <span class="input-group-text">ก.ก.</span>
+                    <div class="col-12 of-row">
+                        <label class="form-label" for="o_SendCust">ส่งลูกค้าภายใน</label>
+                        <div class="of-ctl">
+                            <div class="input-group">
+                                <input type="number" id="o_SendCust" class="form-control text-end" step="1">
+                                <span class="input-group-text bg-success text-white">เดือน</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-12">
-                        <label class="form-label">จะส่งมอบเดือนละ</label>
-                        <div class="input-group">
-                            <input type="text" id="o_sendmth" class="form-control text-end js-comma"
-                                inputmode="decimal" autocomplete="off" placeholder="0.00">
-                            <span class="input-group-text">ก.ก.</span>
+                    <div class="col-12 of-row">
+                        <label class="form-label" for="o_HMStore">นน.ในคลังคงเหลือ</label>
+                        <div class="of-ctl">
+                            <div class="input-group">
+                                <input type="text" id="o_HMStore" class="form-control text-end js-comma"
+                                    inputmode="decimal" autocomplete="off" placeholder="0.00">
+                                <span class="input-group-text">ก.ก.</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 of-row">
+                        <label class="form-label" for="o_sendmth">จะส่งมอบเดือนละ</label>
+                        <div class="of-ctl">
+                            <div class="input-group">
+                                <input type="text" id="o_sendmth" class="form-control text-end js-comma"
+                                    inputmode="decimal" autocomplete="off" placeholder="0.00">
+                                <span class="input-group-text">ก.ก.</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -304,39 +298,47 @@
             <div class="of-sec of-sec-item h-100 d-flex flex-column">
                 <div class="of-sec-title"><i class="ti ti-package"></i>สินค้า</div>
 
-                <div class="mb-3">
-                    <label class="form-label">
+                <div class="mb-2 of-row">
+                    <label class="form-label" for="o_itemno">
                         รหัสสินค้า
                         <i class="ti ti-info-circle text-muted" title="ดึงจากรหัสสินค้าที่กรอกในตารางรายการ"></i>
                     </label>
-                    <input type="text" id="o_itemno" class="form-control of-hl-yellow fw-semibold" readonly>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">น้ำหนักรวม</label>
-                    <div class="input-group">
-                        <input type="text" id="o_netqty" class="form-control text-end js-comma"
-                            inputmode="decimal" autocomplete="off" placeholder="0.00"
-                            oninput="refreshOrderPrice()">
-                        <span class="input-group-text">ก.ก.</span>
+                    <div class="of-ctl">
+                        <input type="text" id="o_itemno" class="form-control of-hl-yellow fw-semibold" readonly>
                     </div>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label">
+                <div class="mb-2 of-row">
+                    <label class="form-label" for="o_netqty">น้ำหนักรวม</label>
+                    <div class="of-ctl">
+                        <div class="input-group">
+                            <input type="text" id="o_netqty" class="form-control text-end js-comma"
+                                inputmode="decimal" autocomplete="off" placeholder="0.00"
+                                oninput="refreshOrderPrice()">
+                            <span class="input-group-text">ก.ก.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-2 of-row">
+                    <label class="form-label" for="o_price_group">
                         กลุ่มราคา
                         <i class="ti ti-info-circle text-muted"
                             title="คำนวณจากน้ำหนักรวม — A = 1,000 kg.up / B = 500 kg.up / C = under 500 kg."></i>
                     </label>
-                    <input type="text" id="o_price_group" class="form-control of-hl-green" readonly>
+                    <div class="of-ctl">
+                        <input type="text" id="o_price_group" class="form-control of-hl-green" readonly>
+                    </div>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label">
+                <div class="mb-2 of-row">
+                    <label class="form-label" for="o_min_qty">
                         ขั้นต่ำ
                         <i class="ti ti-info-circle text-muted" title="ค่าของกลุ่มราคา (A / B / C) ของรหัสสินค้านี้ จากตาราง zcolorrate"></i>
                     </label>
-                    <input type="text" id="o_min_qty" class="form-control of-hl-yellow text-end" readonly>
+                    <div class="of-ctl">
+                        <input type="text" id="o_min_qty" class="form-control of-hl-yellow text-end" readonly>
+                    </div>
                 </div>
 
                 <div class="mt-auto">

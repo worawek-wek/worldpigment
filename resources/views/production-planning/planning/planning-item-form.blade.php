@@ -68,9 +68,9 @@
         <span>ออเดอร์นี้ถูกปิดแล้ว (End Order) — ไม่สามารถแก้ไขได้ กดได้เฉพาะปุ่ม "ยกเลิก"</span>
     </div>
     @endif
-    {{-- lang="en-GB" → บังคับ <input type="time"> ให้แสดง 24 ชม. ทุกเครื่อง (ไม่ขึ้นกับ region ของ OS)
-         ใส่ที่ระดับ form → ครอบทุกช่องเวลาในฟอร์ม รวมถึงแถววิธีการผลิตที่ JS สร้างเพิ่มด้วย (inherit ค่า lang) --}}
-    <form id="planning_item_form" lang="en-GB">
+    {{-- ช่องเวลาในฟอร์มนี้ใช้ flatpickr (class flatpickr-time, time_24hr) แทน <input type="time"> (05/10/2569)
+         เพราะ type="time" แสดง 12/24 ชม. ตาม region ของแต่ละเครื่อง และ lang="en-GB" ที่เคยใส่ไว้บังคับไม่ได้จริง --}}
+    <form id="planning_item_form">
         <input type="hidden" name="planning_id"        value="{{ $planning_item?->id ?? '' }}">
         <input type="hidden" name="planning_header_id" value="{{ $planning_header_id ?? '' }}">
 
@@ -345,8 +345,8 @@
                                 <select name="prod_method_id[]" class="form-select form-select-sm">{!! $prodMethodOptions($row->prod_method_id) !!}</select>
                             </div>
                             <div class="col-md-3"><input type="text" name="prod_method_date[]" class="form-control form-control-sm flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" value="{{ $row->work_date ? substr($row->work_date, 0, 10) : '' }}"></div>
-                            <div class="col-md-2"><input type="time" name="prod_method_start[]" class="form-control form-control-sm" value="{{ $row->start_time ? substr($row->start_time, 0, 5) : '' }}"></div>
-                            <div class="col-md-2"><input type="time" name="prod_method_end[]" class="form-control form-control-sm" value="{{ $row->end_time ? substr($row->end_time, 0, 5) : '' }}"></div>
+                            <div class="col-md-2"><input type="text" name="prod_method_start[]" class="form-control form-control-sm flatpickr-time" autocomplete="off" value="{{ $row->start_time ? substr($row->start_time, 0, 5) : '' }}"></div>
+                            <div class="col-md-2"><input type="text" name="prod_method_end[]" class="form-control form-control-sm flatpickr-time" autocomplete="off" value="{{ $row->end_time ? substr($row->end_time, 0, 5) : '' }}"></div>
                             <div class="col-md-1">
                                 <button type="button" class="btn btn-sm btn-outline-danger btn_remove_prod_method" title="ลบ">
                                     <i class="ti ti-trash"></i>
@@ -359,8 +359,8 @@
                                 <select name="prod_method_id[]" class="form-select form-select-sm">{!! $prodMethodOptions() !!}</select>
                             </div>
                             <div class="col-md-3"><input type="text" name="prod_method_date[]" class="form-control form-control-sm flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป"></div>
-                            <div class="col-md-2"><input type="time" name="prod_method_start[]" class="form-control form-control-sm"></div>
-                            <div class="col-md-2"><input type="time" name="prod_method_end[]" class="form-control form-control-sm"></div>
+                            <div class="col-md-2"><input type="text" name="prod_method_start[]" class="form-control form-control-sm flatpickr-time" autocomplete="off"></div>
+                            <div class="col-md-2"><input type="text" name="prod_method_end[]" class="form-control form-control-sm flatpickr-time" autocomplete="off"></div>
                             <div class="col-md-1">
                                 <button type="button" class="btn btn-sm btn-outline-danger btn_remove_prod_method" title="ลบ">
                                     <i class="ti ti-trash"></i>
@@ -384,9 +384,9 @@
                 </div>
                 <div class="col-md-3 mb-3">
                     <label class="form-label">เวลาที่เริ่มผลิต (Start Time)</label>
-                    <input type="time" name="start_time"
+                    <input type="text" name="start_time"
                         value="{{ $planning_item?->start_time ? substr($planning_item->start_time, 0, 5) : '' }}"
-                        class="form-control">
+                        class="form-control flatpickr-time" autocomplete="off">
                 </div>
                 <div class="col-md-3 mb-3">
                     <label class="form-label">วันที่ผลิตเสร็จ (End Date)</label>
@@ -396,9 +396,9 @@
                 </div>
                 <div class="col-md-3 mb-3">
                     <label class="form-label">เวลาที่ผลิตเสร็จ (End Time)</label>
-                    <input type="time" name="end_time"
+                    <input type="text" name="end_time"
                         value="{{ $planning_item?->end_time ? substr($planning_item->end_time, 0, 5) : '' }}"
-                        class="form-control">
+                        class="form-control flatpickr-time" autocomplete="off">
                 </div>
             </div>
             <div class="row">
@@ -410,9 +410,9 @@
                 </div>
                 <div class="col-md-4 mb-3">
                     <label class="form-label">เวลาที่ส่ง Qc (QC Time)</label>
-                    <input type="time" name="qc_time"
-                        value="{{ $planning_item?->qc_time ?? '' }}"
-                        class="form-control" placeholder="HH:MM">
+                    <input type="text" name="qc_time"
+                        value="{{ $planning_item?->qc_time ? substr($planning_item->qc_time, 0, 5) : '' }}"
+                        class="form-control flatpickr-time" autocomplete="off" placeholder="HH:MM">
                 </div>
                 <div class="col-md-4 mb-3">
                 <label class="form-label">สถานะ Qc (QC Status) </label>
@@ -830,10 +830,24 @@ window.wpFpDateTimeOptions = {
     dateFormat: 'Y-m-d H:i', altInput: true, altFormat: 'd/m/Y H:i',
     allowInput: true, disableMobile: true, static: true
 };
+// ── option สำหรับช่อง "เวลาอย่างเดียว" (05/10/2569) — แทน <input type="time"> ที่แสดง 12/24 ชม. ตาม region ของเครื่อง ──
+// time_24hr → แสดง 24 ชม. เหมือนกันทุกเครื่อง; ไม่ใช้ altInput → ค่าใน input คือ H:i ตรง ๆ (ผ่าน date_format:H:i ของ server)
+window.wpFpTimeOptions = {
+    enableTime: true, noCalendar: true, time_24hr: true,
+    dateFormat: 'H:i', allowInput: true, disableMobile: true, static: true,
+    // หมุนล้อเมาส์บนช่องชั่วโมง/นาทีเพื่อปรับค่า (ไฟล์ plugin โหลดที่ layout/inc_js)
+    plugins: (typeof scrollPlugin === 'function') ? [scrollPlugin()] : []
+};
 // ผูก flatpickr ให้ทุก .flatpickr-date ภายใน scope (กัน init ซ้ำด้วย _flatpickr)
 window.wpInitDateFields = function (scope) {
     $(scope).find('.flatpickr-date').addBack('.flatpickr-date').each(function () {
         if (!this._flatpickr) flatpickr(this, window.wpFpDateOptions);
+    });
+};
+// ผูก flatpickr แบบเวลาอย่างเดียวให้ทุก .flatpickr-time ภายใน scope (กัน init ซ้ำด้วย _flatpickr)
+window.wpInitTimeFields = function (scope) {
+    $(scope).find('.flatpickr-time').addBack('.flatpickr-time').each(function () {
+        if (!this._flatpickr) flatpickr(this, window.wpFpTimeOptions);
     });
 };
 // ตั้งค่าวันที่ (รับ Y-m-d) ให้อัปเดตทั้งช่องที่แสดง (d/m/Y) และค่าจริง — ว่าง = เคลียร์
@@ -930,6 +944,7 @@ window.wpBindHolidayWarn = function (el, label) {
     var initDateFields = window.wpInitDateFields;
     var setDateField   = window.wpSetDateField;
     initDateFields('#planning_item_form'); // ช่องวันที่ในฟอร์มหลัก
+    window.wpInitTimeFields('#planning_item_form'); // ช่องเวลา (24 ชม.) ในฟอร์มหลัก
     // ช่องวันที่แบบมีเวลา (packing_datetie) — ผูก flatpickr พร้อมเวลา
     $('#planning_item_form').find('.flatpickr-datetime').each(function () {
         if (!this._flatpickr) flatpickr(this, window.wpFpDateTimeOptions);
@@ -1007,14 +1022,15 @@ window.wpBindHolidayWarn = function (el, label) {
         return '<div class="row g-2 align-items-center mb-2 prod-method-row">'
             + '<div class="col-md-4">' + prodMethodSelectHtml() + '</div>'
             + '<div class="col-md-3"><input type="text" name="prod_method_date[]" class="form-control form-control-sm flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป"></div>'
-            + '<div class="col-md-2"><input type="time" name="prod_method_start[]" class="form-control form-control-sm"></div>'
-            + '<div class="col-md-2"><input type="time" name="prod_method_end[]" class="form-control form-control-sm"></div>'
+            + '<div class="col-md-2"><input type="text" name="prod_method_start[]" class="form-control form-control-sm flatpickr-time" autocomplete="off"></div>'
+            + '<div class="col-md-2"><input type="text" name="prod_method_end[]" class="form-control form-control-sm flatpickr-time" autocomplete="off"></div>'
             + '<div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger btn_remove_prod_method" title="ลบ"><i class="ti ti-trash"></i></button></div>'
             + '</div>';
     }
     $('#btn_add_prod_method').on('click', function () {
         var $row = $(prodMethodRowHtml()).appendTo('#prod_method_rows');
         initDateFields($row); // ผูก flatpickr ให้ช่องวันที่ของแถวใหม่
+        window.wpInitTimeFields($row); // และช่องเวลาของแถวใหม่
     });
     // ลบแถว; ถ้าเหลือแถวเดียวให้ล้างค่าแทนการลบ (คงไว้อย่างน้อย 1 แถว)
     $('#prod_method_rows').on('click', '.btn_remove_prod_method', function () {
