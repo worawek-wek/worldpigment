@@ -66,6 +66,9 @@ Route::prefix('order')->group(function () {
 
         // กดอนุมัติ / ยกเลิกอนุมัติ — เขียน morder.appv + morder.appvDT
         Route::post('/approve', [OrderApprovalController::class, 'approve'])->name('order.orderappv.approve');
+
+        // ปุ่ม "พิมพ์รายการที่อนุมัติวันนี้" — รายงานผลิตภัณฑ์ที่ต้องผลิต (P) ของใบที่อนุมัติวันนี้ (06/10/2569)
+        Route::get('/approved-today-pdf', [OrderApprovalController::class, 'approvedTodayPdf'])->name('order.orderappv.approved_today_pdf');
     });
 
 });

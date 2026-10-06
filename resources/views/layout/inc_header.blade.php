@@ -56,6 +56,43 @@
     </style>
 
     {{-- ─────────────────────────────────────────────────────────────────
+         ฟอร์มแบบกระชับ "label อยู่ซ้าย ต่อด้วยช่องกรอก" ใช้ได้ทุกหน้า (06/10/2569)
+         ยกโครงมาจากฟอร์มใบสั่งซื้อ (order/index.blade.php) ให้ฟอร์มอื่นใช้ร่วมกัน
+
+         วิธีใช้: ครอบฟอร์ม/กล่องด้วย class "of-form" แล้วเขียนแต่ละช่องเป็น
+            <div class="col-* of-row">
+                <label class="form-label">ป้าย</label>
+                <div class="of-ctl"> ...ช่องกรอก... </div>
+            </div>
+         ⚠ ช่องกรอกต้องอยู่ใน .of-ctl เสมอ ห้ามวาง <select> เป็นลูกตรงของ .of-row
+           — enhanceSelects() ห่อ select ด้วย element ใหม่ ตัวห่อจะกลายเป็น flex item แล้วความกว้างเพี้ยน
+         • ความกว้าง label ตั้งด้วยตัวแปร CSS --of-lw (ตั้งที่ .of-form หรือกล่องย่อย / inline style ก็ได้)
+         • .of-row-auto = label กว้างเท่าข้อความ (ช่องที่ 2 ของแถว)
+         • .of-form-sm  = ใช้กับฟอร์มที่ช่องกรอกเป็น form-control-sm
+         • ระยะระหว่างแถวใช้ gy-2 ของ Bootstrap ที่ตัว .row
+       ───────────────────────────────────────────────────────────────── --}}
+    <style>
+        .of-form { --of-lw: 110px; }
+        .of-form .of-row { display: flex; align-items: flex-start; gap: .5rem; }
+        .of-form .of-row > .form-label {
+            flex: 0 0 var(--of-lw);
+            margin-bottom: 0;
+            padding-top: .5rem;      /* ให้ข้อความ label ตรงแนวกับข้อความในช่องกรอก */
+            line-height: 1.25;
+            font-size: .85rem;
+            font-weight: 600;
+            /* 06/10/2569 ตามที่ผู้ใช้สั่ง: label ชิดขวา ให้ข้อความไปจบติดช่องกรอกทุกแถว
+               (เดิมชิดซ้าย — label สั้นจะดูห่างจากช่องกรอก) · ฟอร์มใบสั่งซื้อ/ฟอร์ม MK ใช้กฎของตัวเอง ยังชิดซ้าย */
+            text-align: right;
+        }
+        .of-form .of-row.of-row-auto > .form-label { flex-basis: auto; white-space: nowrap; }
+        .of-form .of-row > .of-ctl { flex: 1 1 0; min-width: 0; }
+        .of-form .of-ctl > .form-text { margin-top: .15rem; }
+        .of-form.of-form-sm .of-row > .form-label,
+        .of-form .of-form-sm .of-row > .form-label { padding-top: .3rem; }
+    </style>
+
+    {{-- ─────────────────────────────────────────────────────────────────
          WIP marker (สำหรับ dev): แปะ class "wip" ที่ element/ส่วนที่ยังเขียน
          ไม่เสร็จ → พื้นหลังแดง ลูกค้าจะเห็นว่าส่วนนั้นยัง test ไม่ได้
          เสร็จแล้ว → ลบคำว่า "wip" ออก "คำเดียว" สไตล์เดิมกลับมาเอง (ไม่ต้องจำสีเดิม)

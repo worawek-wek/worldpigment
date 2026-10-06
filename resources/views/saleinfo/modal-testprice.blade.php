@@ -8,6 +8,9 @@
 {{--   ชื่อลูกค้า = customer.name (CName ในไฟล์ Access เป็น "?" ถาวร)        --}}
 {{--   ราคา 1/2/3 + DB = ProductPriceService::quote(เบอร์ที่ตั้ง, TNet)      --}}
 {{-- ⚠ section Price Quotation ยังไม่ทำ (ยังคง wip)                         --}}
+{{-- 06/10/2569: ช่องกรอก/ช่องข้อมูลเทส เปลี่ยนเป็น label อยู่ซ้าย            --}}
+{{--   (โครง .of-form / .of-row / .of-ctl — CSS กลางใน layout/inc_header)    --}}
+{{--   กล่อง Price 1/2/3 + DB คงผังเดิม (label บน — กล่องราคาเล็กเรียงแนวนอน)  --}}
 {{-- ═══════════════════════════════════════════════════════════════════ --}}
 <div class="modal modalHeadDecor fade" id="testPriceModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -23,22 +26,27 @@
             </div>
 
             {{-- ไม่มี <form> — ฟอร์มนี้ไม่มีการบันทึก กัน Enter เผลอ submit --}}
-            <div class="modal-body px-4 py-4" style="background-color: #f8f9fb;">
+            <div class="modal-body px-4 py-4 of-form" style="background-color: #f8f9fb; --of-lw: 120px;">
 
                 {{-- ─── กลุ่ม: ลูกค้า / เลขที่เทส (ช่องที่กรอกได้) ─── --}}
                 <div class="card shadow-sm mb-3" style="border: 1px solid #e3e5ea;">
                     <div class="card-body p-3">
 
-                        <div class="row g-3 align-items-end mb-3">
-                            <div class="col-md-4">
-                                <label for="tp_customer" class="form-label small mb-1 fw-semibold">
-                                    Customer <span class="text-muted fw-normal">(เช่น 41008)</span>
+                        {{-- 06/10/2569: label อยู่ซ้าย — ตัวอย่างในวงเล็บลงบรรทัดที่ 2 ของ label (d-block) --}}
+                        <div class="row gx-3 gy-2">
+                            <div class="col-md-4 of-row">
+                                <label for="tp_customer" class="form-label fw-semibold">
+                                    Customer <span class="text-muted fw-normal d-block">(เช่น 41008)</span>
                                 </label>
-                                <input type="text" id="tp_customer" class="form-control" autocomplete="off">
+                                <div class="of-ctl">
+                                    <input type="text" id="tp_customer" class="form-control" autocomplete="off">
+                                </div>
                             </div>
-                            <div class="col-md-5">
-                                <label class="form-label small mb-1 text-muted">ชื่อลูกค้า</label>
-                                <div id="tp_cust_name" class="form-control-plaintext fw-medium ps-2 text-truncate">—</div>
+                            <div class="col-md-5 of-row of-row-auto">
+                                <label class="form-label text-muted">ชื่อลูกค้า</label>
+                                <div class="of-ctl">
+                                    <div id="tp_cust_name" class="form-control-plaintext fw-medium ps-2 text-truncate">—</div>
+                                </div>
                             </div>
                             <div class="col-md-3 text-md-end">
                                 <button type="button" class="btn btn-success w-100" id="tp_refresh">
@@ -46,25 +54,31 @@
                                     Refresh
                                 </button>
                             </div>
-                        </div>
 
-                        <div class="row g-3 align-items-end">
-                            <div class="col-md-3">
-                                <label for="tp_testno" class="form-label small mb-1 fw-semibold">
-                                    Test No. <span class="text-muted fw-normal">(เช่น 25/0077/4)</span>
+                            {{-- Test No. / Lot Test ขยายจาก col-md-3 เป็น col-md-6 (label กินที่ด้านซ้าย)
+                                 "ตั้งเบอร์เป็น" จึงลงไปอยู่แถวของตัวเอง (col-12) --}}
+                            <div class="col-md-6 of-row">
+                                <label for="tp_testno" class="form-label fw-semibold">
+                                    Test No. <span class="text-muted fw-normal d-block">(เช่น 25/0077/4)</span>
                                 </label>
-                                <input type="text" id="tp_testno" class="form-control" autocomplete="off">
+                                <div class="of-ctl">
+                                    <input type="text" id="tp_testno" class="form-control" autocomplete="off">
+                                </div>
                             </div>
-                            <div class="col-md-3">
-                                <label for="tp_lottest" class="form-label small mb-1 fw-semibold">
-                                    Lot Test <span class="text-muted fw-normal">(เช่น 680717-2/77)</span>
+                            <div class="col-md-6 of-row">
+                                <label for="tp_lottest" class="form-label fw-semibold">
+                                    Lot Test <span class="text-muted fw-normal d-block">(เช่น 680717-2/77)</span>
                                 </label>
-                                <input type="text" id="tp_lottest" class="form-control" autocomplete="off">
+                                <div class="of-ctl">
+                                    <input type="text" id="tp_lottest" class="form-control" autocomplete="off">
+                                </div>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label small mb-1 text-danger">ตั้งเบอร์เป็น</label>
-                                <div id="tp_setcode" class="form-control fw-semibold text-truncate"
-                                    style="background-color: #f6b98a; border-color: #e08a1e;">—</div>
+                            <div class="col-12 of-row">
+                                <label class="form-label text-danger">ตั้งเบอร์เป็น</label>
+                                <div class="of-ctl">
+                                    <div id="tp_setcode" class="form-control fw-semibold text-truncate"
+                                        style="background-color: #f6b98a; border-color: #e08a1e;">—</div>
+                                </div>
                             </div>
                         </div>
 
@@ -84,17 +98,23 @@
                     </div>
 
                     <div class="card-body p-3">
-                        <div class="mb-3">
-                            <label class="form-label small mb-1">Sample</label>
-                            <input type="text" id="tp_sample" class="form-control" readonly tabindex="-1">
+                        <div class="mb-2 of-row">
+                            <label class="form-label">Sample</label>
+                            <div class="of-ctl">
+                                <input type="text" id="tp_sample" class="form-control" readonly tabindex="-1">
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label small mb-1">Resin ที่ลูกค้าใช้</label>
-                            <input type="text" id="tp_resin_cust" class="form-control" readonly tabindex="-1">
+                        <div class="mb-2 of-row">
+                            <label class="form-label">Resin ที่ลูกค้าใช้</label>
+                            <div class="of-ctl">
+                                <input type="text" id="tp_resin_cust" class="form-control" readonly tabindex="-1">
+                            </div>
                         </div>
-                        <div class="mb-0">
-                            <label class="form-label small mb-1">Resin (Match)</label>
-                            <input type="text" id="tp_resin_match" class="form-control" readonly tabindex="-1">
+                        <div class="mb-0 of-row">
+                            <label class="form-label">Resin (Match)</label>
+                            <div class="of-ctl">
+                                <input type="text" id="tp_resin_match" class="form-control" readonly tabindex="-1">
+                            </div>
                         </div>
                     </div>
                 </div>

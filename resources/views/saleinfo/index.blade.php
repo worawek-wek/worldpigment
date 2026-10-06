@@ -232,6 +232,27 @@
     color: #55350a;
     font-variant-numeric: tabular-nums;
 }
+/* แถวราคากลุ่ม A/B/C (zcolorrate) ใต้ช่องราคา — 3 ช่องกว้างเท่าช่องราคาด้านบน (06/10/2569) */
+.saleinfo-dbprice .dbprice-grouphead {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #7a4d05;
+}
+.saleinfo-dbprice .dbprice-groupnone {
+    font-weight: 400;
+    color: #8a6d3b;
+    margin-left: 0.5rem;
+}
+.saleinfo-dbprice .dbprice-groups {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(170px, 1fr);
+    gap: 0.75rem;
+}
+@media (max-width: 991.98px) {
+    .saleinfo-dbprice .dbprice-groups {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
 /* บรรทัดบอกที่มาของราคา (ราคาทุน · เงื่อนไข · สูตร) ใต้กล่องคำนวณราคา */
 .saleinfo-price-note {
     font-size: 0.8rem;
@@ -745,10 +766,21 @@
             .val(value === null || value === undefined || value === '' ? '' : commaFmt(value, 0));
     }
 
+    // ราคากลุ่ม A/B/C จาก zcolorrate (06/10/2569) — rate = null คือรหัสนี้ไม่มีในกลุ่มราคา
+    // showNone = ขึ้นข้อความ "ไม่มีในกลุ่มราคา" (เฉพาะตอนค้นแล้วไม่เจอ ไม่ใช่ตอนล้างฟอร์ม)
+    function setSaleinfoGroupRates(rate, showNone) {
+        ['A', 'B', 'C'].forEach(function (g) {
+            const v = rate ? rate['rate_' + g] : null;
+            $('#saleinfo_group_' + g).val(v === null || v === undefined || v === '' ? '' : commaFmt(v, 2));
+        });
+        $('#saleinfo_group_none').toggleClass('d-none', !!rate || !showNone);
+    }
+
     function clearSaleinfoCalc() {
         if (saleinfoCalcXhr) { saleinfoCalcXhr.abort(); saleinfoCalcXhr = null; }
         clearTimeout(saleinfoCalcTimer);
         SALEINFO_CALC_FIELDS.forEach(function (name) { setCalcField(name, ''); });
+        setSaleinfoGroupRates(null, false);
         $('#saleinfo_price_note').text('').removeClass('saleinfo-price-note-warn');
     }
 
@@ -757,6 +789,9 @@
         res = res || {};
         const p = res.prices || null;
         const $note = $('#saleinfo_price_note').removeClass('saleinfo-price-note-warn');
+
+        // ราคากลุ่มไม่ขึ้นกับราคาทุน — เติมก่อน ไม่ว่าจะคำนวณราคา 1/2/3 ได้หรือไม่
+        setSaleinfoGroupRates(res.color_rate || null, true);
 
         if (p) {
             setCalcField('db_price_1', p.price_1);

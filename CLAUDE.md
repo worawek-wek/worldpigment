@@ -717,6 +717,22 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 - ✅ **ตรวจแล้วว่าคอลัมน์เหล่านี้ยังอยู่ครบ:** `morder.appv`/`appvDT` · `suborder.nold` · `qmast.id`/`letterhead`/`remark_lang` · `testmain.ChemSafety`/`Brand` · `emp.role_id`/`password`
 - ⚠ **`migrate:status` แสดง Pending อีก 25 ตัว** — ส่วนใหญ่เป็นตาราง `tb_*` ที่มีอยู่ใน DB แล้ว (DB นี้ไม่ได้สร้างจาก `migrate` ล้วน ๆ) **อย่ารัน `php artisan migrate` รวดเดียว** โดยไม่ตรวจทีละตัว
 
+### ปุ่ม "พิมพ์รายการที่อนุมัติวันนี้" → PDF "รายงานผลิตภัณฑ์ที่ต้องผลิต (P)" — 06/10/2569
+
+ปุ่มบนหัวหน้า `/order` → `GET order/order-approval/approved-today-pdf` → `OrderApprovalController::approvedTodayPdf()` (mPDF A4 แนวตั้ง) → blade **`order/order-approved-today-pdf.blade.php`** · ผังตามกระดาษระบบเดิม (MK01-FM04.04)
+
+- **เงื่อนไข (ผู้ใช้สั่ง):** ใบที่ **อนุมัติวันนี้** (`morder.appv` ≠ 0/NULL + `appvDT` อยู่ในวันนี้) **เรียงตามเลขที่ใบสั่ง** → `Runno` · ผ่าน `approvableQuery()` จึงไม่รวมใบจอง R · `?date=Y-m-d` พิมพ์ย้อนหลังได้ (ปุ่มไม่ส่ง)
+- 1 แถว = 1 รายการ `suborder` · 3 บรรทัดต่อรายการ: (1) เลขที่ใบ · เวลารับ (`Mdate` H:i) · รหัสสินค้า · Lot · นน. P (`Production`) · Sale (`supno`) · รหัสลูกค้า · ชื่อลูกค้า · ซื้อครั้งก่อน (2) กำหนดผลิตเสร็จ (`senddate`) + ส่งก่อนได้/RP/Spec/Cer + หมายเหตุ (`suborder.Remark`) (3) กำหนดลูกค้าต้องการใช้ (`custwant`)
+- ท้ายรายงาน: รวมน้ำหนัก P · ช่องเซ็น การตลาด / วางแผนผลิต / เวลา · **"รายการสินค้าที่สั่งซ้ำ"** = รหัสสินค้า (+ ประเภทใบ 2 ตัวหน้า) ที่มี **มากกว่า 1 รายการในรายงาน** พร้อมจำนวนรายการ + น้ำหนักรวม
+- ⚠ **สิ่งที่ตีความเอง ยังไม่ได้ยืนยันกับผู้ใช้:**
+  - **เฉพาะรายการที่ `Production > 0`** (ชื่อรายงานคือ "ที่ต้องผลิต (P)") — รายการที่มีแต่ S ไม่ออก
+  - **แยกหน้าตามแผนก (`morder.Company`)** — กระดาษเดิมหัวเขียน "แผนกผลิต DB" · รวมน้ำหนัก/รายการสั่งซ้ำ คิดต่อแผนก
+  - **"ซื้อครั้งก่อน"** = `MAX(morder.Mdate)` ของรหัสสินค้านั้นก่อนใบนี้ **ไม่แยกลูกค้า** แสดงแบบ พ.ศ. `yymmdd` · ไม่เคยสั่ง = `NEW`
+  - **กล่องสี่เหลี่ยมหลังรหัสลูกค้า (กระดาษเดิมมี "A" บางราย) วาดกล่องเปล่า** — ยังไม่ทราบที่เก็บใน DB (น่าจะเกี่ยวกับ "AList" ที่ฟอร์มลูกค้าก็ยังหาที่เก็บไม่เจอ)
+  - หัวรายงานเขียน "อนุมัติวันที่ dd/mm/yy" แทน "วันที่ … ระหว่างเวลา 08:00 ถึง 18:00" ของกระดาษเดิม
+- `approvableQuery()` qualify เป็น `morder.Orderno` แล้ว (เดิม `Orderno` เปล่า — join `suborder` แล้ว ambiguous)
+- ทดสอบสร้าง PDF ด้วยข้อมูล 18/09/2026 ผ่าน (33 รายการ 4 แผนก 5 หน้า) แต่ **ยังไม่ได้เปิดดูหน้าตา PDF** — เครื่อง dev ข้อมูล `appvDT` ล่าสุดคือ 21/09/2026 วันนี้จึงขึ้น "ไม่พบใบสั่งซื้อที่อนุมัติในวันนี้"
+
 ### ฟอร์มลูก: อนุมัติใบสั่งซื้อ (morderAPPV) — 12/08/2569
 
 แปลงจากฟอร์ม Access **"morderAPPV"** — `OrderApprovalController` + route ใต้ prefix `order/order-approval/*` + view `order/order-approval.blade.php` (modal ในหน้า `/order`) **สถานะ: อนุมัติ / ยกเลิกอนุมัติ ได้แล้ว** (21/08/2569)
@@ -860,6 +876,12 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 
 ⚠ **`uprice` เป็น MyISAM + charset `utf8` (3 ไบต์)** — ต่างจาก `tb_saleinfo` ที่เป็น InnoDB/utf8mb4 ⇒ ไม่มีทรานแซกชัน (ดูหัวข้อ MyISAM ด้านล่าง) และเก็บ emoji ไม่ได้ (ภาษาไทยปกติเก็บได้ ทดสอบแล้ว)
 
+**ฟอร์ม "กำหนดราคา" แสดง "ราคากลุ่ม" A/B/C ของรหัสสินค้านั้นด้วย (06/10/2569 ตามที่ผู้ใช้สั่ง)** — แถว 3 ช่องใต้ช่องราคาในกล่อง "คำนวนราคา" ของ `modal-price.blade.php` (`#saleinfo_group_A/B/C`) = **`zcolorrate.rate_A` / `rate_B` / `rate_C`** (ตัวเดียวกับเมนู "จัดการกลุ่มราคา" / ปุ่ม "ดูกลุ่มราคา")
+- `SaleinfoController::priceLookup()` แนบ key **`color_rate`** มากับ `saleinfo/price-lookup` (null = รหัสไม่มีใน `zcolorrate`) — จับคู่ `colorno` = รหัสที่ส่งมาแบบตรงตัว (รหัสเดียวกับที่ใช้คำนวณราคา: `ITEMNO` → ไม่กรอกใช้ `st_code`)
+- ฝั่งจอ `setSaleinfoGroupRates(rate, showNone)` ใน `saleinfo/index.blade.php` — เรียกจาก `showSaleinfoCalc()` **ก่อน**แยกขาคำนวณได้/ไม่ได้ (ราคากลุ่มไม่ขึ้นกับราคาทุน: รหัสที่คำนวณราคา 1/2/3 ไม่ได้ก็ยังมีราคากลุ่มได้ เช่น `1107025`) และ `clearSaleinfoCalc()` · ไม่มีในกลุ่มราคา = ช่องขีด `—` + ข้อความ "รหัสสินค้านี้ไม่มีในกลุ่มราคา" (`#saleinfo_group_none`)
+- แสดงทศนิยม 2 ตำแหน่ง (ตรงกับตาราง "ดูกลุ่มราคา") · ป้ายเกณฑ์กลุ่มมาจาก `PriceApprovalController::priceGroups()` ไม่ hard-code · **แสดงอย่างเดียว ไม่ได้บันทึก**
+- ⚠ **ทำเฉพาะฟอร์ม "กำหนดราคา"** — จอ "ค้นหาราคาสินค้า" (`modal-newprice`) ได้ `color_rate` มาใน response เดียวกันแต่ยังไม่ได้แสดง · จอ Test Price ไม่ได้แตะ
+
 **ตาราง `tb_saleinfo` ยังอยู่ ไม่ได้ลบ** — มี 6 แถวและ**เป็นข้อมูลทดสอบทั้งหมด** (`Test`, `12345`, `78945`) ไม่มีของจริงต้องย้าย. ตอนนี้ไม่มีโค้ดไหนอ่าน/เขียนแล้ว — จะ drop ทิ้งเมื่อไหร่ก็ได้ (พร้อม migration 2 ไฟล์ที่สร้างมัน) แต่ยังไม่ทำเพราะเป็นการลบข้อมูล
 
 ## ตารางวันหยุดนักขัตฤกษ์ (เมนู "วันหยุดนักขัตฤกษ์", `/holiday`) — 01/09/2569
@@ -990,6 +1012,19 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
   - **ฟอนต์ Public Sans / IBM Plex Sans Thai / Lexend** → `public/assets/vendor/fonts/google-fonts.css` + woff2 37 ไฟล์ใน `public/assets/vendor/fonts/google/` (url ใน CSS เป็น relative `google/...`)
   - เพิ่มไลบรารี/ฟอนต์ใหม่ ให้ดาวน์โหลดมาเก็บใน `public/assets/vendor/` แล้วอ้าง path local เสมอ
   - ⚠ **ยังเหลือ CDN ใน view ที่ไม่มี controller/route เรียกแล้ว** (ของเหลือจาก template): `user/news` · `report-2/*` · `position/index` — ไม่ได้แก้ · `.env` ยังตั้ง `MAIL_HOST=smtp.gmail.com` แต่ไม่มีโค้ดส่งอีเมล
+- **ฟอร์มแบบกระชับ "label อยู่ซ้าย ต่อด้วยช่องกรอก" — โครงกลาง `.of-form` / `.of-row` / `.of-ctl`** (06/10/2569 ตามที่ผู้ใช้สั่ง "แก้ Form ทั้งระบบให้กระชับเหมือนหน้า Order"): CSS กลางอยู่ที่ `layout/inc_header.blade.php` (บล็อก "ฟอร์มแบบกระชับ") ใช้ได้ทุกหน้า — ยกโครงมาจากฟอร์มใบสั่งซื้อ
+  - วิธีใช้: ครอบฟอร์ม/กล่องด้วย `of-form` → แต่ละช่อง `<div class="col-* of-row">` + `<label class="form-label">` + `<div class="of-ctl">…ช่องกรอก / form-text / input-group…</div>` · row ใช้ `gx-3 gy-2` (row ถัดไปที่แยก `.row` ใส่ `mt-0`)
+  - 🔴 **ช่องกรอกต้องอยู่ใน `.of-ctl` เสมอ ห้ามวาง `<select>` เป็นลูกตรงของ `.of-row`** (`enhanceSelects()` ห่อ select แล้ว flex เพี้ยน)
+  - ความกว้าง label = ตัวแปร CSS **`--of-lw`** (ค่าเริ่มต้น 110px) ตั้งต่อกล่อง/ต่อฟอร์ม (inline style หรือ `<style>` ของหน้า) · `of-row-auto` = label กว้างเท่าข้อความ · `of-form-sm` = ฟอร์มที่ช่องเป็น `form-control-sm`
+  - **label ใน `.of-form` จัดชิดขวา** (`text-align: right` ในกฎกลาง — ผู้ใช้สั่ง 06/10/2569 เพราะ label สั้นดูห่างจากช่องกรอก) · ฟอร์มใบสั่งซื้อ + ฟอร์ม MK ใช้กฎของตัวเองจึง**ยังชิดซ้าย** · กล่องหมายเหตุของใบเสนอราคาใช้ `--of-lw` 132px โหมด TH / 150px โหมด EN
+  - **ฟอร์มที่แปลงแล้ว:** ฐานข้อมูลลูกค้า (`customer-form` — `--of-lw` อยู่ที่ `.cf-sec*` ใน `customer/index`) · อนุมัติใบสั่งซื้อ (`order-approval` — `#oaDetailView`, ปุ่ม Refresh ย้ายขึ้นไปแถวเดียวกับปุ่ม "กลับไปรายการ") · ใบเสนอราคา (`#quotationModal` ใน `quotation/index`) · กำหนดราคา (`modal-price` / `modal-newprice` / `modal-testprice`) · ข้อมูลสินค้า · กลุ่มราคา · วันหยุด — **id / name ของทุกช่องคงเดิม JS ไม่ได้แก้**
+  - ฟอร์มใบสั่งซื้อ + ฟอร์ม MK ยังใช้กฎของตัวเองใน `order/index.blade.php` (`.of-sec .of-row…` / `.pa-body .of-row…`) — ไม่ได้ครอบ `of-form`
+  - **ที่จงใจคงเป็น label อยู่บน:** กล่องราคาเรียงแนวนอน (ราคา 1/2/3, DB 3-4/1-2 Kg., กลุ่ม A/B/C) · ตารางในฟอร์ม · แถบตัวกรองหน้ารายการ
+  - 🔴 **ฟอร์มเทียบสี (`modal-cm` / `modal-sd` / `modal-result`) ไม่แปลง — ผู้ใช้สั่ง 06/10/2569 ว่า "Form เดิมกระชับอยู่แล้ว"** (เคยแปลงแล้วคืนกลับเป็นของเดิมในวันเดียวกัน) **อย่าแปลงอีก**
+  - **ลำดับช่อง (ลำดับ Tab) ที่เปลี่ยนเพื่อให้ตรงแนว:** ใบเสนอราคา — `q_EmpID` มาก่อน `q_Engname` · กลุ่มราคา — วันที่ปรับราคาขึ้นไปอยู่แถวเดียวกับรหัสสินค้า (เดิมอยู่ใต้กล่องราคา) · ข้อมูลสินค้า — ปุ่ม `#btn_add_temp_inline` ย้ายจากใน label ไปอยู่ขวาของ select Temp
+  - **ตัวอย่างในวงเล็บที่ยาวเกิน label ถูกย้ายลงเป็น `form-text` ใต้ช่อง** (ใบเสนอราคา 5 ช่องหมายเหตุ · REM1/REM2/PackRem ใน `modal-price` · รหัสสินค้าใน `color-rate-form`) — ตัวอย่างสั้นยังอยู่ใน label (ลงบรรทัดที่ 2)
+  - ⚠ **ยังไม่ได้แปลง:** ฟอร์มฝั่ง Production / Permission / master ของ Production (planning-item-form · semi-pigment · pigment · employee · role · machine · department · temp · prod-method · planning-remark · qc-status · planning-status · worker/qc portal) — รอผู้ใช้ยืนยันว่ารวมด้วยหรือไม่
+  - ⚠ ความกว้าง label / คอลัมน์ ตั้งจากการประเมิน **ยังไม่ได้เปิดดูในเบราว์เซอร์** — ถ้า label ตกบรรทัด/ช่องแคบ ให้ปรับ `--of-lw` หรือ `col-*` ของช่องนั้น
 - **ช่องกรอกเวลา ห้ามใช้ `<input type="time">`** (05/10/2569): เบราว์เซอร์แสดง 12 ชม. (AM/PM) หรือ 24 ชม. ตาม region ของแต่ละเครื่อง และ `lang="en-GB"` บังคับไม่ได้จริงบน Chrome/Edge ⇒ ใช้ flatpickr แบบ `enableTime + noCalendar + time_24hr`, `dateFormat: 'H:i'` (ไม่ใช้ altInput — ค่าใน input คือ `H:i` ตรง ๆ ผ่าน `date_format:H:i` ของ server ได้เลย)
   - หน้า planning: ฟอร์มแก้ไข Item ใช้ class **`flatpickr-time`** + `window.wpInitTimeFields(scope)` / `wpFpTimeOptions` (`planning-item-form.blade.php` — แถววิธีการผลิตที่ JS สร้างเพิ่มต้องเรียก init เอง) · ตัวกรองเวลาบรรจุในหน้ารายการ init ที่ `index.blade.php` (`fpPackingTimeStart/End`)
   - **หมุนล้อเมาส์ปรับชั่วโมง/นาทีได้** ผ่าน `public/assets/vendor/libs/flatpickr/plugins/scrollPlugin.js` (ดัดแปลงจาก plugin ของ flatpickr เก็บในเครื่อง, โหลดที่ `layout/inc_js` ทุกหน้า) — ทำงานเฉพาะช่องที่ใส่ `plugins: [scrollPlugin()]` ใน option (ตอนนี้มีแค่ช่องเวลาอย่างเดียวของหน้า planning; ช่องวันที่/วันเวลาบรรจุไม่ได้ใส่)

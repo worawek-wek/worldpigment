@@ -21,7 +21,7 @@
         || trim((string) $v('blackdate')) !== '';
 @endphp
 
-<form id="customer_form" autocomplete="off">
+<form id="customer_form" class="of-form" autocomplete="off">
     @csrf
     <input type="hidden" name="mode" value="{{ $isNew ? 'insert' : 'update' }}">
 
@@ -35,58 +35,83 @@
         </div>
     @endif
 
+    {{-- 06/10/2569: ช่องกรอกเปลี่ยนเป็น "label อยู่ซ้าย ต่อด้วยช่องกรอก" แบบเดียวกับฟอร์มใบสั่งซื้อ
+         (โครง .of-row / .of-ctl — CSS กลางอยู่ที่ layout/inc_header, ความกว้าง label ตั้งด้วย --of-lw
+          ใน <style> ของ customer/index.blade.php) · name / id ของทุกช่องคงเดิม --}}
+
     {{-- ═══ ข้อมูลลูกค้า ═══ --}}
     <div class="cf-sec mb-3">
         <div class="cf-sec-title"><i class="ti ti-address-book"></i> ข้อมูลลูกค้า</div>
 
-        <div class="row g-3">
-            <div class="col-md-2">
+        <div class="row gx-3 gy-2">
+            <div class="col-md-4 of-row">
                 <label class="form-label">รหัส <span class="text-danger">*</span></label>
-                <input type="text" class="form-control cf-hl-code" id="c_code" name="code" maxlength="6"
-                    value="{{ $v('code') }}" {{ $isNew ? '' : 'readonly' }}>
-                @if ($isNew)
-                    <div class="form-text small">กรอกเอง (ไม่เกิน 6 ตัวอักษร)</div>
-                @endif
+                <div class="of-ctl">
+                    <input type="text" class="form-control cf-hl-code" id="c_code" name="code" maxlength="6"
+                        value="{{ $v('code') }}" {{ $isNew ? '' : 'readonly' }}>
+                    @if ($isNew)
+                        <div class="form-text small">กรอกเอง (ไม่เกิน 6 ตัวอักษร)</div>
+                    @endif
+                </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-8 of-row">
                 <label class="form-label">ชื่อ <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="c_name" name="name" maxlength="70" value="{{ $v('name') }}">
+                <div class="of-ctl">
+                    <input type="text" class="form-control" id="c_name" name="name" maxlength="70" value="{{ $v('name') }}">
+                </div>
             </div>
-            <div class="col-md-4">
+
+            <div class="col-md-8 of-row">
                 <label class="form-label">ชื่อ (อังกฤษ)</label>
-                <input type="text" class="form-control" id="c_name_en" name="name_en" maxlength="60" value="{{ $name_en }}">
-                <div class="form-text small">เก็บที่ตาราง engname</div>
+                <div class="of-ctl">
+                    <input type="text" class="form-control" id="c_name_en" name="name_en" maxlength="60" value="{{ $name_en }}">
+                    <div class="form-text small">เก็บที่ตาราง engname</div>
+                </div>
             </div>
-
-            <div class="col-md-3">
+            <div class="col-md-4 of-row">
                 <label class="form-label">เลขที่</label>
-                <input type="text" class="form-control" name="no" maxlength="40" value="{{ $v('no') }}">
+                <div class="of-ctl">
+                    <input type="text" class="form-control" name="no" maxlength="40" value="{{ $v('no') }}">
+                </div>
             </div>
-            <div class="col-md-9">
+
+            <div class="col-md-8 of-row">
                 <label class="form-label">ถนน</label>
-                <input type="text" class="form-control" name="road" maxlength="65" value="{{ $v('road') }}">
+                <div class="of-ctl">
+                    <input type="text" class="form-control" name="road" maxlength="65" value="{{ $v('road') }}">
+                </div>
             </div>
-
-            <div class="col-md-4">
+            <div class="col-md-4 of-row">
                 <label class="form-label">อำเภอ / เขต</label>
-                <input type="text" class="form-control" name="amphur" maxlength="40" value="{{ $v('amphur') }}">
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">จังหวัด</label>
-                <input type="text" class="form-control" name="city" maxlength="20" value="{{ $v('city') }}">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">รหัสไปรษณีย์</label>
-                <input type="text" class="form-control" name="zip" maxlength="6" value="{{ $v('zip') }}">
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">โทร</label>
-                <input type="text" class="form-control" name="tel" maxlength="23" value="{{ $v('tel') }}">
+                <div class="of-ctl">
+                    <input type="text" class="form-control" name="amphur" maxlength="40" value="{{ $v('amphur') }}">
+                </div>
             </div>
 
-            <div class="col-md-3">
+            <div class="col-md-4 of-row">
+                <label class="form-label">จังหวัด</label>
+                <div class="of-ctl">
+                    <input type="text" class="form-control" name="city" maxlength="20" value="{{ $v('city') }}">
+                </div>
+            </div>
+            <div class="col-md-4 of-row">
+                <label class="form-label">รหัสไปรษณีย์</label>
+                <div class="of-ctl">
+                    <input type="text" class="form-control" name="zip" maxlength="6" value="{{ $v('zip') }}">
+                </div>
+            </div>
+            <div class="col-md-4 of-row">
+                <label class="form-label">โทร</label>
+                <div class="of-ctl">
+                    <input type="text" class="form-control" name="tel" maxlength="23" value="{{ $v('tel') }}">
+                </div>
+            </div>
+
+            <div class="col-md-4 of-row">
                 <label class="form-label">Fax</label>
-                <input type="text" class="form-control" name="fax" maxlength="12" value="{{ $v('fax') }}">
+                <div class="of-ctl">
+                    <input type="text" class="form-control" name="fax" maxlength="12" value="{{ $v('fax') }}">
+                </div>
             </div>
         </div>
     </div>
@@ -95,107 +120,138 @@
     <div class="cf-sec cf-sec-sale mb-3">
         <div class="cf-sec-title"><i class="ti ti-businessplan"></i> เงื่อนไขการขาย</div>
 
-        <div class="row g-3">
-            <div class="col-md-3">
+        <div class="row gx-3 gy-2">
+            <div class="col-md-4 of-row">
                 <label class="form-label">เครดิต</label>
-                <input type="text" class="form-control" name="term" maxlength="15" value="{{ $v('term') }}">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">ส่วนลด %</label>
-                <input type="text" class="form-control" name="cashdisc" value="{{ $v('cashdisc') }}">
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">รหัสผู้ขาย</label>
-                <select class="form-select" name="sale">
-                    <option value="">- ไม่ระบุ -</option>
-                    @foreach ($saleList as $s)
-                        <option value="{{ $s['sale'] }}" {{ $saleCurrent === (string) $s['sale'] ? 'selected' : '' }}>
-                            {{ $s['label'] }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">ประเภทลูกค้า</label>
-                <select class="form-select" name="type">
-                    <option value="">- ไม่ระบุ -</option>
-                    @foreach ($types as $t)
-                        <option value="{{ $t->type }}" {{ (string) $v('type') === (string) $t->type ? 'selected' : '' }}>
-                            {{ $t->type }} — {{ $t->t_namee }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="col-md-4">
-                <label class="form-label">เลขที่ผู้เสียภาษี</label>
-                <input type="text" class="form-control" name="taxid" maxlength="50" value="{{ $v('taxid') }}">
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">สาขา (เพื่อเปิดบิล)</label>
-                <input type="text" class="form-control" name="branch" maxlength="15" value="{{ $v('Branch') }}">
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">เลขผู้เสียภาษีเดิม (10 หลัก)</label>
-                <input type="text" class="form-control" name="legal" maxlength="50" value="{{ $v('legal') }}">
-            </div>
-
-            <div class="col-md-5">
-                <label class="form-label d-block">เอกสารที่ต้องแนบ</label>
-                <div class="cf-checkrow">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="c_rp" name="rp" value="1"
-                            {{ CustomerController::checked($v('RP')) ? 'checked' : '' }}>
-                        <label class="form-check-label" for="c_rp">RP</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="c_cer" name="cer" value="1"
-                            {{ CustomerController::checked($v('CER')) ? 'checked' : '' }}>
-                        <label class="form-check-label" for="c_cer">CER</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="c_msds" name="msds" value="1"
-                            {{ CustomerController::checked($v('MSDS')) ? 'checked' : '' }}>
-                        <label class="form-check-label" for="c_msds">MSDS</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="c_po" name="po" value="1"
-                            {{ CustomerController::checked($v('PO')) ? 'checked' : '' }}>
-                        <label class="form-check-label" for="c_po">PO</label>
-                    </div>
+                <div class="of-ctl">
+                    <input type="text" class="form-control" name="term" maxlength="15" value="{{ $v('term') }}">
                 </div>
-                <div class="form-text small">ค่าตั้งต้นที่ฟอร์มใบสั่งซื้อดึงไปเติมให้อัตโนมัติ</div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-4 of-row">
+                <label class="form-label">ส่วนลด %</label>
+                <div class="of-ctl">
+                    <input type="text" class="form-control" name="cashdisc" value="{{ $v('cashdisc') }}">
+                </div>
+            </div>
+            <div class="col-md-4 of-row">
+                <label class="form-label">รหัสผู้ขาย</label>
+                <div class="of-ctl">
+                    <select class="form-select" name="sale">
+                        <option value="">- ไม่ระบุ -</option>
+                        @foreach ($saleList as $s)
+                            <option value="{{ $s['sale'] }}" {{ $saleCurrent === (string) $s['sale'] ? 'selected' : '' }}>
+                                {{ $s['label'] }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+
+            <div class="col-md-4 of-row">
+                <label class="form-label">ประเภทลูกค้า</label>
+                <div class="of-ctl">
+                    <select class="form-select" name="type">
+                        <option value="">- ไม่ระบุ -</option>
+                        @foreach ($types as $t)
+                            <option value="{{ $t->type }}" {{ (string) $v('type') === (string) $t->type ? 'selected' : '' }}>
+                                {{ $t->type }} — {{ $t->t_namee }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-4 of-row">
+                <label class="form-label">เลขที่ผู้เสียภาษี</label>
+                <div class="of-ctl">
+                    <input type="text" class="form-control" name="taxid" maxlength="50" value="{{ $v('taxid') }}">
+                </div>
+            </div>
+            <div class="col-md-4 of-row">
+                <label class="form-label">สาขา (เพื่อเปิดบิล)</label>
+                <div class="of-ctl">
+                    <input type="text" class="form-control" name="branch" maxlength="15" value="{{ $v('Branch') }}">
+                </div>
+            </div>
+
+            <div class="col-md-4 of-row">
+                <label class="form-label">เลขผู้เสียภาษีเดิม (10 หลัก)</label>
+                <div class="of-ctl">
+                    <input type="text" class="form-control" name="legal" maxlength="50" value="{{ $v('legal') }}">
+                </div>
+            </div>
+            <div class="col-md-4 of-row">
                 <label class="form-label">ใบกำกับ / สำเนา</label>
-                <input type="text" class="form-control" name="copyinv" maxlength="20" value="{{ $v('CopyINV') }}">
+                <div class="of-ctl">
+                    <input type="text" class="form-control" name="copyinv" maxlength="20" value="{{ $v('CopyINV') }}">
+                </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-4 of-row">
                 <label class="form-label">Nickname</label>
-                <input type="text" class="form-control cf-hl-yellow" name="nickname" maxlength="30" value="{{ $v('nickname') }}">
-                <div class="form-text small">ชื่อที่ติดข้างกล่อง</div>
+                <div class="of-ctl">
+                    <input type="text" class="form-control cf-hl-yellow" name="nickname" maxlength="30" value="{{ $v('nickname') }}">
+                    <div class="form-text small">ชื่อที่ติดข้างกล่อง</div>
+                </div>
             </div>
 
-            <div class="col-md-4">
+            <div class="col-md-8 of-row">
+                <label class="form-label">เอกสารที่ต้องแนบ</label>
+                <div class="of-ctl">
+                    <div class="cf-checkrow">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="c_rp" name="rp" value="1"
+                                {{ CustomerController::checked($v('RP')) ? 'checked' : '' }}>
+                            <label class="form-check-label" for="c_rp">RP</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="c_cer" name="cer" value="1"
+                                {{ CustomerController::checked($v('CER')) ? 'checked' : '' }}>
+                            <label class="form-check-label" for="c_cer">CER</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="c_msds" name="msds" value="1"
+                                {{ CustomerController::checked($v('MSDS')) ? 'checked' : '' }}>
+                            <label class="form-check-label" for="c_msds">MSDS</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="c_po" name="po" value="1"
+                                {{ CustomerController::checked($v('PO')) ? 'checked' : '' }}>
+                            <label class="form-check-label" for="c_po">PO</label>
+                        </div>
+                    </div>
+                    <div class="form-text small">ค่าตั้งต้นที่ฟอร์มใบสั่งซื้อดึงไปเติมให้อัตโนมัติ</div>
+                </div>
+            </div>
+            <div class="col-md-4 of-row">
                 <label class="form-label">เวลารับของ</label>
-                <input type="text" class="form-control" name="custtime" maxlength="20" value="{{ $v('custTime') }}">
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">ลงของ เก็บเงิน / เช็ค</label>
-                <input type="text" class="form-control" name="cashchq" maxlength="20" value="{{ $v('CashChq') }}">
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">หมายเหตุภายใน</label>
-                <input type="text" class="form-control" name="cust_desc" maxlength="50" value="{{ $v('cust_desc') }}">
+                <div class="of-ctl">
+                    <input type="text" class="form-control" name="custtime" maxlength="20" value="{{ $v('custTime') }}">
+                </div>
             </div>
 
-            <div class="col-md-6">
-                <label class="form-label">คำสั่งขณะส่งมอบ</label>
-                <input type="text" class="form-control" name="condition" maxlength="50" value="{{ $v('condition') }}">
+            <div class="col-md-4 of-row">
+                <label class="form-label">ลงของ เก็บเงิน / เช็ค</label>
+                <div class="of-ctl">
+                    <input type="text" class="form-control" name="cashchq" maxlength="20" value="{{ $v('CashChq') }}">
+                </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-8 of-row">
+                <label class="form-label">หมายเหตุภายใน</label>
+                <div class="of-ctl">
+                    <input type="text" class="form-control" name="cust_desc" maxlength="50" value="{{ $v('cust_desc') }}">
+                </div>
+            </div>
+
+            <div class="col-md-6 of-row">
+                <label class="form-label">คำสั่งขณะส่งมอบ</label>
+                <div class="of-ctl">
+                    <input type="text" class="form-control" name="condition" maxlength="50" value="{{ $v('condition') }}">
+                </div>
+            </div>
+            <div class="col-md-6 of-row">
                 <label class="form-label">หมายเหตุ</label>
-                <input type="text" class="form-control" name="remark" maxlength="50" value="{{ $v('remark') }}">
+                <div class="of-ctl">
+                    <input type="text" class="form-control" name="remark" maxlength="50" value="{{ $v('remark') }}">
+                </div>
             </div>
         </div>
     </div>
@@ -278,19 +334,25 @@
     @if ($hasBlackInfo)
         <div class="cf-sec cf-sec-black mb-3">
             <div class="cf-sec-title"><i class="ti ti-ban"></i> ข้อมูล Blacklist (แก้ไขที่นี่ไม่ได้)</div>
-            <div class="row g-3">
-                <div class="col-md-3">
+            <div class="row gx-3 gy-2">
+                <div class="col-md-3 of-row">
                     <label class="form-label">สถานะ</label>
-                    <input type="text" class="form-control" value="{{ $isBlack ? 'ติด Blacklist' : 'ปกติ' }}" readonly>
+                    <div class="of-ctl">
+                        <input type="text" class="form-control" value="{{ $isBlack ? 'ติด Blacklist' : 'ปกติ' }}" readonly>
+                    </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-3 of-row">
                     <label class="form-label">วันที่</label>
-                    <input type="text" class="form-control" readonly
-                        value="{{ $v('blackdate') ? \Carbon\Carbon::parse($v('blackdate'))->format('d/m/Y') : '' }}">
+                    <div class="of-ctl">
+                        <input type="text" class="form-control" readonly
+                            value="{{ $v('blackdate') ? \Carbon\Carbon::parse($v('blackdate'))->format('d/m/Y') : '' }}">
+                    </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-6 of-row">
                     <label class="form-label">หมายเหตุ</label>
-                    <input type="text" class="form-control" value="{{ $v('blackrem') }}" readonly>
+                    <div class="of-ctl">
+                        <input type="text" class="form-control" value="{{ $v('blackrem') }}" readonly>
+                    </div>
                 </div>
             </div>
             <div class="form-text small mt-2">

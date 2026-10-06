@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Mpdf\Mpdf;
 
 /**
  * อนุมัติใบสั่งซื้อ — แปลงมาจากฟอร์ม Access "morderAPPV"
@@ -73,7 +75,8 @@ class OrderApprovalController extends Controller
     {
         return DB::table('morder')
             // ไม่รวมใบจอง R (CR / HR / WR)
-            ->whereRaw('SUBSTRING(Orderno, 2, 1) <> ?', ['R']);
+            // qualify ชื่อตาราง — approvedTodayPdf() เอา query นี้ไป join suborder ซึ่งมี Orderno เหมือนกัน (06/10/2569)
+            ->whereRaw('SUBSTRING(morder.Orderno, 2, 1) <> ?', ['R']);
 
         // ── ปิดไว้ชั่วคราว: ไม่รวมใบสั่งทำสต๊อก ──
         // ->where(function ($q) {
@@ -267,5 +270,113 @@ class OrderApprovalController extends Controller
             'price2'      => $appv->price2 ?? null,
             'price3'      => $appv->price3 ?? null,
         ];
+    }
+
+    /**
+     * GET — ปุ่ม "พิมพ์รายการที่อนุมัติวันนี้" บนหน้า /order (06/10/2569)
+     *   รายงาน PDF "รายงานผลิตภัณฑ์ที่ต้องผลิต (P)" ตามกระดาษของระบบเดิม (MK01-FM04.04)
+     *
+     *   เงื่อนไข: ใบสั่งซื้อที่ **อนุมัติวันนี้** (morder.appvDT อยู่ในวันนี้) เรียงตามเลขที่ใบสั่ง
+     *   1 แถว = 1 รายการใน suborder ที่มีน้ำหนักผลิต (Production > 0) — รายงานนี้เป็นของ "ที่ต้องผลิต (P)"
+     *   แยกหน้าตามแผนกที่ผลิต (morder.Company) — กระดาษเดิมออกทีละแผนก หัวรายงานเขียน "แผนกผลิต DB"
+     *   ท้ายแต่ละแผนก: รวมน้ำหนัก P · ช่องเซ็น · "รายการสินค้าที่สั่งซ้ำ" (รหัสสินค้าเดียวกันเกิน 1 รายการ)
+     *
+     *   ?date=Y-m-d  พิมพ์ย้อนหลังของวันอื่นได้ (ปุ่มบนจอไม่ส่ง = วันนี้)
+     */
+    public function approvedTodayPdf(Request $request)
+    {
+        try {
+            $day = $request->filled('date')
+                ? Carbon::createFromFormat('Y-m-d', (string) $request->query('date'))
+                : now();
+        } catch (\Exception $e) {
+            $day = now();
+        }
+        $from = $day->copy()->startOfDay();
+        $to   = $day->copy()->endOfDay();
+
+        $rows = $this->approvableQuery()
+            ->join('suborder as s', 's.Orderno', '=', 'morder.Orderno')
+            ->leftJoin('customer as c', 'c.code', '=', 'morder.Custno')
+            ->whereNotNull('morder.appv')
+            ->where('morder.appv', '<>', 0)            // Access เก็บ -1 = อนุมัติแล้ว
+            ->whereBetween('morder.appvDT', [$from, $to])
+            ->where('s.Production', '>', 0)
+            ->orderBy('morder.Orderno')
+            ->orderBy('s.Runno')
+            ->get([
+                'morder.Orderno', 'morder.Mdate', 'morder.Company', 'morder.Custno', 'morder.supno',
+                'morder.Send', 'morder.RP', 'morder.Spec', 'morder.Cer',
+                'c.name as custname',
+                's.Itemno', 's.Lotno', 's.Production', 's.senddate', 's.custwant', 's.Remark',
+            ]);
+
+        foreach ($rows as $r) {
+            // "ซื้อครั้งก่อน" = วันที่สั่งครั้งล่าสุดของรหัสสินค้านี้ก่อนใบนี้ (ไม่แยกลูกค้า) · ไม่เคยสั่ง = NEW
+            $r->last_order = DB::table('suborder as s2')
+                ->join('morder as m2', 'm2.Orderno', '=', 's2.Orderno')
+                ->where('s2.Itemno', $r->Itemno)
+                ->where('m2.Orderno', '<>', $r->Orderno)
+                ->where('m2.Mdate', '<', $r->Mdate)
+                ->max('m2.Mdate');
+
+            // checkbox แบบ Access: -1 = ติ๊ก
+            foreach (['Send', 'RP', 'Spec', 'Cer'] as $f) {
+                $r->{$f} = (int) $r->{$f} !== 0;
+            }
+        }
+
+        // 1 แผนก = 1 section (ขึ้นหน้าใหม่) — แผนกว่างไปท้ายสุด
+        $sections = $rows->groupBy(fn ($r) => trim((string) $r->Company))
+            ->sortBy(fn ($g, $dept) => $dept === '' ? 'zzzz' : $dept)
+            ->map(function ($items, $dept) {
+                // รายการสินค้าที่สั่งซ้ำ — รหัสสินค้า + ประเภทใบ (2 ตัวหน้าเลขที่ใบ) ที่มีมากกว่า 1 รายการ
+                $repeats = $items
+                    ->groupBy(fn ($r) => $r->Itemno . '|' . substr((string) $r->Orderno, 0, 2))
+                    ->filter(fn ($g) => $g->count() > 1)
+                    ->map(fn ($g) => (object) [
+                        'itemno' => $g->first()->Itemno,
+                        'type'   => substr((string) $g->first()->Orderno, 0, 2),
+                        'count'  => $g->count(),
+                        'weight' => $g->sum(fn ($r) => (float) $r->Production),
+                    ])
+                    ->sortBy('itemno')
+                    ->values();
+
+                return (object) [
+                    'dept'    => $dept,
+                    'items'   => $items->values(),
+                    'total'   => $items->sum(fn ($r) => (float) $r->Production),
+                    'repeats' => $repeats,
+                ];
+            })
+            ->values();
+
+        $html = view('order.order-approved-today-pdf', [
+            'sections' => $sections,
+            'day'      => $day,
+        ])->render();
+
+        $mpdf = new Mpdf([
+            'mode'          => 'utf-8',
+            'format'        => 'A4',
+            'margin_left'   => 10,
+            'margin_right'  => 10,
+            'margin_top'    => 16,
+            'margin_bottom' => 10,
+        ]);
+
+        $mpdf->autoScriptToLang = true;
+        $mpdf->autoLangToFont   = true;
+        $mpdf->SetFont('sarabun');
+        $mpdf->SetHTMLHeader(
+            '<div style="font-family: sarabun; font-size: 10px;">Page {PAGENO} of {nbpg} &nbsp; ' . now()->format('d/m/y H:i') . '</div>'
+        );
+        $mpdf->WriteHTML($html);
+
+        return response($mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="order-approved-' . $day->format('Ymd') . '.pdf"',
+        ]);
     }
 }

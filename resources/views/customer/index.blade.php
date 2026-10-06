@@ -60,6 +60,12 @@
     .cf-sec .form-label { margin-bottom: .25rem; font-size: .85rem; font-weight: 600; }
     .cf-sec .form-text { margin-top: .15rem; color: #8a94a6; }
 
+    /* ความกว้าง label ของแถวแบบ "label อยู่ซ้าย" (06/10/2569 — โครง .of-row/.of-ctl, CSS กลางที่ layout/inc_header)
+       ตั้งต่อกล่องให้ช่องกรอกในกล่องเดียวกันตรงแนวกัน · label ที่ยาวกว่านี้จะขึ้นบรรทัดใหม่ในตัว label เอง */
+    .cf-sec       { --of-lw: 96px; }
+    .cf-sec-sale  { --of-lw: 128px; }
+    .cf-sec-black { --of-lw: 64px; }
+
     .cf-sec-sale    { background: #fdfaf4; border-color: #ecdfc4; }
     .cf-sec-sale .cf-sec-title { color: #a3781f; border-bottom-color: #ecdfc4; }
     .cf-sec-contact { background: #f8fbf7; border-color: #d6e7cf; }

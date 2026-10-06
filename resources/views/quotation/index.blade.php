@@ -115,6 +115,15 @@
     display: block;
     width: 100%;
 }
+
+/* ─── ฟอร์มแบบ label อยู่ซ้าย (06/10/2569) — โครง .of-row / .of-ctl, CSS กลางอยู่ใน layout/inc_header ───
+   --of-lw = ความกว้าง label ตั้งให้พอกับ label ที่ยาวที่สุดของแต่ละกล่อง */
+#quotationForm .of-form { --of-lw: 130px; }          /* ข้อมูลเอกสาร / ลูกค้า / รูปแบบตาราง */
+#quotationForm .of-form .qf-lw-wide { --of-lw: 150px; }   /* คอลัมน์ขวาของกล่องลูกค้า — "ชื่อลูกค้า (ภาษาอังกฤษ)" */
+#quotationForm #remarkSection { --of-lw: 150px; }    /* หมายเหตุ — เผื่อ label ภาษาอังกฤษ เช่น "Price validity from *" */
+/* 06/10/2569: โหมดภาษาไทย label สั้นกว่า — ลดให้พอดี label ไทยที่ยาวสุด ("จำนวนส่งมอบขั้นต่ำ *")
+   ไม่งั้น label กับช่องกรอกห่างกันเกิน (ผู้ใช้ทัก) */
+#quotationForm #remarkSection.lang-th { --of-lw: 132px; }
 </style>
 
 <body>
@@ -313,54 +322,73 @@
                 {{-- qno เดิม (ใช้ตอน update/หา key) --}}
                 <input type="hidden" name="qno" id="q_qno_key">
 
-                <div class="modal-body px-4 py-4">
+                {{-- 06/10/2569: เปลี่ยนช่องกรอกส่วนหัวฟอร์มเป็น "label อยู่ซ้าย ต่อด้วยช่องกรอก" แบบเดียวกับฟอร์ม Order
+                     (โครง .of-row / .of-ctl — CSS กลางใน layout/inc_header) · ความกว้าง label (--of-lw) ตั้งใน <style> ของหน้านี้
+                     id / name / attribute ของทุกช่องคงเดิม JS ไม่ได้แก้ --}}
+                <div class="modal-body px-4 py-4 of-form">
 
                     {{-- ── Section 1: ข้อมูลเอกสาร ── --}}
                     <div class="qf-sec">
                         <div class="qf-sec-title"><i class="ti ti-clipboard-text"></i>ข้อมูลเอกสาร</div>
                         {{-- หัวกระดาษ (บนสุด) — เลือกก่อน เพราะกำหนด prefix ของเลขที่ --}}
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <label class="form-label">หัวกระดาษ <span class="text-muted fw-normal">(หัวเอกสารที่พิมพ์)</span></label>
-                                <select name="letterhead" id="q_letterhead" class="form-select w-100" onchange="onLetterheadChange()">
-                                    <option value="WPI">WPI</option>
-                                    <option value="WPC">WPC</option>
-                                    <option value="WH">WH</option>
-                                </select>
+                        <div class="row gx-3 gy-2">
+                            <div class="col-md-4 of-row">
+                                <label class="form-label">หัวกระดาษ</label>
+                                <div class="of-ctl">
+                                    <select name="letterhead" id="q_letterhead" class="form-select w-100" onchange="onLetterheadChange()">
+                                        <option value="WPI">WPI</option>
+                                        <option value="WPC">WPC</option>
+                                        <option value="WH">WH</option>
+                                    </select>
+                                </div>
+                            </div>
+                            {{-- 06/10/2569: คำอธิบายในวงเล็บย้ายออกจาก label (label ซ้ายแคบ) มาอยู่ข้างช่องแทน --}}
+                            <div class="col-md-8 d-flex align-items-center">
+                                <span class="text-muted fw-normal small">(หัวเอกสารที่พิมพ์)</span>
                             </div>
                         </div>
                         {{-- แถว: เลขที่ / วันที่ / Revise Date --}}
-                        <div class="row g-3 mt-1">
-                            <div class="col-md-4">
+                        {{-- mt-0 = หักล้าง margin ติดลบของ gy-2 ไม่งั้นแถวชิดกันเกิน --}}
+                        <div class="row gx-3 gy-2 mt-0">
+                            <div class="col-md-4 of-row">
                                 <label class="form-label">เลขที่ใบเสนอราคา <span class="text-danger">*</span></label>
-                                <input type="text" name="Qno" id="q_Qno" class="form-control" maxlength="10" required>
+                                <div class="of-ctl">
+                                    <input type="text" name="Qno" id="q_Qno" class="form-control" maxlength="10" required>
+                                </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-4 of-row">
                                 <label class="form-label">วันที่เสนอราคา <span class="text-danger">*</span></label>
-                                <input type="text" name="Qdate" id="q_Qdate" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" required>
+                                <div class="of-ctl">
+                                    <input type="text" name="Qdate" id="q_Qdate" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" required>
+                                </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-4 of-row">
                                 <label class="form-label text-danger">Revise Date</label>
-                                <input type="text" name="Revisedate" id="q_Revisedate" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
+                                <div class="of-ctl">
+                                    <input type="text" name="Revisedate" id="q_Revisedate" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
+                                </div>
                             </div>
                         </div>
                         {{-- แถวล่าง: ชนิดสินค้า / พร้อมตัวอย่าง --}}
-                        <div class="row g-3 mt-1">
-                            <div class="col-md-4">
+                        <div class="row gx-3 gy-2 mt-0">
+                            <div class="col-md-4 of-row">
                                 <label class="form-label">ชนิดสินค้า</label>
-                                <select name="PDtype" id="q_PDtype" class="form-select w-100">
-                                    @foreach ($pdtypes as $pt)
-                                        @php
-                                            // CP: แสดงเป็น "Compound" ในฟอร์ม (เข้าใจง่ายกว่า)
-                                            // — ไม่แก้ pdtype.PDHead1 ใน DB เพราะค่านั้นถูกใช้เป็นหัวเรื่องบนใบเสนอราคาที่พิมพ์ออก
-                                            $ptLabel = $pt->PDType === 'CP' ? 'Compound' : $pt->PDHead1;
-                                        @endphp
-                                        <option value="{{ $pt->PDType }}">{{ $pt->PDType }} — {{ $ptLabel }}</option>
-                                    @endforeach
-                                </select>
+                                <div class="of-ctl">
+                                    <select name="PDtype" id="q_PDtype" class="form-select w-100">
+                                        @foreach ($pdtypes as $pt)
+                                            @php
+                                                // CP: แสดงเป็น "Compound" ในฟอร์ม (เข้าใจง่ายกว่า)
+                                                // — ไม่แก้ pdtype.PDHead1 ใน DB เพราะค่านั้นถูกใช้เป็นหัวเรื่องบนใบเสนอราคาที่พิมพ์ออก
+                                                $ptLabel = $pt->PDType === 'CP' ? 'Compound' : $pt->PDHead1;
+                                            @endphp
+                                            <option value="{{ $pt->PDType }}">{{ $pt->PDType }} — {{ $ptLabel }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
                             </div>
-                            <div class="col-md-4 d-flex align-items-end">
-                                <div class="form-check mb-2">
+                            {{-- ไม่มี label — จัดให้อยู่กลางแนวตั้งของแถว (เดิมชิดล่างเพราะ label อยู่บน) --}}
+                            <div class="col-md-4 d-flex align-items-center">
+                                <div class="form-check mb-0">
                                     <input class="form-check-input" id="q_exam" name="exam" type="checkbox" value="1">
                                     <label class="form-check-label" for="q_exam">พร้อมตัวอย่าง</label>
                                 </div>
@@ -369,25 +397,36 @@
                     </div>
 
                     {{-- ── Section 2: ข้อมูลลูกค้า ── --}}
+                    {{-- 06/10/2569: label ซ้าย — จัดเป็น 2 แถว (4 + 8): รหัสลูกค้า | ชื่อลูกค้า  /  รหัสพนักงานขาย | ชื่อลูกค้า (อังกฤษ)
+                         รหัสลูกค้า col-md-2 → 4 · รหัสพนักงานขาย col-md-3 → 4 · ชื่อลูกค้าทั้งสองช่อง col-md-5 → 8
+                         สลับลำดับ รหัสพนักงานขาย กับ ชื่อลูกค้า (อังกฤษ) ให้ช่องกรอกตรงแนวกันทั้งสองแถว --}}
                     <div class="qf-sec">
                         <div class="qf-sec-title"><i class="ti ti-building-store"></i>ข้อมูลลูกค้า</div>
-                        <div class="row g-3">
-                            <div class="col-md-2">
+                        <div class="row gx-3 gy-2">
+                            <div class="col-md-4 of-row">
                                 <label class="form-label">รหัสลูกค้า <span class="text-danger">*</span></label>
-                                <input type="text" name="Custid" id="q_Custid" class="form-control" maxlength="6"
-                                    oninput="lookupCustomer(this.value)" required>
+                                <div class="of-ctl">
+                                    <input type="text" name="Custid" id="q_Custid" class="form-control" maxlength="6"
+                                        oninput="lookupCustomer(this.value)" required>
+                                </div>
                             </div>
-                            <div class="col-md-5">
+                            <div class="col-md-8 of-row qf-lw-wide">
                                 <label class="form-label">ชื่อลูกค้า <span class="text-danger">*</span></label>
-                                <input type="text" name="CustName" id="q_CustName" class="form-control text-primary fw-bold" required>
+                                <div class="of-ctl">
+                                    <input type="text" name="CustName" id="q_CustName" class="form-control text-primary fw-bold" required>
+                                </div>
                             </div>
-                            <div class="col-md-5">
-                                <label class="form-label">ชื่อลูกค้า (ภาษาอังกฤษ)</label>
-                                <input type="text" name="Engname" id="q_Engname" class="form-control" maxlength="70">
-                            </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4 of-row">
                                 <label class="form-label">รหัสพนักงานขาย</label>
-                                <input type="number" name="EmpID" id="q_EmpID" class="form-control">
+                                <div class="of-ctl">
+                                    <input type="number" name="EmpID" id="q_EmpID" class="form-control">
+                                </div>
+                            </div>
+                            <div class="col-md-8 of-row qf-lw-wide">
+                                <label class="form-label">ชื่อลูกค้า (ภาษาอังกฤษ)</label>
+                                <div class="of-ctl">
+                                    <input type="text" name="Engname" id="q_Engname" class="form-control" maxlength="70">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -398,9 +437,11 @@
 
                         {{-- รูปแบบตาราง: เลือก preset (1.1–2.3) → ตารางกรอก + PDF ใช้คอลัมน์ชุดนั้น
                              ไม่เลือก = อัตโนมัติ (โชว์ทุกคอลัมน์ในฟอร์ม, PDF ตัดคอลัมน์ที่ไม่มีใครกรอกออกเอง) --}}
-                        <div class="row g-3 align-items-end mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label small fw-medium mb-1" for="q_col_format">รูปแบบตารางรายการ</label>
+                        {{-- 06/10/2569: label ซ้าย (โครง .of-row / .of-ctl) --}}
+                        <div class="row gx-3 gy-2 mb-3">
+                            <div class="col-md-6 of-row">
+                                <label class="form-label" for="q_col_format">รูปแบบตารางรายการ</label>
+                                <div class="of-ctl">
                                 <select name="col_format" id="q_col_format" class="form-select w-100" onchange="onColFormatChange()">
                                     <option value="">อัตโนมัติ — โชว์ทุกคอลัมน์</option>
                                     <optgroup label="1. ใบเสนอราคา">
@@ -418,6 +459,7 @@
                                         @endforeach
                                     </optgroup>
                                 </select>
+                                </div>
                             </div>
                         </div>
 
@@ -470,70 +512,84 @@
                             <i class="ti ti-info-circle me-1"></i>ช่องที่มี <span class="text-danger fw-bold">*</span> ต้องกรอก — ช่องที่ปล่อยว่างจะไม่แสดงในใบเสนอราคา
                         </div>
 
-                        <div class="row g-3">
+                        {{-- 06/10/2569: label ซ้าย (โครง .of-row / .of-ctl) — ตัวอย่างในวงเล็บ "(เช่น ...)" ย้ายจาก label
+                             ลงมาเป็น form-text ใต้ช่องกรอก (label ซ้ายแคบ ใส่ไม่พอ) · class i18n-th คงไว้ จึงยังซ่อนตอนสลับเป็น EN เหมือนเดิม --}}
+                        <div class="row gx-3 gy-2">
                             {{-- ราคาเม็ดพลาสติก --}}
-                            <div class="col-md-6">
+                            <div class="col-md-6 of-row">
                                 <label class="form-label">
                                     <span class="i18n-th">ราคาเม็ดพลาสติก</span><span class="i18n-en">Resin Price</span>
-                                    <span class="text-muted fw-normal i18n-th">(เช่น 60.50 บาท เดือน มิย 2026)</span>
                                 </label>
-                                <input type="text" name="resin_price_note" id="q_resin_price_note" class="form-control"
-                                    maxlength="100">
+                                <div class="of-ctl">
+                                    <input type="text" name="resin_price_note" id="q_resin_price_note" class="form-control"
+                                        maxlength="100">
+                                    <div class="form-text text-muted fw-normal i18n-th">(เช่น 60.50 บาท เดือน มิย 2026)</div>
+                                </div>
                             </div>
 
                             {{-- ราคานี้มีผลวันที่ (from → to) --}}
-                            <div class="col-md-6">
+                            <div class="col-md-6 of-row">
                                 <label class="form-label">
                                     <span class="i18n-th">ราคานี้มีผลวันที่</span><span class="i18n-en">Price validity from</span>
                                     <span class="text-danger">*</span>
                                 </label>
-                                <div class="d-flex align-items-center gap-2">
-                                    <input type="text" name="ValidFrom" id="q_ValidFrom" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" required>
-                                    <span class="small fw-medium"><span class="i18n-th">ถึง</span><span class="i18n-en">to</span></span>
-                                    <input type="text" name="Validto" id="q_Validto" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" required>
+                                <div class="of-ctl">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <input type="text" name="ValidFrom" id="q_ValidFrom" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" required>
+                                        <span class="small fw-medium"><span class="i18n-th">ถึง</span><span class="i18n-en">to</span></span>
+                                        <input type="text" name="Validto" id="q_Validto" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" required>
+                                    </div>
                                 </div>
                             </div>
 
                             {{-- จำนวนส่งมอบขั้นต่ำ --}}
-                            <div class="col-md-6">
+                            <div class="col-md-6 of-row">
                                 <label class="form-label">
                                     <span class="i18n-th">จำนวนส่งมอบขั้นต่ำ</span><span class="i18n-en">Minimum Quantity</span>
                                     <span class="text-danger">*</span>
-                                    <span class="text-muted fw-normal i18n-th">(เช่น 100)</span>
                                 </label>
-                                <div class="input-group">
-                                    <input type="text" name="Qremark" id="q_Qremark" class="form-control" maxlength="50" required>
-                                    <span class="input-group-text"><span class="i18n-th">กก.</span><span class="i18n-en">kg</span></span>
+                                <div class="of-ctl">
+                                    <div class="input-group">
+                                        <input type="text" name="Qremark" id="q_Qremark" class="form-control" maxlength="50" required>
+                                        <span class="input-group-text"><span class="i18n-th">กก.</span><span class="i18n-en">kg</span></span>
+                                    </div>
+                                    <div class="form-text text-muted fw-normal i18n-th">(เช่น 100)</div>
                                 </div>
                             </div>
 
                             {{-- สถานที่ส่งสินค้า --}}
-                            <div class="col-md-6">
+                            <div class="col-md-6 of-row">
                                 <label class="form-label">
                                     <span class="i18n-th">สถานที่ส่งสินค้า</span><span class="i18n-en">Delivery Location</span>
-                                    <span class="text-muted fw-normal i18n-th">(เช่น กรุงเทพฯและปริมณฑล)</span>
                                 </label>
-                                <input type="text" name="delivery_place" id="q_delivery_place" class="form-control"
-                                    maxlength="100">
+                                <div class="of-ctl">
+                                    <input type="text" name="delivery_place" id="q_delivery_place" class="form-control"
+                                        maxlength="100">
+                                    <div class="form-text text-muted fw-normal i18n-th">(เช่น กรุงเทพฯและปริมณฑล)</div>
+                                </div>
                             </div>
 
                             {{-- เทอมการส่งมอบสินค้า --}}
-                            <div class="col-md-6">
+                            <div class="col-md-6 of-row">
                                 <label class="form-label">
                                     <span class="i18n-th">เทอมการส่งมอบสินค้า</span><span class="i18n-en">Price Term</span>
-                                    <span class="text-muted fw-normal i18n-th">(เช่น DDP)</span>
                                 </label>
-                                <input type="text" name="delivery_term" id="q_delivery_term" class="form-control"
-                                    maxlength="50">
+                                <div class="of-ctl">
+                                    <input type="text" name="delivery_term" id="q_delivery_term" class="form-control"
+                                        maxlength="50">
+                                    <div class="form-text text-muted fw-normal i18n-th">(เช่น DDP)</div>
+                                </div>
                             </div>
 
                             {{-- เทอมการชำระเงิน --}}
-                            <div class="col-md-6">
+                            <div class="col-md-6 of-row">
                                 <label class="form-label">
                                     <span class="i18n-th">เทอมการชำระเงิน</span><span class="i18n-en">Term of Payment</span>
-                                    <span class="text-muted fw-normal i18n-th">(เช่น 30วัน นับจากส่งสินค้า)</span>
                                 </label>
-                                <input type="text" name="Term" id="q_Term" class="form-control">
+                                <div class="of-ctl">
+                                    <input type="text" name="Term" id="q_Term" class="form-control">
+                                    <div class="form-text text-muted fw-normal i18n-th">(เช่น 30วัน นับจากส่งสินค้า)</div>
+                                </div>
                             </div>
                         </div>
 

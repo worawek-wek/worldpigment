@@ -144,7 +144,15 @@ class SaleinfoController extends Controller
         $code = trim((string) $request->query('code'));
 
         try {
-            return response()->json($prices->lookup($code));
+            $result = $prices->lookup($code);
+
+            // ราคากลุ่ม A/B/C ของรหัสสินค้านี้ จาก `zcolorrate` (06/10/2569) — ไม่มีในตาราง = null
+            // ไม่ขึ้นกับราคาทุน: รหัสที่คำนวณราคา 1/2/3 ไม่ได้ ก็ยังมีราคากลุ่มได้
+            $result['color_rate'] = $code === '' ? null : DB::table('zcolorrate')
+                ->where('colorno', $code)
+                ->first(['rate_A', 'rate_B', 'rate_C']);
+
+            return response()->json($result);
         } catch (\Throwable $e) {
             // อ่านตารางราคาทุนไม่ได้ (ยังไม่ได้ migrate / ยังไม่ได้ import ข้อมูล)
             // — บอกให้รู้ ไม่ใช่โชว์ราคา 0 ให้เข้าใจผิด
@@ -154,6 +162,7 @@ class SaleinfoController extends Controller
                 'base_price' => null,
                 'rule'       => null,
                 'prices'     => null,
+                'color_rate' => null,
                 'reason'     => 'อ่านข้อมูลราคาทุนไม่ได้: ' . $e->getMessage(),
             ], 500);
         }

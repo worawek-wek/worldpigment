@@ -54,93 +54,123 @@
     </div>
 
     {{-- ════════ มุมมอง 2: ฟอร์มอนุมัติของใบที่เลือก ════════ --}}
-    <div id="oaDetailView" class="d-none">
+    <div id="oaDetailView" class="d-none of-form">
 
-    <div class="mb-3">
+    <div class="mb-3 d-flex justify-content-between align-items-center gap-2">
         <button type="button" class="btn btn-label-secondary" onclick="oaShowList()">
             <i class="ti ti-arrow-left me-1"></i>กลับไปรายการที่รออนุมัติ
         </button>
+        <button type="button" class="btn btn-label-secondary" onclick="orderApprovalRefresh()">
+            <i class="ti ti-refresh me-1"></i>Refresh
+        </button>
     </div>
+
+    {{-- 06/10/2569: ช่องในฟอร์มนี้เปลี่ยนเป็น "label อยู่ซ้าย ต่อด้วยช่องกรอก" แบบเดียวกับฟอร์มใบสั่งซื้อ
+         (โครง .of-row / .of-ctl — CSS กลางอยู่ที่ layout/inc_header · of-form อยู่ที่ #oaDetailView)
+         ปุ่ม Refresh ย้ายขึ้นไปอยู่แถวเดียวกับปุ่ม "กลับไปรายการ" · id ของทุกช่องคงเดิม --}}
 
     {{-- ── แถว 1: เอกสาร ── --}}
-    <div class="row g-3 align-items-end">
-        <div class="col-md-3">
+    <div class="row gx-3 gy-2">
+        <div class="col-md-3 of-row">
             <label class="form-label">วัน-เวลา</label>
-            <input type="text" id="oa_Mdate" class="form-control" readonly>
+            <div class="of-ctl">
+                <input type="text" id="oa_Mdate" class="form-control" readonly>
+            </div>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-3 of-row">
             <label class="form-label">เลขที่ใบสั่ง</label>
-            <input type="text" id="oa_Orderno" class="form-control fw-bold text-primary" readonly>
+            <div class="of-ctl">
+                <input type="text" id="oa_Orderno" class="form-control fw-bold text-primary" readonly>
+            </div>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-3 of-row">
             <label class="form-label">แผนกที่ผลิต</label>
-            <input type="text" id="oa_Company" class="form-control" readonly>
+            <div class="of-ctl">
+                <input type="text" id="oa_Company" class="form-control" readonly>
+            </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-3 of-row of-row-auto">
             <label class="form-label">PO</label>
-            <input type="text" id="oa_PO" class="form-control" readonly>
-        </div>
-        <div class="col-md-2 text-md-end">
-            <button type="button" class="btn btn-label-secondary w-100" onclick="orderApprovalRefresh()">
-                <i class="ti ti-refresh me-1"></i>Refresh
-            </button>
+            <div class="of-ctl">
+                <input type="text" id="oa_PO" class="form-control" readonly>
+            </div>
         </div>
     </div>
 
-    {{-- ── แถว 2: ลูกค้า / ผู้บันทึก / ผู้ขาย / สต๊อก ── --}}
-    <div class="row g-3 align-items-end mt-1">
-        <div class="col-md-2">
+    {{-- ── แถว 2: ลูกค้า / ผู้บันทึก ── --}}
+    <div class="row gx-3 gy-2 mt-0">
+        <div class="col-md-3 of-row">
             <label class="form-label">รหัสลูกค้า</label>
-            <input type="text" id="oa_Custno" class="form-control" readonly>
+            <div class="of-ctl">
+                <input type="text" id="oa_Custno" class="form-control" readonly>
+            </div>
         </div>
-        <div class="col-md-4">
-            <label class="form-label">&nbsp;</label>
-            <input type="text" id="oa_Custname" class="form-control text-primary fw-semibold" readonly>
+        <div class="col-md-6 of-row">
+            <label class="form-label">ชื่อลูกค้า</label>
+            <div class="of-ctl">
+                <input type="text" id="oa_Custname" class="form-control text-primary fw-semibold" readonly>
+            </div>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-3 of-row of-row-auto">
             <label class="form-label">ผู้บันทึก</label>
-            <input type="text" id="oa_Emp" class="form-control" readonly>
-        </div>
-        <div class="col-md-1">
-            <label class="form-label">ผู้ขาย</label>
-            <input type="text" id="oa_sale" class="form-control text-center" readonly>
-        </div>
-        <div class="col-md-3">
-            <label class="form-label">น.น.Stock คงเหลือปัจจุบัน</label>
-            <input type="text" id="oa_HMStore" class="form-control text-end" readonly>
+            <div class="of-ctl">
+                <input type="text" id="oa_Emp" class="form-control" readonly>
+            </div>
         </div>
     </div>
 
-    {{-- ── แถว 3: เงื่อนไขการส่ง ── --}}
-    <div class="row g-3 align-items-end mt-1">
-        <div class="col-md-5">
-            <label class="form-label d-block">เงื่อนไขบนใบสั่ง</label>
-            <div class="oa-checkrow">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="oa_Send" disabled>
-                    <label class="form-check-label" for="oa_Send">ส่งก่อนได้</label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="oa_RP" disabled>
-                    <label class="form-check-label" for="oa_RP">RP</label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="oa_Spec" disabled>
-                    <label class="form-check-label" for="oa_Spec">Spec</label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="oa_Cer" disabled>
-                    <label class="form-check-label" for="oa_Cer">Cer</label>
+    {{-- ── แถว 3: ผู้ขาย / สต๊อก ── --}}
+    <div class="row gx-3 gy-2 mt-0">
+        <div class="col-md-3 of-row">
+            <label class="form-label">ผู้ขาย</label>
+            <div class="of-ctl">
+                <input type="text" id="oa_sale" class="form-control text-center" readonly>
+            </div>
+        </div>
+        <div class="col-md-5 of-row of-row-auto">
+            <label class="form-label">น.น.Stock คงเหลือปัจจุบัน</label>
+            <div class="of-ctl">
+                <input type="text" id="oa_HMStore" class="form-control text-end" readonly>
+            </div>
+        </div>
+        <div class="col-md-4 of-row of-row-auto">
+            <label class="form-label">ส่งลูกค้าภายใน (เดือน)</label>
+            <div class="of-ctl">
+                <input type="text" id="oa_SendCust" class="form-control text-end" readonly>
+            </div>
+        </div>
+    </div>
+
+    {{-- ── แถว 4: เงื่อนไขการส่ง ── --}}
+    <div class="row gx-3 gy-2 mt-0">
+        <div class="col-md-6 of-row">
+            <label class="form-label">เงื่อนไขบนใบสั่ง</label>
+            <div class="of-ctl">
+                <div class="oa-checkrow">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="oa_Send" disabled>
+                        <label class="form-check-label" for="oa_Send">ส่งก่อนได้</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="oa_RP" disabled>
+                        <label class="form-check-label" for="oa_RP">RP</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="oa_Spec" disabled>
+                        <label class="form-check-label" for="oa_Spec">Spec</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="oa_Cer" disabled>
+                        <label class="form-check-label" for="oa_Cer">Cer</label>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-6 of-row of-row-auto">
             <label class="form-label">สถานที่ส่ง</label>
-            <input type="text" id="oa_DVpoint" class="form-control" readonly>
-        </div>
-        <div class="col-md-3">
-            <label class="form-label">ส่งลูกค้าภายใน (เดือน)</label>
-            <input type="text" id="oa_SendCust" class="form-control text-end" readonly>
+            <div class="of-ctl">
+                <input type="text" id="oa_DVpoint" class="form-control" readonly>
+            </div>
         </div>
     </div>
 
@@ -168,30 +198,38 @@
     </div>
 
     {{-- ── แผงราคาอ้างอิงของเบอร์ที่เลือก ── --}}
-    <div class="row g-3 mt-2">
-        <div class="col-lg-8">
-            <div class="mb-2 d-flex align-items-center gap-2">
-                <label class="form-label mb-0" style="width:60px;">REM1:</label>
-                <input type="text" id="oa_rem1" class="form-control form-control-sm" readonly>
+    <div class="row gx-3 gy-2 mt-2">
+        <div class="col-lg-8 of-form-sm" style="--of-lw: 64px;">
+            <div class="of-row mb-2">
+                <label class="form-label">REM1:</label>
+                <div class="of-ctl">
+                    <input type="text" id="oa_rem1" class="form-control form-control-sm" readonly>
+                </div>
             </div>
-            <div class="mb-2 d-flex align-items-center gap-2">
-                <label class="form-label mb-0" style="width:60px;">REM2:</label>
-                <input type="text" id="oa_rem2" class="form-control form-control-sm" readonly>
+            <div class="of-row mb-2">
+                <label class="form-label">REM2:</label>
+                <div class="of-ctl">
+                    <input type="text" id="oa_rem2" class="form-control form-control-sm" readonly>
+                </div>
             </div>
-            <div class="d-flex align-items-center gap-2">
-                <label class="form-label mb-0 text-danger" style="width:60px;">ผู้บริหาร:</label>
-                {{-- ⚠ ยังไม่มีคอลัมน์เก็บใน morder — พิมพ์ได้แต่ยังไม่บันทึก (รอผู้ใช้ระบุที่เก็บ) --}}
-                <input type="text" id="oa_mdnote" class="form-control form-control-sm oa-hl-green"
-                    title="ยังไม่ยืนยันคอลัมน์ที่เก็บ — ค่าที่พิมพ์ยังไม่ถูกบันทึก">
+            <div class="of-row">
+                <label class="form-label text-danger">ผู้บริหาร:</label>
+                <div class="of-ctl">
+                    {{-- ⚠ ยังไม่มีคอลัมน์เก็บใน morder — พิมพ์ได้แต่ยังไม่บันทึก (รอผู้ใช้ระบุที่เก็บ) --}}
+                    <input type="text" id="oa_mdnote" class="form-control form-control-sm oa-hl-green"
+                        title="ยังไม่ยืนยันคอลัมน์ที่เก็บ — ค่าที่พิมพ์ยังไม่ถูกบันทึก">
+                </div>
             </div>
         </div>
-        <div class="col-lg-4">
+        <div class="col-lg-4 of-row of-row-auto">
             <label class="form-label">ราคาที่กำหนดไว้</label>
-            <input type="text" id="oa_fixed_price" class="form-control text-end fw-bold oa-hl-blue" readonly>
+            <div class="of-ctl">
+                <input type="text" id="oa_fixed_price" class="form-control text-end fw-bold oa-hl-blue" readonly>
+            </div>
         </div>
     </div>
 
-    {{-- ── ราคา 3 ช่อง (กลุ่ม A / B / C) ── --}}
+    {{-- ── ราคา 3 ช่อง (กลุ่ม A / B / C) — คงเป็น label อยู่บน (กล่องราคาเรียงแนวนอน กระชับอยู่แล้ว) ── --}}
     <div class="row g-2 mt-2 align-items-end">
         <div class="col-md-4">
             <label class="form-label">ราคา1 <span class="text-muted fw-normal small">(A · 1,000 kg. up)</span></label>
@@ -208,25 +246,30 @@
     </div>
 
     {{-- ── แถวสรุป + อนุมัติ ── --}}
-    <div class="row g-3 mt-2 align-items-end">
-        <div class="col-md-3">
+    <div class="row gx-3 gy-2 mt-2">
+        <div class="col-md-4 of-row of-row-auto">
             <label class="form-label">เทอม / ส่วนลดเงินสด</label>
-            <input type="text" id="oa_term" class="form-control text-danger fw-semibold" readonly>
+            <div class="of-ctl">
+                <input type="text" id="oa_term" class="form-control text-danger fw-semibold" readonly>
+            </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3 of-row of-row-auto">
             <label class="form-label fw-bold text-danger">ราคาขายครั้งนี้</label>
-            <input type="text" id="oa_price" class="form-control text-end fw-bold oa-sell" readonly>
+            <div class="of-ctl">
+                <input type="text" id="oa_price" class="form-control text-end fw-bold oa-sell" readonly>
+            </div>
         </div>
-        <div class="col-md-2">
-            <label class="form-label d-block">&nbsp;</label>
-            <div class="form-check">
+        <div class="col-md-2 d-flex align-items-center">
+            <div class="form-check mb-0">
                 <input class="form-check-input" type="checkbox" id="oa_appv" onclick="orderApprovalApprove(event)">
                 <label class="form-check-label fw-bold" for="oa_appv">อนุมัติ</label>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-3 of-row of-row-auto">
             <label class="form-label">วัน-เวลา อนุมัติ</label>
-            <input type="text" id="oa_appvDT" class="form-control" readonly>
+            <div class="of-ctl">
+                <input type="text" id="oa_appvDT" class="form-control" readonly>
+            </div>
         </div>
     </div>
 

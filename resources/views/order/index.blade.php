@@ -394,6 +394,8 @@
 .oa-body { background: #f4f4f0; }
 .oa-body .form-label { margin-bottom: .25rem; font-size: .85rem; font-weight: 600; }
 .oa-checkrow { display: flex; flex-wrap: wrap; gap: 1.25rem; padding: .45rem .75rem; background: #fff; border: 1px solid #d9d9d2; border-radius: .375rem; }
+/* 06/10/2569: ฟอร์มอนุมัติใบสั่งซื้อใช้แถวแบบ "label อยู่ซ้าย" (โครง .of-row/.of-ctl — CSS กลางที่ layout/inc_header) */
+#oaDetailView { --of-lw: 104px; }
 
 /* ตารางรายการ — พื้นเหลืองเหมือนฟอร์มเดิม */
 .oa-grid table { background: #ffffdd; }
@@ -485,6 +487,13 @@
                             <i class="ti ti-gavel me-1"></i>
                             อนุมัติใบสั่งซื้อ
                             <span class="badge bg-danger ms-1 d-none" id="oaQueueBadge">0</span>
+                        </button>
+                        {{-- พิมพ์ PDF ใบสั่งซื้อที่อนุมัติวันนี้ เรียงตามเลขที่ใบสั่ง (06/10/2569)
+                             → OrderApprovalController::approvedTodayPdf() --}}
+                        <button class="btn btn-label-secondary border"
+                            onclick="window.open('{{ url('order/order-approval/approved-today-pdf') }}', '_blank')">
+                            <i class="ti ti-printer me-1"></i>
+                            พิมพ์รายการที่อนุมัติวันนี้
                         </button>
                         <button class="btn btn-label-primary border" style="color: #1f158e;" onclick="approvalOpen()">
                             <i class="ti ti-discount-check me-1"></i>

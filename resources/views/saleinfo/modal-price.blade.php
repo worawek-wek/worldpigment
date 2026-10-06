@@ -2,6 +2,9 @@
 {{-- Modal: กำหนดราคา (ราคาสินค้าต่อลูกค้า)                                --}}
 {{-- Trigger: data-bs-target="#saleinfoModal" (สร้าง) / viewSaleinfo(id) (แก้ไข) --}}
 {{-- โครงช่องอ้างอิงจากจอเก่า (Access) — ปลายทางคือตาราง uprice            --}}
+{{-- 06/10/2569: เปลี่ยนช่องกรอกเป็น "label อยู่ซ้าย ต่อด้วยช่องกรอก" แบบฟอร์ม Order --}}
+{{--   (โครง .of-form / .of-row / .of-ctl — CSS กลางใน layout/inc_header)     --}}
+{{--   กล่อง "คำนวนราคา" และตารางประวัติ คงผังเดิม                            --}}
 {{-- ═══════════════════════════════════════════════════════════════════ --}}
 <div class="modal modalHeadDecor fade" id="saleinfoModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl">
@@ -37,7 +40,8 @@
                             </h6>
                         </div>
 
-                        <div class="card-body p-4">
+                        {{-- of-form = ฟอร์มแบบกระชับ label ซ้าย (06/10/2569) — กลุ่มล่างสุดตั้ง --of-lw กว้างกว่าเพราะ label ยาว --}}
+                        <div class="card-body p-4 of-form">
 
                             {{-- ─── กลุ่ม: ลูกค้า / สินค้า ─── --}}
                             <div class="mb-4 pb-3 border-bottom">
@@ -52,21 +56,28 @@
                                 <div class="row g-3">
                                     {{-- ซ้าย: ช่องกรอก --}}
                                     <div class="col-lg-7">
-                                        <div class="row g-3">
-                                            <div class="col-md-5">
-                                                <label class="form-label small mb-1">รหัสลูกค้า <span class="text-muted fw-normal">(เช่น 41008)</span></label>
-                                                <input type="text" name="CustNo" maxlength="5" class="form-control" required>
+                                        {{-- ตัวอย่างในวงเล็บลงบรรทัดที่ 2 ของ label (d-block) --}}
+                                        <div class="row gx-3 gy-2">
+                                            <div class="col-md-5 of-row">
+                                                <label class="form-label">รหัสลูกค้า <span class="text-muted fw-normal d-block">(เช่น 41008)</span></label>
+                                                <div class="of-ctl">
+                                                    <input type="text" name="CustNo" maxlength="5" class="form-control" required>
+                                                </div>
                                             </div>
-                                            <div class="col-md-7">
-                                                <label class="form-label small mb-1 text-danger">
+                                            <div class="col-md-7 of-row">
+                                                <label class="form-label text-danger">
                                                     <i class="ti ti-asterisk-simple"></i>
-                                                    ชื่อสินค้า <span class="text-muted fw-normal">(เช่น CP8462B)</span>
+                                                    ชื่อสินค้า <span class="text-muted fw-normal d-block">(เช่น CP8462B)</span>
                                                 </label>
-                                                <input type="text" name="st_code" maxlength="17" class="form-control" required>
+                                                <div class="of-ctl">
+                                                    <input type="text" name="st_code" maxlength="17" class="form-control" required>
+                                                </div>
                                             </div>
-                                            <div class="col-md-7 offset-md-5">
-                                                <label class="form-label small mb-1">รหัสสินค้า <span class="text-muted fw-normal">(เช่น CP8462B)</span></label>
-                                                <input type="text" name="ITEMNO" maxlength="17" class="form-control">
+                                            <div class="col-md-7 offset-md-5 of-row">
+                                                <label class="form-label">รหัสสินค้า <span class="text-muted fw-normal d-block">(เช่น CP8462B)</span></label>
+                                                <div class="of-ctl">
+                                                    <input type="text" name="ITEMNO" maxlength="17" class="form-control">
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -105,21 +116,27 @@
 
                                 {{-- ไม่ใส่ align-items-end แล้ว (07/09/2569) — label ของช่องราคายาว 2 บรรทัดได้
                                      ถ้าจัดชิดล่างจะดัน label+input ของช่องวันที่หลุดลงไปไม่ตรงหัวแถว --}}
-                                <div class="row g-3">
+                                <div class="row gx-3 gy-2">
                                     {{-- ถอดช่อง "วันที่แจ้งปรับ" (NotifyDate) และ "MOQ (kg)" ออกตามที่ผู้ใช้สั่ง (07/09/2569)
                                          ทั้งคู่เป็นช่อง wip ที่ `uprice` ไม่มีคอลัมน์รองรับ จึงไม่เคยถูกบันทึก --}}
-                                    <div class="col-md-3">
-                                        <label class="form-label small mb-1 d-block">วันที่เริ่มซื้อ <span class="text-muted fw-normal">(วว/ดด/ปปปป)</span></label>
-                                        <input type="text" name="DATE" class="form-control flatpickr-date">
+                                    {{-- 06/10/2569: col-md-3 → col-md-4 เพราะ label ย้ายมากินที่ด้านซ้าย --}}
+                                    <div class="col-md-4 of-row">
+                                        <label class="form-label">วันที่เริ่มซื้อ <span class="text-muted fw-normal d-block">(วว/ดด/ปปปป)</span></label>
+                                        <div class="of-ctl">
+                                            <input type="text" name="DATE" class="form-control flatpickr-date">
+                                        </div>
                                     </div>
-                                    {{-- คงความกว้าง col-md-3 ตามเดิม — ครึ่งแถวทำให้ช่องกรอกตัวเลขยาวเกินจำเป็น --}}
-                                    <div class="col-md-3">
-                                        <label class="form-label small mb-1 text-danger">
+                                    {{-- คงความกว้าง col-md-3 ตามเดิม — ครึ่งแถวทำให้ช่องกรอกตัวเลขยาวเกินจำเป็น
+                                         (06/10/2569: เป็น col-md-4 แล้ว — ช่องกรอกจริงยังกว้างพอ ๆ กับเดิมเพราะหัก label ออก) --}}
+                                    <div class="col-md-4 of-row">
+                                        <label class="form-label text-danger">
                                             <i class="ti ti-asterisk-simple"></i>
-                                            ราคา <span class="text-muted fw-normal">(เช่น 46.72)</span>
+                                            ราคา <span class="text-muted fw-normal d-block">(เช่น 46.72)</span>
                                         </label>
-                                        <input type="text" name="PRICE" class="form-control text-end js-comma"
-                                            inputmode="decimal" autocomplete="off" placeholder="0.00" required>
+                                        <div class="of-ctl">
+                                            <input type="text" name="PRICE" class="form-control text-end js-comma"
+                                                inputmode="decimal" autocomplete="off" placeholder="0.00" required>
+                                        </div>
                                     </div>
                                     {{-- ปิดไว้ก่อน: NoAcp เป็นคอลัมน์ใน uprice ของเดิม (มีค่า 1 อยู่ 114 จาก 60,603 แถว)
                                          แต่ "ไม่รับ Order เบอร์นี้" เป็นการเดาความหมายจากชื่อคอลัมน์ — ไม่มีช่องนี้ในจอเก่า
@@ -137,19 +154,26 @@
                                     {{-- หมายเหตุ 2 ช่อง = REM1 / REM2 ของ `uprice` (07/09/2569)
                                          REM2 เคยปิดไว้ (คิดว่าเลิกใช้เพราะมีตารางประวัติแทน) — ผู้ใช้สั่งให้เปิดคืน
                                          ทั้งคู่ varchar(100) และเป็นคู่เดียวกับที่ฟอร์มอนุมัติใบสั่งซื้อโชว์เป็น REM1 / REM2 --}}
-                                    <div class="col-12">
-                                        <label class="form-label small mb-1">
+                                    {{-- 06/10/2569: ตัวอย่างในวงเล็บยาวเกินความกว้าง label → ย้ายลงไปเป็น form-text ใต้ช่อง --}}
+                                    <div class="col-12 of-row">
+                                        <label class="form-label">
                                             <i class="ti ti-note me-1"></i>
-                                            หมายเหตุ 1 <span class="text-muted fw-normal">(เช่น เฉพาะเบอร์คิดราคาพิเศษ เช็คราคาก่อนเปิด ORDER)</span>
+                                            หมายเหตุ 1
                                         </label>
-                                        <input type="text" name="REM1" maxlength="100" class="form-control">
+                                        <div class="of-ctl">
+                                            <input type="text" name="REM1" maxlength="100" class="form-control">
+                                            <div class="form-text"><span class="text-muted fw-normal">(เช่น เฉพาะเบอร์คิดราคาพิเศษ เช็คราคาก่อนเปิด ORDER)</span></div>
+                                        </div>
                                     </div>
-                                    <div class="col-12">
-                                        <label class="form-label small mb-1">
+                                    <div class="col-12 of-row">
+                                        <label class="form-label">
                                             <i class="ti ti-note me-1"></i>
-                                            หมายเหตุ 2 <span class="text-muted fw-normal">(เช่น เดิม 46.72.- ปรับลด 08/12/25 @44.62.-)</span>
+                                            หมายเหตุ 2
                                         </label>
-                                        <input type="text" name="REM2" maxlength="100" class="form-control">
+                                        <div class="of-ctl">
+                                            <input type="text" name="REM2" maxlength="100" class="form-control">
+                                            <div class="form-text"><span class="text-muted fw-normal">(เช่น เดิม 46.72.- ปรับลด 08/12/25 @44.62.-)</span></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -164,18 +188,26 @@
                                     </span>
                                 </div>
 
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label small mb-1">ระบุข้างบรรจุภัณฑ์ <span class="text-muted fw-normal">(เช่น PP AZ 864 (NH-361L))</span></label>
-                                        <input type="text" name="PackRem" maxlength="85" class="form-control">
+                                <div class="row gx-3 gy-2" style="--of-lw: 130px;">
+                                    <div class="col-md-6 of-row">
+                                        <label class="form-label">ระบุข้างบรรจุภัณฑ์</label>
+                                        <div class="of-ctl">
+                                            <input type="text" name="PackRem" maxlength="85" class="form-control">
+                                            {{-- ตัวอย่างยาวเกินความกว้าง label → อยู่ใต้ช่องแทน (06/10/2569) --}}
+                                            <div class="form-text"><span class="text-muted fw-normal">(เช่น PP AZ 864 (NH-361L))</span></div>
+                                        </div>
                                     </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label small mb-1">Label DB <span class="text-muted fw-normal">(ข้อความบนฉลาก)</span></label>
-                                        <input type="text" name="Label" maxlength="85" class="form-control">
+                                    <div class="col-md-6 of-row">
+                                        <label class="form-label">Label DB <span class="text-muted fw-normal d-block">(ข้อความบนฉลาก)</span></label>
+                                        <div class="of-ctl">
+                                            <input type="text" name="Label" maxlength="85" class="form-control">
+                                        </div>
                                     </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label small mb-1">ผู้บริหาร (ผู้อนุมัติราคา)</label>
-                                        <input type="text" name="Author" maxlength="50" class="form-control">
+                                    <div class="col-md-6 of-row">
+                                        <label class="form-label">ผู้บริหาร (ผู้อนุมัติราคา)</label>
+                                        <div class="of-ctl">
+                                            <input type="text" name="Author" maxlength="50" class="form-control">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -279,6 +311,26 @@
                                         <div class="dbprice-colorval" id="saleinfo_color_pct">—</div>
                                     </div>
                                 </div>
+                            </div>
+
+                            {{-- ราคากลุ่ม A/B/C ของรหัสสินค้านี้ — `zcolorrate.rate_A/B/C` (06/10/2569)
+                                 มากับ saleinfo/price-lookup (key `color_rate`) · รหัสที่ไม่มีในกลุ่มราคา = ขีด "—"
+                                 ป้ายเกณฑ์มาจาก PriceApprovalController::priceGroups() ไม่ hard-code ซ้ำ --}}
+                            <div class="dbprice-grouphead mt-3 mb-2">
+                                <i class="ti ti-stack-2 me-1"></i>
+                                ราคากลุ่ม
+                                <span class="dbprice-groupnone d-none" id="saleinfo_group_none">รหัสสินค้านี้ไม่มีในกลุ่มราคา</span>
+                            </div>
+                            <div class="dbprice-groups">
+                                @foreach (\App\Http\Controllers\PriceApprovalController::priceGroups() as $g)
+                                    <div class="dbprice-tier">
+                                        <div class="dbprice-tier-label">{{ $g['label'] }}</div>
+                                        <div class="dbprice-value">
+                                            <span class="dbprice-unit">฿</span>
+                                            <input type="text" id="saleinfo_group_{{ $g['group'] }}" class="dbprice-input" placeholder="—" readonly tabindex="-1">
+                                        </div>
+                                    </div>
+                                @endforeach
                             </div>
 
                             {{-- ที่มาของราคา: ราคาทุน · เงื่อนไขที่จับคู่ได้ · สูตรคูณ/หาร/บวก

@@ -7,6 +7,8 @@
 {{-- ราคาขาย 2 = ราคาขาย 1 × 1.14   |   ราคาขาย 3 = ราคาขาย 2 × 1.30        --}}
 {{-- ราคาขาย 1/2/3 แสดงเป็นจำนวนเต็ม (ปัดเศษตอนแสดงผล) ส่วนราคาทุนคงทศนิยม 2 ตำแหน่ง 12/08/2569 --}}
 {{-- ⚠ DB 1-2 / 3-4 Kg ยังไม่รู้สูตร (รอลูกค้า)                             --}}
+{{-- 06/10/2569: ช่องรหัสสินค้าเปลี่ยนเป็น label อยู่ซ้าย (โครง .of-row/.of-ctl — CSS กลางใน layout/inc_header) --}}
+{{--   แถวราคาขาย 1/2/3 + DB เป็น label ซ้ายอยู่แล้ว (grid col-4/5/3) จึงคงไว้ --}}
 {{-- ═══════════════════════════════════════════════════════════════════ --}}
 <div class="modal modalHeadDecor fade" id="newPriceModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -22,19 +24,21 @@
             </div>
 
             {{-- ไม่มี <form> — ฟอร์มนี้ไม่มีการบันทึก กัน Enter เผลอ submit ไปด้วย --}}
-            <div class="modal-body px-4 py-4" style="background-color: #f8f9fb;">
+            <div class="modal-body px-4 py-4 of-form" style="background-color: #f8f9fb;">
 
                 {{-- ─── รหัสสินค้า (ช่องเดียวที่กรอกได้) ─── --}}
-                <div class="mb-4">
-                    <label for="np_code" class="form-label small mb-1 fw-semibold">
-                        รหัสสินค้า <span class="text-muted fw-normal">(เช่น 1101029)</span>
+                <div class="mb-3 of-row">
+                    <label for="np_code" class="form-label fw-semibold">
+                        รหัสสินค้า <span class="text-muted fw-normal d-block">(เช่น 1101029)</span>
                     </label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="ti ti-barcode"></i></span>
-                        <input type="text" id="np_code" class="form-control" autocomplete="off">
-                        <button type="button" class="btn btn-label-secondary" id="np_clear" title="ล้าง">
-                            <i class="ti ti-x"></i>
-                        </button>
+                    <div class="of-ctl">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="ti ti-barcode"></i></span>
+                            <input type="text" id="np_code" class="form-control" autocomplete="off">
+                            <button type="button" class="btn btn-label-secondary" id="np_clear" title="ล้าง">
+                                <i class="ti ti-x"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
