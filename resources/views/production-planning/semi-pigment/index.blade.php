@@ -39,7 +39,7 @@
                             <div class="col-md-4">
                                 <label class="form-label mb-1 small text-muted">ค้นหา</label>
                                 <input id="searchInput" type="text" class="form-control"
-                                    placeholder="ค้นหา Item No., แผนกที่ใช้, เลขที่ใบเบิก Red Bill (งาน), Order No., แผนกที่ผลิต">
+                                    placeholder="ค้นหา Item No., แผนกที่ใช้, เลขที่ใบเบิก Red Bill (งาน), Item No. (งาน), Order No., แผนกที่ผลิต">
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label mb-1 small text-muted">แผนก</label>
@@ -93,6 +93,7 @@
                                     <tr>
                                         <th>#</th>
                                         <th>เลขที่ใบเบิก Red Bill (งาน)</th>
+                                        <th>Item No. (งาน)</th>
                                         <th>แผนกที่ผลิต</th>
                                         <th>วันที่ขอ</th>
                                         <th>วันที่สั่ง</th>
@@ -179,6 +180,8 @@
                 { className: "text-center", data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
                 // เลขที่ใบเบิก Red Bill ของงานผลิต (tb_planning) ที่ผูกกับ Semi — มาจาก relation จึง sort/search ที่ SQL ไม่ได้
                 { className: "text-center", data: 'job_red_bill', name: 'job_red_bill', orderable: false, searchable: false },
+                // รหัสสินค้า Item No. ของงานผลิตเดียวกัน — มาจาก relation เช่นกัน จึง sort ไม่ได้
+                { className: "text-left",   data: 'job_itemno',   name: 'job_itemno',   orderable: false, searchable: false },
                 { className: "text-center", data: 'company',      name: 'company',      orderable: true },
                 { className: "text-center", data: 'created_at',   name: 'created_at',   orderable: true },
                 { className: "text-center", data: 'order_date',   name: 'order_date',   orderable: true },
@@ -192,7 +195,8 @@
                 { className: "text-center", data: 'action',       name: 'action',       orderable: false, searchable: false },
             ],
             // เริ่มต้นเรียงตามวันที่ขอ (created_at) ใหม่→เก่า ให้ใกล้เคียงลำดับเดิม (id desc)
-            order: [[3, 'desc']]
+            // (index 4 หลังเพิ่มคอลัมน์ Item No. (งาน) — 07/10/2569)
+            order: [[4, 'desc']]
         });
     });
 

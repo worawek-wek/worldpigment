@@ -76,6 +76,8 @@ class SemiPigmentController extends Controller
             // เลขที่ใบเบิก Red Bill ของ "งานผลิต" (tb_planning) ที่ผูกกับ Semi นี้ — ค่าเดียวกับคอลัมน์ (งาน) ใน PDF/Excel
             // มาจาก relation จึง sort/search ที่ระดับ SQL ไม่ได้ (ตั้ง orderable/searchable=false ฝั่ง DataTables)
             ->addColumn('job_red_bill', fn ($row) => optional($row->planning)->red_bill_code ?: '-')
+            // รหัสสินค้า Item No. ของ "งานผลิต" เดียวกัน — คนละตัวกับ itemno ของ Semi เอง (07/10/2569)
+            ->addColumn('job_itemno', fn ($row) => optional($row->planning)->itemno ?: '-')
             ->editColumn('order_date', fn ($row) => $row->order_date ? \Carbon\Carbon::parse($row->order_date)->format('d/m/Y') : '-')
             // วันที่ขอ = วันที่สร้างรายการ (created_at)
             ->editColumn('created_at', fn ($row) => $row->created_at ? \Carbon\Carbon::parse($row->created_at)->format('d/m/Y') : '-')
@@ -751,8 +753,12 @@ class SemiPigmentController extends Controller
                       ->orWhere('orderno', 'LIKE', '%'.$search.'%')
                       ->orWhere('company', 'LIKE', '%'.$search.'%')
                       // ค้นตามเลขที่ใบเบิก Red Bill ของ "งานผลิต" (tb_planning) ที่ผูกกับ Semi นี้ — คอลัมน์ (งาน) ที่แสดงในตาราง
+                      // + รหัสสินค้า Item No. ของงานผลิตนั้น — คอลัมน์ "รหัสสินค้า Item No. (งาน)" ใน PDF/Excel (07/10/2569)
                       ->orWhereHas('planning', function ($q) use ($search) {
-                          $q->where('red_bill_code', 'LIKE', '%'.$search.'%');
+                          $q->where(function ($q) use ($search) {
+                              $q->where('red_bill_code', 'LIKE', '%'.$search.'%')
+                                ->orWhere('itemno', 'LIKE', '%'.$search.'%');
+                          });
                       });
                 });
             })
