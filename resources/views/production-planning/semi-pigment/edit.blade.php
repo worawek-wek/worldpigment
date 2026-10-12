@@ -15,7 +15,7 @@
     <input type="hidden" name="id" value="{{ $sp->id }}">
 
     {{-- ── ข้อมูลอ้างอิง (อ่านอย่างเดียว) ── --}}
-    <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
+    <div class="d-flex flex-wrap gap-3 align-items-center mb-2">
         <span class="badge {{ $typeCls }}">{{ strtoupper($sp->type) }}</span>
         <span class="text-muted small">Order No.: <strong class="text-body">{{ $sp->orderno ?? '-' }}</strong></span>
         <span class="ms-auto">สถานะ: <span class="badge {{ $statusCls }}">{{ $sp->statusLabel() }}</span></span>
@@ -28,7 +28,7 @@
     @endunless
 
     <div class="row">
-        <div class="col-md-4 mb-3">
+        <div class="col-md-4 mb-2">
             <label class="form-label">แผนกผลิต (Company)</label>
             <select class="form-select" name="company" {{ $ro }}>
                 <option value="">-- เลือก --</option>
@@ -37,36 +37,36 @@
                 @endforeach
             </select>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-4 mb-2">
             <label class="form-label">แผนกที่ใช้ (Cust No.)</label>
             <input type="text" class="form-control" name="custno" value="{{ $sp->custno }}" {{ $ro }}>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-4 mb-2">
             <label class="form-label">Semi No. (Item No) <span class="text-danger">*</span></label>
             <input type="text" class="form-control" name="itemno" value="{{ $sp->itemno }}" {{ $ro }}>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-4 mb-2">
             <label class="form-label">วันที่สั่ง</label>
             <input type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" name="mdate" value="{{ $r_mdate }}" {{ $ro }}>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-4 mb-2">
             <label class="form-label">วันที่ต้องการรับ</label>
             <input type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" name="custwant" value="{{ $r_custwant }}" {{ $ro }}>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-4 mb-2">
             <label class="form-label">ขาด Semi Code</label>
             <input type="text" class="form-control" name="semi_code" value="{{ $sp->semi_code }}" {{ $ro }}
             placeholder="รหัสกึ่งสำเร็จรูป (ปิดชั่วคราว)" disabled>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-4 mb-2">
             <label class="form-label">แม่สีหลัก (Primary Color)</label>
             <input type="text" class="form-control" name="primary_color" value="{{ $sp->primary_color }}" {{ $ro }}>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-4 mb-2">
             <label class="form-label">Lot No.</label>
             <input type="text" class="form-control" name="lot_no" value="{{ $sp->lot_no }}" {{ $ro }}>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-4 mb-2">
             <label class="form-label">เลขที่ใบเบิกออกใบแดง (Red Bill)</label>
             <input type="text" class="form-control" name="red_bill_code" value="{{ $sp->red_bill_code }}" {{ $ro }}
             placeholder="เลขที่ใบเบิก (ปิดชั่วคราว)" disabled>
@@ -76,27 +76,27 @@
     <hr class="my-2">
 
     <div class="row">
-        <div class="col-md-4 mb-3">
+        <div class="col-md-4 mb-2">
             <label class="form-label">ยอดคงเหลือวันนี้ (Balance)</label>
             <input type="number" step="any" class="form-control" name="balance" value="{{ $sp->balance }}" {{ $ro }}>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-4 mb-2">
             <label class="form-label">ยอดใช้ย้อนหลัง 2 เดือน</label>
             <input type="number" step="any" class="form-control" name="retrospective" value="{{ $sp->retrospective }}" {{ $ro }}>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-4 mb-2">
             <label class="form-label">น้ำหนักที่จะใช้ (weight_request)</label>
             <input type="number" step="any" class="form-control" name="weight_request" value="{{ $sp->weight_request }}" {{ $ro }}>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-4 mb-2">
             <label class="form-label">ผลิตเพิ่ม (Increase)</label>
             <input type="number" step="any" class="form-control" name="increase_production" value="{{ $sp->increase_production }}" {{ $ro }}>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-4 mb-2">
             <label class="form-label">น้ำหนักที่จะผลิต (weight_production)</label>
             <input type="number" step="any" class="form-control" name="weight_production" value="{{ $sp->weight_production }}" {{ $ro }}>
         </div>
-        <div class="col-12 mb-3">
+        <div class="col-12 mb-2">
             <label class="form-label">หมายเหตุ (Remark)</label>
             <textarea class="form-control" rows="2" name="remark" placeholder="หมายเหตุ" {{ $ro }}>{{ $sp->remark }}</textarea>
         </div>

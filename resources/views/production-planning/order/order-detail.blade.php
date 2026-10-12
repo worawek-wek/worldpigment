@@ -1,4 +1,4 @@
-<div class="row g-3">
+<div class="row gx-3 gy-2">
     <div class="row">
         <div class="col-md-6">
             <label class="form-label">เลขที่ใบสั่ง</label>
@@ -9,7 +9,7 @@
             {{ $order->Mdate ? \Carbon\Carbon::parse($order->Mdate)->format('d/m/Y') : '' }}
         </div>
     </div>
-    <div class="row mt-3">
+    <div class="row mt-2">
         <div class="col-md-2">
             <label class="form-label">รหัสลูกค้า</label>
             {{ $order->Custno }}
@@ -19,7 +19,7 @@
             {{ $order->Custname }}
         </div>
     </div>
-    <div class="row mt-3">
+    <div class="row mt-2">
         <div class="col-12">
             <table class="table table-bordered table-hover align-middle mb-0">
                 <thead class="table-light">

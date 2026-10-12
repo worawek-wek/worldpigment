@@ -23,34 +23,38 @@
                 <input type="hidden" name="_pk" value="">
 
                 <!-- Body -->
-                <div class="modal-body px-5 py-4" style="background-color: #f8f9fb;">
+                <div class="modal-body px-5 py-3" style="background-color: #f8f9fb;">
 
-                    <div class="card shadow-sm mb-3"
+                    <div class="card shadow-sm mb-0"
                         style="border: 1px solid #dcd8f5; border-bottom-width: 0;">
 
                         <div class="card-header py-2 px-3 d-flex align-items-center"
-                            style="background-color: #efedfd; border-bottom: 2px solid #6c5ce7; border-radius: 0.375rem 0.375rem 0 0;">
+                            style="background-color: #dedaff; border-bottom: 2px solid #6c5ce7; border-radius: 0.375rem 0.375rem 0 0;">
                             <h6 class="mb-0 fw-semibold" style="color: #3a309d;">
                                 <i class="ti ti-package me-1"></i>
                                 ใบส่ง ต.ย. ให้ลูกค้า
                             </h6>
                         </div>
 
-                        <div class="card-body p-4">
+                        <div class="card-body py-2 px-3">
 
                             {{-- ─── อ้างอิงใบนำส่งเทียบสี (CM) — 1 CM มีได้หลายใบส่ง ต.ย. ─── --}}
-                            <div class="row g-3 mb-4 pb-3 border-bottom">
-                                <div class="col-md-4">
-                                    <label class="form-label small mb-1 fw-semibold" style="color:#4b3fb8;">
-                                        <i class="ti ti-link me-1"></i>เลขที่ใบนำส่งเทียบสี (อ้างอิง) <br> <span class="text-muted fw-normal">(เช่น 26/0001)</span>
+                            {{-- แถวช่องเดียว → label ซ้าย ช่องกรอกขวา (โครงกลาง .of-form, 07/10/2569) --}}
+                            <div class="row gx-3 gy-2 mb-2 pb-2 border-bottom of-form" style="--of-lw: 225px;">
+                                <div class="col-md-6 of-row">
+                                    <label class="form-label small fw-semibold" style="color:#4b3fb8;">
+                                        {{-- text-nowrap: ไม่ให้ "(อ้างอิง)" ตกบรรทัด — --of-lw ต้องกว้างพอสำหรับข้อความนี้ --}}
+                                        <span class="text-nowrap"><i class="ti ti-link me-1"></i>เลขที่ใบนำส่งเทียบสี (อ้างอิง)</span> <br> <span class="text-muted fw-normal">(เช่น 26/0001)</span>
                                     </label>
-                                    <input type="text" name="SendNo" class="form-control">
+                                    <div class="of-ctl">
+                                        <input type="text" name="SendNo" class="form-control">
+                                    </div>
                                 </div>
                             </div>
 
                             {{-- ─── กลุ่ม: ข้อมูลลูกค้า ─── --}}
-                            <div class="mb-4 pb-3 border-bottom">
-                                <div class="d-flex align-items-center mb-3 ps-2"
+                            <div class="mb-2 pb-2 border-bottom">
+                                <div class="d-flex align-items-center mb-2 ps-2"
                                     style="border-left: 3px solid #6c5ce7;">
                                     <i class="ti ti-user-circle me-2" style="color: #4b3fb8;"></i>
                                     <span class="fw-semibold" style="font-size: 0.95rem; color: #4b3fb8;">
@@ -58,7 +62,7 @@
                                     </span>
                                 </div>
 
-                                <div class="row g-3 align-items-end">
+                                <div class="row gx-3 gy-2 align-items-end">
                                     <div class="col-md-2">
                                         <label class="form-label small mb-1">รหัสลูกค้า <span class="text-muted fw-normal">(เช่น 00004)</span></label>
                                         <input type="text" name="custno" class="form-control">
@@ -85,8 +89,8 @@
                             </div>
 
                             {{-- ─── กลุ่ม: เอกสารปิดงาน (อยู่ใต้ข้อมูลลูกค้า) ─── --}}
-                            <div class="p-3 rounded mb-4" style="background-color: #fffaf0; border: 1px dashed #ffc107;">
-                                <div class="d-flex align-items-center mb-3 ps-2"
+                            <div class="py-2 px-3 rounded mb-2" style="background-color: #fffaf0; border: 1px dashed #ffc107;">
+                                <div class="d-flex align-items-center mb-2 ps-2"
                                     style="border-left: 3px solid #f0a500;">
                                     <i class="ti ti-receipt me-2" style="color: #8a6100;"></i>
                                     <span class="fw-semibold" style="font-size: 0.95rem; color: #8a6100;">
@@ -94,7 +98,7 @@
                                     </span>
                                 </div>
 
-                                <div class="row g-3 align-items-end">
+                                <div class="row gx-3 gy-2 align-items-end">
                                     <div class="col-md-6">
                                         <label class="form-label small mb-1 text-danger">
                                             <i class="ti ti-asterisk-simple"></i>
@@ -110,8 +114,8 @@
                             </div>
 
                             {{-- ─── กลุ่ม: ข้อมูลสี (เหมือนฟอร์ม CM — ดึงจากใบนำส่งเทียบสีตอนป้อน SendNo แต่แก้ไขได้) ─── --}}
-                            <div class="mb-4 pb-3 border-bottom">
-                                <div class="d-flex align-items-center mb-3 ps-2"
+                            <div class="mb-2 pb-2 border-bottom">
+                                <div class="d-flex align-items-center mb-2 ps-2"
                                     style="border-left: 3px solid #6c5ce7;">
                                     <i class="ti ti-palette me-2" style="color: #4b3fb8;"></i>
                                     <span class="fw-semibold" style="font-size: 0.95rem; color: #4b3fb8;">
@@ -119,18 +123,20 @@
                                     </span>
                                 </div>
 
-                                <div class="row g-3">
-                                    {{-- รายละเอียด (ช่องเดียวในกลุ่มข้อมูลสี) --}}
-                                    <div class="col-md-8">
-                                        <label class="form-label small mb-1">รายละเอียด <span class="text-muted fw-normal">(รายละเอียดผลิตภัณฑ์)</span></label>
-                                        <input type="text" name="TestDesc" class="form-control">
+                                <div class="row gx-3 gy-2 of-form" style="--of-lw: 150px;">
+                                    {{-- รายละเอียด (ช่องเดียวในกลุ่มข้อมูลสี) — label ซ้าย ช่องกรอกขวา (07/10/2569) --}}
+                                    <div class="col-md-8 of-row">
+                                        <label class="form-label small">รายละเอียด <span class="text-muted fw-normal">(รายละเอียดผลิตภัณฑ์)</span></label>
+                                        <div class="of-ctl">
+                                            <input type="text" name="TestDesc" class="form-control">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
                             {{-- ─── กลุ่ม: รายละเอียดผลิตภัณฑ์ (ย้ายจากฟอร์ม CM) ─── --}}
-                            <div class="mb-4 pb-3 border-bottom">
-                                <div class="d-flex align-items-center mb-3 ps-2"
+                            <div class="mb-2 pb-2 border-bottom">
+                                <div class="d-flex align-items-center mb-2 ps-2"
                                     style="border-left: 3px solid #6c5ce7;">
                                     <i class="ti ti-flask me-2" style="color: #4b3fb8;"></i>
                                     <span class="fw-semibold" style="font-size: 0.95rem; color: #4b3fb8;">
@@ -140,7 +146,8 @@
 
                                 {{-- ความกว้างแต่ละช่องปรับตามเนื้อหา (ไม่ยืดเต็มคอลัมน์) — ใช้ w-100 คั่นเพื่อขึ้นบรรทัดใหม่ --}}
                                 {{-- align-items-end: label ยาวไม่เท่ากันในแถว → ช่องกรอกชิดล่างเรียงตรงกัน --}}
-                                <div class="row g-3 align-items-end">
+                                {{-- of-form: ใช้กับแถว 2 และ 3 (label ซ้าย ช่องกรอกขวา) — แถว 1 ไม่มี of-row จึงยังเป็น label อยู่บน --}}
+                                <div class="row gx-3 gy-2 align-items-end of-form" style="--of-lw: 150px;">
                                     {{-- แถว 1: Resin + PHR + น้ำหนัก + Standard --}}
                                     <div class="col-md-6">
                                         <label class="form-label small mb-1">Resin (Match) <span class="text-muted fw-normal">(เช่น PVC, ABS, PE)</span></label>
@@ -162,37 +169,43 @@
                                     </div>
                                     <div class="w-100"></div>
 
-                                    {{-- แถว 2: เลขที่ใบรายงานผล + Lot No. --}}
-                                    <div class="col-md-4">
-                                        <label class="form-label small mb-1">เลขที่ใบรายงานผล <span class="text-muted fw-normal">(เช่น 26/0001/2/4)</span></label>
-                                        <input type="text" name="rptno" class="form-control">
+                                    {{-- แถว 2: เลขที่ใบรายงานผล + Lot No. — label ซ้าย ช่องกรอกขวา (07/10/2569) --}}
+                                    <div class="col-md-5 of-row">
+                                        <label class="form-label small">เลขที่ใบรายงานผล <span class="text-muted fw-normal">(เช่น 26/0001/2/4)</span></label>
+                                        <div class="of-ctl">
+                                            <input type="text" name="rptno" class="form-control">
+                                        </div>
                                     </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label small mb-1">Lot No. <span class="text-muted fw-normal">(เช่น 690112-1-2/01)</span></label>
-                                        <input type="text" name="lotno" class="form-control">
+                                    <div class="col-md-5 of-row">
+                                        <label class="form-label small">Lot No. <span class="text-muted fw-normal">(เช่น 690112-1-2/01)</span></label>
+                                        <div class="of-ctl">
+                                            <input type="text" name="lotno" class="form-control">
+                                        </div>
                                     </div>
                                     <div class="w-100"></div>
 
-                                    {{-- แถว 3: หมายเหตุ (ย้ายมาจากกลุ่มการยกเลิก/Sales) --}}
-                                    <div class="col-12">
-                                        <label class="form-label small mb-1">
+                                    {{-- แถว 3: หมายเหตุ (ย้ายมาจากกลุ่มการยกเลิก/Sales) — label ซ้าย ช่องกรอกขวา (07/10/2569) --}}
+                                    <div class="col-12 of-row">
+                                        <label class="form-label small">
                                             <i class="ti ti-note me-1"></i>
                                             หมายเหตุ <span class="text-muted fw-normal">(หมายเหตุเพิ่มเติม)</span>
                                         </label>
-                                        <textarea name="remark" class="form-control" rows="2"></textarea>
+                                        <div class="of-ctl">
+                                            <textarea name="remark" class="form-control" rows="2"></textarea>
+                                        </div>
                                     </div>
                                     <div class="w-100"></div>
 
                                     {{-- แถว 4: ข้อมูลที่ลูกค้าอนุมัติ (เน้นในกล่องพื้นฟ้าอ่อน) --}}
                                     <div class="col-12">
-                                        <div class="p-3 rounded"
+                                        <div class="py-2 px-3 rounded"
                                             style="background-color: #e7f3fe; border: 1px solid #b6d9f5;">
                                             <div class="d-flex align-items-center mb-2 ps-1"
                                                 style="border-left: 3px solid #2f8ee0;">
                                                 <i class="ti ti-circle-check me-2" style="color: #1c6dbf;"></i>
                                                 <span class="fw-semibold small" style="color: #1c6dbf;">ข้อมูลที่ลูกค้าอนุมัติ</span>
                                             </div>
-                                            <div class="row g-3 align-items-end">
+                                            <div class="row gx-3 gy-2 align-items-end">
                                                 <div class="col-md-6">
                                                     <label class="form-label small mb-1">ลูกค้าอนุมัติเบอร์ตั้ง <span class="text-muted fw-normal">(เช่น CP1Y583PVC)</span></label>
                                                     <input type="text" name="CodeNo" class="form-control border-primary-subtle">
@@ -208,8 +221,8 @@
                             </div>
 
                             {{-- ─── กลุ่ม: การยกเลิก / Sales ─── --}}
-                            <div class="mb-4 pb-3 border-bottom">
-                                <div class="d-flex align-items-center mb-3 ps-2"
+                            <div class="mb-2 pb-2 border-bottom">
+                                <div class="d-flex align-items-center mb-2 ps-2"
                                     style="border-left: 3px solid #6c5ce7;">
                                     <i class="ti ti-alert-circle me-2" style="color: #4b3fb8;"></i>
                                     <span class="fw-semibold" style="font-size: 0.95rem; color: #4b3fb8;">
@@ -217,7 +230,7 @@
                                     </span>
                                 </div>
 
-                                <div class="row g-3 align-items-end">
+                                <div class="row gx-3 gy-2 align-items-end">
                                     <div class="col-md-4 px-4">
                                         <div class="form-check p-2 rounded border border-danger-subtle bg-danger-subtle">
                                             <input class="form-check-input" type="checkbox" name="cancel" value="1" id="cancel">

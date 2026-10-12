@@ -245,32 +245,32 @@
                         </label>
                     </div>
                     <div class="col-6">
-                        <input type="text" id="o_min_price" class="form-control form-control-sm text-end of-warn" readonly>
+                        <input type="text" id="o_min_price" class="form-control form-control-sm text-end of-ro of-warn" readonly tabindex="-1">
                     </div>
 
                     <div class="col-6"><label class="form-label mb-0 small">ราคาอนุมัติ</label></div>
                     <div class="col-6">
-                        <input type="text" id="o_appv_price" class="form-control form-control-sm text-end" readonly>
+                        <input type="text" id="o_appv_price" class="form-control form-control-sm text-end of-ro" readonly tabindex="-1">
                     </div>
 
                     <div class="col-6"><label class="form-label mb-0 small">ยืนราคาถึง</label></div>
                     <div class="col-6">
-                        <input type="text" id="o_valid_to" class="form-control form-control-sm text-end" readonly>
+                        <input type="text" id="o_valid_to" class="form-control form-control-sm text-end of-ro" readonly tabindex="-1">
                     </div>
 
                     <div class="col-6">
                         <label class="form-label mb-0 small">
                             ราคาที่กำหนดไว้
-                            <i class="ti ti-info-circle text-muted" title="= ราคาช่อง 1 จากระบบกำหนดราคา"></i>
+                            <i class="ti ti-info-circle text-muted" title="= ราคาที่ตั้งไว้ในเมนู กำหนดราคา ของลูกค้า + รหัสสินค้านี้"></i>
                         </label>
                     </div>
                     <div class="col-6">
-                        <input type="text" id="o_fixed_price" class="form-control form-control-sm text-end" readonly>
+                        <input type="text" id="o_fixed_price" class="form-control form-control-sm text-end of-ro" readonly tabindex="-1">
                     </div>
 
                     <div class="col-6"><label class="form-label mb-0 small">ราคาช่อง 2</label></div>
                     <div class="col-6">
-                        <input type="text" id="o_price2" class="form-control form-control-sm text-end" readonly>
+                        <input type="text" id="o_price2" class="form-control form-control-sm text-end of-ro" readonly tabindex="-1">
                     </div>
 
                     {{-- ราคาขาย = ช่องเดียวในกล่องนี้ที่ผู้ใช้พิมพ์เอง

@@ -93,6 +93,43 @@
     </style>
 
     {{-- ─────────────────────────────────────────────────────────────────
+         แถบชื่อฟอร์มบนหัว modal (.modalHeadDecor) — ลด padding ทั้งระบบ (07/10/2569 ตามที่ผู้ใช้สั่ง)
+         แต่ละหน้านิยาม .modalHeadDecor ของตัวเองใน <style> (padding 1.25rem 1.5rem + สามเหลี่ยม border 65px ตายตัว)
+         กฎกลางนี้ทับด้วย specificity ที่สูงกว่า จึงไม่ต้องไล่แก้ทีละหน้า
+         • สามเหลี่ยมเฉียงวาดด้วย clip-path สูง 100% ของแถบ (แบบเดียวกับ #orderModal) — ถ้าคง border 65px ไว้
+           พอแถบเตี้ยลง สามเหลี่ยมจะยื่นเลยขอบล่างของหัว modal
+         • background-color: inherit = ใช้สีของแถบหน้านั้นเอง (teal / ส้มของหน้ากำหนดราคา)
+       ───────────────────────────────────────────────────────────────── --}}
+    {{-- ลายสลับขาว-เทาของตารางรายการหน้าแรก (#table-data) — 07/10/2569 ตามที่ผู้ใช้สั่ง
+         ธีมตั้ง --bs-table-striped-bg ไว้ #fbfbfc (เกือบขาว มองไม่เห็น) จึงตั้งเทาให้ชัดเฉพาะตารางใน #table-data
+         ตาราง table-striped ที่อื่น (ฝั่ง Production ฯลฯ) ยังใช้สีของธีมตามเดิม
+         ตารางที่ไม่ได้อยู่ใน #table-data (กลุ่มราคา / ตั้งค่าเงื่อนไขราคา) ใช้ class "table-striped wp-zebra" แทน --}}
+    <style>
+        #table-data .table-striped,
+        .table-striped.wp-zebra { --bs-table-striped-bg: #f1f2f4; }
+        /* Bootstrap ลงสีแถวคี่ (แถวแรกเป็นเทา) — ผู้ใช้ต้องการให้แถวแรกเป็นขาว จึงสลับไปลงสีแถวคู่แทน */
+        #table-data .table-striped > tbody > tr:nth-of-type(odd) > *,
+        .table-striped.wp-zebra > tbody > tr:nth-of-type(odd) > * { --bs-table-bg-type: transparent; }
+        #table-data .table-striped > tbody > tr:nth-of-type(even) > *,
+        .table-striped.wp-zebra > tbody > tr:nth-of-type(even) > * {
+            --bs-table-color-type: var(--bs-table-striped-color);
+            --bs-table-bg-type: var(--bs-table-striped-bg);
+        }
+    </style>
+
+    <style>
+        .modal.modalHeadDecor .modal-header .modal-title { padding: .5rem 1.25rem; }
+        .modal.modalHeadDecor .modal-header .modal-title::after {
+            right: -48px;
+            width: 48px;
+            height: 100%;
+            border: 0;
+            background-color: inherit;
+            clip-path: polygon(0 0, 100% 0, 0 100%);
+        }
+    </style>
+
+    {{-- ─────────────────────────────────────────────────────────────────
          WIP marker (สำหรับ dev): แปะ class "wip" ที่ element/ส่วนที่ยังเขียน
          ไม่เสร็จ → พื้นหลังแดง ลูกค้าจะเห็นว่าส่วนนั้นยัง test ไม่ได้
          เสร็จแล้ว → ลบคำว่า "wip" ออก "คำเดียว" สไตล์เดิมกลับมาเอง (ไม่ต้องจำสีเดิม)

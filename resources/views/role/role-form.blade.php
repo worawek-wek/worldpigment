@@ -7,21 +7,21 @@
     @endif
 
     <div class="row">
-        <div class="col-md-6 mb-3">
+        <div class="col-md-6 mb-2">
             <label class="form-label" for="role_name">
                 ชื่อ Role <span class="text-danger">*</span>
             </label>
             <input type="text" class="form-control" id="role_name" name="name"
                 value="{{ $role?->name }}" maxlength="255" placeholder="เช่น ผู้ดูแลระบบ, ฝ่ายผลิต">
         </div>
-        <div class="col-md-6 mb-3">
+        <div class="col-md-6 mb-2">
             <label class="form-label" for="role_description">รายละเอียด</label>
             <input type="text" class="form-control" id="role_description" name="description"
                 value="{{ $role?->description }}" maxlength="255" placeholder="รายละเอียด (ถ้ามี)">
         </div>
     </div>
 
-    <div class="mb-3">
+    <div class="mb-2">
         <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" role="switch"
                 id="role_is_active" name="is_active" value="Y"
@@ -39,7 +39,7 @@
         </div>
     </div>
 
-    <hr class="my-3">
+    <hr class="my-2">
 
     <div class="d-flex justify-content-between align-items-center mb-2">
         <label class="form-label mb-0 fw-bold">

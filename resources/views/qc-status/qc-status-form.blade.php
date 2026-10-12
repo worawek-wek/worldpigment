@@ -2,7 +2,7 @@
     @csrf
     <input type="hidden" name="id" value="{{ $item?->id }}">
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label" for="qcstatus_name">
             สถานะ QC <span class="text-danger">*</span>
         </label>
@@ -10,14 +10,14 @@
             value="{{ $item?->name }}" maxlength="255" placeholder="กรอกชื่อสถานะ QC">
     </div>
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label" for="qcstatus_sort">ลำดับ</label>
         <input type="number" class="form-control" id="qcstatus_sort" name="sort"
             value="{{ $item?->sort ?? 0 }}" min="0" placeholder="0">
         <small class="text-muted">เลขน้อยแสดงก่อน</small>
     </div>
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label d-block">สถานะการใช้งาน</label>
         <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" role="switch"

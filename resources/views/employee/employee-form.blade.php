@@ -7,7 +7,7 @@
         <input type="hidden" name="edit_empno" value="{{ $employee->empno }}">
     @endif
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label" for="employee_empno">
             รหัสพนักงาน (Emp No.) <span class="text-danger">*</span>
         </label>
@@ -16,13 +16,13 @@
             {{ $isEdit ? 'readonly' : '' }}>
     </div>
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label" for="employee_user">ชื่อผู้ใช้ (Email or Username)</label>
         <input type="text" class="form-control" id="employee_user" name="user"
             value="{{ $employee?->user }}" maxlength="50" placeholder="ชื่อผู้ใช้สำหรับเข้าระบบ" autocomplete="off">
     </div>
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label" for="employee_password">รหัสผ่าน (Password)</label>
         <input type="password" class="form-control" id="employee_password" name="password"
             maxlength="255" placeholder="{{ $isEdit ? 'เว้นว่างถ้าไม่เปลี่ยนรหัสผ่าน' : 'กรอกรหัสผ่าน (อย่างน้อย 4 ตัว)' }}"
@@ -32,9 +32,9 @@
         @endif
     </div>
 
-    <hr class="mb-3">
+    <hr class="mb-2">
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label" for="employee_empname">
             ชื่อ <span class="text-danger">*</span>
         </label>
@@ -42,19 +42,19 @@
             value="{{ $employee?->empname }}" maxlength="10" placeholder="กรอกชื่อ">
     </div>
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label" for="employee_empsur">นามสกุล</label>
         <input type="text" class="form-control" id="employee_empsur" name="empsur"
             value="{{ $employee?->empsur }}" maxlength="20" placeholder="กรอกนามสกุล">
     </div>
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label" for="employee_supno">รหัสสังกัด (Sup No.)</label>
         <input type="text" class="form-control" id="employee_supno" name="supno"
             value="{{ $employee?->supno }}" maxlength="2" placeholder="รหัสสังกัด (สูงสุด 2 ตัว)">
     </div>
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label" for="employee_department">แผนก</label>
         <select class="form-select" id="employee_department" name="dept">
             <option value="">-- เลือกแผนก --</option>
@@ -67,7 +67,7 @@
         </select>
     </div>
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label" for="employee_role">สิทธิ์การใช้งาน (Role)</label>
         <select class="form-select" id="employee_role" name="role_id">
             <option value="">-- เลือก Role --</option>
@@ -84,7 +84,7 @@
         </select>
     </div>
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label" for="employee_signature">ลายเซ็น (Signature)</label>
         <input type="file" class="form-control" id="employee_signature" name="signature" accept="image/*">
         <small class="text-muted">รองรับไฟล์รูปภาพ (jpeg, png, jpg, gif, webp) ขนาดไม่เกิน 2MB{{ $isEdit ? ' — เว้นว่างไว้หากไม่ต้องการเปลี่ยนลายเซ็นเดิม' : '' }}</small>
@@ -100,7 +100,7 @@
         <input type="hidden" name="remove_signature" id="employee_remove_signature" value="0">
     </div>
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label d-block">สถานะการใช้งาน</label>
         <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" role="switch"

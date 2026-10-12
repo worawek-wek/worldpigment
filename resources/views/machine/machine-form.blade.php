@@ -2,7 +2,7 @@
     @csrf
     <input type="hidden" name="id" value="{{ $machine?->id }}">
 
-    <div class="mb-3">
+    <div class="mb-2">
         @php
             $deptNames   = $departments->pluck('name')->all();
             $currentDept = $machine?->dept;
@@ -24,7 +24,7 @@
         </select>
     </div>
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label" for="machine_MBX">
             ชื่อ/รหัสเครื่องจักร (MBX) <span class="text-danger">*</span>
         </label>
@@ -32,13 +32,13 @@
             value="{{ $machine?->MBX }}" placeholder="กรอกชื่อ/รหัสเครื่องจักร">
     </div>
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label" for="machine_speed_rpm">ความเร็วรอบ (Speed RPM)</label>
         <input type="text" class="form-control" id="machine_speed_rpm" name="speed_rpm" maxlength="255"
             value="{{ $machine?->speed_rpm }}" placeholder="กรอกความเร็วรอบ (ถ้ามี)">
     </div>
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label" for="machine_group">ประเภท/กลุ่ม (Group)</label>
         <input type="text" class="form-control" id="machine_group" name="group" maxlength="50"
             value="{{ $machine?->group }}" placeholder="กรอกประเภท/กลุ่ม (ถ้ามี)">

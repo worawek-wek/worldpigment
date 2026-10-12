@@ -76,19 +76,19 @@
 
         {{-- ── ข้อมูลหลัก ── --}}
         <div class="row">
-            <div class="col-md-4 mb-3">
+            <div class="col-md-4 mb-2">
                 <label class="form-label">รหัสสินค้า (Item No.) <span class="text-danger">*</span></label>
                 <input type="text" name="itemno"
                        value="{{ $default_itemno }}"
                        class="form-control" placeholder="กรอก Item No.">
             </div>
-            <div class="col-md-4 mb-3">
+            <div class="col-md-4 mb-2">
                 <label class="form-label">ล๊อค (Lot)</label>
                 <input type="text" name="lot"
                        value="{{ $planning_item?->lot ?? '' }}"
                        class="form-control" placeholder="Lot">
             </div>
-            <div class="col-md-4 mb-3">
+            <div class="col-md-4 mb-2">
                 <label class="form-label">Plan Type</label>
                 {{-- auto-fill จาก planning_header.plan_type --}}
                 <input type="text" name="plan_type"
@@ -98,7 +98,7 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-4 mb-3">
+            <div class="col-md-4 mb-2">
                 <label class="form-label">น้ำหนักสั่งตาม Order (Quantity)</label>
                 {{-- เพิ่มใหม่: ดึง netqty จาก header มาตั้งต้น / แก้ไข: ใช้ค่าเดิมของ item --}}
                 {{-- js-number-format: จัดรูปแบบหลักพันสดขณะพิมพ์ (เก็บค่าดิบ server ตัดจุลภาคเอง) --}}
@@ -106,13 +106,13 @@
                        value="{{ $planning_item ? number_format((float) ($planning_item->quantity ?? 0), 2) : number_format((float) ($parent_header?->netqty ?? 0), 2) }}"
                        class="form-control js-number-format" placeholder="0.00">
             </div>
-            <div class="col-md-4 mb-3">
+            <div class="col-md-4 mb-2">
                 <label class="form-label">น้ำหนัก TP (Weight)</label>
                 <input type="text" name="weight" inputmode="decimal"
                        value="{{ number_format((float) ($planning_item?->weight ?? 0), 2) }}"
                        class="form-control js-number-format" placeholder="0.00">
             </div>
-            <div class="col-md-4 mb-3">
+            <div class="col-md-4 mb-2">
                 <label class="form-label">น้ำหนักที่ผลิตได้ (Weight Produced)</label>
                 <input type="text" name="weight_produced" inputmode="decimal"
                        value="{{ $planning_item && $planning_item->weight_produced !== null ? number_format((float) $planning_item->weight_produced, 2) : '' }}"
@@ -120,7 +120,7 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-4 mb-3">
+            <div class="col-md-4 mb-2">
                 <label class="form-label">เลขที่ใบเบิกออกใบแดง (Red Bill)</label>
                 {{-- เพิ่มใหม่: ดึง orderno จาก header มาตั้งต้น / แก้ไข: ใช้ค่าเดิมของ item --}}
                 <input type="text" name="red_bill_code"
@@ -128,7 +128,7 @@
                        class="form-control" placeholder="เลขที่ใบเบิกออกใบแดง">
             </div>
             {{-- เพิ่มใหม่: รอบการผลิต (คอลัมน์ cycles ของ tb_planning) --}}
-            <div class="col-md-4 mb-3">
+            <div class="col-md-4 mb-2">
                 <label class="form-label">รอบการผลิต (Cycles)</label>
                 <input type="text" name="cycles" maxlength="25"
                        value="{{ $planning_item ? ($planning_item->cycles ?? '') : '' }}"
@@ -136,13 +136,13 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-4 mb-3">
+            <div class="col-md-4 mb-2">
                 <label class="form-label">วันที่สั่ง (mdate)</label>
                 <input type="text" name="mdate"
                     value="{{ $planning_item?->mdate ? substr($planning_item->mdate, 0, 10) : '' }}"
                     class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
             </div>
-            <div class="col-md-4 mb-3">
+            <div class="col-md-4 mb-2">
                 <label class="form-label">วันที่ต้องการรับ (custwant)</label>
                 {{-- data-original เก็บค่าเดิม (Y-m-d) ไว้เทียบว่ามีการแก้ไขไหม → ถ้าเปลี่ยนต้องยืนยันก่อนบันทึก --}}
                 <input type="text" name="custwant"
@@ -150,7 +150,7 @@
                     data-original="{{ $planning_item?->custwant ? substr($planning_item->custwant, 0, 10) : '' }}"
                     class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
             </div>
-            <div class="col-md-4 mb-3">
+            <div class="col-md-4 mb-2">
                 <label class="form-label d-flex align-items-center justify-content-between">
                     <span>วันที่กำหนดทบทวน (senddate)</span>
                     @if($planning_item && count($senddate_logs))
@@ -166,13 +166,13 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-6 mb-3">
+            <div class="col-md-6 mb-2">
                 <label class="form-label">หมายเหตุ MK (Remark)</label>
                 <input type="text" name="remark"
                        value="{{ $planning_item?->remark ?? '' }}"
                        class="form-control" placeholder="หมายเหตุ">
             </div>
-            <div class="col-md-6 mb-3">
+            <div class="col-md-6 mb-2">
                 <label class="form-label">ขาดวัตถุดิบ (Shortage Remark)</label>
                 <input type="text" name="shortage_remark"
                        value="{{ $planning_item?->shortage_remark ?? '' }}"
@@ -181,7 +181,7 @@
         </div>
 
         <div class="row">
-            <div class="col-md-12 mb-3">
+            <div class="col-md-12 mb-2">
                 <label class="form-label">หมายเหตุวางแผน (Planning Remark)</label>
                 @php
                     // เก็บลง tb_planning.planning_remark เป็น "ข้อความ" (snapshot) — datalist เป็นแค่ตัวช่วยกรอกให้เป็นมาตรฐาน
@@ -209,7 +209,7 @@
                 // แผนกปัจจุบันของ item: ใช้ของ item ก่อน ถ้าว่างจึง fallback ไปที่ header
                 $current_company = $planning_item?->company ?: ($parent_header?->company ?? '');
             @endphp
-            <div class="col-md-4 mb-3">
+            <div class="col-md-4 mb-2">
                 <label class="form-label">แผนก (Company)</label>
                 <select name="company" id="planning_item_company" class="form-select">
                     @foreach($companies as $company_name)
@@ -224,7 +224,7 @@
                 </select>
                 <small class="text-muted">เปลี่ยนแผนกเพื่อย้ายรายการนี้ไปให้แผนกอื่นทำ (เครื่องจักร/สถานะจะโหลดใหม่)</small>
             </div>
-            <div class="col-md-4 mb-3">
+            <div class="col-md-4 mb-2">
                 <label class="form-label">เครื่องจักร (Machine No.)</label>
                 <select name="machine_no" id="planning_item_machine" class="form-control">
                     <option value="">เลือกเครื่องจักร</option>
@@ -236,7 +236,7 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-4 mb-3">
+            <div class="col-md-4 mb-2">
                 <label class="form-label">สถานะการวางแผน (Planning Status)</label>
                 @php $current_status = $planning_item?->planning_status ?? ''; @endphp
                 <select name="planning_status" id="planning_item_status" class="form-select">
@@ -258,13 +258,13 @@
 
         <div class="row p-3 rounded mt-2" style="background-color: #fff1ca; border: 1px dashed #ffc107;">
             <div class="row">
-                <div class="col-md-3 mb-3">
+                <div class="col-md-3 mb-2">
                     <label class="form-label">วันที่วางแผนผลิต (Inplan)</label>
                     <input type="text" name="inplan"
                         value="{{ $planning_item?->inplan ? substr($planning_item->inplan, 0, 10) : '' }}"
                         class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
                 </div>
-                <div class="col-md-3 mb-3">
+                <div class="col-md-3 mb-2">
                     <label class="form-label">กะการผลิต (Work Shift)</label>
                     @php $current_shift = $planning_item?->work_shift ?? ''; @endphp
                     <select name="work_shift" class="form-select">
@@ -274,7 +274,7 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-3 mb-3">
+                <div class="col-md-3 mb-2">
                     <label class="form-label d-flex align-items-center justify-content-between mb-1">
                         <span>พนักงานผู้รับผิดชอบ</span>
                         {{-- เพิ่มพนักงานใหม่ทันทีจากฟอร์มนี้ (เปิด modal ซ้อน ใช้ฟอร์มเดียวกับหน้าจัดการพนักงาน)
@@ -376,25 +376,25 @@
 
         <div class="row p-3 rounded mt-2" style="background-color: rgb(241, 211, 250);  border: 1px dashed #9e05bd;">
             <div class="row">
-                <div class="col-md-3 mb-3">
+                <div class="col-md-3 mb-2">
                     <label class="form-label">วันที่เริ่มผลิต (Start Date)</label>
                     <input type="text" name="start_date"
                         value="{{ $planning_item?->start_date ? substr($planning_item->start_date, 0, 10) : '' }}"
                         class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
                 </div>
-                <div class="col-md-3 mb-3">
+                <div class="col-md-3 mb-2">
                     <label class="form-label">เวลาที่เริ่มผลิต (Start Time)</label>
                     <input type="text" name="start_time"
                         value="{{ $planning_item?->start_time ? substr($planning_item->start_time, 0, 5) : '' }}"
                         class="form-control flatpickr-time" autocomplete="off">
                 </div>
-                <div class="col-md-3 mb-3">
+                <div class="col-md-3 mb-2">
                     <label class="form-label">วันที่ผลิตเสร็จ (End Date)</label>
                     <input type="text" name="end_date"
                         value="{{ $planning_item?->end_date ? substr($planning_item->end_date, 0, 10) : '' }}"
                         class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
                 </div>
-                <div class="col-md-3 mb-3">
+                <div class="col-md-3 mb-2">
                     <label class="form-label">เวลาที่ผลิตเสร็จ (End Time)</label>
                     <input type="text" name="end_time"
                         value="{{ $planning_item?->end_time ? substr($planning_item->end_time, 0, 5) : '' }}"
@@ -402,19 +402,19 @@
                 </div>
             </div>
             <div class="row">
-                <div class="col-md-4 mb-3">
+                <div class="col-md-4 mb-2">
                     <label class="form-label">วันที่ส่ง Qc (QC Date)</label>
                     <input type="text" name="qc_date"
                         value="{{ $planning_item?->qc_date ? substr($planning_item->qc_date, 0, 10) : '' }}"
                         class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
                 </div>
-                <div class="col-md-4 mb-3">
+                <div class="col-md-4 mb-2">
                     <label class="form-label">เวลาที่ส่ง Qc (QC Time)</label>
                     <input type="text" name="qc_time"
                         value="{{ $planning_item?->qc_time ? substr($planning_item->qc_time, 0, 5) : '' }}"
                         class="form-control flatpickr-time" autocomplete="off" placeholder="HH:MM">
                 </div>
-                <div class="col-md-4 mb-3">
+                <div class="col-md-4 mb-2">
                 <label class="form-label">สถานะ Qc (QC Status) </label>
                     @php
                         // เก็บลง tb_planning.qc_status เป็น "id" อ้างอิง master tb_qc_status
@@ -433,7 +433,7 @@
         {{-- <div class="row my-2"><hr /></div> --}}
 
         <div class="row">
-            <div class="col-md-6 mb-3">
+            <div class="col-md-6 mb-2">
                 @php
                     $item_end_job     = ($planning_item?->end_job ?? 'N') === 'Y';
                     $semi_jobs_done   = $item_semi_jobs_done ?? true;
@@ -519,7 +519,7 @@
             </div>
         </div>
 
-        <hr class="my-4">
+        <hr class="my-3">
 
         {{-- ── Semi ── --}}
         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -537,7 +537,7 @@
                 <i class="ti ti-plus me-1"></i>เพิ่ม Semi
             </button>
         </div>
-        <div class="table-responsive mb-3">
+        <div class="table-responsive mb-2">
             <table class="table table-sm table-bordered align-middle" id="table_semi">
                 <thead class="table-primary">
                     <tr>
@@ -611,7 +611,7 @@
              เปิดคืน: เปลี่ยน @if(false) เป็น @if(true) หรือถอด @if(false)/@endif ออก
              backend (tb_pigment / PigmentController / routes) ไม่ถูกแตะ --}}
         @if(false)
-        <hr class="my-3">
+        <hr class="my-2">
 
         {{-- ── Pigment ── --}}
         <div class="d-flex justify-content-between align-items-center mb-2">

@@ -1117,6 +1117,9 @@
             });
         }
 
+        // ผู้สร้างของใบที่เปิดแก้ไขอยู่ {name} — null = ใบใหม่ / ใบเก่าที่ไม่มีผู้สร้าง (ไม่ต้องป้อนรหัสผ่าน)
+        var qCreator = null;
+
         // ────────────────────────────────────────────────────────
         //  แก้ไข — ดึงข้อมูลเดิมมาเติมฟอร์ม
         // ────────────────────────────────────────────────────────
@@ -1124,6 +1127,7 @@
             $.getJSON("{{ $page_url }}/edit", {qno: qno}, function(res){
                 if (res.error){ Swal.fire('ไม่พบข้อมูล', qno, 'error'); return; }
                 var h = res.header || {};
+                qCreator = res.creator || null;   // ผู้สร้างใบ — มี = ตอนบันทึกต้องป้อนรหัสผ่านของคนนี้
                 document.getElementById('quotationForm').reset();
                 $('#q_mode').val('update');
                 $('#q_qno_key').val(h.Qno);
@@ -1181,9 +1185,11 @@
             if (!form.checkValidity()) { form.reportValidity(); return; }
 
             var mode = $('#q_mode').val();
+            // แก้ไขใบที่มีผู้สร้าง → ต้องป้อนรหัสผ่านของผู้สร้างใบ (server ตรวจซ้ำอีกชั้นใน update())
+            var needPassword = mode === 'update' && !!qCreator;
 
             // ── ยืนยันก่อนบันทึก ──
-            Swal.fire({
+            var opt = {
                 title: mode === 'update' ? 'ยืนยันการแก้ไข?' : 'ยืนยันการบันทึก?',
                 text: 'เลขที่ใบเสนอราคา ' + $('#q_Qno').val().trim(),
                 icon: 'question',
@@ -1191,17 +1197,28 @@
                 confirmButtonText: 'ยืนยัน',
                 cancelButtonText: 'ยกเลิก',
                 confirmButtonColor: '#54BAB9',
-            }).then(function(result){
-                if (result.isConfirmed) submitQuotation(mode);
+            };
+            if (needPassword) {
+                opt.input = 'password';
+                opt.inputLabel = 'รหัสผ่านของผู้สร้างใบ: ' + qCreator.name;
+                opt.inputAttributes = { autocomplete: 'new-password' };
+                opt.inputValidator = function(v){ return v ? null : 'กรุณาป้อนรหัสผ่านของผู้สร้างใบ'; };
+                // Swal ที่มีช่องกรอกต้องอยู่ใน modal ไม่งั้น focus trap ของ Bootstrap ดึงโฟกัสกลับ พิมพ์ไม่ได้
+                opt.target = document.getElementById('quotationModal');
+                opt.heightAuto = false;
+            }
+            Swal.fire(opt).then(function(result){
+                if (result.isConfirmed) submitQuotation(mode, needPassword ? result.value : null);
             });
         }
 
         // ส่งข้อมูลจริงหลังผู้ใช้กดยืนยัน (แยกจาก saveQuotation เพื่อคั่นด้วย confirm)
-        function submitQuotation(mode){
+        function submitQuotation(mode, creatorPassword){
             var form = document.getElementById('quotationForm');
             var url  = mode === 'update' ? "{{ $page_url }}/update" : "{{ $page_url }}/insert";
             var fd = new FormData(form);
             fd.append('_token', '{{ csrf_token() }}');
+            if (creatorPassword) fd.append('creator_password', creatorPassword);
             // ตัด field ภายใน (__auto) ออกก่อนส่ง
             var cleanItems = currentItems.map(function(r){
                 var o = {}; Object.keys(r).forEach(function(k){ if (k !== '__auto') o[k] = r[k]; }); return o;

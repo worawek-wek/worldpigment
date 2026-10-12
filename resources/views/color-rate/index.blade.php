@@ -56,7 +56,7 @@
 
                     <div class="card-header">
                         <div class="table-responsive">
-                            <table id="dataTable" class="table table-striped table-hover">
+                            <table id="dataTable" class="table table-striped wp-zebra table-hover">
                                 <thead class="table-light">
                                     <tr>
                                         <th class="col-1">#</th>

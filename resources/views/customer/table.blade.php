@@ -1,5 +1,5 @@
 <div class="table-responsive">
-    <table class="table table-hover align-middle">
+    <table class="table table-striped table-hover align-middle">
 
         @php
             // สถานะการเรียงปัจจุบัน (ส่งมาจาก controller) — เลือกไอคอนหัวตาราง
@@ -133,10 +133,13 @@
                             onclick="customerOpen('{{ $row->code }}')">
                             <i class="ti ti-edit"></i>
                         </button>
+                        {{-- ซ่อนปุ่มลบลูกค้าไว้ (08/10/2569 ตามที่ผู้ใช้สั่ง) — เปิดคืน: เปลี่ยน @if(false) เป็น @if(true) --}}
+                        @if(false)
                         <button class="btn btn-sm btn-icon btn-label-danger" title="ลบลูกค้า"
                             onclick="customerDelete('{{ $row->code }}', '{{ addslashes($row->name) }}')">
                             <i class="ti ti-trash"></i>
                         </button>
+                        @endif
                     </td>
                 </tr>
             @empty

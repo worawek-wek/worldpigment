@@ -2,7 +2,7 @@
     @csrf
     <input type="hidden" name="id" value="{{ $temp?->id }}">
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label" for="temp_name">
             ชื่อ <span class="text-danger">*</span>
         </label>
@@ -10,7 +10,7 @@
             value="{{ $temp?->Temp1 }}" placeholder="กรอกชื่อ">
     </div>
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label d-block">สถานะการใช้งาน</label>
         <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" role="switch"

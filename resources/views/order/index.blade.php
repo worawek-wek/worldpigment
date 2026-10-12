@@ -246,6 +246,18 @@
 .of-warn      { background-color: #fbdcc4 !important; font-weight: 600; }
 .of-sell      { background-color: #e8e8e8 !important; }
 
+/* ช่องอ่านอย่างเดียวในกล่องราคา — แสดงเป็นข้อความธรรมดา ไม่ใช่กล่อง input (08/10/2569)
+   ยังเป็น <input readonly> อยู่ เพื่อให้ JS เดิม (.val()) ทำงานต่อได้ */
+.of-sec-price .of-ro,
+.of-sec-price .of-ro:focus {
+    border-color: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    padding-right: 0;
+    cursor: default;
+}
+.of-sec-price .of-ro.of-warn { color: #c2410c; font-weight: 700; }
+
 /* แถว checkbox ท้ายกล่องซ้าย */
 /* gap แนวตั้ง .2rem (เดิม 1.25rem เท่าแนวนอน) — itype ตัดขึ้นหลายบรรทัดหลัง label ย้ายมาอยู่ซ้าย (05/10/2569) */
 .of-checkrow { display: flex; flex-wrap: wrap; gap: .2rem 1.25rem; padding-top: .35rem; }
@@ -488,12 +500,12 @@
                             อนุมัติใบสั่งซื้อ
                             <span class="badge bg-danger ms-1 d-none" id="oaQueueBadge">0</span>
                         </button>
-                        {{-- พิมพ์ PDF ใบสั่งซื้อที่อนุมัติวันนี้ เรียงตามเลขที่ใบสั่ง (06/10/2569)
+                        {{-- พิมพ์ PDF ใบสั่งซื้อที่อนุมัติ เรียงตามเลขที่ใบสั่ง (06/10/2569) — 07/10/2569: เปิดหน้าต่างเลือก
+                             แผนก / วันที่ / ช่วงเวลา / S-P ก่อน (#prodReportModal ตามฟอร์ม Access เดิม)
                              → OrderApprovalController::approvedTodayPdf() --}}
-                        <button class="btn btn-label-secondary border"
-                            onclick="window.open('{{ url('order/order-approval/approved-today-pdf') }}', '_blank')">
+                        <button class="btn btn-label-secondary border" onclick="prodReportOpen()">
                             <i class="ti ti-printer me-1"></i>
-                            พิมพ์รายการที่อนุมัติวันนี้
+                            พิมพ์รายงานที่ต้องผลิต
                         </button>
                         <button class="btn btn-label-primary border" style="color: #1f158e;" onclick="approvalOpen()">
                             <i class="ti ti-discount-check me-1"></i>
@@ -739,6 +751,74 @@
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <!-- Modal: อนุมัติใบสั่งซื้อ (morderAPPV) — ผังตามฟอร์ม Access เดิม -->
 <!-- ═══════════════════════════════════════════════════════════════ -->
+{{-- ═══ หน้าต่างเลือกเงื่อนไขก่อนพิมพ์ "รายงานผลิตภัณฑ์ที่ต้องผลิต" (07/10/2569 — ตามฟอร์ม Access เดิม) ═══
+     กด "ออกรายงาน" → เปิด PDF แท็บใหม่ (OrderApprovalController::approvedTodayPdf) · ไม่รวมใบ HE --}}
+<div class="modal fade" id="prodReportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="ti ti-printer me-2"></i>รายงานผลิตภัณฑ์ที่ต้องผลิต</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body of-form" style="--of-lw: 100px;">
+                <div class="of-row mb-2">
+                    <label class="form-label" for="pr_dept">แผนกที่ผลิต</label>
+                    <div class="of-ctl">
+                        <select id="pr_dept" class="form-select no-enhance">
+                            @foreach ($companies as $c)
+                                <option value="{{ $c }}">{{ $c }}</option>
+                            @endforeach
+                            {{-- ทุกแผนก = ไม่กรองแผนก รายงานแยกหน้าตามแผนก — ใบที่ไม่ได้ระบุ "ผลิตที่" จะออกในหน้า "ไม่ระบุ"
+                                 (07/10/2569: ใบที่ Company ว่างไม่ตรงกับแผนกไหนเลย เลือกแผนกแล้วจึงไม่ออก) --}}
+                            <option value="">ทุกแผนก (รวมใบที่ไม่ระบุแผนก)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="of-row mb-2">
+                    <label class="form-label" for="pr_date">วันที่</label>
+                    <div class="of-ctl">
+                        <input type="text" id="pr_date" class="form-control" autocomplete="off">
+                    </div>
+                </div>
+                <div class="of-row mb-2">
+                    <label class="form-label" for="pr_time_from">ระหว่างเวลา</label>
+                    <div class="of-ctl">
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="text" id="pr_time_from" class="form-control" autocomplete="off">
+                            <span class="fw-semibold">ถึง</span>
+                            <input type="text" id="pr_time_to" class="form-control" autocomplete="off">
+                        </div>
+                    </div>
+                </div>
+                <div class="of-row">
+                    <label class="form-label">ชนิด</label>
+                    <div class="of-ctl">
+                        <div class="d-flex gap-4 pt-2">
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="radio" name="pr_type" id="pr_type_p" value="P" checked>
+                                <label class="form-check-label" for="pr_type_p">P (ผลิต)</label>
+                            </div>
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="radio" name="pr_type" id="pr_type_s" value="S">
+                                <label class="form-check-label" for="pr_type_s">S (สต๊อก)</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <span class="badge bg-label-danger">ไม่รวม HE</span>
+                <div>
+                    <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ปิด</button>
+                    <button type="button" class="btn btn-primary" onclick="prodReportPrint()">
+                        <i class="ti ti-printer me-1"></i>ออกรายงาน
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal modalHeadDecor fade" id="orderApprovalModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
@@ -1222,7 +1302,7 @@
 
         // สินค้า + ราคา (ราคาขายเป็นค่าที่ผู้ใช้พิมพ์ไว้เอง ไม่ได้มาจากกล่องราคา)
         $('#o_itemno').val(res.itemno || '');
-        $('#o_price').val(commaFmt(o.price, 2));
+        $('#o_price').val(commaFmt(o.price, 2)).removeData('autofill');
         setOrderPriceLocked(!!o.appv);   // อนุมัติแล้ว = ล็อกช่องราคาขาย
         fillOrderStatus(o.appv_status, o.appvDT);
         fillPriceBox(res.price);
@@ -1307,9 +1387,10 @@
     // กล่องราคา — ทุกช่องอ่านอย่างเดียว ยกเว้น "ราคาขาย" ที่ผู้ใช้พิมพ์เอง (ไม่แตะที่นี่)
     function fillPriceBox(p){
         p = p || {};
-        $('#o_fixed_price').val(fmtNum(p.fixed_price, 2))
-            .attr('title', p.formula ? 'ราคาขาย 1 = ราคาทุน ' + p.formula : '');
-        $('#o_price2').val(fmtNum(p.price2, 2));
+        // ราคาที่กำหนดไว้ = ราคาจากเมนู "กำหนดราคา" (uprice.PRICE ของลูกค้า + เบอร์นี้) — 08/10/2569
+        $('#o_fixed_price').val(fmtNum(p.fixed_price, 2)).attr('title', '');
+        // ราคา 1/2/3 โชว์เป็นจำนวนเต็ม (ปัดเศษ) เหมือนฟอร์ม "กำหนดราคา" — 08/10/2569
+        $('#o_price2').val(fmtNum(p.price2, 0));
         // "ราคาต้องไม่ต่ำกว่า" = ราคาอนุมัติ (ถ้ายังยืนราคาอยู่) ไม่งั้นราคาช่อง 2
         // ตัวเลขนี้ต้องเป็นตัวเดียวกับที่ checkPriceFloor() ใช้ตอนบันทึก ผู้ใช้จะได้ไม่โดนบล็อกด้วยเลขที่ไม่เห็น
         $('#o_min_price').val(fmtNum(p.min_price, 2))
@@ -1323,6 +1404,23 @@
         $('#o_min_qty').val(fmtNum(p.min_rate, 2));
         $('#o_appv_price').val(fmtNum(p.appv_price, 2));
         $('#o_valid_to').val(fmtDate(p.valid_to));
+
+        /* ราคาขาย: มีราคาอนุมัติ (ขอราคาพิเศษ) ที่ยังไม่เลยวันยืนราคา → เติมให้เลย — 08/10/2569
+           เติมเฉพาะตอนช่องยังว่าง/0 หรือค่าปัจจุบันเป็นค่าที่ระบบเติมไว้เอง (data-autofill)
+           ⇒ ไม่ทับราคาที่ผู้ใช้พิมพ์ / ราคาที่บันทึกไว้ในใบเดิม · ใบที่อนุมัติแล้ว (readonly) ไม่แตะ
+           เปลี่ยนไปเบอร์ที่ไม่มีราคาอนุมัติ → ล้างค่าที่ระบบเติมไว้ กันราคาของเบอร์ก่อนหน้าค้าง */
+        var $sell = $('#o_price');
+        if (!$sell.prop('readonly')){
+            var cur = $sell.val(), auto = $sell.data('autofill');
+            var canFill = !numOf(cur) ||(auto !== undefined && cur === auto);
+            if (canFill){
+                var fill = (p.min_from === 'approved' && p.min_price != null) ? commaFmt(p.min_price, 2) : '';
+                if (fill || (auto !== undefined && cur === auto)){
+                    $sell.val(fill);
+                    fill ? $sell.data('autofill', fill) : $sell.removeData('autofill');
+                }
+            }
+        }
 
         // ── ข้อความใต้กล่องราคา: บอกที่มาของราคา หรือบอกว่าทำไมคำนวณไม่ได้ ──
         var $note = $('#o_price_note').removeClass('of-price-note-warn');
@@ -1402,12 +1500,15 @@
     // ⚠ กันได้แค่ฝั่งจอ — ค่าที่ส่งมาตอนบันทึกยังเป็นอะไรก็ได้ (ยิง POST ตรงไม่ผ่านด่านนี้)
     var OI_NO_PASTE = '#orderItems [data-f="outno"], #orderItems [data-f="Remark"]';
 
-    $(document).on('paste drop', OI_NO_PASTE, function(e){
+    // 08/10/2569: ห้าม "ตัด" (Ctrl+X / คลิกขวา → ตัด) ด้วย ตามที่ผู้ใช้สั่ง
+    // ⚠ บล็อก `dragstart` คู่กัน ไม่งั้นลากข้อความออกจากช่อง = ย้ายออกได้เหมือนตัด · "คัดลอก" ยังทำได้
+    $(document).on('paste drop cut dragstart', OI_NO_PASTE, function(e){
         e.preventDefault();
+        var isCut = (e.type === 'cut' || e.type === 'dragstart');
         Swal.fire({
             icon: 'warning',
-            title: 'ช่องนี้ไม่อนุญาตให้วางข้อมูล',
-            text:  'กรุณาพิมพ์เอง',
+            title: isCut ? 'ช่องนี้ไม่อนุญาตให้ตัดข้อมูล' : 'ช่องนี้ไม่อนุญาตให้วางข้อมูล',
+            text:  isCut ? 'ลบได้ด้วยการพิมพ์แก้เอง' : 'กรุณาพิมพ์เอง',
             toast: true, position: 'top-end', timer: 2000, showConfirmButton: false
         });
     });
@@ -2055,9 +2156,10 @@
         $('#oa_rem1').val(p.rem1 || '');
         $('#oa_rem2').val(p.rem2 || '');
         $('#oa_fixed_price').val(fmtNum(p.fixed_price, 2));
-        $('#oa_price1').val(fmtNum(p.price1, 2));
-        $('#oa_price2').val(fmtNum(p.price2, 2));
-        $('#oa_price3').val(fmtNum(p.price3, 2));
+        // ราคา 1/2/3 โชว์เป็นจำนวนเต็ม เหมือนฟอร์ม "กำหนดราคา" — 08/10/2569
+        $('#oa_price1').val(fmtNum(p.price1, 0));
+        $('#oa_price2').val(fmtNum(p.price2, 0));
+        $('#oa_price3').val(fmtNum(p.price3, 0));
     }
 
     // ── ปุ่มอนุมัติ — เขียน morder.appv + morder.appvDT ──
@@ -2229,7 +2331,15 @@
         paIndex = -1;
         paRenderNav();
         setApprovalFormMode('new');
+        $('#a_ReqDate').val(approvalNowText());   // วันที่ขอราคา = ปัจจุบัน (แสดงผล — server ประทับเวลาจริงตอนบันทึก)
         $('#a_custno').trigger('focus');
+    }
+
+    // วันเวลาปัจจุบันในรูปแบบเดียวกับช่อง "วันที่ขอราคา"
+    function approvalNowText(){
+        var d = new Date();
+        var p = function(n){ return (n < 10 ? '0' : '') + n; };
+        return fmtDateTime(todayYmd() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':00');
     }
 
     // ════════════════════════════════════════════════════════
@@ -2458,37 +2568,39 @@
         $('#a_custname').val(c.name || '');
         $('#a_sale').val(c.sale || '');
 
-        var r = res.request || {};
-        apvReq = r.ReqDate ? r : null;
+        var req = res.request || {};
 
         // สลับโหมดให้ตรงกับข้อมูลที่โหลดมา (05/10/2569)
         var hasItem = !!$('#a_itemno').val();
-        if (apvMode === 'new' && r.ReqDate){
-            // กำลังสร้างใหม่ แต่คู่นี้มีใบอยู่แล้ว (1 คู่ = 1 ใบ) → แก้ใบเดิมแทน
-            apvMode = 'edit';
-            Swal.fire({
-                icon: 'info',
-                title: 'คู่ลูกค้า/เบอร์นี้มีใบขอราคาอยู่แล้ว',
-                text:  'เปลี่ยนเป็นแก้ไขใบเดิม',
-                toast: true, position: 'top-end', timer: 3500, showConfirmButton: false
-            });
-        } else if (apvMode === 'edit' && !r.ReqDate && apvAutoNew && hasItem){
+        if (apvMode === 'edit' && !req.ReqDate && apvAutoNew && hasItem){
             // เปิดมาพร้อมคู่ (เช่นจากด่านราคาในใบสั่งซื้อ) และยังไม่มีใบ → เข้าโหมดสร้างใหม่ให้เลย
             apvMode = 'new';
         }
         if (hasItem) apvAutoNew = false;
+
+        // โหมดสร้างใหม่ = ใบใหม่เสมอ ไม่ดึงใบขอราคาเดิมของคู่นี้มาแก้ (08/10/2569 ตามที่ผู้ใช้สั่ง)
+        // เดิมคู่ที่เคยขอแล้วจะเด้งกลับเป็นโหมดแก้ไข + เติมข้อมูลใบเก่า ⇒ สร้างใบใหม่ของคู่นั้นไม่ได้เลย
+        // ข้อมูลอ้างอิงของคู่ (ราคา 1/2/3 · ราคากลุ่ม · ราคาที่ตกลงไว้ล่าสุด · ตารางล่าง) ยังดึงมาแสดงตามปกติ
+        var isNew = apvMode === 'new';
+        var r = isNew ? {} : req;
+        apvReq = r.ReqDate ? r : null;
         setApprovalFormMode(apvMode);
 
         // เก็บ ReqDate ของใบเดิมไว้ให้ปุ่มลบใช้ — ไม่มี = ยังไม่เคยขอราคาคู่นี้ (ใบใหม่)
         // เก็บสถานะอนุมัติเดิมไว้ด้วย เพื่อแยก "อนุมัติใหม่" (ต้องอยู่ในโหมด MD) ออกจาก "ใบที่อนุมัติไปแล้ว"
-        $('#a_ReqDate').val(r.ReqDate ? fmtDateTime(r.ReqDate) : '')
+        // โหมดสร้างใหม่: โชว์วันเวลาปัจจุบันเป็นวันที่ขอราคา (08/10/2569 ตามที่ผู้ใช้สั่ง)
+        // — แสดงผลอย่างเดียว server ประทับเวลาจริงตอนกด "เพิ่ม" · data('reqdate') ต้องว่างไว้ (= ยังไม่มีใบ)
+        $('#a_ReqDate').val(r.ReqDate ? fmtDateTime(r.ReqDate) : (isNew ? approvalNowText() : ''))
             .data('reqdate', r.ReqDate || '')
             .data('appv', r.Appv ? 1 : 0);
-        $('#a_price').val(commaFmt(r.price, 2));
-        $('#a_weight').val(commaFmt(r.weight, 2));
-        $('#a_remark').val(r.remark || '');
-        $('#a_costup').prop('checked', !!r.costup);
-        $('#a_Appv').prop('checked', !!r.Appv);
+        // โหมดสร้างใหม่: ไม่แตะช่องที่ผู้ใช้กรอกเอง — เปลี่ยนลูกค้า/เบอร์แล้วค่าที่พิมพ์ไว้ไม่หาย
+        if (!isNew){
+            $('#a_price').val(commaFmt(r.price, 2));
+            $('#a_weight').val(commaFmt(r.weight, 2));
+            $('#a_remark').val(r.remark || '');
+            $('#a_costup').prop('checked', !!r.costup);
+            $('#a_Appv').prop('checked', !!r.Appv);
+        }
 
         // ราคา 3 ช่อง = ราคาขาย 1/2/3 จากเมนู "กำหนดราคา" — คำนวณสด ๆ จากรหัสสินค้าเสมอ
         // (ค่าที่เคยบันทึกใน appvreq ใช้เป็นค่าสำรองเฉพาะตอนคำนวณไม่ได้ จะได้ไม่โชว์ช่องว่างเปล่า)
@@ -2533,6 +2645,19 @@
     // ราคา 3 ช่อง + DB 3-4 / 1-2 Kg. — มาจากระบบกำหนดราคา (ProductPriceService.lookup)
     //   calc = payload จาก /price-approval/data → key `calc`
     //   req  = ใบขออนุมัติเดิม (ใช้เป็นค่าสำรองเมื่อคำนวณไม่ได้เท่านั้น)
+    /* ราคา 1/2/3 โชว์เป็นจำนวนเต็ม (ปัดเศษ) เหมือนฟอร์ม "กำหนดราคา" — 08/10/2569
+       ปัดเฉพาะตอนแสดงผล: ค่าจริง (มีทศนิยม) เก็บไว้ที่ data('raw') ให้ approvalSave() ส่งไปบันทึก
+       ไม่งั้นสำเนาราคาใน appvreq.price1/2/3 จะกลายเป็นค่าที่ปัดแล้ว */
+    function setApvPrice(sel, v){
+        $(sel).val(fmtNum(v, 0)).data('raw', (v === null || v === undefined) ? '' : v);
+    }
+    // ช่องว่าง (ถูกล้างด้วย .val('')) = ไม่มีค่า — ไม่เอา raw ที่ค้างจากใบก่อนหน้า
+    function apvPriceRaw(sel){
+        var $el = $(sel), raw = $el.data('raw');
+        if ($el.val() === '') return '';
+        return (raw === undefined || raw === '') ? $el.val() : raw;
+    }
+
     function fillApprovalPrices(calc, req){
         calc = calc || {};
         req  = req  || {};
@@ -2540,11 +2665,11 @@
         var $note = $('#a_price_note').removeClass('of-price-note-warn');
 
         if (p){
-            $('#a_price1').val(fmtNum(p.price_1, 2));
-            $('#a_price2').val(fmtNum(p.price_2, 2));
-            $('#a_price3').val(fmtNum(p.price_3, 2));
-            $('#a_price_34').val(fmtNum(p.db_3_4, 2));
-            $('#a_price_12').val(fmtNum(p.db_1_2, 2));
+            setApvPrice('#a_price1', p.price_1);
+            setApvPrice('#a_price2', p.price_2);
+            setApvPrice('#a_price3', p.price_3);
+            $('#a_price_34').val(fmtNum(p.db_3_4, 0));
+            $('#a_price_12').val(fmtNum(p.db_1_2, 0));
 
             /* 19/09/2569: เอาบรรทัดบอกที่มาของราคาออกตามที่ผู้ใช้สั่ง
                (เดิมโชว์ "ราคาทุน … · <เงื่อนไขที่เข้า> · × mul ÷ div + add")
@@ -2555,9 +2680,9 @@
         }
 
         // คำนวณไม่ได้ (ไม่มีรหัสในตารางราคาทุน / ไม่มีเงื่อนไขรองรับ) — บอกเหตุผลไว้ ไม่ปล่อยว่างเงียบ ๆ
-        $('#a_price1').val(fmtNum(req.price1, 2));
-        $('#a_price2').val(fmtNum(req.price2, 2));
-        $('#a_price3').val(fmtNum(req.price3, 2));
+        setApvPrice('#a_price1', req.price1);
+        setApvPrice('#a_price2', req.price2);
+        setApvPrice('#a_price3', req.price3);
         $('#a_price_34').val('');
         $('#a_price_12').val('');
 
@@ -2817,17 +2942,21 @@
             itemno:      itemno,
             price:       $('#a_price').val(),
             weight:      $('#a_weight').val(),
-            price1:      $('#a_price1').val(),
-            price2:      $('#a_price2').val(),
-            price3:      $('#a_price3').val(),
+            // ส่งค่าจริง (มีทศนิยม) ไม่ใช่ค่าที่ปัดเป็นจำนวนเต็มบนจอ — ดู setApvPrice()
+            price1:      apvPriceRaw('#a_price1'),
+            price2:      apvPriceRaw('#a_price2'),
+            price3:      apvPriceRaw('#a_price3'),
             remark:      $('#a_remark').val(),
             costup:      $('#a_costup').is(':checked') ? 1 : 0,
             Appv:        approve ? 1 : 0,
             valid_to:    $('#a_validto').val(),
             // ผู้ใช้แตะช่อง "อนุมัติราคาถึง" เองไหม — server ใช้ตัดสินว่าจะเก็บวันที่ของใบที่ยังไม่อนุมัติหรือไม่
-            valid_to_changed: apvValidToTouched ? 1 : 0
+            valid_to_changed: apvValidToTouched ? 1 : 0,
+            // โหมดสร้างใหม่ = ขึ้นใบใหม่เสมอ แม้คู่นี้เคยขอราคาแล้ว (08/10/2569)
+            'new':       apvMode === 'new' ? 1 : 0
         };
         // หมายเหตุ: ไม่ต้องส่ง ReqDate — server หาใบล่าสุดของคู่นี้เอง (มี = แก้ทับ, ไม่มี = ใบใหม่)
+        // ยกเว้นส่ง new=1 มา = ไม่หาใบเดิม ขึ้นใบใหม่ด้วยเวลาปัจจุบัน
 
         var $btn = $('#btnApprovalSave').prop('disabled', true);
 
@@ -2889,6 +3018,48 @@
 
     // พิมพ์ — รายการที่อนุมัติราคาแล้วใน 3 วันล่าสุด ตามผังกระดาษเดิม (12/09/2569)
     // เดิมเป็น window.print() เพราะยังไม่มีแบบฟอร์มให้อ้างอิง
+    // ────────────────────────────────────────────────────────
+    //  รายงานผลิตภัณฑ์ที่ต้องผลิต (07/10/2569) — หน้าต่างเลือกเงื่อนไขก่อนพิมพ์
+    //  ค่าเริ่มต้น: วันนี้ · 08:00–18:00 · P  (ช่องเวลาใช้ flatpickr 24 ชม. ตามข้อตกลงของระบบ)
+    // ────────────────────────────────────────────────────────
+    var prFp = null;
+    function prodReportInit(){
+        if (prFp) return;
+        var timeOpt = {
+            enableTime: true, noCalendar: true, time_24hr: true, dateFormat: 'H:i',
+            allowInput: true, static: true, disableMobile: true,
+            plugins: (typeof scrollPlugin === 'function') ? [scrollPlugin()] : []
+        };
+        prFp = {
+            date: flatpickr('#pr_date', { dateFormat: 'd/m/Y', allowInput: true, static: true, disableMobile: true }),
+            from: flatpickr('#pr_time_from', timeOpt),
+            to:   flatpickr('#pr_time_to', timeOpt)
+        };
+    }
+    function prodReportOpen(){
+        prodReportInit();
+        prFp.date.setDate(new Date(), false);
+        prFp.from.setDate('08:00', false);
+        prFp.to.setDate('18:00', false);
+        $('#pr_type_p').prop('checked', true);
+        $('#prodReportModal').modal('show');
+    }
+    function prodReportPrint(){
+        var q = {
+            dept:      $('#pr_dept').val() || '',
+            date:      $('#pr_date').val() || '',
+            time_from: $('#pr_time_from').val() || '',
+            time_to:   $('#pr_time_to').val() || '',
+            type:      $('input[name="pr_type"]:checked').val() || 'P'
+        };
+        if (!q.date) { Swal.fire({ icon: 'warning', title: 'กรุณาเลือกวันที่' }); return; }
+        if (q.time_from && q.time_to && q.time_from > q.time_to) {
+            Swal.fire({ icon: 'warning', title: 'ช่วงเวลาไม่ถูกต้อง', text: 'เวลาเริ่มต้องไม่มากกว่าเวลาสิ้นสุด' });
+            return;
+        }
+        window.open('{{ url('order/order-approval/approved-today-pdf') }}?' + $.param(q), '_blank');
+    }
+
     function approvalPrint(){
         window.open(APPROVAL_URL + '/approved-pdf', '_blank');
     }

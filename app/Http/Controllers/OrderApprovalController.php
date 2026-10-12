@@ -102,7 +102,7 @@ class OrderApprovalController extends Controller
             ->orderBy('morder.Mdate')
             ->orderBy('morder.Orderno')
             ->get([
-                'morder.Orderno', 'morder.Mdate', 'morder.Company',
+                'morder.Orderno', 'morder.Mdate', 'morder.appvDT', 'morder.Company',
                 'morder.Custno', 'morder.price',
                 DB::raw('COALESCE(c.name, morder.Custname) as custname'),
             ]);
@@ -273,27 +273,33 @@ class OrderApprovalController extends Controller
     }
 
     /**
-     * GET — ปุ่ม "พิมพ์รายการที่อนุมัติวันนี้" บนหน้า /order (06/10/2569)
+     * GET — ปุ่ม "พิมพ์รายงานที่ต้องผลิต" บนหน้า /order (06/10/2569, เพิ่มตัวเลือกก่อนพิมพ์ 07/10/2569)
      *   รายงาน PDF "รายงานผลิตภัณฑ์ที่ต้องผลิต (P)" ตามกระดาษของระบบเดิม (MK01-FM04.04)
      *
-     *   เงื่อนไข: ใบสั่งซื้อที่ **อนุมัติวันนี้** (morder.appvDT อยู่ในวันนี้) เรียงตามเลขที่ใบสั่ง
-     *   1 แถว = 1 รายการใน suborder ที่มีน้ำหนักผลิต (Production > 0) — รายงานนี้เป็นของ "ที่ต้องผลิต (P)"
-     *   แยกหน้าตามแผนกที่ผลิต (morder.Company) — กระดาษเดิมออกทีละแผนก หัวรายงานเขียน "แผนกผลิต DB"
-     *   ท้ายแต่ละแผนก: รวมน้ำหนัก P · ช่องเซ็น · "รายการสินค้าที่สั่งซ้ำ" (รหัสสินค้าเดียวกันเกิน 1 รายการ)
+     *   ตัวเลือก (หน้าต่างก่อนพิมพ์ — ตามฟอร์ม Access เดิม):
+     *     ?dept=DB                แผนกที่ผลิต (morder.Company) — ไม่ส่ง = ทุกแผนก แยกหน้าตามแผนก
+     *     ?date=02/10/2026        วันที่ (d/m/Y หรือ Y-m-d) — ไม่ส่ง = วันนี้
+     *     ?time_from=08:00&time_to=18:00   ช่วงเวลา (ค่าเริ่มต้น 08:00–18:00)
+     *     ?type=P                 P = น้ำหนักผลิต (suborder.Production) · S = สต๊อก (suborder.Stock)
      *
-     *   ?date=Y-m-d  พิมพ์ย้อนหลังของวันอื่นได้ (ปุ่มบนจอไม่ส่ง = วันนี้)
+     *   เงื่อนไข: ใบสั่งซื้อที่ **อนุมัติ** ในวัน+ช่วงเวลานั้น (morder.appvDT) เรียงตามเลขที่ใบสั่ง
+     *   ไม่รวมใบจอง R (approvableQuery) และ **ไม่รวมใบ HE** (ตามป้าย "ไม่รวม HE" บนฟอร์ม Access เดิม)
+     *   1 แถว = 1 ใบ — เอาเฉพาะรายการแรกของใบ (suborder.Runno น้อยสุด) และต้องมีน้ำหนักของชนิดที่เลือก (> 0)
+     *   ท้ายแต่ละแผนก: รวมน้ำหนัก · ช่องเซ็น · "รายการสินค้าที่สั่งซ้ำ" (รหัสสินค้าเดียวกันเกิน 1 รายการ)
      */
     public function approvedTodayPdf(Request $request)
     {
-        try {
-            $day = $request->filled('date')
-                ? Carbon::createFromFormat('Y-m-d', (string) $request->query('date'))
-                : now();
-        } catch (\Exception $e) {
-            $day = now();
-        }
-        $from = $day->copy()->startOfDay();
-        $to   = $day->copy()->endOfDay();
+        $day      = self::parseReportDate((string) $request->query('date', ''));
+        $timeFrom = self::parseReportTime((string) $request->query('time_from', ''), '08:00');
+        $timeTo   = self::parseReportTime((string) $request->query('time_to', ''), '18:00');
+        $type     = strtoupper((string) $request->query('type', 'P')) === 'S' ? 'S' : 'P';
+        $dept     = trim((string) $request->query('dept', ''));
+
+        $from = $day->copy()->setTimeFromTimeString($timeFrom . ':00');
+        $to   = $day->copy()->setTimeFromTimeString($timeTo . ':59');
+
+        // ชื่อคอลัมน์มาจากค่าคงที่ 2 ตัวนี้เท่านั้น (ไม่ได้เอาค่าจาก request ไปต่อ SQL)
+        $weightCol = $type === 'S' ? 's.Stock' : 's.Production';
 
         $rows = $this->approvableQuery()
             ->join('suborder as s', 's.Orderno', '=', 'morder.Orderno')
@@ -301,24 +307,48 @@ class OrderApprovalController extends Controller
             ->whereNotNull('morder.appv')
             ->where('morder.appv', '<>', 0)            // Access เก็บ -1 = อนุมัติแล้ว
             ->whereBetween('morder.appvDT', [$from, $to])
-            ->where('s.Production', '>', 0)
+            ->whereRaw('LEFT(morder.Orderno, 2) <> ?', ['HE'])   // "ไม่รวม HE" ตามฟอร์มเดิม
+            ->when($dept !== '', fn ($q) => $q->where('morder.Company', $dept))
+            // 1 ใบ = 1 แถว: เอาเฉพาะ "รายการแรก" ของใบ (Runno น้อยสุด) แม้ใบจะมีหลายรายการ (07/10/2569 ผู้ใช้สั่ง)
+            ->whereRaw('s.Runno = (SELECT MIN(s0.Runno) FROM suborder s0 WHERE s0.Orderno = morder.Orderno)')
+            ->where($weightCol, '>', 0)
             ->orderBy('morder.Orderno')
             ->orderBy('s.Runno')
             ->get([
-                'morder.Orderno', 'morder.Mdate', 'morder.Company', 'morder.Custno', 'morder.supno',
+                'morder.Orderno', 'morder.Mdate', 'morder.appvDT', 'morder.Company', 'morder.Custno', 'morder.supno',
                 'morder.Send', 'morder.RP', 'morder.Spec', 'morder.Cer',
                 'c.name as custname',
-                's.Itemno', 's.Lotno', 's.Production', 's.senddate', 's.custwant', 's.Remark',
+                's.Itemno', 's.Lotno', $weightCol . ' as weight', 's.senddate', 's.custwant', 's.Remark',
             ]);
 
+        $alist = self::alistCustomers($rows->pluck('Custno')->unique()->all());
+
         foreach ($rows as $r) {
-            // "ซื้อครั้งก่อน" = วันที่สั่งครั้งล่าสุดของรหัสสินค้านี้ก่อนใบนี้ (ไม่แยกลูกค้า) · ไม่เคยสั่ง = NEW
-            $r->last_order = DB::table('suborder as s2')
+            // "ซื้อครั้งก่อน" = Lot ของครั้งล่าสุดที่ **ลูกค้ารายนี้** สั่งสินค้านี้ก่อนใบนี้ (07/10/2569 ผู้ใช้ยืนยัน)
+            //   ไม่เคยสั่ง = NEW · ครั้งล่าสุดห่างจากใบนี้เกิน 3 ปี = "เกิน 3 ปี"
+            $prev = DB::table('suborder as s2')
                 ->join('morder as m2', 'm2.Orderno', '=', 's2.Orderno')
                 ->where('s2.Itemno', $r->Itemno)
+                ->where('m2.Custno', $r->Custno)
                 ->where('m2.Orderno', '<>', $r->Orderno)
                 ->where('m2.Mdate', '<', $r->Mdate)
-                ->max('m2.Mdate');
+                ->orderByDesc('m2.Mdate')
+                ->first(['m2.Mdate', 's2.Lotno']);
+
+            if (!$prev) {
+                $r->last_label = 'NEW';
+            } elseif (Carbon::parse($prev->Mdate)->lt(Carbon::parse($r->Mdate)->subYears(3))) {
+                $r->last_label = 'เกิน 3 ปี';
+            } else {
+                $r->last_label = trim((string) $prev->Lotno);
+            }
+
+            // กำหนดผลิตเสร็จ = วันที่กำหนดส่งทบทวน (senddate) - 1 วัน (07/10/2569 ผู้ใช้ยืนยัน)
+            //   ส่วน "กำหนดลูกค้าต้องการใช้" ในรายงาน = senddate ตรง ๆ
+            $r->finish_date = $r->senddate ? Carbon::parse($r->senddate)->subDay() : null;
+
+            // กล่องหลังรหัสลูกค้า — ลูกค้าที่อยู่ในตาราง Alist ขึ้น "A"
+            $r->is_alist = isset($alist[trim((string) $r->Custno)]);
 
             // checkbox แบบ Access: -1 = ติ๊ก
             foreach (['Send', 'RP', 'Spec', 'Cer'] as $f) {
@@ -338,7 +368,7 @@ class OrderApprovalController extends Controller
                         'itemno' => $g->first()->Itemno,
                         'type'   => substr((string) $g->first()->Orderno, 0, 2),
                         'count'  => $g->count(),
-                        'weight' => $g->sum(fn ($r) => (float) $r->Production),
+                        'weight' => $g->sum(fn ($r) => (float) $r->weight),
                     ])
                     ->sortBy('itemno')
                     ->values();
@@ -346,15 +376,25 @@ class OrderApprovalController extends Controller
                 return (object) [
                     'dept'    => $dept,
                     'items'   => $items->values(),
-                    'total'   => $items->sum(fn ($r) => (float) $r->Production),
+                    'total'   => $items->sum(fn ($r) => (float) $r->weight),
                     'repeats' => $repeats,
                 ];
             })
             ->values();
 
+        // ไม่มีข้อมูล → คง 1 section ว่างไว้พิมพ์หัวรายงานของแผนกที่เลือก
+        if ($sections->isEmpty()) {
+            $sections = collect([(object) [
+                'dept' => $dept, 'items' => collect(), 'total' => 0, 'repeats' => collect(),
+            ]]);
+        }
+
         $html = view('order.order-approved-today-pdf', [
-            'sections' => $sections,
-            'day'      => $day,
+            'sections'  => $sections,
+            'day'       => $day,
+            'time_from' => $timeFrom,
+            'time_to'   => $timeTo,
+            'type'      => $type,
         ])->render();
 
         $mpdf = new Mpdf([
@@ -378,5 +418,65 @@ class OrderApprovalController extends Controller
             'Content-Type'        => 'application/pdf',
             'Content-Disposition' => 'inline; filename="order-approved-' . $day->format('Ymd') . '.pdf"',
         ]);
+    }
+
+    /** วันที่ของรายงาน — รับ d/m/Y (จากช่อง flatpickr) หรือ Y-m-d · อ่านไม่ได้/ไม่ส่ง = วันนี้ */
+    private static function parseReportDate(string $value): Carbon
+    {
+        $value = trim($value);
+        foreach (['d/m/Y', 'Y-m-d'] as $fmt) {
+            try {
+                $d = Carbon::createFromFormat($fmt, $value);
+                if ($d && $d->format($fmt) === $value) {
+                    return $d->startOfDay();
+                }
+            } catch (\Exception $e) {
+                // ลองรูปแบบถัดไป
+            }
+        }
+
+        return now()->startOfDay();
+    }
+
+    /** เวลาของรายงาน — รับเฉพาะ HH:MM (24 ชม.) ไม่ตรงรูปแบบ = ค่าเริ่มต้น */
+    private static function parseReportTime(string $value, string $default): string
+    {
+        $value = trim($value);
+
+        return preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $value) ? $value : $default;
+    }
+
+    /**
+     * รหัสลูกค้าที่อยู่ในตาราง Alist (คืนเป็น map รหัส => true) — ใช้ขึ้น "A" ในรายงานที่ต้องผลิต
+     *
+     * ⚠ 07/10/2569: ตาราง Alist **ยังไม่มีใน DB เครื่อง dev** (และไม่มีในไฟล์ dump ที่ public/sql)
+     *   จึงตรวจก่อนว่ามีตาราง + หาคอลัมน์รหัสลูกค้าจากชื่อที่เป็นไปได้ — ไม่มีตาราง/ไม่เจอคอลัมน์ = ไม่ขึ้น A
+     *   (ไม่ throw ให้รายงานพัง) · ได้โครงตารางจริงแล้วให้แก้รายชื่อคอลัมน์ที่นี่ที่เดียว
+     */
+    private static function alistCustomers(array $custnos): array
+    {
+        $custnos = array_values(array_filter(array_map(fn ($c) => trim((string) $c), $custnos), 'strlen'));
+        if (!$custnos) {
+            return [];
+        }
+
+        foreach (['Alist', 'alist', 'AList'] as $table) {
+            if (!\Illuminate\Support\Facades\Schema::hasTable($table)) {
+                continue;
+            }
+            $columns = \Illuminate\Support\Facades\Schema::getColumnListing($table);
+            foreach (['custno', 'code', 'custid', 'cust_no', 'customer'] as $want) {
+                foreach ($columns as $col) {
+                    if (strtolower($col) === $want) {
+                        return DB::table($table)->whereIn($col, $custnos)->pluck($col)
+                            ->mapWithKeys(fn ($c) => [trim((string) $c) => true])->all();
+                    }
+                }
+            }
+
+            return [];
+        }
+
+        return [];
     }
 }

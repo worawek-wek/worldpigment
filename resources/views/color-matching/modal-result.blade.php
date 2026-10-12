@@ -32,12 +32,12 @@
                 <input type="hidden" name="_pk" value="">
 
                 <!-- Body -->
-                <div class="modal-body px-4 py-4" style="background-color: #f8f9fb;">
+                <div class="modal-body px-4 py-3" style="background-color: #f8f9fb;">
 
                     {{-- ─── ข้อมูลใบส่ง ต.ย. (อ่านอย่างเดียว — แก้ที่ฟอร์มใบส่ง ต.ย.) ─── --}}
                     <div class="card shadow-sm mb-3" style="border: 1px solid #dcd8f5;">
                         <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between"
-                            style="background-color: #efedfd; border-bottom: 2px solid #6c5ce7; border-radius: 0.375rem 0.375rem 0 0;">
+                            style="background-color: #dedaff; border-bottom: 2px solid #6c5ce7; border-radius: 0.375rem 0.375rem 0 0;">
                             <h6 class="mb-0 fw-semibold" style="color: #3a309d;">
                                 <i class="ti ti-package me-1"></i>ใบส่ง ต.ย. ให้ลูกค้า
                             </h6>
@@ -45,7 +45,7 @@
                         </div>
 
                         <div class="card-body p-3">
-                            <div class="row g-3">
+                            <div class="row gx-3 gy-2">
                                 <div class="col-md-6">
                                     <div class="text-muted small mb-1">เลขที่ใบส่ง ต.ย. ให้ลูกค้า</div>
                                     <div class="fw-bold fs-5" style="color:#4b3fb8;" id="tr_Testno">—</div>
@@ -98,7 +98,7 @@
                         <div class="card-body p-3">
 
                             {{-- แถวบน: ยังไม่ตอบ / สั่งซื้อแล้ว + วันที่ทราบผล --}}
-                            <div class="row g-3 align-items-end mb-3 pb-3 border-bottom">
+                            <div class="row gx-3 gy-2 align-items-end mb-2 pb-2 border-bottom">
                                 <div class="col-md-8">
                                     <div class="d-flex flex-wrap gap-2">
                                         @foreach ($trOptions as $code => $opt)

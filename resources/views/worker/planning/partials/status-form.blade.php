@@ -6,7 +6,7 @@
 <div class="modal-body">
     <input type="hidden" id="status_planning_id" value="{{ $job->id }}">
 
-    <div class="row g-2 mb-3">
+    <div class="row g-2 mb-2">
         <div class="col-6">
             <div class="small text-muted">รหัสสี</div>
             <div class="fw-semibold">{{ $job->itemno ?: '-' }}</div>

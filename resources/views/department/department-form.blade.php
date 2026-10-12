@@ -2,7 +2,7 @@
     @csrf
     <input type="hidden" name="id" value="{{ $department?->id }}">
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label" for="department_name">
             ชื่อแผนก <span class="text-danger">*</span>
         </label>
@@ -10,13 +10,13 @@
             value="{{ $department?->name }}" placeholder="กรอกชื่อแผนก">
     </div>
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label" for="department_description">รายละเอียด</label>
         <textarea class="form-control" id="department_description" name="description" rows="3"
             placeholder="รายละเอียดแผนก (ถ้ามี)">{{ $department?->description }}</textarea>
     </div>
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label d-block">สถานะการใช้งาน</label>
         <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" role="switch"

@@ -2,7 +2,7 @@
     @csrf
     <input type="hidden" name="id" value="{{ $remark?->id }}">
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label" for="remark_name">
             หมายเหตุ <span class="text-danger">*</span>
         </label>
@@ -10,14 +10,14 @@
             value="{{ $remark?->name }}" maxlength="255" placeholder="กรอกหมายเหตุ">
     </div>
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label" for="remark_sort">ลำดับ</label>
         <input type="number" class="form-control" id="remark_sort" name="sort"
             value="{{ $remark?->sort ?? 0 }}" min="0" placeholder="0">
         <small class="text-muted">เลขน้อยแสดงก่อน</small>
     </div>
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label d-block">สถานะการใช้งาน</label>
         <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" role="switch"

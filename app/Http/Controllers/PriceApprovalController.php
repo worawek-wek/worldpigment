@@ -649,6 +649,8 @@ class PriceApprovalController extends Controller
      *   - คู่ที่ยังไม่เคยขอ  → ขึ้นใบใหม่ด้วยเวลาปัจจุบัน
      *   - คู่ที่เคยขอแล้ว    → แก้ทับ "ใบล่าสุด" เสมอ (หา ReqDate ของใบล่าสุดที่ server เอง
      *                          ไม่เชื่อค่าที่ client ส่งมา กันเผลอสร้างใบซ้ำ/ใบผิดวัน)
+     *   - ส่ง `new=1` มา     → ขึ้นใบใหม่เสมอ แม้คู่นี้เคยขอแล้ว (ปุ่ม "สร้างราคาพิเศษใหม่", 08/10/2569)
+     *                          ใบเดิมไม่ถูกแตะ · หลังจากนั้น "ใบที่แก้ได้" ของคู่นี้คือใบใหม่ (ใบล่าสุด)
      *   - ติ๊ก "อนุมัติ" ต้องอยู่ในโหมดอนุมัติ (ปลดล็อกด้วยรหัสผ่าน MD แล้ว) — ดู unlock()
      *   - การอนุมัติจะเขียนราคาที่ยืนไว้ลง `zcustprice` ด้วย (ราคาขายครั้งนี้ + อนุมัติราคาถึง)
      *     ตามที่ฟอร์มเดิมโชว์ทั้งสองที่คู่กัน
@@ -682,11 +684,15 @@ class PriceApprovalController extends Controller
         }
 
         // ใบล่าสุดของคู่นี้ — มีอยู่ = แก้ทับใบเดิม, ไม่มี = ขึ้นใบใหม่
-        $existing = DB::table('appvreq')
-            ->where('custno', $custno)
-            ->where('itemno', $itemno)
-            ->orderByDesc('ReqDate')
-            ->first(['ReqDate', 'Appv']);
+        // ส่ง new=1 มา (ปุ่ม "สร้างราคาพิเศษใหม่") = ขึ้นใบใหม่เสมอ ไม่แตะใบเดิมของคู่นี้ (08/10/2569 ตามที่ผู้ใช้สั่ง)
+        // — ใบเดิมยังอยู่ครบเป็นประวัติ (appvreq เก็บได้หลายใบต่อคู่ คีย์รวม ReqDate)
+        $existing = $request->boolean('new')
+            ? null
+            : DB::table('appvreq')
+                ->where('custno', $custno)
+                ->where('itemno', $itemno)
+                ->orderByDesc('ReqDate')
+                ->first(['ReqDate', 'Appv']);
 
         $alreadyApproved = $existing ? self::checked($existing->Appv) : false;
         $mdMode          = $this->mdUnlocked();

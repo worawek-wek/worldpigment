@@ -1,12 +1,16 @@
 {{--
-    รายงานผลิตภัณฑ์ที่ต้องผลิต (P) — ใบสั่งซื้อที่อนุมัติวันนี้ เรียงตามเลขที่ใบสั่ง (06/10/2569)
-    ปุ่ม "พิมพ์รายการที่อนุมัติวันนี้" บนหน้า /order → OrderApprovalController::approvedTodayPdf()
+    รายงานผลิตภัณฑ์ที่ต้องผลิต (P / S) — ใบสั่งซื้อที่อนุมัติในวัน+ช่วงเวลาที่เลือก เรียงตามเลขที่ใบสั่ง (06/10/2569)
+    ปุ่ม "พิมพ์รายงานที่ต้องผลิต" บนหน้า /order → หน้าต่างเลือกเงื่อนไข → OrderApprovalController::approvedTodayPdf()
+    07/10/2569: รับตัวเลือก แผนก / วันที่ / ช่วงเวลา / ชนิด S-P ($type) · "ซื้อครั้งก่อน" = Lot ก่อนหน้า ($r->last_label)
+                · กล่องหลังรหัสลูกค้าขึ้น "A" เมื่อลูกค้าอยู่ในตาราง Alist ($r->is_alist)
     ผังตามกระดาษของระบบเดิม (MK01-FM04.04): 1 รายการ = 1 บล็อก 3 บรรทัด
     1 แผนก (morder.Company) = 1 section ขึ้นหน้าใหม่ · ท้าย section: รวมน้ำหนัก P + ช่องเซ็น + รายการสินค้าที่สั่งซ้ำ
 
+    07/10/2569 (ผู้ใช้ยืนยัน): เวลารับ = เวลาที่กดอนุมัติ (appvDT) · กำหนดผลิตเสร็จ = senddate - 1 วัน ($r->finish_date)
+                · กำหนดลูกค้าต้องการใช้ = senddate (วันที่กำหนดส่งทบทวน)
+
     ⚠ page-break ใส่ inline เฉพาะ section ที่ไม่ใช่อันแรก — ห้ามใช้ CSS :first-of-type (mPDF ไม่รองรับ)
     ⚠ เครื่องหมายถูกต้องบังคับฟอนต์ dejavusanscondensed — ฟอนต์ไทยของ mPDF ไม่มี glyph U+2714
-    ⚠ กล่องสี่เหลี่ยมหลังรหัสลูกค้า (กระดาษเดิมมีตัว "A" บางราย) ยังไม่ทราบที่เก็บใน DB — วาดกล่องเปล่าไว้ก่อน
 --}}
 @php
     use Illuminate\Support\Carbon;
@@ -19,14 +23,6 @@
     $fmtT = function ($d) {
         if (!$d) return '';
         try { return Carbon::parse($d)->format('H:i'); } catch (\Exception $e) { return ''; }
-    };
-    // "ซื้อครั้งก่อน" แบบกระดาษเดิม = ปี พ.ศ. 2 หลัก + เดือน + วัน (เช่น 680715) · ไม่เคยสั่ง = NEW
-    $fmtLast = function ($d) {
-        if (!$d) return 'NEW';
-        try {
-            $c = Carbon::parse($d);
-            return sprintf('%02d%02d%02d', ($c->year + 543) % 100, $c->month, $c->day);
-        } catch (\Exception $e) { return ''; }
     };
     $chk = fn ($on) => '<table class="chk"><tr><td>' . ($on ? '<span class="chk-mark">&#10004;</span>' : '&nbsp;') . '</td></tr></table>';
 @endphp
@@ -47,8 +43,12 @@
         table.list { width: 100%; border-collapse: collapse; }
         table.list th { font-size: 11px; font-weight: bold; text-align: left; padding: 2px 3px;
                         border-bottom: 2px solid #000; vertical-align: bottom; }
-        table.list td { padding: 2px 3px; vertical-align: middle; }
-        table.list tr.last td { border-bottom: 1px solid #555; padding-bottom: 5px; }
+        /* 07/10/2569 (ผู้ใช้ทัก): เพิ่มช่องไฟระหว่างบรรทัด/ระหว่างรายการ + เส้นคั่นต้องยาวสุดขอบขวา
+           ⚠ ช่องหมายเหตุเป็น rowspan=2 เริ่มที่แถวกลาง จึงไม่ได้เส้นจาก `tr.last td` — ต้องใส่ class rem-cell ให้มีเส้นเอง */
+        table.list td { padding: 4px 3px; vertical-align: middle; }
+        table.list tr.first td { padding-top: 9px; }
+        table.list tr.last td { border-bottom: 1px solid #555; padding-bottom: 9px; }
+        table.list td.rem-cell { border-bottom: 1px solid #555; padding-bottom: 9px; vertical-align: top; }
 
         .orderno { color: #2b4a9b; font-size: 12px; }
         .item { font-size: 12px; font-weight: bold; }
@@ -90,9 +90,9 @@
             </tr>
             <tr>
                 <td class="title" style="width: 46%;">
-                    รายงานผลิตภัณฑ์ที่ต้องผลิต (P) แผนกผลิต &nbsp;{{ $sec->dept !== '' ? $sec->dept : 'ไม่ระบุ' }}
+                    รายงานผลิตภัณฑ์ที่ต้องผลิต ({{ $type }}) แผนกผลิต &nbsp;{{ $sec->dept !== '' ? $sec->dept : 'ไม่ระบุ' }}
                 </td>
-                <td>อนุมัติวันที่ {{ $day->format('d/m/y') }}</td>
+                <td>วันที่ {{ $day->format('d/m/y') }} &nbsp;ระหว่างเวลา {{ $time_from }} ถึง {{ $time_to }}</td>
                 <td class="sortby">เรียงตาม Order No.</td>
             </tr>
         </table>
@@ -105,7 +105,7 @@
                     <th style="width: 8%;">เวลารับ</th>
                     <th style="width: 12%;">รหัสสินค้า</th>
                     <th style="width: 9%;">Lot</th>
-                    <th style="width: 8%;" class="text-end">นน. P</th>
+                    <th style="width: 8%;" class="text-end">นน. {{ $type }}</th>
                     <th style="width: 5%;" class="text-center sm">Sale</th>
                     <th style="width: 6%;">รหัส</th>
                     <th style="width: 4%;"></th>
@@ -115,23 +115,23 @@
             </thead>
             <tbody>
                 @foreach ($sec->items as $i => $r)
-                    <tr>
+                    <tr class="first">
                         <td class="text-end">{{ $i + 1 }}</td>
                         <td class="orderno">{{ $r->Orderno }}</td>
-                        <td>{{ $fmtT($r->Mdate) }}</td>
+                        <td>{{ $fmtT($r->appvDT) }}</td>
                         <td class="item">{{ $r->Itemno }}</td>
                         <td>{{ $r->Lotno }}</td>
-                        <td class="wt">{{ $fmtNum($r->Production) }}</td>
+                        <td class="wt">{{ $fmtNum($r->weight) }}</td>
                         <td class="text-center sm">{{ $r->supno }}</td>
                         <td class="sm">{{ $r->Custno }}</td>
-                        <td><table class="box"><tr><td>&nbsp;</td></tr></table></td>
+                        <td><table class="box"><tr><td style="padding: 0;">{!! $r->is_alist ? 'A' : '&nbsp;' !!}</td></tr></table></td>
                         <td class="sm">{{ $r->custname }}</td>
-                        <td class="text-end sm">{{ $fmtLast($r->last_order) }}</td>
+                        <td class="text-end sm">{{ $r->last_label }}</td>
                     </tr>
                     <tr>
                         <td></td>
                         <td>กำหนดผลิตเสร็จ</td>
-                        <td>{{ $fmtD($r->senddate) }}</td>
+                        <td>{{ $fmtD($r->finish_date) }}</td>
                         <td colspan="6">
                             <table style="border-collapse: collapse;">
                                 <tr>
@@ -146,21 +146,24 @@
                                 </tr>
                             </table>
                         </td>
-                        <td colspan="2" rowspan="2" style="vertical-align: top;">{!! nl2br(e(trim((string) $r->Remark))) !!}</td>
+                        <td colspan="2" rowspan="2" class="rem-cell">{!! nl2br(e(trim((string) $r->Remark))) !!}</td>
                     </tr>
                     <tr class="last">
                         <td></td>
                         <td colspan="3"></td>
                         <td colspan="3" class="blue">กำหนดลูกค้าต้องการใช้</td>
-                        <td colspan="2" class="blue">{{ $fmtD($r->custwant) }}</td>
+                        <td colspan="2" class="blue">{{ $fmtD($r->senddate) }}</td>
                     </tr>
                 @endforeach
+                @if ($sec->items->isEmpty())
+                    <tr><td colspan="11" class="empty">ไม่พบใบสั่งซื้อที่อนุมัติในช่วงเวลานี้</td></tr>
+                @endif
             </tbody>
         </table>
 
         <table class="sum">
             <tr>
-                <td style="width: 38%;" class="text-end">รวมน้ำหนัก P</td>
+                <td style="width: 38%;" class="text-end">รวมน้ำหนัก {{ $type }}</td>
                 <td style="width: 22%;" class="total text-center">{{ $fmtNum($sec->total) }}</td>
                 <td colspan="2"></td>
             </tr>

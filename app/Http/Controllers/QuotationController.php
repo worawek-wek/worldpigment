@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\Emp;
 use App\Models\Qmast;
+use App\Services\AccessControl;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class QuotationController extends Controller
 {
@@ -266,6 +269,8 @@ class QuotationController extends Controller
             'cust'       => $data['cust'],
             'items'      => $data['items'],
             'col_config' => $data['colConfig'],
+            // ผู้สร้างใบ (null = ใบเก่าที่ไม่มีผู้สร้าง/หาบัญชีไม่เจอ → แก้ไขได้โดยไม่ต้องป้อนรหัสผ่าน)
+            'creator'    => ($c = $this->creatorOf($row)) ? ['name' => $c['name']] : null,
         ]);
     }
 
@@ -378,6 +383,12 @@ class QuotationController extends Controller
 
             $header = $this->extractHeader($request);
             $header['Qno'] = $qno;
+            // ผู้สร้างใบ = บัญชีที่ล็อกอินอยู่ (12/10/2569) — ตอนแก้ไขต้องป้อนรหัสผ่านของบัญชีนี้
+            $account = AccessControl::currentAccount();
+            if ($account) {
+                $header['created_by_type'] = $account instanceof Emp ? 'emp' : 'user';
+                $header['created_by']      = (string) $account->getKey();
+            }
             $header['col_config'] = json_encode($this->buildColConfig($request, $items), JSON_UNESCAPED_UNICODE);
             // timestamps (ใช้ Query Builder → ตั้งเอง; Eloquent ไม่ได้จัดการให้)
             $header['created_at'] = $header['updated_at'] = now();
@@ -403,6 +414,25 @@ class QuotationController extends Controller
             return response()->json(['error' => 'not_found'], 404);
         }
         $qno = trim((string) $row->Qno);
+
+        // ต้องป้อนรหัสผ่านของ "ผู้สร้างใบ" ก่อนแก้ไข (12/10/2569) — ตรวจที่ server ก่อนแตะ DB
+        // ใบเก่าที่ไม่มีผู้สร้าง (หรือบัญชีผู้สร้างถูกลบไปแล้ว) = ไม่มีรหัสให้ตรวจ → แก้ไขได้ตามเดิม
+        $creator = $this->creatorOf($row);
+        if ($creator) {
+            $password = (string) $request->input('creator_password', '');
+            if ($password === '') {
+                return response()->json([
+                    'error' => 'กรุณาป้อนรหัสผ่านของผู้สร้างใบเสนอราคา (' . $creator['name'] . ')',
+                    'bad_password' => true,
+                ], 422);
+            }
+            if (!Hash::check($password, (string) $creator['password'])) {
+                return response()->json([
+                    'error' => 'รหัสผ่านของผู้สร้างใบเสนอราคาไม่ถูกต้อง',
+                    'bad_password' => true,
+                ], 422);
+            }
+        }
 
         try {
             DB::beginTransaction();
@@ -569,6 +599,45 @@ class QuotationController extends Controller
             'name' => $name !== '' ? $name : null,
             'sign' => $this->signatureUrl($e->signature ?? null),
         ];
+    }
+
+    /**
+     * ผู้สร้างใบเสนอราคา (qmast.created_by_type + created_by) — ชื่อ + รหัสผ่าน (hash) ของบัญชีนั้น
+     * created_by_type: 'emp' = พนักงาน (created_by = emp.empno) · 'user' = admin (created_by = users.id)
+     * ใบเก่าที่ไม่ได้เก็บผู้สร้าง / หาบัญชีไม่เจอ / บัญชีไม่มีรหัสผ่าน → null
+     *
+     * @return array{name: string, password: string}|null
+     */
+    private function creatorOf($row): ?array
+    {
+        $type = trim((string) ($row->created_by_type ?? ''));
+        $key  = trim((string) ($row->created_by ?? ''));
+        if ($type === '' || $key === '') {
+            return null;
+        }
+
+        if ($type === 'emp') {
+            $e = DB::table('emp')->where('empno', $key)->first(['empno', 'empname', 'empsur', 'password']);
+            if (!$e) {
+                return null;
+            }
+            $name = trim(($e->empname ?? '') . ' ' . ($e->empsur ?? ''));
+            $name = $name !== '' ? $name . ' (' . $e->empno . ')' : $e->empno;
+            $hash = $e->password;
+        } else {
+            $u = DB::table('users')->where('id', $key)->first(['name', 'username', 'password']);
+            if (!$u) {
+                return null;
+            }
+            $name = trim((string) ($u->name ?: $u->username));
+            $hash = $u->password;
+        }
+
+        if (trim((string) $hash) === '') {
+            return null;
+        }
+
+        return ['name' => $name, 'password' => (string) $hash];
     }
 
     /**

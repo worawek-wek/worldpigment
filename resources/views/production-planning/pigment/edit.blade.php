@@ -14,7 +14,7 @@
     <input type="hidden" name="id" value="{{ $pigment->id }}">
 
     {{-- ── ข้อมูลอ้างอิง (อ่านอย่างเดียว) ── --}}
-    <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
+    <div class="d-flex flex-wrap gap-3 align-items-center mb-2">
         <span class="badge bg-label-success">PIGMENT</span>
         <span class="text-muted small">Order No.: <strong class="text-body">{{ $pigment->orderno ?? '-' }}</strong></span>
         <span class="ms-auto">สถานะ: <span class="badge {{ $statusCls }}">{{ $pigment->statusLabel() }}</span></span>
@@ -27,19 +27,19 @@
     @endunless
 
     <div class="row">
-        <div class="col-md-4 mb-3">
+        <div class="col-md-4 mb-2">
             <label class="form-label">Cust No.</label>
             <input type="text" class="form-control" name="custno" value="{{ $pigment->custno }}" {{ $ro }}>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-4 mb-2">
             <label class="form-label">วันที่สั่ง</label>
             <input type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" name="mdate" value="{{ $r_mdate }}" {{ $ro }}>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-4 mb-2">
             <label class="form-label">วันที่ต้องการรับ</label>
             <input type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" name="custwant" value="{{ $r_custwant }}" {{ $ro }}>
         </div>
-        <div class="col-md-12 mb-3">
+        <div class="col-md-12 mb-2">
             <label class="form-label">Item No. <span class="text-danger">*</span></label>
             <input type="text" class="form-control" name="itemno" value="{{ $pigment->itemno }}" {{ $ro }}>
         </div>
@@ -48,19 +48,19 @@
     <hr class="my-2">
 
     <div class="row">
-        <div class="col-md-3 mb-3">
+        <div class="col-md-3 mb-2">
             <label class="form-label">ยอดคงเหลือวันนี้ (Balance)</label>
             <input type="number" step="any" class="form-control" name="balance" value="{{ $pigment->balance }}" {{ $ro }}>
         </div>
-        <div class="col-md-3 mb-3">
+        <div class="col-md-3 mb-2">
             <label class="form-label">ยอดใช้ย้อนหลัง 2 เดือน</label>
             <input type="number" step="any" class="form-control" name="retrospective" value="{{ $pigment->retrospective }}" {{ $ro }}>
         </div>
-        <div class="col-md-3 mb-3">
+        <div class="col-md-3 mb-2">
             <label class="form-label">น้ำหนักที่จะใช้ (weight_request)</label>
             <input type="number" step="any" class="form-control" name="weight_request" value="{{ $pigment->weight_request }}" {{ $ro }}>
         </div>
-        <div class="col-md-3 mb-3">
+        <div class="col-md-3 mb-2">
             <label class="form-label">น้ำหนักที่จะผลิต (weight_production)</label>
             <input type="number" step="any" class="form-control" name="weight_production" value="{{ $pigment->weight_production }}" {{ $ro }}>
         </div>

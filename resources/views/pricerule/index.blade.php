@@ -108,7 +108,7 @@
             </div>
 
             <div class="table-responsive">
-                <table class="table table-sm table-bordered align-middle mb-0" id="pr_table">
+                <table class="table table-striped wp-zebra table-sm table-bordered align-middle mb-0" id="pr_table">
                     <thead>
                         <tr class="text-center">
                             <th style="min-width: 260px;">เงื่อนไข</th>

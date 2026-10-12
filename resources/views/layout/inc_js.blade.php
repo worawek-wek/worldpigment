@@ -255,8 +255,28 @@
                 // select2 ตาม disabled ให้เองอยู่แล้ว (มี observer ภายในของมัน) — sync แค่ค่าที่เลือก
                 $el.trigger('change.select2');
             } else if (mode === 'picker') {
+                syncPickerSelection($el);
                 $el.selectpicker('render');
                 syncPickerDisabled($el);
+            }
+        }
+
+        // bootstrap-select เวอร์ชันนี้จำ "ตัวที่ถูกเลือก" ไว้ในข้อมูลของตัวเอง (selectpicker.main.data[].selected)
+        // แล้ว 'render' วาดข้อความบนปุ่มจากค่าที่จำไว้นั้น — ไม่ได้อ่านจาก <select> จริง
+        // ⇒ ตั้งค่าด้วย .val() / form.reset() แล้วสั่ง 'render' เฉย ๆ ปุ่มจะค้างค่าเดิม (ค่าจริงของ select ถูกแล้ว)
+        // → ไล่ปรับค่าที่จำไว้ให้ตรงกับ <option> จริงก่อน render (12/10/2569)
+        function syncPickerSelection($el){
+            var sp   = $el.data('selectpicker');
+            var data = sp && sp.selectpicker && sp.selectpicker.main && sp.selectpicker.main.data;
+            if (!data) return;
+            for (var i = 0; i < data.length; i++) {
+                var d = data[i];
+                if (!d || !d.option || d.type !== 'option') continue;
+                var on = !!d.option.selected;
+                if (d.selected === on) continue;
+                // setSelected ปรับ class ของรายการในดรอปดาวน์ให้ด้วย (มีเฉพาะเมื่อรายการถูกสร้าง element แล้ว)
+                try { if (d.element && typeof sp.setSelected === 'function') sp.setSelected(d, on); } catch (e) {}
+                d.selected = on;
             }
         }
 

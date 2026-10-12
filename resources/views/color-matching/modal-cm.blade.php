@@ -23,24 +23,24 @@
                 <input type="hidden" name="_pk" value="">
 
                 <!-- Body -->
-                <div class="modal-body px-5 py-4" style="background-color: #f8f9fb;">
+                <div class="modal-body px-5 py-3" style="background-color: #f8f9fb;">
 
                     <div class="card shadow-sm mb-3"
                         style="border: 1px solid #cfe4e3; border-bottom-width: 0;">
 
                         <div class="card-header py-2 px-3 d-flex align-items-center"
-                            style="background-color: #e8f6f6; border-bottom: 2px solid #54BAB9; border-radius: 0.375rem 0.375rem 0 0;">
+                            style="background-color: #cdeceb; border-bottom: 2px solid #54BAB9; border-radius: 0.375rem 0.375rem 0 0;">
                             <h6 class="mb-0 fw-semibold" style="color: #1f5d5c;">
                                 <i class="ti ti-file-text me-1"></i>
                                 ใบนำส่งเทียบสี
                             </h6>
                         </div>
 
-                        <div class="card-body p-4">
+                        <div class="card-body p-3">
 
                             {{-- ─── กลุ่ม: ข้อมูลลูกค้า ─── --}}
-                            <div class="mb-4 pb-3 border-bottom">
-                                <div class="d-flex align-items-center mb-3 ps-2"
+                            <div class="mb-3 pb-2 border-bottom">
+                                <div class="d-flex align-items-center mb-2 ps-2"
                                     style="border-left: 3px solid #54BAB9;">
                                     <i class="ti ti-user-circle me-2" style="color: #2a8a89;"></i>
                                     <span class="fw-semibold" style="font-size: 0.95rem; color: #2a8a89;">
@@ -48,7 +48,7 @@
                                     </span>
                                 </div>
 
-                                <div class="row g-3">
+                                <div class="row gx-3 gy-2">
                                     <div class="col-md-2">
                                         <label class="form-label small mb-1">รหัสลูกค้า <span class="text-muted fw-normal">(เช่น 00004)</span></label>
                                         <input type="text" name="custno" class="form-control">
@@ -71,8 +71,8 @@
                             </div>
 
                             {{-- ─── กลุ่ม: ข้อมูลใบนำส่ง ─── --}}
-                            <div class="mb-4 pb-3 border-bottom">
-                                <div class="d-flex align-items-center mb-3 ps-2"
+                            <div class="mb-3 pb-2 border-bottom">
+                                <div class="d-flex align-items-center mb-2 ps-2"
                                     style="border-left: 3px solid #54BAB9;">
                                     <i class="ti ti-file-invoice me-2" style="color: #2a8a89;"></i>
                                     <span class="fw-semibold" style="font-size: 0.95rem; color: #2a8a89;">
@@ -80,7 +80,7 @@
                                     </span>
                                 </div>
 
-                                <div class="row g-3">
+                                <div class="row gx-3 gy-2">
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">เลขที่ใบนำส่งเทียบสี <span class="text-muted fw-normal">(เช่น 26/0001)</span></label>
                                         <input type="text" name="SendNo" class="form-control" required>
@@ -115,8 +115,8 @@
                             </div>
 
                             {{-- ─── กลุ่ม: ข้อมูลสี ─── --}}
-                            <div class="mb-4 pb-3 border-bottom">
-                                <div class="d-flex align-items-center mb-3 ps-2"
+                            <div class="mb-3 pb-2 border-bottom">
+                                <div class="d-flex align-items-center mb-2 ps-2"
                                     style="border-left: 3px solid #54BAB9;">
                                     <i class="ti ti-palette me-2" style="color: #2a8a89;"></i>
                                     <span class="fw-semibold" style="font-size: 0.95rem; color: #2a8a89;">
@@ -124,7 +124,7 @@
                                     </span>
                                 </div>
 
-                                <div class="row g-3">
+                                <div class="row gx-3 gy-2">
                                     <div class="col-md-4">
                                         <label class="form-label small mb-1">สี <span class="text-muted fw-normal">(ชื่อสี เช่น DB PINK-Y)</span></label>
                                         <input type="text" name="color" class="form-control">
@@ -226,8 +226,8 @@
                             </div>
 
                             {{-- ─── กลุ่ม: วันที่ดำเนินการ และผู้เทียบสี ─── --}}
-                            <div class="mb-4 pb-3 border-bottom">
-                                <div class="d-flex align-items-center mb-3 ps-2"
+                            <div class="mb-3 pb-2 border-bottom">
+                                <div class="d-flex align-items-center mb-2 ps-2"
                                     style="border-left: 3px solid #54BAB9;">
                                     <i class="ti ti-calendar-event me-2" style="color: #2a8a89;"></i>
                                     <span class="fw-semibold" style="font-size: 0.95rem; color: #2a8a89;">
@@ -235,7 +235,7 @@
                                     </span>
                                 </div>
 
-                                <div class="row g-3">
+                                <div class="row gx-3 gy-2">
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">Start Date <span class="text-muted fw-normal">(วว/ดด/ปปปป)</span></label>
                                         <input type="text" name="startdate" class="form-control flatpickr-date">
@@ -256,8 +256,8 @@
                             </div>
 
                             {{-- ─── กลุ่ม: การติดตามงาน ─── --}}
-                            <div class="mb-3">
-                                <div class="d-flex align-items-center mb-3 ps-2"
+                            <div class="mb-2">
+                                <div class="d-flex align-items-center mb-2 ps-2"
                                     style="border-left: 3px solid #54BAB9;">
                                     <i class="ti ti-clipboard-check me-2" style="color: #2a8a89;"></i>
                                     <span class="fw-semibold" style="font-size: 0.95rem; color: #2a8a89;">
@@ -265,7 +265,7 @@
                                     </span>
                                 </div>
 
-                                <div class="row g-3">
+                                <div class="row gx-3 gy-2">
                                     <div class="col-md-4">
                                         <label class="form-label small mb-1">ผู้รับเอกสาร <span class="text-muted fw-normal">(ชื่อพนักงาน)</span></label>
                                         <input type="text" name="TNname" class="form-control">

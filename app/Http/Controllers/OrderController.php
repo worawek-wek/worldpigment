@@ -530,12 +530,12 @@ class OrderController extends Controller
      * ราคา2 = ราคา1 × 1.14, ราคา3 = ราคา2 × 1.30 (ตัวคูณอยู่ที่ `product_price.tier`)
      * → **อ้างอิงจากรหัสสินค้าอย่างเดียว ไม่เกี่ยวกับลูกค้า**
      *
-     *   fixed_price  ราคาที่กำหนดไว้      = ราคาขาย 1
-     *   price2       ราคาช่อง 2           = ราคาขาย 2
+     *   price2      ราคาช่อง 2           = ราคาขาย 2
      *   min_price    ราคาต้องไม่ต่ำกว่า    = ราคาขาย 2
      *   cost_price   ราคาทุน              = ราคาทุนที่ใช้คำนวณ
      *
      * ส่วนที่ผูกกับลูกค้า (ใช้ custno ด้วย):
+     *   fixed_price  ราคาที่กำหนดไว้      uprice.PRICE (เมนู "กำหนดราคา") — 08/10/2569 เดิมเป็นราคาขาย 1
      *   appv_price   ราคาอนุมัติ          appvreq.price
      *   valid_to     ยืนราคาถึง           zcustprice.enddate
      *
@@ -619,8 +619,9 @@ class OrderController extends Controller
             'group'       => $group ? $group['group'] : null,
             'group_label' => $group ? $group['label'] : null,
             'min_rate'    => $minRate,
-            // ราคาที่กำหนดไว้ = ราคาขาย 1 · ราคาช่อง 2 = ราคาขาย 2
-            'fixed_price' => $prices['price_1'] ?? null,
+            // ราคาที่กำหนดไว้ = ราคาจากเมนู "กำหนดราคา" (uprice.PRICE ของคู่ ลูกค้า+เบอร์ แถวล่าสุด) — 08/10/2569
+            // เดิมใช้ราคาขาย 1 ที่คำนวณจากราคาทุน · ราคาช่อง 2 = ราคาขาย 2 เหมือนเดิม
+            'fixed_price' => $uprice->PRICE ?? null,
             'price2'      => $prices['price_2'] ?? null,
             // ราคาต้องไม่ต่ำกว่า = ราคาอนุมัติ → ราคากลุ่ม (zcolorrate) → ราคาช่อง 2
             'min_price'   => $minPrice,

@@ -1,5 +1,5 @@
 <div class="table-responsive">
-    <table class="table table-hover align-middle">
+    <table class="table table-striped table-hover align-middle">
 
         <thead class="pr-thead-dark">
             <tr class="align-middle">

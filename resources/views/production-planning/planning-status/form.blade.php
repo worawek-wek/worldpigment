@@ -10,7 +10,7 @@
     <form id="planning_status_form">
         <input type="hidden" name="id" value="{{ $planning_status?->id ?? '' }}">
 
-        <div class="mb-3">
+        <div class="mb-2">
             <label class="form-label">แผนก (Dept)</label>
             <select name="dept" class="form-select">
                 <option value="">เลือกแผนก</option>
@@ -20,21 +20,21 @@
             </select>
         </div>
 
-        <div class="mb-3">
+        <div class="mb-2">
             <label class="form-label">ชื่อสถานะ <span class="text-danger">*</span></label>
             <input type="text" name="name"
                    value="{{ $planning_status?->name ?? '' }}"
                    class="form-control" placeholder="กรอกชื่อสถานะ">
         </div>
 
-        <div class="mb-3">
+        <div class="mb-2">
             <label class="form-label">ลำดับการเรียง (Sort)</label>
             <input type="number" name="sort" min="0"
                    value="{{ $planning_status?->sort ?? 0 }}"
                    class="form-control" placeholder="0">
         </div>
 
-        <div class="mb-3">
+        <div class="mb-2">
             <label class="form-label">สถานะการใช้งาน</label>
             <select name="is_active" class="form-select">
                 <option value="Y" {{ ($planning_status?->is_active ?? 'Y') === 'Y' ? 'selected' : '' }}>เปิดใช้งาน</option>

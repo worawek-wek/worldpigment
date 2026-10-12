@@ -2,7 +2,7 @@
     @csrf
     <input type="hidden" name="id" value="{{ $method?->id }}">
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label" for="prod_method_name">
             ชื่อวิธีการผลิต <span class="text-danger">*</span>
         </label>
@@ -10,7 +10,7 @@
             value="{{ $method?->name }}" placeholder="กรอกชื่อวิธีการผลิต">
     </div>
 
-    <div class="mb-3">
+    <div class="mb-2">
         @php $currentDept = $method?->dept; $deptNames = $departments->pluck('name')->all(); @endphp
         <label class="form-label" for="prod_method_dept">แผนก (Dept)</label>
         <select class="form-select" id="prod_method_dept" name="dept">
@@ -27,13 +27,13 @@
         </select>
     </div>
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label" for="prod_method_sort">ลำดับ (Sort)</label>
         <input type="number" class="form-control" id="prod_method_sort" name="sort"
             value="{{ $method?->sort ?? 0 }}" placeholder="0">
     </div>
 
-    <div class="mb-3">
+    <div class="mb-2">
         <label class="form-label d-block">สถานะการใช้งาน</label>
         <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" role="switch"
