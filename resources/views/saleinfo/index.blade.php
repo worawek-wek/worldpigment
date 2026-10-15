@@ -517,6 +517,7 @@
     <!-- / Layout wrapper -->
 
     @include('saleinfo.modal-price')
+    @include('saleinfo.modal-view')   {{-- ดูราคา (อ่านอย่างเดียว) — 15/10/2569 --}}
     @include('saleinfo.modal-newprice')
     @include('saleinfo.modal-testprice')
     @include('color-rate.lookup-modal')   {{-- modal "ดูกลุ่มราคา" (อ่านอย่างเดียว) — 19/09/2569 --}}
@@ -1039,6 +1040,127 @@
             }
         });
     }
+
+    // ────────────────────────────────────────────────────────
+    //  ดูราคา (อ่านอย่างเดียว) — ปุ่มตาในตาราง (15/10/2569)
+    //  หน้าตาแบบแสดงข้อมูล (modal-view) ไม่ใช่ฟอร์ม · ใช้ endpoint ชุดเดียวกับฟอร์มแก้ไข
+    // ────────────────────────────────────────────────────────
+    function svText(sel, v) {
+        $(sel).text(v === null || v === undefined || String(v).trim() === '' ? '—' : v);
+    }
+
+    function svMoney(sel, v, decimals) {
+        $(sel).text(v === null || v === undefined || v === '' ? '—' : commaFmt(v, decimals));
+    }
+
+
+    function clearSaleinfoView() {
+        $('#saleinfoViewModal .sv-val').text('—');
+        $('#sv_last_note').text('');
+        $('#sv_price_note').text('').removeClass('sv-note-warn');
+        $('#sv_group_none').addClass('d-none');
+        $('#sv_history_body').html('<tr><td colspan="4" class="text-center text-muted">ไม่มีประวัติการปรับราคา</td></tr>');
+        $('#sv_history_count').text('0 รายการ');
+    }
+
+    function showSaleinfoView(id) {
+        $.getJSON("{{ $page_url }}/edit/" + id)
+            .done(function (res) {
+                if (!res.found) return;
+                const d = res.data;
+
+                clearSaleinfoView();
+
+                const custno = (d.CustNo || '').trim();
+                const itemno = (d.ITEMNO || '').trim();
+                const code   = itemno || (d.st_code || '').trim();   // รหัสที่ใช้คำนวณราคา (เหมือนฟอร์ม)
+
+                svText('#sv_custno', custno);
+                svText('#sv_stcode', d.st_code);
+                svText('#sv_itemno', d.ITEMNO);
+                svMoney('#sv_price', d.PRICE, 2);
+                svText('#sv_date', d.DATE);
+                svText('#sv_rem1', d.REM1);
+                svText('#sv_rem2', d.REM2);
+                svText('#sv_packrem', d.PackRem);
+                svText('#sv_label', d.Label);
+                svText('#sv_author', d.Author);
+
+                // ข้อมูลลูกค้า (กล่องขวา)
+                if (custno) {
+                    $.getJSON("{{ $page_url }}/customer/" + encodeURIComponent(custno)).done(function (c) {
+                        if (!c.found) return;
+                        svText('#sv_cust_name', c.name);
+                        svText('#sv_cust_road', c.road);
+                        svText('#sv_cust_term', c.term);
+                    });
+                }
+
+                // สั่งซื้อล่าสุด (กติกาเดียวกับฟอร์ม: ไม่พบ = เกิน 3 ปี)
+                if (custno && code) {
+                    $.getJSON("{{ $page_url }}/last-order", { custno: custno, itemno: code }).done(function (o) {
+                        if (!o.found) {
+                            $('#sv_last_note').text('เกิน 3 ปี');
+                            return;
+                        }
+                        svText('#sv_last_lot', o.lot);
+                        svText('#sv_last_dv', o.delivered);
+                        $('#sv_last_note').text(o.over_3_years ? 'เกิน 3 ปี' : '');
+                    });
+                }
+
+                // ประวัติการปรับราคา (ไม่รวมแถวที่กำลังดู) — เหมือนฟอร์ม
+                if (custno && itemno) {
+                    $.getJSON("{{ $page_url }}/history", { custno: custno, itemno: itemno, exclude_id: id }).done(function (h) {
+                        const rows = h.rows || [];
+                        if (!rows.length) return;
+                        $('#sv_history_body').html(rows.map(function (r, i) {
+                            const badge = (i === 0) ? '<span class="badge-current">ปัจจุบัน</span>' : '';
+                            return '<tr>'
+                                + '<td class="text-center">' + esc(r.DATE || '—') + '</td>'
+                                + '<td>' + esc(r.ITEMNO || '—') + '</td>'
+                                + '<td class="text-end">' + fmtNum(r.PRICE) + badge + '</td>'
+                                + '<td class="text-muted">' + esc(r.REM1 || '—') + '</td>'
+                                + '</tr>';
+                        }).join(''));
+                        $('#sv_history_count').text(rows.length + ' รายการ');
+                    });
+                }
+
+                // คำนวนราคา + ราคากลุ่ม + ที่มาของราคา
+                if (code) {
+                    $.getJSON("{{ $page_url }}/price-lookup", { code: code }).done(function (p) {
+                        const rate = p.color_rate || null;
+                        ['A', 'B', 'C'].forEach(function (g) {
+                            svMoney('#sv_group_' + g, rate ? rate['rate_' + g] : null, 2);
+                        });
+                        $('#sv_group_none').toggleClass('d-none', !!rate);
+
+                        if (p.prices) {
+                            svMoney('#sv_p1', p.prices.price_1, 0);
+                            svMoney('#sv_p2', p.prices.price_2, 0);
+                            svMoney('#sv_p3', p.prices.price_3, 0);
+                            svMoney('#sv_db34', p.prices.db_3_4, 0);
+                            svMoney('#sv_db12', p.prices.db_1_2, 0);
+
+                            const src = [];
+                            if (p.base_price !== null && p.base_price !== undefined) src.push('ราคาทุน ' + fmtNum(p.base_price));
+                            if (p.rule && p.rule.label) src.push(p.rule.label);
+                            if (p.rule) src.push('× ' + p.rule.mul + ' ÷ ' + p.rule.div + ' + ' + p.rule.add);
+                            $('#sv_price_note').text(src.join('  ·  '));
+                        } else if (p.reason) {
+                            $('#sv_price_note').text(p.reason).addClass('sv-note-warn');
+                        }
+                    });
+                }
+
+                $('#saleinfoViewModal').modal('show');
+            })
+            .fail(function () {
+                Swal.fire({ title: 'ไม่พบข้อมูล', text: 'รายการนี้อาจถูกลบไปแล้ว', icon: 'error', heightAuto: false });
+            });
+    }
+
 
     $('#btn_delete_saleinfo').on('click', function () {
         const id = $(this).data('id');

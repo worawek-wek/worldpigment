@@ -59,6 +59,12 @@
 
                     <td class="text-center">
                         <div class="d-inline-flex gap-1">
+                            {{-- ดูอย่างเดียว (15/10/2569) --}}
+                            <button class="btn btn-sm btn-icon btn-label-info"
+                                title="ดูราคา"
+                                onclick="showSaleinfoView('{{ $row->id }}')">
+                                <i class="ti ti-eye"></i>
+                            </button>
                             <button class="btn btn-sm btn-icon btn-theme-saleinfo"
                                 title="แก้ไขราคา"
                                 onclick="viewSaleinfo('{{ $row->id }}')">
