@@ -1614,7 +1614,11 @@
             + td('<span class="oi-no"></span>', 'text-center text-muted')
             + td(txt('Itemno', r.Itemno, ' maxlength="20" oninput="onItemnoInput(this)"'))
             + td(txt('nold', r.nold, ' list="noldList" maxlength="1"'))
-            + td(txt('prodname', r.prodname, ' maxlength="20"'))   // suborder.prodname = varchar(20)
+            // suborder.prodname = varchar(20)
+            // ชื่อที่โหลดมาจากใบเดิมติด data-autofill ไว้ด้วย → แก้รหัสสินค้าแล้วชื่อเปลี่ยนตาม (15/10/2569)
+            // (ผู้ใช้พิมพ์แก้ชื่อเองเมื่อไหร่ data-autofill ถูกลบ ชื่อนั้นจะไม่ถูกทับอีก)
+            + td(txt('prodname', r.prodname, ' maxlength="20"'
+                + (r.prodname ? ' data-autofill="' + esc(r.prodname) + '"' : '')))
             + td(txt('Lotno', r.Lotno, ' maxlength="20"'))
             + td(num('Stock', r.Stock))
             + td(num('Production', r.Production))
@@ -1747,7 +1751,10 @@
 
         $.getJSON("{{ $page_url }}/item-lookup", {
             itemno: itemno,
-            custno: ($('#o_Custno').val() || '').trim()   // Label ของเบอร์เดียวกันต่างกันได้ตามลูกค้า
+            custno: ($('#o_Custno').val() || '').trim(),  // Label ของเบอร์เดียวกันต่างกันได้ตามลูกค้า
+            // เช็ค "เกิน 3 ปี" จากใบก่อนหน้า โดยยึดวันที่ของใบนี้ (15/10/2569)
+            orderno: ($('#o_Orderno').val() || '').trim(),
+            mdate:   $('#o_Mdate').val() || ''
         }, function(res){
             if (($(el).val() || '').trim() !== itemno) return;   // ผู้ใช้พิมพ์ต่อแล้ว
 
@@ -1786,7 +1793,7 @@
         if (res && res.need_match){
             $('#o_match_detail').text(res.last_order_date
                 ? 'เบอร์ ' + res.itemno + ' — สั่งครั้งล่าสุด ' + fmtDate(res.last_order_date, true)
-                : 'เบอร์ ' + res.itemno + ' — ไม่เคยมีประวัติการสั่งซื้อ');
+                : 'เบอร์ ' + res.itemno + ' — ลูกค้ารายนี้ไม่เคยสั่งซื้อ');
             $('#o_match_warn').removeClass('d-none');
         } else {
             $('#o_match_warn').addClass('d-none');
@@ -1821,7 +1828,7 @@
     function lookupOrderCustomer(code){
         code = (code || '').trim();
         clearTimeout(custLookupTimer);
-        if (!code){ $('#o_Custname').val(''); fillDvpoints([], ''); return; }
+        if (!code){ $('#o_Custname').val(''); fillDvpoints([], ''); refreshItemContext(); return; }
         custLookupTimer = setTimeout(function(){
             if (custLookupXhr) custLookupXhr.abort();
             custLookupXhr = $.getJSON("{{ $page_url }}/customer/" + encodeURIComponent(code), function(res){
@@ -1851,6 +1858,7 @@
                 // ส่งก่อนได้ (Send) / SPEC (Spec) ไม่มีค่าประจำลูกค้าใน customer — ผู้ใช้ติ๊กเอง
 
                 refreshOrderPrice();   // เปลี่ยนลูกค้า → ราคาของคู่ (ลูกค้า, สินค้า) เปลี่ยนตาม
+                refreshItemContext();  // แถบ "เกิน 3 ปี" ผูกกับคู่ (ลูกค้า, สินค้า) — 15/10/2569
             });
         }, 350);
     }
@@ -1866,6 +1874,7 @@
         $('#o_Cer').prop('checked', false);
         $('#o_MSDS').prop('checked', false);
         refreshOrderPrice();     // กล่องราคาผูกกับคู่ (ลูกค้า, สินค้า) — ไม่มีลูกค้าแล้วต้องล้างตาม
+        refreshItemContext();    // แถบ "เกิน 3 ปี" ก็ผูกกับลูกค้าเช่นกัน
     }
 
     // แจ้งเตือนลูกค้าติด Blacklist แล้วล้างรหัสลูกค้าเมื่อกดตกลง
@@ -1965,15 +1974,19 @@
         var lines  = [];
         var calls  = $.map(codes, function(code){
             var d = $.Deferred();
-            $.getJSON("{{ $page_url }}/item-lookup", {itemno: code, custno: custno})
+            $.getJSON("{{ $page_url }}/item-lookup", {
+                itemno: code, custno: custno,
+                orderno: ($('#o_Orderno').val() || '').trim(),
+                mdate:   $('#o_Mdate').val() || ''
+            })
                 .done(function(res){
                     if (!res || res.need_match){
                         lines.push(code + ' — ' + (res && res.last_order_date
                             ? 'สั่งครั้งล่าสุด ' + fmtDate(res.last_order_date, true)
-                            : 'ไม่พบประวัติการสั่งซื้อ'));
+                            : 'ลูกค้ารายนี้ไม่เคยสั่งซื้อ'));
                     }
                 })
-                .fail(function(){ lines.push(code + ' — ไม่พบประวัติการสั่งซื้อ'); })
+                .fail(function(){ lines.push(code + ' — ไม่พบประวัติการสั่งซื้อของลูกค้ารายนี้'); })
                 .always(function(){ d.resolve(); });
             return d.promise();
         });

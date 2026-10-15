@@ -736,10 +736,20 @@ class OrderController extends Controller
         // หมายเหตุของรายการ (suborder.Remark) — เติมจาก uprice.Label ให้เป็นค่าตั้งต้น
         $remark = trim((string) ($up->Label ?? ''));
 
-        // วันที่สั่งซื้อล่าสุดของเบอร์นี้ (ทุกลูกค้า — การ Match เป็นเรื่องของสูตรสี ไม่ผูกกับลูกค้า)
-        $lastDate = DB::table('suborder')
+        /* ใบก่อนหน้าของ "ลูกค้ารายนี้" ที่สั่งเบอร์นี้ — 15/10/2569 ตามที่ผู้ใช้สั่ง (เดิมนับทุกลูกค้า)
+           ยึด "วันที่" ของใบที่เปิดอยู่ (mdate ที่ฟอร์มส่งมา, ไม่ส่ง = ตอนนี้) เป็นจุดเทียบ:
+             - นับเฉพาะใบที่วันที่ก่อนหน้าวันนั้น และไม่ใช่ใบที่เปิดอยู่ (orderno)
+             - เกิน 3 ปีนับย้อนจากวันนั้น
+           ยังไม่ระบุลูกค้า = ยังตัดสินไม่ได้ ไม่ขึ้นเตือน */
+        $refDate = Carbon::parse($this->parseDateTime($request->query('mdate')) ?? now());
+        $orderno = trim((string) $request->query('orderno', ''));
+
+        $lastDate = $custno === '' ? null : DB::table('suborder')
             ->join('morder', 'morder.Orderno', '=', 'suborder.Orderno')
             ->where('suborder.Itemno', $itemno)
+            ->where('morder.Custno', $custno)
+            ->when($orderno !== '', fn ($q) => $q->where('morder.Orderno', '<>', $orderno))
+            ->where('morder.Mdate', '<', $refDate->format('Y-m-d H:i:s'))
             ->max('morder.Mdate');
 
         return response()->json([
@@ -748,8 +758,9 @@ class OrderController extends Controller
             'prodname'        => $prodname,
             'remark'          => $remark !== '' ? $remark : null,
             'last_order_date' => $lastDate,
-            // เกิน 3 ปี (หรือไม่เคยสั่งเลย) → ต้อง Match ใหม่
-            'need_match'      => !$lastDate || Carbon::parse($lastDate)->lt(Carbon::now()->subYears(3)),
+            // ลูกค้ารายนี้สั่งเบอร์นี้ครั้งล่าสุดเกิน 3 ปี (หรือไม่เคยสั่งเลย) → ต้อง Match ใหม่
+            'need_match'      => $custno !== ''
+                && (!$lastDate || Carbon::parse($lastDate)->lt($refDate->copy()->subYears(3))),
         ]);
     }
 
@@ -884,8 +895,16 @@ class OrderController extends Controller
 
            ⚠ ใบที่อนุมัติแล้วข้ามด่านนี้ (21/09/2569 ตามที่ผู้ใช้สั่ง) เพราะราคาขายถูกล็อกไม่ให้แก้
            อยู่แล้ว การตรวจราคาที่ส่งมาจึงไม่มีผลกับค่าที่จะเขียน — ถ้าไม่ข้าม ใบที่ราคาเดิมต่ำกว่า
-           เกณฑ์ปัจจุบัน (วัดได้ 33.7% ของใบที่อนุมัติแล้ว) จะแก้ช่องอื่นแล้วบันทึกไม่ได้เลย */
-        if (!$approved) {
+           เกณฑ์ปัจจุบัน (วัดได้ 33.7% ของใบที่อนุมัติแล้ว) จะแก้ช่องอื่นแล้วบันทึกไม่ได้เลย
+
+           ⚠ ใบประเภท HM ไม่ต้องเช็คราคา (15/10/2569 ตามที่ผู้ใช้สั่ง)
+             ประเภท = 2 ตัวหน้าเลขที่ใบ (insert ใช้ order_type ที่ส่งมา) */
+        $typePrefix = strtoupper(substr(
+            $mode === 'insert' ? $type : trim((string) $request->input('Orderno')),
+            0,
+            2
+        ));
+        if (!$approved && $typePrefix !== 'HM') {
             $blocked = $this->checkPriceFloor(
                 $custno,
                 $items,
