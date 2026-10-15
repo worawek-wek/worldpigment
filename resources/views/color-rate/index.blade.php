@@ -18,6 +18,10 @@
                             </p>
                         </div>
                         <div class="d-flex gap-2 flex-wrap">
+                            {{-- ประวัติทุกรหัส (รวมรหัสที่ถูกลบไปแล้ว) 15/10/2569 --}}
+                            <button type="button" class="btn btn-info waves-effect" id="btn_history_all">
+                                <i class="ti ti-history me-1"></i> ประวัติการแก้ไข
+                            </button>
                             <button type="button" class="btn btn-primary" id="btn_add">
                                 <i class="ti ti-plus me-1"></i> เพิ่มข้อมูล
                             </button>
@@ -50,6 +54,20 @@
                             <div class="col-md-4">
                                 <input id="searchInput" type="text" class="form-control"
                                     placeholder="ค้นหารหัสสินค้า...">
+                            </div>
+                            {{-- ตัวกรองวันที่ปรับราคา (RDate) แบบช่วง 15/10/2569 --}}
+                            <div class="col-md-5">
+                                <div class="input-group">
+                                    <span class="input-group-text">วันที่ปรับราคา</span>
+                                    <input id="searchDateFrom" type="text" class="form-control flatpickr-filter" placeholder="ตั้งแต่">
+                                    <span class="input-group-text">ถึง</span>
+                                    <input id="searchDateTo" type="text" class="form-control flatpickr-filter" placeholder="ถึง">
+                                </div>
+                            </div>
+                            <div class="col-md-auto">
+                                <button type="button" class="btn btn-label-secondary waves-effect" id="btn_clear_filter">
+                                    <i class="ti ti-filter-off me-1"></i> ล้างตัวกรอง
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -95,6 +113,29 @@
         </div>
     </div>
 
+    <!-- History Modal (15/10/2569) — เปิดจากปุ่มในแถว (รหัสเดียว) หรือปุ่มบนหัวหน้า (ทุกรหัส) -->
+    <div class="modal fade modalHeadDecor" id="colorRateHistoryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="ti ti-history me-1"></i>ประวัติการแก้ไขกลุ่มราคา
+                        <span id="history_title_code"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3" id="history_search_box">
+                        <div class="col-md-4">
+                            <input id="historySearch" type="text" class="form-control" placeholder="ค้นหารหัสสินค้า...">
+                        </div>
+                    </div>
+                    <div id="history_result"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 @endsection
 
 @section('script')
@@ -111,7 +152,9 @@
             ajax: {
                 url: "{{ route('colorrate.datatable') }}",
                 data: function(d) {
-                    d.search = $('#searchInput').val();
+                    d.search    = $('#searchInput').val();
+                    d.date_from = $('#searchDateFrom').val();
+                    d.date_to   = $('#searchDateTo').val();
                 },
                 error: function(xhr, error, thrown) {
                     console.error('AJAX Error:', error, thrown);
@@ -134,6 +177,22 @@
 
     $(document).on('keyup', '#searchInput', function(e){
         e.preventDefault();
+        oTable.draw();
+    });
+
+    // ตัวกรองวันที่ปรับราคา — เลือกวันแล้ว redraw ตาราง
+    var fpFilters = flatpickr('.flatpickr-filter', {
+        dateFormat: 'd/m/Y',
+        allowInput: true,
+        disableMobile: true,
+        onChange: function(){ oTable.draw(); }
+    });
+
+    $(document).on('click', '#btn_clear_filter', function(e){
+        e.preventDefault();
+        $('#searchInput').val('');
+        // ล้างด้วย instance.clear() ไม่ใช่ .val('') (flatpickr จะจำค่าเดิมไว้)
+        [].concat(fpFilters).forEach(function(fp){ fp.clear(false); });
         oTable.draw();
     });
 
@@ -171,6 +230,52 @@
     $(document).on('click', '.btn_edit', function(e){
         e.preventDefault();
         openColorRateForm($(this).data('id'));
+    });
+
+    // ─── ประวัติการแก้ไข (15/10/2569) ───
+    // historyCode = รหัสที่ดูอยู่ ('' = ทุกรหัส)
+    var historyCode = '', historyXhr = null, historyTimer = null;
+
+    function loadColorRateHistory(){
+        if (historyXhr) historyXhr.abort();
+        showTableLoading('#history_result');
+        historyXhr = $.ajax({
+            url: "{{ route('colorrate.history') }}",
+            method: "GET",
+            data: { colorno: historyCode, search: $('#historySearch').val() },
+            success: function(res){
+                $('#history_result').html(res.data);
+            },
+            error: function(xhr, textStatus){
+                if (textStatus === 'abort') return;
+                showTableError('#history_result');
+            }
+        });
+    }
+
+    function openColorRateHistory(code){
+        historyCode = code || '';
+        $('#historySearch').val('');
+        $('#history_title_code').text(historyCode ? '— ' + historyCode : '');
+        // ช่องค้นหาใช้เฉพาะตอนดูทุกรหัส
+        $('#history_search_box').toggleClass('d-none', historyCode !== '');
+        $('#colorRateHistoryModal').modal('show');
+        loadColorRateHistory();
+    }
+
+    $(document).on('click', '#btn_history_all', function(e){
+        e.preventDefault();
+        openColorRateHistory('');
+    });
+
+    $(document).on('click', '.btn_history', function(e){
+        e.preventDefault();
+        openColorRateHistory(String($(this).data('id')));
+    });
+
+    $(document).on('keyup', '#historySearch', function(){
+        clearTimeout(historyTimer);
+        historyTimer = setTimeout(loadColorRateHistory, 400);
     });
 
     // ลบรายการ

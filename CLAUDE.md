@@ -49,7 +49,7 @@ worldpigment/
 │   │   ├── PDFController.php
 │   │   ├── SaleinfoController.php   # กำหนดราคา + ค้นหาราคาสินค้า — เขียนลง `uprice` (04/08/2569, ย้ายตาราง 29/08/2569)
 │   │   ├── PriceRuleController.php  # ตั้งค่าเงื่อนไขราคา คูณ/หาร/บวก — เมนูแยก /price-rule (21/08/2569)
-│   │   ├── ColorRateController.php   # จัดการกลุ่มราคา zcolorrate — ราคาขั้นต่ำกลุ่ม A/B/C (19/09/2569)
+│   │   ├── ColorRateController.php   # จัดการกลุ่มราคา zcolorrate — ราคาขั้นต่ำกลุ่ม A/B/C (19/09/2569) + ประวัติ tb_color_rate_history (15/10/2569)
 │   │   ├── ProductController.php    # ข้อมูลสินค้า tb_products — CRUD (07/08/2569)
 │   │   ├── HolidayController.php    # วันหยุดนักขัตฤกษ์ tb_holiday — CRUD + ปฏิทินรายปี (01/09/2569)
 │   │   ├── PlanningRemarkController.php # หมายเหตุวางแผน tb_planning_remark — CRUD master (08/09/2569)
@@ -1040,6 +1040,14 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 - 🔴 **ห้ามพิมพ์ชื่อ Blade directive (เช่น at-section) ในคอมเมนต์ JS ของ partial** — Blade ตีความเป็น directive จริง แล้ว**กลืน HTML ที่เหลือทั้งหน้า** (เจอจริงตอนทำ 19/09/2569: หน้า render ออกมาเหลือ 411 bytes)
 - ⚠ **ความเสี่ยงแบบเดียวกับเมนูอื่น:** route `colorrate/store` · `colorrate/delete` ป้องกันแค่ `auth` + สิทธิ์ระดับเมนู — ไม่มีสิทธิ์เขียน/ลบแยก และ **ไม่มี audit trail** (ตารางไม่มีคอลัมน์ผู้แก้ไข — `RDate` เป็นวันที่ปรับราคา ไม่ใช่เวลาที่แก้เรคคอร์ด)
 - ⚠ **การลบกระทบด่านราคาทันที** — รหัสที่ถูกลบจะตกไปใช้ "ราคาช่อง 2" เป็นเกณฑ์แทน (ดูตารางลำดับเกณฑ์ในหัวข้อด่านราคา)
+
+**ตัวกรองวันที่ปรับราคา (15/10/2569 ตามที่ผู้ใช้สั่ง):** ช่วง `#searchDateFrom` / `#searchDateTo` (flatpickr `d/m/Y`, เลือกแล้ว redraw) → param `date_from` / `date_to` → `datatable()` กรอง `RDate` (`to` รวมทั้งวัน · แปลงไม่ได้ = ไม่กรอง ผ่าน `parseDate()`) + ปุ่ม "ล้างตัวกรอง" · ⚠ กรองเฉพาะตารางหลัก ไม่ได้กรองใน modal ประวัติ
+
+**ประวัติการแก้ไข (History) — 15/10/2569 ตามที่ผู้ใช้สั่ง:** ตารางใหม่ **`tb_color_rate_history`** (InnoDB, migration `2026_10_15_110000_create_tb_color_rate_history_table` — idempotent, **รันแล้ว**) + Model `ColorRateHistory` (`ACTIONS` = ป้าย/สี badge)
+- 1 แถว = 1 ครั้งที่ **เพิ่ม / แก้ไข / ลบ** — เก็บ `old_rate_A/B/C` + `old_RDate` (ค่าก่อน) · `new_*` (ค่าหลัง) · ผู้ทำ `changed_by_type` (`emp`/`user`) + `changed_by` (empno / users.id) + **`changed_by_name` (ชื่อ ณ ตอนนั้น)** · `changed_at`
+- เขียนจาก `ColorRateController::logHistory()` ที่ท้าย `store()` (create/update) และ**ก่อน** `delete()` ใน `destroy()` · **แก้ไขแต่ค่าไม่เปลี่ยนเลย = ไม่บันทึก**
+- ดูได้ 2 ทาง → `GET color-rate/history` (`colorrate.history`, คืน HTML partial `color-rate/history-table`): **ปุ่ม `.btn_history` ในแถว** = เฉพาะรหัสนั้น · **ปุ่ม "ประวัติการแก้ไข" บนหัวหน้า** = ทุกรหัส (รวมรหัสที่ถูกลบไปแล้ว) + ช่องค้นหารหัส · จำกัด 500 แถวล่าสุด (`HISTORY_LIMIT`) · ช่องที่เปลี่ยนแสดง "เดิม → ใหม่"
+- ⚠ ไม่ผูก FK กับ `zcolorrate` (ตั้งใจ — รหัสที่ลบแล้วยังดูประวัติได้) · `zcolorrate` เป็น MyISAM จึงไม่มีทรานแซกชันครอบการเขียนราคา+ประวัติ · ข้อมูลก่อน 15/10/2569 ไม่มีประวัติ · แก้ `zcolorrate` ตรงใน DB จะไม่ถูกบันทึก
 
 ## สถานะ QC (เมนู "สถานะ QC", `/production-planning/qc-status`) — 09/09/2569
 

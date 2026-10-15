@@ -11,6 +11,8 @@ Route::prefix('color-rate')->group(function () {
     Route::get('/edit',      [ColorRateController::class, 'edit'])->name('colorrate.edit');
     Route::post('/store',    [ColorRateController::class, 'store'])->name('colorrate.store');
     Route::post('/delete',   [ColorRateController::class, 'destroy'])->name('colorrate.delete');
+    // ประวัติการแก้ไข (tb_color_rate_history) 15/10/2569
+    Route::get('/history',   [ColorRateController::class, 'history'])->name('colorrate.history');
 
     // อ่านอย่างเดียว — ปุ่ม "ดูกลุ่มราคา" ในหน้า /saleinfo และ /order
     // ⚠ ตั้งใจใช้ namespace `colorratelookup` (ไม่ผูกเมนู) เพื่อให้ pass-through CheckAccess

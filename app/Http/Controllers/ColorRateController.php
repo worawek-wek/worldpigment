@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\ColorRate;
+use App\Models\ColorRateHistory;
+use App\Models\Emp;
+use App\Services\AccessControl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\Facades\DataTables;
@@ -33,6 +36,13 @@ class ColorRateController extends Controller
             ->when(request('search'), function ($q, $search) {
                 $q->where('colorno', 'like', "%{$search}%");
             })
+            // ตัวกรองวันที่ปรับราคา (RDate) แบบช่วง — รับ d/m/Y · ค่าแปลงไม่ได้ = ไม่กรอง (15/10/2569)
+            ->when($this->parseDate(request('date_from')), function ($q, $from) {
+                $q->where('RDate', '>=', $from);
+            })
+            ->when($this->parseDate(request('date_to')), function ($q, $to) {
+                $q->where('RDate', '<=', substr($to, 0, 10).' 23:59:59');
+            })
             // ลำดับเริ่มต้น = รหัสสินค้า (เติมเฉพาะตอนผู้ใช้ยังไม่คลิก sort คอลัมน์อื่น)
             ->when(empty(request('order')), function ($q) {
                 $q->orderBy('colorno', 'asc');
@@ -60,6 +70,9 @@ class ColorRateController extends Controller
                 $key = e($item->colorno);
 
                 return '<div class="d-flex justify-content-center gap-1">
+                            <button type="button" class="btn btn-sm btn-icon btn-info waves-effect btn_history" data-id="'.$key.'" title="ประวัติการแก้ไข">
+                                <i class="ti ti-history ti-sm"></i>
+                            </button>
                             <button type="button" class="btn btn-sm btn-icon btn-warning btn_edit" data-id="'.$key.'" title="แก้ไข">
                                 <i class="ti ti-pencil ti-sm"></i>
                             </button>
@@ -142,14 +155,17 @@ class ColorRateController extends Controller
         ];
 
         if ($original === '') {
-            ColorRate::create(['colorno' => $colorno] + $data);
+            $item = ColorRate::create(['colorno' => $colorno] + $data);
+            $this->logHistory('create', $colorno, null, $item);
         } else {
             // แก้ไข — ยึด colorno เดิมเสมอ (ช่องบนฟอร์มเป็น readonly อยู่แล้ว)
             $item = ColorRate::find($original);
             if (!$item) {
                 return response()->json(['status' => 404, 'message' => 'ไม่พบรหัสสินค้า '.$original]);
             }
+            $before = clone $item;   // ค่าก่อนแก้ — เก็บลงประวัติ
             $item->forceFill($data)->save();
+            $this->logHistory('update', $original, $before, $item);
         }
 
         return response()->json([
@@ -169,6 +185,7 @@ class ColorRateController extends Controller
             ]);
         }
 
+        $this->logHistory('delete', $item->colorno, $item, null);
         $item->delete();
 
         return response()->json([
@@ -205,7 +222,92 @@ class ColorRateController extends Controller
         ]);
     }
 
+    /** จำนวนแถวสูงสุดของ "ประวัติทั้งหมด" */
+    private const HISTORY_LIMIT = 500;
+
+    /**
+     * ประวัติการแก้ไขกลุ่มราคา (15/10/2569) — คืน HTML ให้ยัดลง modal
+     * ส่ง colorno = เฉพาะรหัสนั้น (ปุ่มในแถว) · ไม่ส่ง = ทุกรหัส (ปุ่มบนหัวหน้า — รวมรหัสที่ถูกลบไปแล้ว)
+     * ค้นได้ด้วย search (LIKE รหัสสินค้า) · จำกัด HISTORY_LIMIT แถวล่าสุด
+     */
+    public function history()
+    {
+        $colorno = trim((string) request('colorno'));
+        $search  = trim((string) request('search'));
+
+        $q = ColorRateHistory::query()
+            ->when($colorno !== '', function ($q) use ($colorno) {
+                $q->where('colorno', $colorno);
+            })
+            ->when($colorno === '' && $search !== '', function ($q) use ($search) {
+                $q->where('colorno', 'like', "%{$search}%");
+            });
+
+        $total = (clone $q)->count();
+        $rows  = $q->orderByDesc('changed_at')->orderByDesc('id')
+            ->limit(self::HISTORY_LIMIT)
+            ->get();
+
+        return response()->json([
+            'status' => 200,
+            'count'  => $total,
+            'data'   => view('color-rate.history-table', [
+                'rows'    => $rows,
+                'total'   => $total,
+                'limit'   => self::HISTORY_LIMIT,
+                'single'  => $colorno !== '',
+                'actions' => ColorRateHistory::ACTIONS,
+            ])->render(),
+        ]);
+    }
+
     // ─────────── ตัวช่วย ───────────
+
+    /**
+     * บันทึกประวัติ 1 แถว — $before / $after เป็น ColorRate (null = ไม่มี: เพิ่มใหม่ไม่มี before, ลบไม่มี after)
+     * แก้ไขแต่ค่าไม่เปลี่ยนเลย = ไม่บันทึก (กันประวัติรกจากการกดบันทึกเฉย ๆ)
+     * ⚠ zcolorrate เป็น MyISAM ⇒ ไม่มีทรานแซกชันครอบ ถ้าบันทึกประวัติพังหลังเขียนราคาแล้ว ราคาไม่ถูกย้อน
+     */
+    private function logHistory(string $action, string $colorno, ?ColorRate $before, ?ColorRate $after): void
+    {
+        $pick = function (?ColorRate $r, string $prefix) {
+            return [
+                $prefix.'rate_A' => $r ? $this->numOrNull($r->rate_A) : null,
+                $prefix.'rate_B' => $r ? $this->numOrNull($r->rate_B) : null,
+                $prefix.'rate_C' => $r ? $this->numOrNull($r->rate_C) : null,
+                $prefix.'RDate'  => ($r && $r->RDate) ? date('Y-m-d H:i:s', strtotime($r->RDate)) : null,
+            ];
+        };
+
+        $old = $pick($before, 'old_');
+        $new = $pick($after, 'new_');
+
+        if ($action === 'update' && array_values($old) === array_values($new)) {
+            return;
+        }
+
+        // ผู้ทำ — ระบบมีบัญชี 2 แบบ (emp = พนักงาน, user = admin) · เก็บชื่อ ณ ตอนนั้นไว้ด้วย
+        $account = AccessControl::currentAccount();
+        $byType = $by = $byName = null;
+        if ($account instanceof Emp) {
+            $byType = 'emp';
+            $by     = $account->empno;
+            $byName = trim($account->empname.' '.$account->empsur) ?: $account->empno;
+        } elseif ($account) {
+            $byType = 'user';
+            $by     = (string) $account->id;
+            $byName = $account->name;
+        }
+
+        ColorRateHistory::create([
+            'colorno'         => $colorno,
+            'action'          => $action,
+            'changed_by_type' => $byType,
+            'changed_by'      => $by,
+            'changed_by_name' => $byName !== null ? mb_substr($byName, 0, 150) : null,
+            'changed_at'      => now(),
+        ] + $old + $new);
+    }
 
     /** จัดรูปแบบเงินสำหรับแสดงในตาราง (ว่าง = ขีด) */
     private function money($v): string
