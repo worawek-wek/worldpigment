@@ -41,6 +41,8 @@ CREATE TABLE `morder` (
   `latetype` char(1) DEFAULT NULL,
   `MSDS` tinyint(4) DEFAULT 0,
   `itype` varchar(5) DEFAULT NULL,
+  `ReqDoc` tinyint(4) DEFAULT 0,
+  `ReqDocRem` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`Orderno`),
   KEY `primarykey` (`Orderno`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;

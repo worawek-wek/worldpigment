@@ -345,6 +345,9 @@ class OrderController extends Controller
             'Spec'     => self::checked($order->Spec),
             'Cer'      => self::checked($order->Cer),
             'MSDS'     => self::checked($order->MSDS),
+            // Require Document — ติ๊ก + ข้อความเอกสารที่ต้องใช้ (15/10/2569)
+            'ReqDoc'    => self::checked($order->ReqDoc ?? null),
+            'ReqDocRem' => $order->ReqDocRem ?? null,
             // ประเภทสินค้าที่สั่ง = key จาก config/order.php → itypes
             'itype'    => $order->itype,
         ];
@@ -1226,6 +1229,11 @@ class OrderController extends Controller
             'Spec'     => $this->flag($request->input('Spec')),
             'Cer'      => $this->flag($request->input('Cer')),
             'MSDS'     => $this->flag($request->input('MSDS')),
+            // Require Document (15/10/2569) — ไม่ติ๊ก = ไม่เก็บข้อความ
+            'ReqDoc'    => $this->flag($request->input('ReqDoc')),
+            'ReqDocRem' => $this->flag($request->input('ReqDoc'))
+                ?$this->nullIfBlank($request->input('ReqDocRem'))
+                : null,
             // itype — รับเฉพาะ key ที่มีใน config/order.php → itypes (ไม่ติ๊ก/ค่าแปลก = null)
             'itype'    => in_array((string) $request->input('itype'), array_column(config('order.itypes', []), 'key'), true)
                 ? (string) $request->input('itype')

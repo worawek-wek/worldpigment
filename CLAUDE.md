@@ -416,6 +416,8 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 | **MSDS** | `customer.MSDS` | 1,593/3,465 ใบ — เป็นแค่ค่าตั้งต้น ติ๊กทับได้ |
 | ชื่อลูกค้า · itype · สถานที่ส่ง | `customer.name` · `type`→`c_type` · `naddress` | — |
 
+**ช่อง "Require Document" (15/10/2569 ตามที่ผู้ใช้สั่ง)** — ใต้แถว checkbox "เงื่อนไขบนใบสั่ง" ใน `order/form.blade.php`: ติ๊ก (`#o_ReqDoc`) แล้วกรอกข้อความ (`#o_ReqDocRem`) · เก็บที่คอลัมน์ใหม่ **`morder.ReqDoc`** tinyint(4) default 0 (-1 = ติ๊ก แบบ Access) + **`morder.ReqDocRem`** varchar(255) — migration `2026_10_15_100000_add_reqdoc_to_morder_table` (**รันแล้ว**) + เพิ่มใน `CREATE TABLE` ของ `public/sql/morder.sql` แล้ว · `syncReqDoc()` ช่องข้อความเป็น `readonly` จนกว่าจะติ๊ก (เอาติ๊กออก = ล้างข้อความ) · `saveOrder()` เตือนถ้าติ๊กแล้วไม่กรอก (ฝั่งจอ) · `headerPayload()` ไม่ติ๊ก = `ReqDocRem` เป็น null · ไม่มีค่าประจำลูกค้า
+
 **ส่งก่อนได้ (`Send`) และ SPEC (`Spec`) ไม่มีค่าประจำลูกค้า** — ตาราง `customer` ไม่มีคอลัมน์ที่ตรงกัน ผู้ใช้ต้องติ๊กเอง
 
 ผู้บันทึก (`Emp`) เติมจากพนักงานที่ล็อกอิน

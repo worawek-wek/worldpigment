@@ -182,6 +182,14 @@
                                     <label class="form-check-label" for="o_MSDS">MSDS</label>
                                 </div>
                             </div>
+                            {{-- Require Document — ติ๊กแล้วกรอกข้อความ (morder.ReqDoc / ReqDocRem, 15/10/2569) --}}
+                            <div class="d-flex align-items-center gap-2 mt-1">
+                                <div class="form-check mb-0 text-nowrap">
+                                    <input class="form-check-input" type="checkbox" id="o_ReqDoc" onchange="syncReqDoc(true)">
+                                    <label class="form-check-label" for="o_ReqDoc">Require Document</label>
+                                </div>
+                                <input type="text" id="o_ReqDocRem" class="form-control form-control-sm" maxlength="255" readonly>
+                            </div>
                         </div>
                     </div>
                 </div>

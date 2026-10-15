@@ -1264,10 +1264,21 @@
         syncItypeRequired();
     }
 
+    /* Require Document (15/10/2569) — ช่องข้อความกรอกได้เฉพาะตอนติ๊ก
+       ใช้ readonly ไม่ใช่ disabled จะได้ไม่ชนกับ setOrderFormMode() ที่คุม disabled ทั้งฟอร์ม
+       fromUser = ผู้ใช้กดติ๊กเอง → ติ๊ก = โฟกัสช่องข้อความ · เอาติ๊กออก = ล้างข้อความ */
+    function syncReqDoc(fromUser){
+        var on = $('#o_ReqDoc').is(':checked');
+        var $rem = $('#o_ReqDocRem').prop('readonly', !on).toggleClass('bg-light', !on);
+        if (!on && fromUser) $rem.val('');
+        if (on && fromUser) $rem.trigger('focus');
+    }
+
     function clearOrderForm(){
         $('#orderModal input[type="text"], #orderModal input[type="number"]').val('');
         $('#orderModal input[type="checkbox"]').prop('checked', false);
         $('#orderModal input[name="order_type_form"]').prop('checked', false);
+        syncReqDoc(false);
         $('#o_Company').val('');
         $('#o_DVpoint').html('<option value="">— ไม่ระบุ —</option>');
         $('#o_Orderno').removeData('existing');
@@ -1360,6 +1371,9 @@
         $('#o_Spec').prop('checked', !!o.Spec);
         $('#o_Cer').prop('checked', !!o.Cer);
         $('#o_MSDS').prop('checked', !!o.MSDS);
+        $('#o_ReqDoc').prop('checked', !!o.ReqDoc);
+        $('#o_ReqDocRem').val(o.ReqDocRem || '');
+        syncReqDoc(false);
 
         // สินค้า + ราคา (ราคาขายเป็นค่าที่ผู้ใช้พิมพ์ไว้เอง ไม่ได้มาจากกล่องราคา)
         $('#o_itemno').val(res.itemno || '');
@@ -1955,6 +1969,15 @@
             return;
         }
 
+        // ติ๊ก Require Document แล้วต้องกรอกข้อความ (15/10/2569)
+        if ($('#o_ReqDoc').is(':checked') && !($('#o_ReqDocRem').val() || '').trim()){
+            Swal.fire({icon: 'warning', title: 'ยังไม่ได้กรอก Require Document',
+                       text: 'ติ๊ก Require Document แล้ว กรุณากรอกเอกสารที่ต้องใช้',
+                       target: '#orderModal', heightAuto: false})
+                .then(function(){ $('#o_ReqDocRem').trigger('focus'); });
+            return;
+        }
+
         // เบอร์ที่สั่งครั้งล่าสุดเกิน 3 ปี (หรือไม่พบประวัติ) → ถามยืนยันอีกชั้นก่อนบันทึก (15/10/2569)
         confirmMatchOver3Years(items, function(){ submitOrder(isEdit, type, items); });
     }
@@ -2036,6 +2059,8 @@
             Spec:       $('#o_Spec').is(':checked')  ? 1 : 0,
             Cer:        $('#o_Cer').is(':checked')   ? 1 : 0,
             MSDS:       $('#o_MSDS').is(':checked')  ? 1 : 0,
+            ReqDoc:     $('#o_ReqDoc').is(':checked') ? 1 : 0,
+            ReqDocRem:  $('#o_ReqDocRem').val(),
             itype:      $('.o-itype-opt:checked').val() || '',
             items:      items
         };
