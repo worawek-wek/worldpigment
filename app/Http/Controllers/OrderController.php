@@ -113,6 +113,9 @@ class OrderController extends Controller
             ->orderBy('Company')
             ->pluck('Company');
 
+        // รหัสพนักงานขาย (morder.supno) — ตัวเลือกของหน้าต่าง "ประมาณการยอดขาย" (15/10/2569)
+        $data['sale_codes'] = SalesForecastController::saleCodes();
+
         // ข้อความหมายเหตุสำเร็จรูปของตารางรายการ
         $data['remarks'] = DB::table('ordrem')->orderBy('rem')->pluck('rem');
 

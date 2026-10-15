@@ -622,7 +622,8 @@ class QuotationController extends Controller
                 return null;
             }
             $name = trim(($e->empname ?? '') . ' ' . ($e->empsur ?? ''));
-            $name = $name !== '' ? $name . ' (' . $e->empno . ')' : $e->empno;
+            // ไม่แสดงรหัสพนักงานต่อท้ายชื่อ (ผู้ใช้สั่ง 12/10/2569) — ใช้รหัสเฉพาะเมื่อพนักงานไม่มีชื่อ
+            $name = $name !== '' ? $name : $e->empno;
             $hash = $e->password;
         } else {
             $u = DB::table('users')->where('id', $key)->first(['name', 'username', 'password']);

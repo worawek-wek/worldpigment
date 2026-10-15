@@ -229,20 +229,41 @@
         </div>
     </div>
 
-    {{-- ── ราคา 3 ช่อง (กลุ่ม A / B / C) — คงเป็น label อยู่บน (กล่องราคาเรียงแนวนอน กระชับอยู่แล้ว) ── --}}
+    {{-- ── ราคา 3 ช่อง — คงเป็น label อยู่บน (กล่องราคาเรียงแนวนอน กระชับอยู่แล้ว) ──
+         12/10/2569: ป้ายกลุ่ม A/B/C ย้ายลงไปเป็นแถว "ราคากลุ่ม" ด้านล่าง (ราคา 3 ช่องอยู่บน ราคากลุ่มอยู่ล่าง) --}}
+    {{-- 12/10/2569: เพิ่ม DB 3-4 Kg. / DB 1-2 Kg. ต่อท้ายในแถวเดียวกัน (5 ช่องกว้างเท่ากัน) --}}
     <div class="row g-2 mt-2 align-items-end">
-        <div class="col-md-4">
-            <label class="form-label">ราคา1 <span class="text-muted fw-normal small">(A · 1,000 kg. up)</span></label>
+        <div class="col-md">
+            <label class="form-label">ราคา 1</label>
             <input type="text" id="oa_price1" class="form-control text-end" readonly>
         </div>
-        <div class="col-md-4">
-            <label class="form-label">ราคา2 <span class="text-muted fw-normal small">(B · 500 kg. up)</span></label>
+        <div class="col-md">
+            <label class="form-label">ราคา 2</label>
             <input type="text" id="oa_price2" class="form-control text-end fw-bold oa-hl-blue" readonly>
         </div>
-        <div class="col-md-4">
-            <label class="form-label">ราคา3 <span class="text-muted fw-normal small">(C · under 500 kg.)</span></label>
+        <div class="col-md">
+            <label class="form-label">ราคา 3</label>
             <input type="text" id="oa_price3" class="form-control text-end" readonly>
         </div>
+        <div class="col-md">
+            <label class="form-label">DB 3-4 Kg.</label>
+            <input type="text" id="oa_db_3_4" class="form-control text-end" readonly tabindex="-1">
+        </div>
+        <div class="col-md">
+            <label class="form-label">DB 1-2 Kg.</label>
+            <input type="text" id="oa_db_1_2" class="form-control text-end" readonly tabindex="-1">
+        </div>
+    </div>
+
+    {{-- ── ราคากลุ่ม A/B/C ของรหัสสินค้า (zcolorrate — ตัวเดียวกับเมนู "จัดการกลุ่มราคา") — 12/10/2569
+         ป้ายเกณฑ์มาจาก PriceApprovalController::priceGroups() ไม่ hard-code · รหัสไม่มีในกลุ่มราคา = ขีด — ── --}}
+    <div class="row g-2 mt-1 align-items-end">
+        @foreach(\App\Http\Controllers\PriceApprovalController::priceGroups() as $g)
+            <div class="col-md-4">
+                <label class="form-label">ราคา{{ $g['label'] }}</label>
+                <input type="text" id="oa_group_{{ $g['group'] }}" class="form-control text-end" readonly tabindex="-1">
+            </div>
+        @endforeach
     </div>
 
     {{-- ── แถวสรุป + อนุมัติ ── --}}

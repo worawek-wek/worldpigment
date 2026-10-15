@@ -3,6 +3,7 @@
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderApprovalController;
 use App\Http\Controllers\PriceApprovalController;
+use App\Http\Controllers\SalesForecastController;
 
 Route::prefix('order')->group(function () {
 
@@ -28,6 +29,9 @@ Route::prefix('order')->group(function () {
 
     // ปุ่ม "+ เพิ่ม" ข้างช่องสถานที่ส่ง — เขียนลง naddress ของลูกค้ารายนั้น (19/09/2569)
     Route::post('/dvpoint', [OrderController::class, 'addDvpoint'])->name('order.dvpoint_add');
+
+    // ─── ประมาณการยอดขาย ตามรหัสพนักงานขาย (ฟอร์ม Access "SaleOrder", 15/10/2569) ───
+    Route::get('/sales-forecast/order-pdf', [SalesForecastController::class, 'orderPdf'])->name('order.salesforecast.order_pdf');
 
     // ─── ฟอร์มขออนุมัติราคาพิเศษ (MD) — ฟอร์มลูกของเมนูนี้ ─────────────
     Route::prefix('price-approval')->group(function () {

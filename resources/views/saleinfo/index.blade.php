@@ -382,6 +382,13 @@
                             placeholder="วว/ดด/ปปปป">
                     </div>
                 </div>
+                {{-- กรองด้วย Label DB (uprice.Label — ข้อความบนฉลาก) — 12/10/2569 --}}
+                <div class="col-md-6">
+                    <label class="form-label small fw-medium mb-1">
+                        Label DB <span class="text-muted fw-normal">(ข้อความบนฉลาก)</span>
+                    </label>
+                    <input type="text" name="label" class="form-control p_search" oninput="loadData(page)">
+                </div>
             </div>
 
             </div>
@@ -528,6 +535,7 @@
     //   ถ้าไปประกาศท้ายไฟล์ ตัวแปรจะยังเป็น undefined ตอนโหลดหน้า → throw แล้ว spinner ค้าง
     var FILTER_LABELS = {
         search:    'ค้นหา',
+        label:     'Label DB',
         date_from: 'วันที่เริ่มราคาใหม่ ตั้งแต่',
         date_to:   'ถึง'
     };
@@ -741,6 +749,7 @@
         $('#btn_delete_saleinfo').addClass('d-none').removeData('id');
         setCustomerPanel(null);
         clearSaleinfoHistory();
+        clearSaleinfoLastOrder();
         clearSaleinfoCalc();
     }
 
@@ -910,6 +919,38 @@
         });
     }
 
+    // ────────────────────────────────────────────────────────
+    //  สั่งซื้อล่าสุด (เฉพาะเบอร์นี้) — Lot / วันที่ส่งมอบล่าสุด จากใบสั่งซื้อ (12/10/2569)
+    //  เงื่อนไข: ลูกค้าคนนี้ + สินค้าชิ้นนี้ (รหัสเดียวกับที่ใช้คำนวณราคา — ITEMNO ว่างใช้ st_code)
+    // ────────────────────────────────────────────────────────
+    let saleinfoLastXhr = null;
+
+    function clearSaleinfoLastOrder() {
+        if (saleinfoLastXhr) { saleinfoLastXhr.abort(); saleinfoLastXhr = null; }
+        $('#saleinfo_last_lot, #saleinfo_last_dv').text('—');
+        $('#saleinfo_last_note').text('');
+    }
+
+    function loadSaleinfoLastOrder() {
+        const custno = ($('#form_saleinfo [name="CustNo"]').val() || '').trim();
+        const itemno = saleinfoCalcCode();
+
+        clearSaleinfoLastOrder();
+        if (!custno || !itemno) return;
+
+        saleinfoLastXhr = $.getJSON("{{ $page_url }}/last-order", { custno: custno, itemno: itemno })
+            .done(function (res) {
+                if (!res.found) {
+                    $('#saleinfo_last_note').text('ยังไม่เคยสั่งซื้อ');
+                    return;
+                }
+                $('#saleinfo_last_lot').text(res.lot || '—');
+                $('#saleinfo_last_dv').text(res.delivered || '—');
+                $('#saleinfo_last_note').text(res.over_3_years ? 'เกิน 3 ปี' : '');
+            })
+            .always(function () { saleinfoLastXhr = null; });
+    }
+
     // แถบข้อมูลลูกค้า (อ่านอย่างเดียว) ในฟอร์ม
     function setCustomerPanel(cust) {
         $('#saleinfo_cust_code').text(cust?.code ?? '—');
@@ -941,17 +982,20 @@
     $('#form_saleinfo [name="CustNo"]').on('change', function () {
         lookupCustomer($(this).val());
         loadSaleinfoHistory($('#form_saleinfo [name="_pk"]').val());
+        loadSaleinfoLastOrder();
     });
 
     // รหัสสินค้าเปลี่ยน → โหลดประวัติของคู่ลูกค้า/สินค้านี้ + คำนวณราคาใหม่
     $('#form_saleinfo [name="ITEMNO"]').on('change', function () {
         loadSaleinfoHistory($('#form_saleinfo [name="_pk"]').val());
+        loadSaleinfoLastOrder();
         clearTimeout(saleinfoCalcTimer);
         refreshSaleinfoCalc();
     });
 
     // ชื่อสินค้าเปลี่ยน → คำนวณใหม่เฉพาะตอนที่ยังไม่ได้กรอกรหัสสินค้า (ใช้ st_code แทน)
     $('#form_saleinfo [name="st_code"]').on('change', function () {
+        loadSaleinfoLastOrder();
         clearTimeout(saleinfoCalcTimer);
         refreshSaleinfoCalc();
     });
@@ -985,6 +1029,7 @@
                 lookupCustomer(d.CustNo);
                 // แก้ไขอยู่ → โชว์ประวัติของคู่นี้ แต่ไม่รวมแถวที่กำลังแก้เอง
                 loadSaleinfoHistory(id);
+                loadSaleinfoLastOrder();
                 refreshSaleinfoCalc();
                 $('#saleinfoModal').modal('show');
             },
@@ -1029,6 +1074,12 @@
                 }
             });
         });
+    });
+
+    // กด Enter ในช่องกรอก ต้องไม่ submit ฟอร์ม — บันทึกได้ทางปุ่ม "บันทึก" เท่านั้น
+    // (textarea ยังขึ้นบรรทัดใหม่ได้ตามปกติ · ปุ่มที่โฟกัสอยู่ยังกด Enter ได้)
+    $('#form_saleinfo').on('keydown', 'input', function (e) {
+        if (e.key === 'Enter') e.preventDefault();
     });
 
     $('#form_saleinfo').on('submit', function (e) {

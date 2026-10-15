@@ -138,6 +138,22 @@
                                                 inputmode="decimal" autocomplete="off" placeholder="0.00" required>
                                         </div>
                                     </div>
+
+                                    {{-- สั่งซื้อล่าสุดของ "ลูกค้าคนนี้ + สินค้าชิ้นนี้" จากใบสั่งซื้อ (12/10/2569 ตามจอ Access เดิม)
+                                         ดึงจาก saleinfo/last-order → morder + suborder · อ่านอย่างเดียว ไม่ได้บันทึก
+                                         อยู่แถวเดียวกับ วันที่เริ่มซื้อ / ราคา ตามที่ผู้ใช้สั่ง (เดิมอยู่ใต้กล่องข้อมูลลูกค้า) --}}
+                                    <div class="col-md-4">
+                                        <div class="px-3 py-2 rounded" style="background-color: #b5dfe0; border: 1px solid #9fd0d1;">
+                                            <div class="small fw-semibold mb-1">สั่งซื้อล่าสุด (เฉพาะเบอร์นี้)</div>
+                                            <div class="row gx-2 gy-1">
+                                                <div class="col-6 small">Lot ล่าสุด</div>
+                                                <div class="col-6 small fw-semibold" id="saleinfo_last_lot">—</div>
+                                                <div class="col-6 small">วันที่ส่งมอบล่าสุด</div>
+                                                <div class="col-6 small fw-semibold" id="saleinfo_last_dv">—</div>
+                                                <div class="col-6 offset-6 small fw-semibold" id="saleinfo_last_note"></div>
+                                            </div>
+                                        </div>
+                                    </div>
                                     {{-- ปิดไว้ก่อน: NoAcp เป็นคอลัมน์ใน uprice ของเดิม (มีค่า 1 อยู่ 114 จาก 60,603 แถว)
                                          แต่ "ไม่รับ Order เบอร์นี้" เป็นการเดาความหมายจากชื่อคอลัมน์ — ไม่มีช่องนี้ในจอเก่า
                                          รอลูกค้ายืนยันความหมายก่อนค่อยเปิดใช้ (คอลัมน์ NoAcp ใน uprice ยังอยู่ ค่าเดิมไม่ถูกแตะ)

@@ -507,6 +507,11 @@
                             <i class="ti ti-printer me-1"></i>
                             พิมพ์รายงานที่ต้องผลิต
                         </button>
+                        {{-- ประมาณการยอดขาย ตามรหัสพนักงานขาย (15/10/2569 — ฟอร์ม Access "SaleOrder") → #salesForecastModal --}}
+                        <button class="btn btn-label-secondary border" onclick="salesForecastOpen()">
+                            <i class="ti ti-report-money me-1"></i>
+                            ประมาณการยอดขาย
+                        </button>
                         <button class="btn btn-label-primary border" style="color: #1f158e;" onclick="approvalOpen()">
                             <i class="ti ti-discount-check me-1"></i>
                             ขออนุมัติราคาพิเศษ
@@ -814,6 +819,62 @@
                         <i class="ti ti-printer me-1"></i>ออกรายงาน
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- ═══ หน้าต่าง "ประมาณการยอดขาย ตามรหัสพนักงานขาย" (15/10/2569 — ฟอร์ม Access "SaleOrder") ═══
+     ใช้ได้แล้วเฉพาะปุ่ม "ยอดรับ Order" → SalesForecastController::orderPdf()
+     อีก 3 ปุ่มยังไม่รู้เงื่อนไข (class wip) --}}
+<div class="modal fade" id="salesForecastModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="ti ti-report-money me-2"></i>ประมาณการยอดขาย ตามรหัสพนักงานขาย</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body of-form" style="--of-lw: 130px;">
+                <div class="row gx-3 gy-2">
+                    <div class="col-md-6 of-row">
+                        <label class="form-label" for="sf_sale">รหัสพนักงานขาย</label>
+                        <div class="of-ctl">
+                            <select id="sf_sale" class="form-select no-enhance">
+                                <option value="">รวม</option>
+                                @foreach ($sale_codes as $s)
+                                    <option value="{{ $s }}">{{ $s }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row gx-3 gy-2 mt-0">
+                    <div class="col-md-6 of-row">
+                        <label class="form-label" for="sf_from">ช่วง วันที่-เวลา</label>
+                        <div class="of-ctl"><input type="text" id="sf_from" class="form-control" autocomplete="off"></div>
+                    </div>
+                    <div class="col-md-6 of-row of-row-auto">
+                        <label class="form-label" for="sf_to">ถึง วันที่-เวลา</label>
+                        <div class="of-ctl"><input type="text" id="sf_to" class="form-control" autocomplete="off"></div>
+                    </div>
+                </div>
+                <div class="row g-2 mt-3">
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-outline-primary w-100" onclick="salesForecastPrint('order')">ยอดรับ Order</button>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-outline-danger w-100 wip" onclick="salesForecastPrint('due')">กำหนดส่ง (แรก)</button>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-outline-primary w-100 wip" onclick="salesForecastPrint('latest')">เลื่อนล่าสุด</button>
+                    </div>
+                    <div class="col-12">
+                        <button type="button" class="btn btn-outline-secondary w-100 wip" onclick="salesForecastPrint('delivered')">ยอดขาย ที่จัดส่งลูกค้า เฉพาะราคาผ่านช่อง 2</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ปิด</button>
             </div>
         </div>
     </div>
@@ -2173,6 +2234,15 @@
         $('#oa_price1').val(fmtNum(p.price1, 0));
         $('#oa_price2').val(fmtNum(p.price2, 0));
         $('#oa_price3').val(fmtNum(p.price3, 0));
+        // DB 3-4 / 1-2 Kg. — คำนวณสดจากระบบกำหนดราคา โชว์เป็นจำนวนเต็มเหมือนราคา 1/2/3 (12/10/2569)
+        $('#oa_db_3_4').val(fmtNum(p.db_3_4, 0));
+        $('#oa_db_1_2').val(fmtNum(p.db_1_2, 0));
+        // ราคากลุ่ม A/B/C (zcolorrate) ใต้ราคา 3 ช่อง — ทศนิยม 2 ตำแหน่งเหมือนตาราง "ดูกลุ่มราคา" (12/10/2569)
+        // รหัสไม่มีในกลุ่มราคา = ขีด — (ไม่ปล่อยว่าง จะได้รู้ว่าไม่มี ไม่ใช่ยังไม่โหลด)
+        var cr = p.color_rate || null;
+        ['A', 'B', 'C'].forEach(function(g){
+            $('#oa_group_' + g).val(cr ? (fmtNum(cr[g], 2) || '—') : '—');
+        });
     }
 
     // ── ปุ่มอนุมัติ — เขียน morder.appv + morder.appvDT ──
@@ -3075,6 +3145,43 @@
 
     function approvalPrint(){
         window.open(APPROVAL_URL + '/approved-pdf', '_blank');
+    }
+
+    // ────────────────────────────────────────────────────────
+    //  ประมาณการยอดขาย ตามรหัสพนักงานขาย (15/10/2569) — ฟอร์ม Access "SaleOrder"
+    //  ค่าเริ่มต้น: ต้นเดือน 00:00 → สิ้นเดือน 23:59 · รหัสพนักงานขาย = รวม
+    // ────────────────────────────────────────────────────────
+    var sfFp = null;
+    function salesForecastOpen(){
+        if (!sfFp) {
+            var opt = {
+                enableTime: true, time_24hr: true, dateFormat: 'd/m/Y H:i',
+                allowInput: true, static: true, disableMobile: true
+            };
+            sfFp = { from: flatpickr('#sf_from', opt), to: flatpickr('#sf_to', opt) };
+        }
+        var now = new Date();
+        sfFp.from.setDate(new Date(now.getFullYear(), now.getMonth(), 1, 0, 0), false);
+        sfFp.to.setDate(new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59), false);
+        $('#sf_sale').val('');
+        $('#salesForecastModal').modal('show');
+    }
+    function salesForecastPrint(kind){
+        if (kind !== 'order') {
+            Swal.fire({ icon: 'info', title: 'ยังไม่เปิดใช้งาน', text: 'รายงานนี้ยังไม่ได้ทำ', target: '#salesForecastModal', heightAuto: false });
+            return;
+        }
+        var from = sfFp.from.selectedDates[0], to = sfFp.to.selectedDates[0];
+        if (!from || !to) {
+            Swal.fire({ icon: 'warning', title: 'กรุณาเลือกช่วงวันที่-เวลา', target: '#salesForecastModal', heightAuto: false });
+            return;
+        }
+        if (from > to) {
+            Swal.fire({ icon: 'warning', title: 'ช่วงวันที่ไม่ถูกต้อง', text: 'วันที่เริ่มต้องไม่มากกว่าวันที่สิ้นสุด', target: '#salesForecastModal', heightAuto: false });
+            return;
+        }
+        var q = { sale: $('#sf_sale').val() || '', from: $('#sf_from').val(), to: $('#sf_to').val() };
+        window.open('{{ url('order/sales-forecast/order-pdf') }}?' + $.param(q), '_blank');
     }
 
     // ────────────────────────────────────────────────────────

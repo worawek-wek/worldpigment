@@ -20,6 +20,8 @@ Route::prefix('saleinfo')->group(function () {
     Route::get('/edit/{id}', [SaleinfoController::class, 'edit'])->name('saleinfo.edit');   // → JSON (เติมฟอร์ม)
     Route::get('/history',   [SaleinfoController::class, 'history'])->name('saleinfo.history'); // → JSON (ประวัติการปรับราคา)
 
+    Route::get('/last-order', [SaleinfoController::class, 'lastOrder'])->name('saleinfo.last_order'); // → JSON (สั่งซื้อล่าสุดของลูกค้า+สินค้า 12/10/2569)
+
     // ─── เขียน ───────────────────────────────────────────────────────
     Route::post('/insert', [SaleinfoController::class, 'insert'])->name('saleinfo.insert');
     Route::post('/update', [SaleinfoController::class, 'update'])->name('saleinfo.update');

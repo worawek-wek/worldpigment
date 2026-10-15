@@ -358,6 +358,54 @@ class SaleinfoController extends Controller
     }
 
     /**
+     * GET — สั่งซื้อล่าสุดของ "ลูกค้าคนนี้ + สินค้าชิ้นนี้" จากใบสั่งซื้อ (JSON) — 12/10/2569
+     *
+     * เติมกล่อง "สั่งซื้อล่าสุด (เฉพาะเบอร์นี้)" ในฟอร์มกำหนดราคา (ตามจอ Access เดิม)
+     *   Lot ล่าสุด          = `suborder.Lotno` ของใบล่าสุด (`morder.Mdate`) ที่มี Lot แล้ว
+     *   วันที่ส่งมอบล่าสุด   = `suborder.DVDate` (วันที่ลูกค้าได้รับ) ที่ใหม่ที่สุด
+     *   เกิน 3 ปี            = วันที่ส่งมอบล่าสุดห่างจากวันนี้เกิน 3 ปี
+     * อ่านอย่างเดียว — ไม่เคยสั่ง = found: false
+     */
+    public function lastOrder(Request $request)
+    {
+        $custno = trim((string) $request->query('custno'));
+        $itemno = trim((string) $request->query('itemno'));
+
+        if ($custno === '' || $itemno === '') {
+            return response()->json(['found' => false]);
+        }
+
+        $base = function () use ($custno, $itemno) {
+            return DB::table('suborder as s')
+                ->join('morder as m', 'm.Orderno', '=', 's.Orderno')
+                ->where('m.Custno', $custno)
+                ->where('s.Itemno', $itemno);
+        };
+
+        if (!$base()->exists()) {
+            return response()->json(['found' => false]);
+        }
+
+        // ใบล่าสุดมักยังไม่ได้ออก Lot → เอา Lot ของใบล่าสุด "ที่มี Lot แล้ว"
+        $lot = $base()
+            ->whereNotNull('s.Lotno')
+            ->where('s.Lotno', '<>', '')
+            ->orderByDesc('m.Mdate')
+            ->orderByDesc('s.Runno')
+            ->value('s.Lotno');
+
+        $delivered = $base()->max('s.DVDate');
+        $delivered = $delivered ? Carbon::parse($delivered) : null;
+
+        return response()->json([
+            'found'      => true,
+            'lot'        => $lot,
+            'delivered'  => $delivered ? $delivered->format('d/m/y') : null,
+            'over_3_years' => $delivered ? $delivered->lt(now()->subYears(3)) : false,
+        ]);
+    }
+
+    /**
      * POST — เพิ่มราคาใหม่
      */
     public function insert(Request $request)
@@ -505,6 +553,11 @@ class SaleinfoController extends Controller
                   ->orWhere('uprice.ITEMNO', 'LIKE', "%{$s}%")
                   ->orWhere('c.name', 'LIKE', "%{$s}%");
             });
+        }
+        // กรองด้วย Label DB (uprice.Label — ข้อความบนฉลาก) — 12/10/2569
+        $label = trim((string) $request->input('label', ''));
+        if ($label !== '') {
+            $query->where('uprice.Label', 'LIKE', "%{$label}%");
         }
         if (@$request->date_from) {
             $d = $this->parseDate($request->date_from);

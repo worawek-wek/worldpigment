@@ -40,6 +40,7 @@ worldpigment/
 │   │   ├── OrderController.php      # เมนู O-Order — ฟอร์มบันทึกใบสั่งซื้อ morder/suborder (12/08/2569)
 │   │   ├── PriceApprovalController.php  # ฟอร์มลูกของ O-Order — ขออนุมัติราคาพิเศษ appvreq (12/08/2569)
 │   │   ├── OrderApprovalController.php  # ฟอร์มลูกของ O-Order — อนุมัติใบสั่งซื้อ morder.appv (12/08/2569)
+│   │   ├── SalesForecastController.php  # ฟอร์มลูกของ O-Order — ประมาณการยอดขาย ตามรหัสพนักงานขาย (PDF) (15/10/2569)
 │   │   ├── QuotationController.php
 │   │   ├── CustomerController.php   # ฐานข้อมูลลูกค้า customer/contact/naddress/engname — CRUD (24/08/2569)
 │   │   ├── ReportController.php
@@ -749,6 +750,16 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 - `approvableQuery()` qualify เป็น `morder.Orderno` แล้ว (เดิม `Orderno` เปล่า — join `suborder` แล้ว ambiguous)
 - ทดสอบด้วยข้อมูล 18/09/2026 (DB/P = 10 รายการ 90 กก. ตรงกับ SQL · MB/S · ช่วงเวลาแคบ · ไม่มีข้อมูล · พารามิเตอร์ขยะ) ผ่าน แต่ **ยังไม่ได้เปิดดูหน้าตา PDF และยังไม่ได้กดหน้าต่างเลือกเงื่อนไขในเบราว์เซอร์** — เครื่อง dev ข้อมูล `appvDT` ล่าสุดคือ 21/09/2026
 
+### ปุ่ม "ประมาณการยอดขาย" → PDF "รายงานยอดรับ Order ตามรหัสพนักงานขาย" — 15/10/2569
+
+แปลงจากฟอร์ม Access **"SaleOrder"** — ปุ่มบนหัวหน้า `/order` → หน้าต่าง `#salesForecastModal` (`order/index.blade.php`: `salesForecastOpen()` / `salesForecastPrint(kind)`) → `GET order/sales-forecast/order-pdf` → `SalesForecastController::orderPdf()` (mPDF A4 แนวตั้ง) → blade **`order/sales-forecast-pdf.blade.php`**
+
+- **ตัวเลือก:** รหัสพนักงานขาย (`sale` = `morder.supno`, ว่าง = "รวม" · ตัวเลือกจาก `SalesForecastController::saleCodes()` ส่งผ่าน `OrderController::index` เป็น `$sale_codes`) · ช่วงวันที่-เวลา (`from`/`to` รูปแบบ `d/m/Y H:i`, flatpickr 24 ชม., ค่าเริ่มต้น ต้นเดือน 00:00 → สิ้นเดือน 23:59 · `to` รวมทั้งนาทีสุดท้าย)
+- **ยอด = `morder.netqty × morder.price`** · กรอง `morder.Mdate` · กลุ่มละ 1 พนักงานขาย (`supno` เรียงแบบข้อความ 1,10,11,…,5,8 ตามกระดาษ) → แถวละ 1 ลูกค้า → คอลัมน์ MB / DB / CP / SPP (`morder.Company`, ค่าคงที่ `COMPANIES`) + รวม · ท้ายกลุ่ม "รวม" · ท้ายรายงาน "รวมทุกราย" · แผนกว่าง/อื่น ๆ นับเข้าเฉพาะช่องรวม · ลูกค้าที่ยอด 0 ทั้งแถวไม่แสดง
+- **เทียบกับกระดาษตัวอย่าง (01–03/09/26) ตรง 5 จาก 7 เซลส์** (5/10/11/13/15) · เซลส์ 1 เกินกระดาษ 2,145.5 = ลูกค้า **`E1027`** พอดี (ระบบเดิมน่าจะตัดลูกค้ารหัสขึ้นต้น E — **ยังไม่ได้ตัด รอยืนยัน**) · เซลส์ 8 ขาด 57,500 ที่ลูกค้า `36017` (น่าจะเป็นใบที่ถูกแก้/ลบหลังพิมพ์กระดาษ)
+- ⚠ **อีก 3 ปุ่มของฟอร์มเดิมยังไม่ทำ (class `wip`, กดแล้วขึ้น "ยังไม่เปิดใช้งาน")**: กำหนดส่ง (แรก) · เลื่อนล่าสุด · ยอดขาย ที่จัดส่งลูกค้า เฉพาะราคาผ่านช่อง 2 — ยังไม่รู้เงื่อนไข
+- route อยู่ใต้ `order.*` ⇒ สิทธิ์ตามเมนู Order · ⚠ ยังไม่ได้เปิดดูหน้าตา PDF ในเบราว์เซอร์
+
 ### ฟอร์มลูก: อนุมัติใบสั่งซื้อ (morderAPPV) — 12/08/2569
 
 แปลงจากฟอร์ม Access **"morderAPPV"** — `OrderApprovalController` + route ใต้ prefix `order/order-approval/*` + view `order/order-approval.blade.php` (modal ในหน้า `/order`) **สถานะ: อนุมัติ / ยกเลิกอนุมัติ ได้แล้ว** (21/08/2569)
@@ -792,7 +803,9 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 | ส่งก่อนได้ / RP / Spec / Cer / สถานที่ส่ง | `morder.Send` / `RP` / `Spec` / `Cer` / `DVpoint` |
 | ตารางเหลือง: รหัสสินค้า · ชื่อสินค้า · Lot No · **S** · **P** · กำหนดทบทวน · หมายเหตุ | `suborder.Itemno` · `prodname` · `Lotno` · `Stock` · `Production` · `senddate` · `Remark` |
 | REM1 / REM2 / ราคาที่กำหนดไว้ | `uprice.REM1` / `REM2` / `PRICE` (ของเบอร์ที่เลือกในตาราง) |
-| ราคา1 / ราคา2 / ราคา3 | `appvreq.price1` / `price2` / `price3` (= กลุ่ม A/B/C) |
+| ราคา1 / ราคา2 / ราคา3 | `appvreq.price1` / `price2` / `price3` (สำเนาราคา 3 ช่องของใบขอราคาล่าสุดของคู่ ลูกค้า+เบอร์ — คู่ที่ไม่เคยขอราคา = ว่าง) |
+| **DB 3-4 Kg. / DB 1-2 Kg.** (ต่อท้ายราคา 1/2/3 ในแถวเดียวกัน — เพิ่ม 12/10/2569 ตามที่ผู้ใช้สั่ง) | คำนวณสดจาก `ProductPriceService::lookup($itemno)` (`db_3_4` / `db_1_2` — ไม่มีที่เก็บใน `appvreq`) · `#oa_db_3_4` / `#oa_db_1_2` โชว์เป็นจำนวนเต็ม · ⚠ **คนละที่มากับราคา 1/2/3 ของฟอร์มนี้** (อันนั้นเป็นสำเนาใน `appvreq`) ⇒ คู่ที่ไม่เคยขอราคา ราคา 1/2/3 ว่างแต่ DB มีค่า และถ้าราคาทุนเปลี่ยนหลังวันที่ขอ ตัวเลขจะไม่ต่อเนื่องกัน |
+| **ราคากลุ่ม A / B / C** (แถวใต้ราคา 3 ช่อง — เพิ่ม 12/10/2569 ตามที่ผู้ใช้สั่ง) | `zcolorrate.rate_A` / `rate_B` / `rate_C` ของรหัสสินค้า — `itemPrice()` แนบ key `color_rate` (null = ไม่มีในกลุ่มราคา → ช่องขีด `—`) · `oaFillPrice()` เติม `#oa_group_A/B/C` ทศนิยม 2 ตำแหน่ง · ป้ายเกณฑ์มาจาก `PriceApprovalController::priceGroups()` · ป้าย "(A · 1,000 kg. up)" เดิมบนช่องราคา1/2/3 ถูกถอดออก (ย้ายไปอยู่ที่แถวราคากลุ่ม) |
 | `(<เทอม> - <ส่วนลด>%)` | `customer.term` + `customer.cashdisc` |
 | ราคาขายครั้งนี้ | `morder.price` |
 | **อนุมัติ / วัน-เวลา อนุมัติ** | **`morder.appv`** (-1 = อนุมัติ) / **`morder.appvDT`** |
@@ -909,6 +922,16 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 - ฝั่งจอ `setSaleinfoGroupRates(rate, showNone)` ใน `saleinfo/index.blade.php` — เรียกจาก `showSaleinfoCalc()` **ก่อน**แยกขาคำนวณได้/ไม่ได้ (ราคากลุ่มไม่ขึ้นกับราคาทุน: รหัสที่คำนวณราคา 1/2/3 ไม่ได้ก็ยังมีราคากลุ่มได้ เช่น `1107025`) และ `clearSaleinfoCalc()` · ไม่มีในกลุ่มราคา = ช่องขีด `—` + ข้อความ "รหัสสินค้านี้ไม่มีในกลุ่มราคา" (`#saleinfo_group_none`)
 - แสดงทศนิยม 2 ตำแหน่ง (ตรงกับตาราง "ดูกลุ่มราคา") · ป้ายเกณฑ์กลุ่มมาจาก `PriceApprovalController::priceGroups()` ไม่ hard-code · **แสดงอย่างเดียว ไม่ได้บันทึก**
 - ⚠ **ทำเฉพาะฟอร์ม "กำหนดราคา"** — จอ "ค้นหาราคาสินค้า" (`modal-newprice`) ได้ `color_rate` มาใน response เดียวกันแต่ยังไม่ได้แสดง · จอ Test Price ไม่ได้แตะ
+
+**ฟอร์ม "กำหนดราคา" มีกล่อง "สั่งซื้อล่าสุด (เฉพาะเบอร์นี้)" (12/10/2569 ตามที่ผู้ใช้สั่ง — ตามจอ Access เดิม)** — กล่องเขียวอมฟ้า **แถวเดียวกับ "วันที่เริ่มซื้อ" / "ราคา"** (คอลัมน์ที่ 3 `col-md-4` ของกลุ่ม "ราคา" — ผู้ใช้สั่งย้ายมาจากใต้กล่อง "ข้อมูลลูกค้า" ในวันเดียวกัน) ใน `modal-price.blade.php` (`#saleinfo_last_lot` / `#saleinfo_last_dv` / `#saleinfo_last_note`) · เงื่อนไข **ลูกค้าคนนี้ + สินค้าชิ้นนี้** จากใบสั่งซื้อ (`morder.Custno` + `suborder.Itemno`)
+- `GET saleinfo/last-order?custno=&itemno=` → `SaleinfoController::lastOrder()` · **Lot ล่าสุด** = `suborder.Lotno` ของใบล่าสุด (`morder.Mdate` → `Runno`) **ที่มี Lot แล้ว** (ใบล่าสุดมักยังไม่ออก Lot) · **วันที่ส่งมอบล่าสุด** = `MAX(suborder.DVDate)` (วันที่ลูกค้าได้รับ) รูปแบบ `d/m/y` · **"เกิน 3 ปี"** = วันที่ส่งมอบล่าสุดห่างจากวันนี้เกิน 3 ปี · 2 ค่านี้หาแยกกัน จึงอาจมาจากคนละใบ
+- ฝั่งจอ `loadSaleinfoLastOrder()` / `clearSaleinfoLastOrder()` ใน `saleinfo/index.blade.php` — เรียกตอน `change` ของ CustNo / ITEMNO / st_code · ตอนเปิดแก้ไข (`viewSaleinfo`) · ล้างตอน reset ฟอร์ม · รหัสสินค้าใช้ `saleinfoCalcCode()` (ITEMNO ว่าง = ใช้ st_code) · ไม่เคยสั่ง = ขึ้น "ยังไม่เคยสั่งซื้อ" · อ่านอย่างเดียว ไม่ได้บันทึก
+- ⚠ **"เกิน 3 ปี" ยังไม่มีทางขึ้นกับข้อมูลปัจจุบัน** — `morder` ในเครื่อง dev มีแค่ปี 2026 (01/2026 เป็นต้นไป) ⇒ ลูกค้า/เบอร์ที่สั่งครั้งสุดท้ายก่อนหน้านั้นจะขึ้น "ยังไม่เคยสั่งซื้อ" แทน
+- ⚠ `DVDate` เป็นวันในอนาคตได้ (เช่น 30/10/2026) — แสดงตามที่เก็บ ไม่ได้กรอง · ความหมาย "วันที่ส่งมอบ = `DVDate`" ตั้งจากชื่อช่อง ยังไม่ได้ยืนยันกับผู้ใช้ · ยังไม่ได้เปิดดูในเบราว์เซอร์
+
+**กด Enter ในฟอร์ม "กำหนดราคา" ไม่ submit (15/10/2569 ตามที่ผู้ใช้สั่ง)** — handler `keydown` บน `input` ของ `#form_saleinfo` (`saleinfo/index.blade.php`) `preventDefault()` เมื่อกด Enter ⇒ บันทึกได้ทางปุ่ม "บันทึก" เท่านั้น · textarea ยังขึ้นบรรทัดใหม่ได้ · ฝั่งจอล้วน
+
+**ตัวกรอง "Label DB" ในหน้ารายการ (12/10/2569 ตามที่ผู้ใช้สั่ง)** — ช่อง `input[name="label"]` ในกล่องตัวกรอง (`saleinfo/index.blade.php`, class `p_search` + ป้ายใน `FILTER_LABELS`) → `SaleinfoController::applyFilters()` กรอง `uprice.Label LIKE %…%` (รวมกับตัวกรองอื่นเป็น AND) · ช่องค้นหารวมยัง**ไม่**ค้น `Label` · มี `Label` อยู่ 9,834 จาก 60,712 แถว · ตารางรายการไม่มีคอลัมน์ Label ให้ดู (เห็นได้ในฟอร์มแก้ไข)
 
 **ตาราง `tb_saleinfo` ยังอยู่ ไม่ได้ลบ** — มี 6 แถวและ**เป็นข้อมูลทดสอบทั้งหมด** (`Test`, `12345`, `78945`) ไม่มีของจริงต้องย้าย. ตอนนี้ไม่มีโค้ดไหนอ่าน/เขียนแล้ว — จะ drop ทิ้งเมื่อไหร่ก็ได้ (พร้อม migration 2 ไฟล์ที่สร้างมัน) แต่ยังไม่ทำเพราะเป็นการลบข้อมูล
 
@@ -1155,6 +1178,8 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
   - connection `access` ใน `config/database.php` + `DB::extend('access', ...)` ใน `AppServiceProvider` ยังอยู่ แต่ไม่มีใครเรียกแล้ว (resolve แบบ lazy จึงไม่พังตอน boot)
   - ดูข้อมูลทั้ง 3 ตารางได้ที่ท้ายหน้า **กำหนดราคา** (`/saleinfo`) — แท็บ Compo / PdPrice / TestMai อ่านอย่างเดียว ผ่าน `SaleinfoController::accessData()` → `saleinfo/access-table.blade.php` (05/08/2569)
 - **ตารางเงื่อนไขคิดราคาขาย** (`config/product_price.php` + `ProductPriceService`, 10/08/2569): แต่ละแถวมี `key` (ห้ามเปลี่ยน/ซ้ำ), `prefix`, `suffix`, `suffix_pos` (= ตัวลงท้ายต้องเริ่มที่ตัวที่ N พอดี เช่น "MB ตัวที่ 8 ลงท้ายด้วย P/PC/K/J") และ `mul`/`div`/`add`
+  - **เงื่อนไขตามช่วงราคาทุน — `price_over` / `price_upto` (12/10/2569 ลูกค้าขอเพิ่ม):** แถวที่มี 2 key นี้ใช้ได้เฉพาะเมื่อราคาทุน **มากกว่า `price_over` และไม่เกิน `price_upto`** (ไม่ใส่ = ไม่จำกัดฝั่งนั้น) — `ProductPriceService::match($code, $base)` รับราคาทุนเพิ่ม (`quote()` ส่งให้; ไม่ส่ง = แถวที่มีช่วงไม่ถูกเลือก) · ใช้กับ **รหัสขึ้นต้น 11 / 12 / 13 / 14** 4 แถว (`p11_14_100` / `_500` / `_1000` / `_up`): ราคาทุน ≤100 → ×103÷100+25 · >100–500 → +35 · >500–1,000 → +20 · >1,000 → +200 · เดิมรหัสกลุ่มนี้ (1,279 รหัสใน `access_pdprice`) ตกแถว "ขึ้นต้นด้วย 1 อื่น ๆ" (0/0/0) คิดราคาไม่ได้ ⇒ **ตอนนี้คิดราคาได้ และด่านราคาในใบสั่งซื้อเริ่มบังคับกับรหัสกลุ่มนี้ด้วย** · ช่วงแรกไม่มีขอบล่าง (ราคาทุนต่ำกว่า 1 ก็เข้า) · หน้า `/price-rule` ไม่ได้แก้ — 4 แถวใหม่ขึ้นเองและแก้ คูณ/หาร/บวก ได้ตามปกติ (ช่วงราคาอยู่ในชื่อเงื่อนไข แก้ที่ config) · ⚠ server ที่ cache config ต้องเปิด `/clc` ก่อนถึงจะเห็น
+  - **รหัสขึ้นต้น 16 แยกเป็นแถวของตัวเอง `p16` = ×101÷100+0 (12/10/2569 ลูกค้าขอเพิ่ม)** — เดิมรวมอยู่กับ 15 ในแถว `p15_16` (×102÷100+0) · แถว `p15_16` **คง key เดิม** แต่เหลือเฉพาะ prefix 15 (ป้ายเปลี่ยนเป็น "เม็ด ขึ้นต้นด้วย 15")
   - โครงเงื่อนไข (label/prefix/suffix/suffix_pos) แก้ที่ไฟล์ config เท่านั้น
   - ส่วน **คูณ/หาร/บวก ผู้ใช้แก้เองได้** → เก็บลงตาราง `tb_price_rule` (`rule_key` unique) ซึ่ง **ทับ** ค่าใน config; แถวที่ค่าตรงกับค่าตั้งต้นจะถูกลบทิ้ง = กลับไปใช้ค่า config
   - **หน้าจอแก้ค่าย้ายออกมาเป็นเมนูของตัวเองแล้ว: "ตั้งค่าเงื่อนไขราคา" `/price-rule` (21/08/2569)** — `PriceRuleController` (`index` / `data` → JSON / `update`) + `routes/pricerule.php` + view `pricerule/index.blade.php`; menu key **`PriceRule`** อยู่ใต้หัวข้อ Settings (ต่อจาก "สถานะ Planning"). เดิมเป็น modal `saleinfo/modal-pricerule.blade.php` ในหน้า `/saleinfo` — **ลบทิ้งแล้ว** พร้อม method `SaleinfoController::priceRules/priceRulesUpdate` + route `saleinfo/price-rules*` (ย้ายโค้ดมาทั้งชุด ตรรกะเดิมทุกอย่าง); **ปุ่ม "ตั้งค่าเงื่อนไขราคา" บนหัวหน้า `/saleinfo` ปิดไปแล้ว** เข้าได้ทางเมนูอย่างเดียว

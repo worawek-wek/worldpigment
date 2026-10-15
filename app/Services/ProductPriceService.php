@@ -62,7 +62,7 @@ class ProductPriceService
     public function quote(string $code, float $base): array
     {
         $code = trim($code);
-        $rule = $this->match($code);
+        $rule = $this->match($code, $base);
 
         if (!$rule) {
             return $this->fail($code, $base, 'ไม่มีเงื่อนไขราคารองรับรหัสที่ขึ้นต้นด้วยนี้');
@@ -199,8 +199,11 @@ class ProductPriceService
      * ความเจาะจง: มี suffix (+100) > prefix ยาว (+ความยาว)
      * เช่น 219E649TR เข้าทั้ง "21" และ "2 ลงท้าย TR" → ใช้แบบหลัง
      *      1500102   เข้าทั้ง "1" และ "15"          → ใช้ "15"
+     *
+     * แถวที่มี price_over / price_upto = ใช้ได้เฉพาะราคาทุนในช่วงนั้น (12/10/2569)
+     * — ไม่ส่งราคาทุนมา ($base = null) แถวพวกนี้จะไม่ถูกเลือก
      */
-    public function match(string $code): ?array
+    public function match(string $code, ?float $base = null): ?array
     {
         $code = strtoupper(trim($code));
         $best = null;
@@ -209,6 +212,10 @@ class ProductPriceService
         foreach ($this->rules() as $rule) {
             $prefix = $this->matchedPrefix($code, $rule['prefix'] ?? []);
             if ($prefix === null) {
+                continue;
+            }
+
+            if (!$this->matchesPriceRange($rule, $base)) {
                 continue;
             }
 
@@ -233,6 +240,26 @@ class ProductPriceService
         }
 
         return $best;
+    }
+
+    /**
+     * ราคาทุนอยู่ในช่วงของแถวนี้ไหม — price_over = ต้องมากกว่า · price_upto = ต้องไม่เกิน
+     * แถวที่ไม่ได้กำหนดช่วง = ผ่านเสมอ
+     */
+    private function matchesPriceRange(array $rule, ?float $base): bool
+    {
+        $over = $rule['price_over'] ?? null;
+        $upto = $rule['price_upto'] ?? null;
+
+        if ($over === null && $upto === null) {
+            return true;
+        }
+
+        if ($base === null) {
+            return false;
+        }
+
+        return ($over === null || $base > $over) && ($upto === null || $base <= $upto);
     }
 
     /** คืน prefix ที่ยาวที่สุดในกลุ่มนี้ที่ตรงกับรหัส (ไม่ตรงเลย = null) */

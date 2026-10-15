@@ -246,7 +246,8 @@ class OrderApprovalController extends Controller
     /**
      * ราคาอ้างอิงของเบอร์สินค้า 1 เบอร์ (แผงล่างของฟอร์ม)
      *   fixed_price / REM1 / REM2  → uprice  (ราคาที่กำหนดไว้ + หมายเหตุ 2 บรรทัด)
-     *   price1/2/3                 → appvreq (ราคาตามกลุ่มปริมาณ A/B/C ของใบขออนุมัติล่าสุด)
+     *   price1/2/3                 → appvreq (ราคา 3 ช่องของใบขออนุมัติล่าสุด)
+     *   color_rate                 → zcolorrate (ราคากลุ่ม A/B/C — แถวล่างใต้ราคา 3 ช่อง)
      */
     private function itemPrice($custno, $itemno): array
     {
@@ -262,7 +263,20 @@ class OrderApprovalController extends Controller
             ->orderByDesc('ReqDate')
             ->first(['price1', 'price2', 'price3']);
 
+        // ราคากลุ่ม A/B/C ของรหัสสินค้า (zcolorrate — ตัวเดียวกับเมนู "จัดการกลุ่มราคา") — 12/10/2569
+        // ไม่ผูกกับลูกค้า · รหัสไม่มีในตาราง = null (จอโชว์ขีด —)
+        $rate = DB::table('zcolorrate')
+            ->where('colorno', $itemno)
+            ->first(['rate_A', 'rate_B', 'rate_C']);
+
+        // DB 3-4 Kg. / DB 1-2 Kg. — ไม่มีที่เก็บใน appvreq จึงคำนวณสดจากระบบกำหนดราคา
+        // (ตัวเดียวกับฟอร์ม "กำหนดราคา" / ฟอร์มขออนุมัติราคาพิเศษ) · คำนวณไม่ได้ = null — 12/10/2569
+        $calc = app(\App\Services\ProductPriceService::class)->lookup((string) $itemno);
+
         return [
+            'db_3_4'      => $calc['prices']['db_3_4'] ?? null,
+            'db_1_2'      => $calc['prices']['db_1_2'] ?? null,
+            'color_rate'  => $rate ? ['A' => $rate->rate_A, 'B' => $rate->rate_B, 'C' => $rate->rate_C] : null,
             'fixed_price' => $uprice->PRICE ?? null,
             'rem1'        => $uprice->REM1 ?? null,
             'rem2'        => $uprice->REM2 ?? null,
