@@ -257,6 +257,8 @@
                     <div class="col-6">
                         <input type="text" id="o_valid_to" class="form-control form-control-sm text-end of-ro" readonly tabindex="-1">
                     </div>
+                    {{-- เส้นคั่นใต้ "ยืนราคาถึง" — 15/10/2569 ตามที่ผู้ใช้สั่ง --}}
+                    <div class="col-12"><div class="border-bottom"></div></div>
 
                     <div class="col-6">
                         <label class="form-label mb-0 small">

@@ -150,7 +150,7 @@
                                                 <div class="col-6 small fw-semibold" id="saleinfo_last_lot">—</div>
                                                 <div class="col-6 small">วันที่ส่งมอบล่าสุด</div>
                                                 <div class="col-6 small fw-semibold" id="saleinfo_last_dv">—</div>
-                                                <div class="col-6 offset-6 small fw-semibold" id="saleinfo_last_note"></div>
+                                                <div class="col-6 offset-6 small fw-semibold text-danger" id="saleinfo_last_note"></div>
                                             </div>
                                         </div>
                                     </div>

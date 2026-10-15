@@ -940,8 +940,9 @@
 
         saleinfoLastXhr = $.getJSON("{{ $page_url }}/last-order", { custno: custno, itemno: itemno })
             .done(function (res) {
+                // ไม่พบประวัติการสั่ง = ถือว่าเกิน 3 ปี เหมือนกัน (15/10/2569 ตามที่ผู้ใช้สั่ง)
                 if (!res.found) {
-                    $('#saleinfo_last_note').text('ยังไม่เคยสั่งซื้อ');
+                    $('#saleinfo_last_note').text('เกิน 3 ปี');
                     return;
                 }
                 $('#saleinfo_last_lot').text(res.lot || '—');

@@ -615,6 +615,13 @@ class OrderController extends Controller
             $minFrom  = 'price_2';
         }
 
+        // ต้องไม่ต่ำกว่า "ราคาที่กำหนดไว้" ด้วย — ใช้ค่าที่สูงกว่า (15/10/2569 ตรงกับ checkPriceFloor())
+        $fixedFloor = $this->fixedPriceFloor($custno, $itemno);
+        if ($fixedFloor !== null && ($minPrice === null || $fixedFloor > $minPrice)) {
+            $minPrice = round($fixedFloor, 2);
+            $minFrom  = 'fixed';
+        }
+
         return [
             'found'       => (bool) $prices,
             'message'     => $message,
@@ -977,12 +984,21 @@ class OrderController extends Controller
             $floor     = $colorRate;
             $floorFrom = 'color_rate';
         } else {
-            $calc = app(ProductPriceService::class)->lookup($itemno)['prices']['price_2'] ?? null;
-            if ($calc === null) {
-                return null;   // ไม่มีเพดานให้เทียบ
-            }
-            $floor     = (float) $calc;
+            $calc      = app(ProductPriceService::class)->lookup($itemno)['prices']['price_2'] ?? null;
+            $floor     = $calc === null ? null : (float) $calc;
             $floorFrom = 'price_2';
+        }
+
+        /* ต้องไม่ต่ำกว่า "ราคาที่กำหนดไว้" (uprice.PRICE) ด้วย — 15/10/2569 ตามที่ผู้ใช้สั่ง
+           ใช้ค่าที่สูงกว่าระหว่างเกณฑ์ข้างบนกับราคาที่กำหนดไว้ */
+        $fixed = $this->fixedPriceFloor($custno, $itemno);
+        if ($fixed !== null && ($floor === null || $fixed > $floor)) {
+            $floor     = $fixed;
+            $floorFrom = 'fixed';
+        }
+
+        if ($floor === null) {
+            return null;   // ไม่มีเพดานให้เทียบ
         }
 
         $price = $price === null ? null : (float) $price;
@@ -1006,6 +1022,25 @@ class OrderController extends Controller
             ] : null,
             'message'       => $this->priceBlockedMessage($price, $floor, $custno, $itemno, $approved, $floorFrom),
         ];
+    }
+
+    /**
+     * "ราคาที่กำหนดไว้" — `uprice.PRICE` ของคู่ (ลูกค้า, เบอร์) แถว `DATE` ล่าสุด (15/10/2569)
+     * ตัวเดียวกับช่อง "ราคาที่กำหนดไว้" ในกล่องราคา (priceData) · ไม่มีแถว / ค่าว่าง / 0 = null
+     */
+    private function fixedPriceFloor(string $custno, string $itemno): ?float
+    {
+        if ($custno === '' || $itemno === '') {
+            return null;
+        }
+
+        $price = DB::table('uprice')
+            ->where('CustNo', $custno)
+            ->where('ITEMNO', $itemno)
+            ->orderByDesc('DATE')
+            ->value('PRICE');
+
+        return ($price === null || (float) $price <= 0) ? null : (float) $price;
     }
 
     /**
@@ -1115,6 +1150,7 @@ class OrderController extends Controller
         $label = [
             'approved'   => 'ราคาอนุมัติ',
             'color_rate' => 'ราคาขั้นต่ำของกลุ่มราคา',
+            'fixed'      => 'ราคาที่กำหนดไว้',
         ][$floorFrom] ?? 'ราคาช่อง 2';
 
         if ($price === null) {
@@ -1129,6 +1165,8 @@ class OrderController extends Controller
             $msg .= $approved->enddate
                 ? ' — ราคาที่อนุมัติไว้ยืนราคาถึง ' . Carbon::parse($approved->enddate)->format('d/m/Y')
                 : ' — ราคาที่อนุมัติไว้ไม่กำหนดวันหมดอายุ';
+        } elseif ($floorFrom === 'fixed') {
+            $msg .= ' — ราคาที่กำหนดไว้ของลูกค้า ' . $custno . ' (เมนู "กำหนดราคา")';
         } else {
             $msg .= ' — ยังไม่มีราคาอนุมัติที่ใช้ได้ของลูกค้า ' . $custno
                   . ' (ไม่เคยขอ ยังไม่อนุมัติ หรือเลยวันยืนราคาแล้ว)';

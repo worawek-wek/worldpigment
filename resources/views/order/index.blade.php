@@ -1459,7 +1459,9 @@
                 ? 'เทียบกับราคาอนุมัติของลูกค้ารายนี้ (ยังไม่เลยวันยืนราคา)'
                 : (p.min_from === 'color_rate'
                     ? 'เทียบกับราคาขั้นต่ำของกลุ่มราคา ' + (p.group || '') + ' (zcolorrate)'
-                    : 'เทียบกับราคาช่อง 2'));
+                    : (p.min_from === 'fixed'
+                        ? 'เทียบกับราคาที่กำหนดไว้ (เมนู "กำหนดราคา")'
+                        : 'เทียบกับราคาช่อง 2')));
         $('#o_price_group').val(p.group || '');   // แสดงแค่ A / B / C
         // ขั้นต่ำ = ค่าของกลุ่มราคานั้นจาก zcolorrate
         $('#o_min_qty').val(fmtNum(p.min_rate, 2));
@@ -1944,6 +1946,56 @@
             return;
         }
 
+        // เบอร์ที่สั่งครั้งล่าสุดเกิน 3 ปี (หรือไม่พบประวัติ) → ถามยืนยันอีกชั้นก่อนบันทึก (15/10/2569)
+        confirmMatchOver3Years(items, function(){ submitOrder(isEdit, type, items); });
+    }
+
+    /* ถามยืนยันเมื่อมีรหัสสินค้าในใบที่สั่งครั้งล่าสุดเกิน 3 ปี — 15/10/2569 ตามที่ผู้ใช้สั่ง
+       เช็คใหม่จาก server ทุกรหัส (ไม่อ่านจากแถบแดงบนฟอร์ม ซึ่งอาจยังโหลดไม่เสร็จตอนกดบันทึก)
+       ไม่พบประวัติ / เรียก item-lookup ไม่สำเร็จ = ถือว่าเกิน 3 ปีเหมือนกัน */
+    function confirmMatchOver3Years(items, proceed){
+        var codes = [];
+        $.each(items, function(_, it){
+            var c = (it.Itemno || '').trim();
+            if (c && codes.indexOf(c) === -1) codes.push(c);
+        });
+        if (!codes.length){ proceed(); return; }
+
+        var custno = ($('#o_Custno').val() || '').trim();
+        var lines  = [];
+        var calls  = $.map(codes, function(code){
+            var d = $.Deferred();
+            $.getJSON("{{ $page_url }}/item-lookup", {itemno: code, custno: custno})
+                .done(function(res){
+                    if (!res || res.need_match){
+                        lines.push(code + ' — ' + (res && res.last_order_date
+                            ? 'สั่งครั้งล่าสุด ' + fmtDate(res.last_order_date, true)
+                            : 'ไม่พบประวัติการสั่งซื้อ'));
+                    }
+                })
+                .fail(function(){ lines.push(code + ' — ไม่พบประวัติการสั่งซื้อ'); })
+                .always(function(){ d.resolve(); });
+            return d.promise();
+        });
+
+        $.when.apply($, calls).then(function(){
+            if (!lines.length){ proceed(); return; }
+            Swal.fire({
+                icon:  'warning',
+                title: 'สีที่สั่งซื้อล่าสุดเกิน 3 ปี',
+                html:  'จะต้อง Match ใหม่<br>' + $.map(lines, escHtml).join('<br>')
+                     + '<br><br>จะดำเนินการบันทึกต่อไหม?',
+                showCancelButton:  true,
+                confirmButtonText: 'ดำเนินการต่อ',
+                cancelButtonText:  'ยกเลิก',
+                reverseButtons:    true,
+                target:     '#orderModal',
+                heightAuto: false
+            }).then(function(r){ if (r.isConfirmed) proceed(); });
+        });
+    }
+
+    function submitOrder(isEdit, type, items){
         // ถอดคอมมาออกจากช่องตัวเลขทั้งฟอร์มก่อนอ่านค่า (น้ำหนักรวม / นน.คลัง / ส่งมอบเดือนละ)
         stripCommaFields('#orderModal');
 
