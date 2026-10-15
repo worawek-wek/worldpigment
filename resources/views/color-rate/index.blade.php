@@ -20,7 +20,7 @@
                         <div class="d-flex gap-2 flex-wrap">
                             {{-- ประวัติทุกรหัส (รวมรหัสที่ถูกลบไปแล้ว) 15/10/2569 --}}
                             <button type="button" class="btn btn-info waves-effect" id="btn_history_all">
-                                <i class="ti ti-history me-1"></i> ประวัติการแก้ไข
+                                <i class="ti ti-history me-1"></i> ประวัติการอัพเดตราคากลุ่ม
                             </button>
                             <button type="button" class="btn btn-primary" id="btn_add">
                                 <i class="ti ti-plus me-1"></i> เพิ่มข้อมูล
