@@ -1131,7 +1131,7 @@
     //  ราคาขาย 1 = PdPrice.Price (ไฟล์ Access) × คูณ ÷ หาร + บวก
     //             ตามตารางเงื่อนไขของลูกค้าใน config/product_price.php (จับคู่ด้วยตัวขึ้นต้น/ลงท้ายของรหัส)
     //  ราคาขาย 2 = ราคาขาย 1 × 1.14   |   ราคาขาย 3 = ราคาขาย 2 × 1.30
-    //  ⚠ DB 1-2 / 3-4 Kg ยังไม่รู้สูตร — ยังไม่เติมค่า (รอลูกค้า)
+    //  DB 3-4 / 1-2 Kg = max(ราคาขาย 2 + 250 / 400, ราคาขาย 3) เฉพาะรหัสขึ้นต้น 2 / 36 (15/10/2569)
     // ────────────────────────────────────────────────────────
     const NP_FIELDS = ['#np_price_1', '#np_price_2', '#np_price_3', '#np_db_3_4', '#np_db_1_2'];
     let npTimer = null, npXhr = null;
@@ -1167,6 +1167,9 @@
             $('#np_price_1').val(npMoneyInt(res.prices.price_1));
             $('#np_price_2').val(npMoneyInt(res.prices.price_2));
             $('#np_price_3').val(npMoneyInt(res.prices.price_3));
+            // DB 3-4 / 1-2 Kg. — มีเฉพาะรหัสขึ้นต้นด้วย 2 (รหัสอื่น = null → ช่องว่าง)
+            if (res.prices.db_3_4 != null) $('#np_db_3_4').val(npMoneyInt(res.prices.db_3_4));
+            if (res.prices.db_1_2 != null) $('#np_db_1_2').val(npMoneyInt(res.prices.db_1_2));
         } else if (res.reason) {
             $('#np_error').removeClass('d-none').text(res.reason);
         }

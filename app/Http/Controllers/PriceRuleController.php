@@ -56,6 +56,9 @@ class PriceRuleController extends Controller
                 'price_2_from_price_1' => (float) config('product_price.tier.price_2_from_price_1', 0),
                 'price_3_from_price_2' => (float) config('product_price.tier.price_3_from_price_2', 0),
             ],
+            // ตัวบวกของราคา DB 3-4 / 1-2 Kg. (แก้ได้จากหน้านี้) — 15/10/2569
+            'db'        => $prices->dbAdds(),
+            'db_prefix' => implode(', ', (array) config('product_price.tier.db_prefix', [])),
         ]);
     }
 
@@ -109,6 +112,25 @@ class PriceRuleController extends Controller
             $clean[$key] = ['mul' => $mul, 'div' => $div, 'add' => $add];
         }
 
+        // ตัวบวกของราคา DB — db[db_3_4] / db[db_1_2] (15/10/2569)
+        $dbInput = $request->input('db', []);
+        $dbClean = [];
+        $dbLabel = ['db_3_4' => 'DB 3 - 4 Kg.', 'db_1_2' => 'DB 1 - 2 Kg.'];
+
+        foreach (ProductPriceService::DB_ADD_KEYS as $name => $key) {
+            if (!is_array($dbInput) || !array_key_exists($name, $dbInput)) {
+                continue;   // ไม่ได้ส่งมา = ไม่แตะ
+            }
+
+            $add = $this->numberOrNull($dbInput[$name]);
+            if ($add === null) {
+                $errors[] = "\"{$dbLabel[$name]}\" — ต้องกรอกตัวบวกเป็นตัวเลข";
+                continue;
+            }
+
+            $dbClean[$key] = $add;
+        }
+
         if ($errors) {
             return response()->json(['error' => implode("\n", $errors)], 422);
         }
@@ -116,7 +138,26 @@ class PriceRuleController extends Controller
         $user    = auth()->user()?->name ?: auth()->user()?->username;
         $changed = 0;
 
-        DB::transaction(function () use ($clean, $defaults, $user, &$changed) {
+        DB::transaction(function () use ($clean, $defaults, $dbClean, $user, &$changed) {
+            // ตัวบวกราคา DB — เท่าค่าตั้งต้นใน config = ลบ override ทิ้ง (แบบเดียวกับเงื่อนไขด้านล่าง)
+            foreach ($dbClean as $key => $add) {
+                if ($add == (float) config('product_price.tier.' . $key, 0)) {
+                    $changed += PriceRule::where('rule_key', $key)->delete();
+                    continue;
+                }
+
+                $row = PriceRule::firstOrNew(['rule_key' => $key]);
+                if ($row->exists && (float) $row->add == $add) {
+                    continue;
+                }
+
+                // ใช้แค่คอลัมน์ add — mul/div เป็น NOT NULL จึงใส่ 0 ไว้
+                $row->fill(['mul' => 0, 'div' => 0, 'add' => $add]);
+                $row->updated_by = $user ?: null;
+                $row->save();
+                $changed++;
+            }
+
             foreach ($clean as $key => $values) {
                 $default = $defaults[$key];
 

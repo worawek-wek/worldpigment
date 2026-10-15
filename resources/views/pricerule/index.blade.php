@@ -125,6 +125,36 @@
                 </table>
             </div>
 
+            {{-- ─── ตัวบวกราคา DB 3-4 / 1-2 Kg. (15/10/2569) ─── --}}
+            <div class="pr-formula p-3 mt-4 small">
+                <div class="fw-semibold mb-1">
+                    <i class="ti ti-math-symbols me-1"></i>
+                    ราคา DB = ค่าที่มากกว่าระหว่าง (ราคาขาย 2 + ตัวบวก) กับ ราคาขาย 3
+                </div>
+                <div class="text-muted" id="pr_db_note">คำนวณเฉพาะรหัสสินค้าที่ขึ้นต้นด้วย 2, 36</div>
+            </div>
+
+            <div class="table-responsive mt-2">
+                <table class="table table-sm table-bordered align-middle mb-0" id="pr_db_table" style="max-width: 520px;">
+                    <thead>
+                        <tr class="text-center">
+                            <th>ราคา</th>
+                            <th style="width: 160px;">บวก + (จากราคาขาย 2)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="fw-semibold small">DB 3 - 4 Kg.</td>
+                            <td><input type="number" step="any" class="form-control form-control-sm text-end" id="pr_db_3_4"></td>
+                        </tr>
+                        <tr>
+                            <td class="fw-semibold small">DB 1 - 2 Kg.</td>
+                            <td><input type="number" step="any" class="form-control form-control-sm text-end" id="pr_db_1_2"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
             <div class="small mt-3 text-danger d-none" id="pr_error" style="white-space: pre-line;"></div>
 
             <div class="d-flex justify-content-end mt-3">
@@ -228,6 +258,15 @@
                         ' (2 ค่านี้ต้องให้ผู้ดูแลระบบแก้ให้)'
                     );
                 }
+
+                // ตัวบวกราคา DB 3-4 / 1-2 Kg.
+                if (res.db) {
+                    $('#pr_db_3_4').val(prNum(res.db.db_3_4));
+                    $('#pr_db_1_2').val(prNum(res.db.db_1_2));
+                }
+                if (res.db_prefix) {
+                    $('#pr_db_note').text('คำนวณเฉพาะรหัสสินค้าที่ขึ้นต้นด้วย ' + res.db_prefix + ' — รหัสอื่นไม่มีราคา DB');
+                }
             })
             .fail(function () {
                 $('#pr_tbody').html('<tr><td colspan="4" class="text-center text-danger py-4">โหลดเงื่อนไขไม่สำเร็จ</td></tr>');
@@ -245,6 +284,9 @@
             payload['rules[' + key + '][div]'] = $tr.find('.pr_div').val();
             payload['rules[' + key + '][add]'] = $tr.find('.pr_add').val();
         });
+
+        payload['db[db_3_4]'] = $('#pr_db_3_4').val();
+        payload['db[db_1_2]'] = $('#pr_db_1_2').val();
 
         $btn.prop('disabled', true);
         $('#pr_error').addClass('d-none').text('');

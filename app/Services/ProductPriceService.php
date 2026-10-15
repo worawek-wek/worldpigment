@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
  *   ราคาขาย 1 = PdPrice.Price × mul ÷ div + add
  *   ราคาขาย 2 = ราคาขาย 1 × 1.14
  *   ราคาขาย 3 = ราคาขาย 2 × 1.30
+ *   DB 3-4 / 1-2 Kg. = max(ราคาขาย 2 + 250 / 400, ราคาขาย 3) — เฉพาะรหัสขึ้นต้นด้วย 2 / 36
  *
  * ตัวคูณ/หาร/บวก มาจากตารางเงื่อนไขของลูกค้าใน `config/product_price.php`
  * ซึ่งจับคู่ด้วย "ตัวขึ้นต้น" (และบางแถวมี "ตัวลงท้าย") ของ PdCode
@@ -77,9 +78,13 @@ class ProductPriceService
         $price1 = $base * $rule['mul'] / $rule['div'] + $rule['add'];
         $price2 = $price1 * (float) config('product_price.tier.price_2_from_price_1', 1);
         $price3 = $price2 * (float) config('product_price.tier.price_3_from_price_2', 1);
-        // ⚠ 2 ขั้นนี้ยังใช้ตัวคูณ "ค่าเดา" อยู่ (ดูหมายเหตุใน config/product_price.php)
-        $db34   = $price3 * (float) config('product_price.tier.db_3_4_from_price_3', 0);
-        $db12   = $db34   * (float) config('product_price.tier.db_1_2_from_db_3_4', 0);
+        // DB 3-4 / 1-2 Kg. = max(ราคาขาย 2 + ตัวบวก, ราคาขาย 3) — เฉพาะรหัสขึ้นต้นด้วย 2 / 36 (15/10/2569)
+        $db34 = $db12 = null;
+        if ($this->matchedPrefix(strtoupper($code), (array) config('product_price.tier.db_prefix', [])) !== null) {
+            $dbAdd = $this->dbAdds();
+            $db34  = max($price2 + $dbAdd['db_3_4'], $price3);
+            $db12  = max($price2 + $dbAdd['db_1_2'], $price3);
+        }
 
         return [
             'found'      => true,
@@ -90,8 +95,8 @@ class ProductPriceService
                 'price_1' => round($price1, 2),
                 'price_2' => round($price2, 2),
                 'price_3' => round($price3, 2),
-                'db_3_4'  => $db34 ? round($db34, 2) : null,
-                'db_1_2'  => $db12 ? round($db12, 2) : null,
+                'db_3_4'  => $db34 !== null ? round($db34, 2) : null,
+                'db_1_2'  => $db12 !== null ? round($db12, 2) : null,
             ],
             'reason'     => null,
         ];
@@ -168,6 +173,27 @@ class ProductPriceService
 
             return $rule;
         }, config('product_price.rules', []));
+    }
+
+    /** rule_key ใน tb_price_rule ที่เก็บตัวบวกของราคา DB (ใช้คอลัมน์ add) — 15/10/2569 */
+    public const DB_ADD_KEYS = ['db_3_4' => 'db_3_4_add', 'db_1_2' => 'db_1_2_add'];
+
+    /**
+     * ตัวบวกของราคา DB 3-4 / 1-2 Kg. ที่ใช้จริง = ค่าที่ผู้ใช้แก้ใน tb_price_rule ทับค่าตั้งต้นใน config
+     * คืน ['db_3_4' => float, 'db_1_2' => float]
+     */
+    public function dbAdds(): array
+    {
+        $overrides = $this->overrides();
+        $out = [];
+
+        foreach (self::DB_ADD_KEYS as $name => $key) {
+            $out[$name] = isset($overrides[$key])
+                ? (float) $overrides[$key]->add
+                : (float) config('product_price.tier.' . $key, 0);
+        }
+
+        return $out;
     }
 
     /**

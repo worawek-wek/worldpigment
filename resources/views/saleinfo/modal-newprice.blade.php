@@ -106,8 +106,8 @@
                             </div>
                         </div>
 
-                        {{-- wip: โน้ตจอเก่าบอก "New Rate 3-4 +250" แต่ลงวันที่ 2565 — รอลูกค้ายืนยันก่อนเอาไปคำนวณ --}}
-                        <div class="row g-2 align-items-center mb-2 wip">
+                        {{-- DB 3-4 Kg. = max(ราคาขาย 2 + 250, ราคาขาย 3) เฉพาะรหัสขึ้นต้น 2 / 36 — ตัวบวกแก้ได้ที่ /price-rule (15/10/2569) --}}
+                        <div class="row g-2 align-items-center mb-2">
                             <div class="col-4"></div>
                             <div class="col-5">
                                 <input type="text" id="np_db_3_4" class="form-control text-end fw-semibold"
@@ -118,8 +118,8 @@
                             </div>
                         </div>
 
-                        {{-- wip: โน้ตจอเก่าบอก "New Rate 1-2 +400" แต่ลงวันที่ 2565 — รอลูกค้ายืนยันก่อนเอาไปคำนวณ --}}
-                        <div class="row g-2 align-items-center wip">
+                        {{-- DB 1-2 Kg. = max(ราคาขาย 2 + 400, ราคาขาย 3) เฉพาะรหัสขึ้นต้น 2 / 36 --}}
+                        <div class="row g-2 align-items-center">
                             <div class="col-4"></div>
                             <div class="col-5">
                                 <input type="text" id="np_db_1_2" class="form-control text-end fw-semibold"
