@@ -1072,8 +1072,8 @@ class OrderController extends Controller
             return null;
         }
 
-        // รหัสสินค้าขึ้นต้นด้วย E (ตัวเล็ก/ใหญ่) ไม่ต้องเช็คราคา (16/10/2569 ตามที่ผู้ใช้สั่ง)
-        if (strtoupper($itemno[0]) === 'E') {
+        // รหัสลูกค้าขึ้นต้นด้วย E (ตัวเล็ก/ใหญ่) ไม่ต้องเช็คราคา (16/10/2569 ตามที่ผู้ใช้สั่ง)
+        if (strtoupper(substr(trim($custno), 0, 1)) === 'E') {
             return null;
         }
 

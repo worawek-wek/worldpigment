@@ -29,8 +29,8 @@
     // ── รูปหัวกระดาษ (16/10/2569) — ตามช่อง "หัวกระดาษ" ของใบ (qmast.letterhead) ไฟล์อยู่ที่ public/letter-head ──
     $letterheadFiles = [
         'WH'  => 'WH LETTER HEAD.png',
-        'WPC' => 'WPC LETTER HEAD_noline.png',
-        'WPI' => 'WPI LETTER HEAD _noline.png',
+        'WPC' => 'WPC LETTER HEAD.png',
+        'WPI' => 'WPI LETTER HEAD.png',
     ];
     $lhFile = $letterheadFiles[strtoupper(trim($header->letterhead ?? ''))] ?? null;
     $letterheadUrl = $lhFile ? asset('letter-head/' . rawurlencode($lhFile)) : null;
@@ -126,7 +126,7 @@
             <div>{{ $enDate($header->Qdate) }}</div>
         </div>
 
-        <div class="subject"><span class="field-label">Re:</span> &nbsp;&nbsp; {{ $subjectEn }} &nbsp; {{ $ptname }}</div>
+        <div class="subject"><span class="field-label">Re:</span> &nbsp;&nbsp; {{ $subjectEn }}</div>{{-- ตัดชนิดสินค้า ($ptname) ออก 16/10/2569 --}}
         <div class="subject">
             <span class="field-label">ATTN:</span> &nbsp;&nbsp;
             {{ $tnameEn ?: '—' }} @if($header->Custid) ({{ $header->Custid }}) @endif
@@ -172,6 +172,11 @@
                             $disp = $num
                                 ? (($v !== null && $v !== '') ? number_format((float) $v, 2) . ($reg['suffix'] ?? '') : '')
                                 : $v;
+                            // น้ำหนักส่งครั้งละ เก็บเป็นข้อความ (อาจเป็นช่วง เช่น 1000-2000) → ใส่คอมมาให้ตัวเลข 4 หลักขึ้นไป
+                            // (ข้ามตัวเลขที่ใส่คอมมา/จุดทศนิยมมาแล้ว) — 16/10/2569
+                            if ($k === 'delivery_qty' && $disp !== null && $disp !== '') {
+                                $disp = preg_replace_callback('/(?<![\d,.])\d{4,}/', fn ($m) => number_format((int) $m[0]), (string) $disp);
+                            }
                         @endphp
                         <td class="{{ $num ? 'text-end' : '' }} {{ $k === 'code' ? 'code' : '' }}">{{ $disp }}</td>
                     @endforeach

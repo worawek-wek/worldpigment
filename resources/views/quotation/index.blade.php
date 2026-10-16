@@ -353,7 +353,7 @@
                             <div class="col-md-4 of-row">
                                 <label class="form-label">เลขที่ใบเสนอราคา <span class="text-danger">*</span></label>
                                 <div class="of-ctl">
-                                    <input type="text" name="Qno" id="q_Qno" class="form-control" maxlength="10" required>
+                                    <input type="text" name="Qno" id="q_Qno" class="form-control" maxlength="20" required>
                                 </div>
                             </div>
                             <div class="col-md-4 of-row">
@@ -371,7 +371,10 @@
                         </div>
                         {{-- แถวล่าง: ชนิดสินค้า / พร้อมตัวอย่าง --}}
                         <div class="row gx-3 gy-2 mt-0">
-                            <div class="col-md-4 of-row">
+                            {{-- ชนิดสินค้า — ซ่อนไว้ก่อน (16/10/2569 ตามที่ผู้ใช้สั่ง) · ใช้ d-none ไม่ใช่ลบทิ้ง
+                                 เพราะ select ยังต้องส่งค่า PDtype ไปกับฟอร์ม ไม่งั้นแก้ใบเดิมแล้ว PDtype ถูกทับเป็นค่าว่าง
+                                 (PDtype ยังใช้เดารูปแบบตารางของใบเก่าฝั่ง server) · เปิดคืน: ถอด d-none ออก --}}
+                            <div class="col-md-4 of-row d-none">
                                 <label class="form-label">ชนิดสินค้า</label>
                                 <div class="of-ctl">
                                     <select name="PDtype" id="q_PDtype" class="form-select w-100">

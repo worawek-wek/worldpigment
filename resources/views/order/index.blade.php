@@ -2000,6 +2000,8 @@
         var no     = ($('#o_Orderno').val() || '').trim();
         var prefix = (isEdit && no ? no : type).substring(0, 2).toUpperCase();
         var custno = ($('#o_Custno').val() || '').trim();
+        // ลูกค้ารหัสขึ้นต้นด้วย E ไม่ต้องผ่านฟอร์มนี้ — มาก่อนเงื่อนไขอื่นทั้งหมด (16/10/2569 ตามที่ผู้ใช้สั่ง)
+        if (custno.charAt(0).toUpperCase() === 'E') return false;
         return prefix === 'WI'
             || ($('#o_Company').val() || '') === 'CP'
             || CP_CHECK_CUSTOMERS.indexOf(custno) !== -1;
