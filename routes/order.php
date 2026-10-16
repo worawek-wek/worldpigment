@@ -20,6 +20,8 @@ Route::prefix('order')->group(function () {
     Route::get('/price-info',      [OrderController::class, 'priceInfo'])->name('order.price_info');
     Route::get('/next-orderno',    [OrderController::class, 'nextOrderno'])->name('order.next_orderno');
     Route::get('/item-lookup',     [OrderController::class, 'itemLookup'])->name('order.item_lookup');
+    // ฟอร์มตรวจราคาเม็ด CP ก่อนบันทึก — ค่าที่เคยบันทึกไว้ใน cp_itemprice (16/10/2569)
+    Route::get('/cp-price',        [OrderController::class, 'cpPrice'])->name('order.cp_price');
 
     // ─── บันทึก (สร้างใหม่ / แก้ไข) ───────────────────────────────────
     Route::post('/save', [OrderController::class, 'save'])->name('order.save');

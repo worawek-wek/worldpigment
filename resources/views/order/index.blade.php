@@ -751,6 +751,9 @@
 
         </div>
     </div>
+
+    {{-- ฟอร์มตรวจราคาเม็ด CP ก่อนบันทึก (16/10/2569) — ต้องอยู่ "ใน" #orderModal ดูเหตุผลในไฟล์ --}}
+    @include('order.cp-price-check')
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -1979,8 +1982,128 @@
         }
 
         // เบอร์ที่สั่งครั้งล่าสุดเกิน 3 ปี (หรือไม่พบประวัติ) → ถามยืนยันอีกชั้นก่อนบันทึก (15/10/2569)
-        confirmMatchOver3Years(items, function(){ submitOrder(isEdit, type, items); });
+        // ใบ WI / ผลิตที่ CP / ลูกค้าที่กำหนด → ขึ้นฟอร์มตรวจราคาเม็ด CP ก่อน (16/10/2569)
+        confirmMatchOver3Years(items, function(){
+            if (cpCheckRequired(isEdit, type)) cpCheckOpen(isEdit, type, items);
+            else submitOrder(isEdit, type, items);
+        });
     }
+
+    // ════════════════════════════════════════════════════════
+    //  ฟอร์มตรวจราคาเม็ด CP ก่อนบันทึก (cp_itemprice) — 16/10/2569
+    //  markup: order/cp-price-check.blade.php · บันทึกพร้อมใบสั่งซื้อใน OrderController::save()
+    // ════════════════════════════════════════════════════════
+    var CP_CHECK_CUSTOMERS = @json($cp_check_customers ?? []);
+    var cpPending = null;   // {isEdit, type, items} ที่รอบันทึกหลังกดยืนยันในฟอร์มนี้
+
+    function cpCheckRequired(isEdit, type){
+        var no     = ($('#o_Orderno').val() || '').trim();
+        var prefix = (isEdit && no ? no : type).substring(0, 2).toUpperCase();
+        var custno = ($('#o_Custno').val() || '').trim();
+        return prefix === 'WI'
+            || ($('#o_Company').val() || '') === 'CP'
+            || CP_CHECK_CUSTOMERS.indexOf(custno) !== -1;
+    }
+
+    function cpCheckOpen(isEdit, type, items){
+        cpPending = {isEdit: isEdit, type: type, items: items};
+        var orderno = ($('#o_Orderno').val() || '').trim();
+        var itemno  = (items[0].Itemno || '').trim();
+
+        // 3 ช่องบน — ดึงจากฟอร์มใบสั่งซื้อ
+        $('#cp_Orderno').val(orderno);
+        $('#cp_itemno').val(itemno);
+        $('#cp_OrderPrice').val(commaFmt($('#o_price').val(), 2));
+
+        cpFill(null);
+        $('#cpCheckDialog').removeClass('d-none');
+
+        // ใบเดิมที่เคยบันทึกไว้แล้ว → เติมค่าเดิมกลับมา
+        if (orderno){
+            $.getJSON("{{ $page_url }}/cp-price", {orderno: orderno, itemno: itemno})
+                .done(function(res){ if (res.found) cpFill(res.row); });
+        }
+        setTimeout(function(){ $('#cp_Qdate').trigger('focus'); }, 50);
+    }
+
+    function cpFill(r){
+        r = r || {};
+        var fp = document.getElementById('cp_Qdate')._flatpickr;
+        if (r.Qdate) fp.setDate(String(r.Qdate).substring(0, 10), false, 'Y-m-d'); else fp.clear();
+        $('#cp_wage').val(commaFmt(r.wage, 2));
+        $('#cp_Resin1Code').val(r.Resin1Code || '');
+        $('#cp_Resin1Price').val(commaFmt(r.Resin1Price, 2));
+        $('#cp_Resin1Per').val(commaFmt(r.Resin1Per, 0));
+        $('#cp_Resin2Code').val(r.Resin2Code || '');
+        $('#cp_Resin2Price').val(commaFmt(r.Resin2Price, 2));
+        $('#cp_Resin2Per').val(commaFmt(r.Resin2Per, 0));
+        $('input[name="cp_ResinFrom"]').prop('checked', false);
+        if (r.ResinFrom) $('#cp_ResinFrom' + r.ResinFrom).prop('checked', true);
+        cpRecalc();
+        cpQdateWarn();
+    }
+
+    // ข้อ 4 = ราคาขาย − ค่าเม็ด × % (ทั้ง 2 เม็ด) · ข้อ 5 = ข้อ 4 − ข้อ 2 — สูตรเดียวกับ saveCpItemPrice()
+    function cpRecalc(){
+        var price = numVal('#cp_OrderPrice');
+        var wage  = numVal('#cp_wage');
+        var calc  = price === null ? null
+            : price - (numVal('#cp_Resin1Price') || 0) * (numVal('#cp_Resin1Per') || 0) / 100
+                    - (numVal('#cp_Resin2Price') || 0) * (numVal('#cp_Resin2Per') || 0) / 100;
+        var diff  = (calc === null || wage === null) ? null : calc - wage;
+        var pass  = diff !== null && diff >= -0.005;
+
+        $('#cp_wageCal').val(calc === null ? '' : fmtNum(calc, 2));
+        $('#cp_Diff').val(diff === null ? '' : fmtNum(diff, 2));
+        $('#cp_wageCal_note').text(diff === null ? '' : (pass ? 'สูงกว่า ข้อ 2. / อนุมัติได้' : 'ต่ำกว่า ข้อ 2. / ราคาไม่ผ่าน'))
+            .toggleClass('text-primary', pass).toggleClass('text-danger', !pass);
+        $('#cp_Diff_note').text(diff === null ? '' : (pass ? '>= 0 บาท / อนุมัติได้' : '< 0 บาท / ราคาไม่ผ่าน'))
+            .toggleClass('text-primary', pass).toggleClass('text-danger', !pass);
+        $('#cp_status').text(diff === null ? '—' : (pass ? 'อนุมัติได้' : 'ราคาไม่ผ่าน แจ้งปรับลูกค้า'))
+            .toggleClass('cp-fail', diff !== null && !pass);
+    }
+
+    // ใบเสนอราคาเกิน 90 วัน → ขึ้นข้อความเตือน
+    function cpQdateWarn(){
+        var d = document.getElementById('cp_Qdate')._flatpickr.selectedDates[0];
+        var over = !!d && (new Date() - d) / 86400000 > 90;
+        $('#cp_qdate_warn').toggleClass('d-none', !over);
+    }
+
+    function cpCheckClose(){
+        $('#cpCheckDialog').addClass('d-none');
+        cpPending = null;
+    }
+
+    function cpCheckConfirm(){
+        if (!cpPending) return;
+        var p = cpPending;
+        var cp = {
+            Qdate:       $('#cp_Qdate').val(),
+            wage:        numVal('#cp_wage'),
+            ResinFrom:   $('input[name="cp_ResinFrom"]:checked').val() || '',
+            Resin1Code:  $('#cp_Resin1Code').val(),
+            Resin1Price: numVal('#cp_Resin1Price'),
+            Resin1Per:   numVal('#cp_Resin1Per'),
+            Resin2Code:  $('#cp_Resin2Code').val(),
+            Resin2Price: numVal('#cp_Resin2Price'),
+            Resin2Per:   numVal('#cp_Resin2Per')
+        };
+        cpCheckClose();
+        submitOrder(p.isEdit, p.type, p.items, cp);
+    }
+
+    $(function(){
+        flatpickr('#cp_Qdate', { dateFormat: 'd/m/Y', allowInput: true, static: true, disableMobile: true,
+                                 onChange: cpQdateWarn, onClose: cpQdateWarn });
+        $(document).on('input change blur', '#cpCheckDialog .cp-calc', cpRecalc);
+        // Esc ปิดเฉพาะฟอร์มนี้ — ไม่ให้ไหลขึ้นไปปิดฟอร์มใบสั่งซื้อ
+        $('#cpCheckDialog').on('keydown', function(e){
+            if (e.key === 'Escape'){ e.stopPropagation(); e.preventDefault(); cpCheckClose(); }
+        });
+        // ปิดฟอร์มใบสั่งซื้อ = ปิดฟอร์มนี้ด้วย
+        $('#orderModal').on('hidden.bs.modal', function(e){ if (e.target === this) cpCheckClose(); });
+    });
 
     /* ถามยืนยันเมื่อมีรหัสสินค้าในใบที่สั่งครั้งล่าสุดเกิน 3 ปี — 15/10/2569 ตามที่ผู้ใช้สั่ง
        เช็คใหม่จาก server ทุกรหัส (ไม่อ่านจากแถบแดงบนฟอร์ม ซึ่งอาจยังโหลดไม่เสร็จตอนกดบันทึก)
@@ -2031,7 +2154,7 @@
         });
     }
 
-    function submitOrder(isEdit, type, items){
+    function submitOrder(isEdit, type, items, cp){
         // ถอดคอมมาออกจากช่องตัวเลขทั้งฟอร์มก่อนอ่านค่า (น้ำหนักรวม / นน.คลัง / ส่งมอบเดือนละ)
         stripCommaFields('#orderModal');
 
@@ -2064,6 +2187,8 @@
             itype:      $('.o-itype-opt:checked').val() || '',
             items:      items
         };
+        // ค่าจากฟอร์มตรวจราคาเม็ด CP (16/10/2569) — ส่งเฉพาะใบที่เข้าเงื่อนไข
+        if (cp) payload.cp = cp;
 
         var $btn = $('#btnSaveOrder').prop('disabled', true);
 

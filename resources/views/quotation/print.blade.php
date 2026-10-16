@@ -26,6 +26,18 @@
         return $c->day . ' ' . $enMonths[$c->month] . ' ' . $c->year;
     };
 
+    // ── รูปหัวกระดาษ (16/10/2569) — ตามช่อง "หัวกระดาษ" ของใบ (qmast.letterhead) ไฟล์อยู่ที่ public/letter-head ──
+    $letterheadFiles = [
+        'WH'  => 'WH LETTER HEAD.png',
+        'WPC' => 'WPC LETTER HEAD_noline.png',
+        'WPI' => 'WPI LETTER HEAD _noline.png',
+    ];
+    $lhFile = $letterheadFiles[strtoupper(trim($header->letterhead ?? ''))] ?? null;
+    $letterheadUrl = $lhFile ? asset('letter-head/' . rawurlencode($lhFile)) : null;
+    // ผู้ใช้เลือก "ไม่พิมพ์หัวกระดาษ" ตอนกดพิมพ์ → ส่ง lh=0 มา (query ของ /print หรือ POST ของ /print-preview)
+    //  → ไม่แสดงรูป แต่ "เว้นที่ว่าง" สูงเท่าหัวกระดาษไว้ ให้เอากระดาษที่มีหัวพิมพ์แล้วมาใส่เอง
+    $letterheadBlank = request('lh') === '0';
+
     $subject  = $isRevision ? 'ขอแจ้งปรับราคา' : 'ขอเสนอราคา';
     // ข้อความเนื้อจดหมาย — ตามแบบที่ลูกค้ากำหนด (12/09/2569)
     $bodyText = $isRevision
@@ -53,6 +65,12 @@
         .toolbar { text-align: center; margin-bottom: 18px; }
         .toolbar button { padding: 8px 22px; font-size: 15px; cursor: pointer; }
 
+        /* หัวกระดาษ — รูปกว้างเต็มหน้า */
+        .letterhead { margin-bottom: 18px; }
+        /* ขนาด 90% ของความกว้างหน้า (ย่อลง 10% ตามที่ผู้ใช้สั่ง 16/10/2569) จัดกึ่งกลาง */
+        .letterhead img { display: block; width: 90%; height: auto; margin: 0 auto; }
+        /* ไม่พิมพ์หัวกระดาษ — ซ่อนรูปแต่คงพื้นที่ไว้ (visibility ไม่ใช่ display) */
+        .letterhead.blank img { visibility: hidden; }
         .doc-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
         .doc-head .qno { font-weight: bold; }
         .field-label { display: inline-block; }
@@ -95,6 +113,11 @@
         <button onclick="window.close()">ปิด</button>
         <span class="fmt-tag">{{ $isRevision ? 'แจ้งปรับราคา' : 'เสนอราคา' }}</span>
     </div>
+
+    {{-- หัวกระดาษ (16/10/2569) --}}
+    @if ($letterheadUrl)
+        <div class="letterhead{{ $letterheadBlank ? ' blank' : '' }}" id="letterhead"><img src="{{ $letterheadUrl }}" alt="หัวกระดาษ {{ $header->letterhead }}"></div>
+    @endif
 
     {{-- หัวเอกสาร (สลับ TH/EN ตามภาษาที่เลือก) --}}
     @if ($headEn)

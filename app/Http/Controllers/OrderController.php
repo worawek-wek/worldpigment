@@ -136,6 +136,9 @@ class OrderController extends Controller
         // ต้องมาจาก server เพราะ JS ไม่รู้จักวันหยุดใน tb_holiday — ดู PriceApprovalController::defaultValidTo()
         $data['default_valid_to'] = PriceApprovalController::defaultValidTo();
 
+        // ลูกค้าที่ต้องผ่านฟอร์มตรวจราคาเม็ด CP ก่อนบันทึก (16/10/2569)
+        $data['cp_check_customers'] = config('order.cp_check_customers', []);
+
         return view('order.index', $data);
     }
 
@@ -940,6 +943,16 @@ class OrderController extends Controller
 
                 $this->syncItems($orderno, $items);
 
+                // ฟอร์มตรวจราคาเม็ด CP (16/10/2569) — ส่งมาเฉพาะใบที่เข้าเงื่อนไข (ฝั่งจอเป็นคนตัดสิน)
+                if (is_array($request->input('cp'))) {
+                    $this->saveCpItemPrice(
+                        $orderno,
+                        trim((string) $items[0]['Itemno']),
+                        $this->numOrNull($request->input('price')),
+                        (array) $request->input('cp')
+                    );
+                }
+
                 return $orderno;
             });
         } catch (\Throwable $e) {
@@ -954,6 +967,75 @@ class OrderController extends Controller
             'message' => $mode === 'insert' ? 'บันทึกใบสั่งซื้อใหม่เรียบร้อย' : 'แก้ไขใบสั่งซื้อเรียบร้อย',
             'orderno' => $orderno,
         ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  ฟอร์มตรวจราคาเม็ด CP ก่อนบันทึก (cp_itemprice) — 16/10/2569
+    //  ผังตามฟอร์ม Access เดิม · 1 แถวต่อคู่ (Orderno, itemno)
+    // ─────────────────────────────────────────────────────────────
+
+    public const CP_STATUS_PASS = 'อนุมัติได้';
+    public const CP_STATUS_FAIL = 'ราคาไม่ผ่าน แจ้งปรับลูกค้า';
+
+    /** GET — ค่าที่เคยบันทึกไว้ของคู่ (เลขที่ใบสั่ง, รหัสสินค้า) ใช้เติมฟอร์มตอนเปิดใบเดิม */
+    public function cpPrice(Request $request)
+    {
+        $row = DB::table('cp_itemprice')
+            ->where('Orderno', trim((string) $request->query('orderno')))
+            ->where('itemno', trim((string) $request->query('itemno')))
+            ->first();
+
+        return response()->json(['found' => (bool) $row, 'row' => $row]);
+    }
+
+    /**
+     * เขียน cp_itemprice — ข้อ 4 / ข้อ 5 / สถานะ คำนวณใหม่ที่ server (ไม่เชื่อค่าจากจอ)
+     *   ข้อ 4 (wageCal) = ราคาขาย − ค่าเม็ด#1 × %#1 / 100 − ค่าเม็ด#2 × %#2 / 100
+     *   ข้อ 5 (Diff)    = ข้อ 4 − ข้อ 2 (wage)
+     *   สถานะ          = ข้อ 5 ≥ 0 → อนุมัติได้ · ไม่งั้น ราคาไม่ผ่าน แจ้งปรับลูกค้า
+     * สูตรตรวจกับข้อมูลเดิมแล้ว ตรง 472 จาก 482 แถว
+     */
+    private function saveCpItemPrice(string $orderno, string $itemno, $price, array $cp): void
+    {
+        $num = fn ($k) => $this->numOrNull($cp[$k] ?? null);
+        $txt = fn ($k) => ($v = trim((string) ($cp[$k] ?? ''))) === '' ? null : mb_substr($v, 0, 20);
+
+        $wage = $num('wage');
+        $r1p  = $num('Resin1Price');
+        $r1   = $num('Resin1Per');
+        $r2p  = $num('Resin2Price');
+        $r2   = $num('Resin2Per');
+
+        $wageCal = $price === null ? null
+            : round($price - ($r1p ?? 0) * ($r1 ?? 0) / 100 - ($r2p ?? 0) * ($r2 ?? 0) / 100, 4);
+        $diff = ($wageCal === null || $wage === null) ? null : round($wageCal - $wage, 4);
+
+        $from  = (int) ($cp['ResinFrom'] ?? 0);
+        $qdate = null;
+        $raw   = trim((string) ($cp['Qdate'] ?? ''));
+        if ($raw !== '' && ($d = \DateTime::createFromFormat('!d/m/Y', $raw)) !== false) {
+            $qdate = $d->format('Y-m-d');
+        }
+
+        DB::table('cp_itemprice')->updateOrInsert(
+            ['Orderno' => $orderno, 'itemno' => mb_substr($itemno, 0, 20)],
+            [
+                'OrderPrice'  => $price,
+                'Qdate'       => $qdate,
+                'wage'        => $wage,
+                'ResinFrom'   => ($from >= 1 && $from <= 4) ? $from : null,
+                'Resin1Code'  => $txt('Resin1Code'),
+                'Resin1Price' => $r1p,
+                'Resin1Per'   => $r1 === null ? null : (int) round($r1),
+                'Resin2Code'  => $txt('Resin2Code'),
+                'Resin2Price' => $r2p,
+                'Resin2Per'   => $r2 === null ? null : (int) round($r2),
+                'wageCal'     => $wageCal,
+                'Diff'        => $diff,
+                'status'      => $diff === null ? null
+                    : ($diff >= -0.005 ? self::CP_STATUS_PASS : self::CP_STATUS_FAIL),
+            ]
+        );
     }
 
     // ─────────────────────────────────────────────────────────────

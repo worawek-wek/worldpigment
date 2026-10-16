@@ -37,7 +37,7 @@ worldpigment/
 │   ├── Http/Controllers/
 │   │   ├── Production/          # วางแผนการผลิต
 │   │   ├── ColorMatchingController.php
-│   │   ├── OrderController.php      # เมนู O-Order — ฟอร์มบันทึกใบสั่งซื้อ morder/suborder (12/08/2569)
+│   │   ├── OrderController.php      # เมนู O-Order — ฟอร์มบันทึกใบสั่งซื้อ morder/suborder (12/08/2569) + ฟอร์มตรวจราคาเม็ด CP cp_itemprice (16/10/2569)
 │   │   ├── PriceApprovalController.php  # ฟอร์มลูกของ O-Order — ขออนุมัติราคาพิเศษ appvreq (12/08/2569)
 │   │   ├── OrderApprovalController.php  # ฟอร์มลูกของ O-Order — อนุมัติใบสั่งซื้อ morder.appv (12/08/2569)
 │   │   ├── SalesForecastController.php  # ฟอร์มลูกของ O-Order — ประมาณการยอดขาย ตามรหัสพนักงานขาย (PDF) (15/10/2569)
@@ -754,6 +754,15 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 - `approvableQuery()` qualify เป็น `morder.Orderno` แล้ว (เดิม `Orderno` เปล่า — join `suborder` แล้ว ambiguous)
 - ทดสอบด้วยข้อมูล 18/09/2026 (DB/P = 10 รายการ 90 กก. ตรงกับ SQL · MB/S · ช่วงเวลาแคบ · ไม่มีข้อมูล · พารามิเตอร์ขยะ) ผ่าน แต่ **ยังไม่ได้เปิดดูหน้าตา PDF และยังไม่ได้กดหน้าต่างเลือกเงื่อนไขในเบราว์เซอร์** — เครื่อง dev ข้อมูล `appvDT` ล่าสุดคือ 21/09/2026
 
+### ฟอร์มตรวจราคาเม็ด CP ก่อนบันทึกใบสั่งซื้อ (`cp_itemprice`) — 16/10/2569
+
+แปลงจากฟอร์ม Access เดิม — กดบันทึกใบสั่งซื้อที่เป็น **ประเภท WI** หรือ **ผลิตที่ CP** หรือ **ลูกค้า `config('order.cp_check_customers')`** (41047 / 40412 / 29235 / 17138) → ขึ้นฟอร์มนี้ก่อน (หลังถามยืนยันเกิน 3 ปี) → กด "บันทึกการรับคำสั่งซื้อ" ในฟอร์มนี้ = บันทึกใบสั่งซื้อ + `cp_itemprice` ใน `POST order/save` ครั้งเดียว (payload key `cp`)
+- markup `order/cp-price-check.blade.php` · JS `cpCheck*()` / `cpRecalc()` ใน `order/index.blade.php` · server `OrderController::saveCpItemPrice()` (เรียกใน `save()`) + `GET order/cp-price` (`cpPrice()` เติมค่าเดิมของคู่ Orderno+itemno)
+- 🔴 **เป็นม่านซ้อน "ภายใน" `#orderModal` ไม่ใช่ Bootstrap modal ตัวที่ 2** — modal ซ้อนกัน focus trap แย่งโฟกัส + event shown/hidden ของตัวลูกไหลไปเรียก handler ของฟอร์มใบสั่งซื้อ · Esc ถูก `stopPropagation` ไม่ให้ปิดฟอร์มใบสั่งซื้อ
+- ช่อง: 3 ช่องบน (เลขที่ใบ · รหัสสินค้าแถวแรก · ราคาขาย) ดึงจากฟอร์มอัตโนมัติ · 1 `Qdate` (เกิน 90 วัน = ข้อความแดง) · 2 `wage` · 3 `Resin1/2Code/Price/Per` · ใช้เม็ดจาก `ResinFrom` 1–4 = A–D
+- **ข้อ 4 `wageCal` = ราคาขาย − ค่าเม็ด#1×%#1/100 − ค่าเม็ด#2×%#2/100 · ข้อ 5 `Diff` = ข้อ 4 − ข้อ 2 · `status` = ข้อ 5 ≥ 0 → "อนุมัติได้" ไม่งั้น "ราคาไม่ผ่าน แจ้งปรับลูกค้า"** (ตรงกับข้อมูลเดิม 472/482 แถว) — server คำนวณซ้ำเอง ไม่เชื่อค่าจากจอ
+- ⚠ **ไม่บล็อกการบันทึก** แม้ราคาไม่ผ่าน (บันทึกสถานะไว้เฉย ๆ) · เงื่อนไขตัดสินที่ฝั่งจอ (server เขียนเมื่อมี key `cp`) · `cp_itemprice` เป็น MyISAM · เปลี่ยนรหัสสินค้าแถวแรกของใบเดิม = แถวเก่าค้างอยู่ · ⚠ ยังไม่ได้กดในเบราว์เซอร์
+
 ### ปุ่ม "ประมาณการยอดขาย" → PDF "รายงานยอดรับ Order ตามรหัสพนักงานขาย" — 15/10/2569
 
 แปลงจากฟอร์ม Access **"SaleOrder"** — ปุ่มบนหัวหน้า `/order` → หน้าต่าง `#salesForecastModal` (`order/index.blade.php`: `salesForecastOpen()` / `salesForecastPrint(kind)`) → `GET order/sales-forecast/order-pdf` → `SalesForecastController::orderPdf()` (mPDF A4 แนวตั้ง) → blade **`order/sales-forecast-pdf.blade.php`**
@@ -825,6 +834,12 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 - ⚠ **ไม่มีข้อยกเว้นให้ admin** — admin ก็ต้องรู้รหัสผ่านของผู้สร้าง · ผู้สร้างเปลี่ยนรหัสผ่าน = ใช้รหัสใหม่
 - ⚠ **`destroy()` (ลบใบ) และการพิมพ์ ไม่ได้ถามรหัสผ่าน** — ผู้ใช้สั่งเฉพาะตอนแก้ไข
 - ทดสอบผ่าน controller จริงแล้ว (สร้าง → ไม่ส่งรหัส 422 → รหัสผิด 422 → รหัสถูก 200 · ใบเก่า `creator` = null · ลบข้อมูลทดสอบแล้ว) **ยังไม่ได้กดในเบราว์เซอร์**
+
+**ปุ่ม "คัดลอกเป็นใบใหม่" (16/10/2569 ตามที่ผู้ใช้สั่ง)** — ปุ่ม `ti-copy` ในแถวของ `quotation/table.blade.php` → `quotationCopy(qno)` = `quotationEdit(qno, true)` (โหลดผ่าน `/edit` ตัวเดิม เติมฟอร์มครบทุกช่อง) แล้ว `toCopyMode()` สลับเป็นโหมด `insert`: เลขที่ใหม่จาก `/next-qno` ตาม prefix หัวกระดาษของใบเก่า (แก้ได้) · วันที่เสนอราคา = วันนี้ · **ล้าง Revisedate / ValidFrom / Validto** · `qCreator = null` (ไม่ถามรหัสผ่าน ผู้สร้าง = คนที่กดบันทึก) · **ไม่แก้ฝั่ง server** — บันทึกผ่าน `insert()` ตามปกติ (กันเลขที่ซ้ำอยู่แล้ว) · ⚠ ยังไม่ได้กดในเบราว์เซอร์
+
+**รูปหัวกระดาษบนหน้าพิมพ์ (16/10/2569 ตามที่ผู้ใช้สั่ง)** — `quotation/print.blade.php` (ใช้ทั้งพิมพ์จริงและ print-preview) วางรูปกว้างเต็มหน้าบนสุดตาม `qmast.letterhead`: `WH` → `public/letter-head/WH LETTER HEAD.png` · `WPC` → `WPC LETTER HEAD_noline.png` · `WPI` → `WPI LETTER HEAD _noline.png` · รูปกว้าง **90%** ของหน้า จัดกึ่งกลาง (map `$letterheadFiles` ใน blade, URL ผ่าน `asset()` + `rawurlencode` เพราะชื่อไฟล์มีช่องว่าง) · ค่าว่าง/ไม่รู้จัก = ไม่แสดงรูป · ⚠ ชื่อไฟล์ WPI มีช่องว่างก่อน `_noline` — เปลี่ยนชื่อไฟล์ต้องแก้ map ตาม · ⚠ ไฟล์เป็น RGBA พื้นโปร่งใส ~83% ที่มีสีดำซ่อนอยู่ข้างใต้ — พิมพ์/PDF บางเครื่องอาจขึ้นเป็นแถบดำ · **เลือกได้ว่าจะพิมพ์หัวกระดาษไหม** — กดพิมพ์ (ปุ่มในตาราง `quotationPrint` / ตัวอย่างพิมพ์ในฟอร์ม `quotationPrintPreview`) → `askLetterhead()` เด้ง Swal "พิมพ์พร้อมหัวกระดาษ / ไม่พิมพ์หัวกระดาษ / ยกเลิก" → ไม่พิมพ์ = ส่ง **`lh=0`** (query ของ `/print` · POST ของ `/print-preview`) → blade ตั้ง `$letterheadBlank` แล้วใส่ class `blank` = **ซ่อนรูปแต่เว้นที่ว่างสูงเท่าหัวกระดาษไว้** (`visibility: hidden` ไม่ใช่ `display: none`) ให้เอากระดาษที่มีหัวพิมพ์แล้วมาใส่เอง · ⚠ ต้องถามก่อนเพราะทั้ง 2 ปุ่มโหลดหน้าพิมพ์ใน iframe ซ่อนแล้วสั่งพิมพ์ทันที — **ผู้ใช้ไม่เคยเห็นแถบ `.toolbar` ของหน้าพิมพ์** (เคยใส่ checkbox ไว้ตรงนั้นแล้วมองไม่เห็น เอาออกแล้ว) · ข้อมูลจริง: WH 1,215 ใบ · WPI 2 · WPC 0
+
+**ราคา (บาท/กก) รวมจากช่องราคาข้างหน้าอัตโนมัติ (16/10/2569 ตามที่ผู้ใช้สั่ง)** — `priceParts()` / `recalcPriceKg()` ใน `quotation/index.blade.php` เรียกจาก `updateItem()` เมื่อแก้ช่องส่วนประกอบ: ทั่วไป = `resin_price` + `process_fee` + `pigment_price` + `loss_pct` · รูปแบบ **2.3** = `new_process_fee` + `new_pigment_price` · นับเฉพาะคอลัมน์ที่แสดงอยู่ (ไม่มี `price_kg` ในรูปแบบ = ไม่ทำ) แล้วต่อด้วย `recalcVat()` · ไม่กรอกส่วนประกอบเลย = ไม่แตะราคา · **ไม่คำนวณทับตอนเปิดใบเดิม** · ช่องราคายังพิมพ์ทับเองได้ · ⚠ `loss_pct` (% สูญเสีย, รูปแบบ 1.4) **บวกเป็นตัวเลขตรง ๆ** ไม่ได้คิดเป็นเปอร์เซ็นต์ของราคา (ผู้ใช้สั่ง "รวมเหมือนกัน") · ฝั่งจอล้วน server ไม่ได้ตรวจ
 
 ## ฐานข้อมูลลูกค้า (เมนู C-ฐานข้อมูลลูกค้า, `/customer`) — 24/08/2569
 

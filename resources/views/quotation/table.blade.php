@@ -93,6 +93,11 @@
                                 onclick="quotationEdit('{{ $row->Qno }}')">
                                 <i class="ti ti-edit"></i>
                             </button>
+                            {{-- คัดลอกเป็นใบใหม่ (16/10/2569) --}}
+                            <button class="btn btn-sm btn-icon btn-label-warning" title="คัดลอกเป็นใบใหม่"
+                                onclick="quotationCopy('{{ $row->Qno }}')">
+                                <i class="ti ti-copy"></i>
+                            </button>
                             <button class="btn btn-sm btn-icon btn-label-info" title="พิมพ์"
                                 onclick="quotationPrint('{{ $row->Qno }}')">
                                 <i class="ti ti-printer"></i>

@@ -59,9 +59,9 @@
                             <div class="col-md-5">
                                 <div class="input-group">
                                     <span class="input-group-text">วันที่ปรับราคา</span>
-                                    <input id="searchDateFrom" type="text" class="form-control flatpickr-filter" placeholder="ตั้งแต่">
+                                    <input id="searchDateFrom" type="text" class="form-control flatpickr-filter" placeholder="ตั้งแต่" autocomplete="off">
                                     <span class="input-group-text">ถึง</span>
-                                    <input id="searchDateTo" type="text" class="form-control flatpickr-filter" placeholder="ถึง">
+                                    <input id="searchDateTo" type="text" class="form-control flatpickr-filter" placeholder="ถึง" autocomplete="off">
                                 </div>
                             </div>
                             <div class="col-md-auto">

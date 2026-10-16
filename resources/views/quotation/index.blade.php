@@ -907,10 +907,46 @@
             // ผู้ใช้แก้ช่องนี้เอง → ไม่ถือเป็น auto-fill อีก (กันโดนล้างตอนรหัสไม่เจอ)
             if (row.__auto && row.__auto[key]) delete row.__auto[key];
 
+            // ── ราคา (บาท/กก) อัตโนมัติ — แก้ช่องราคาส่วนประกอบข้างหน้า → รวมลงช่องราคา (16/10/2569) ──
+            if (priceParts().indexOf(key) >= 0){
+                recalcPriceKg(idx);
+            }
+
             // ── VAT อัตโนมัติ — แก้ราคาแล้ว VAT ต้องตามทันที ──
             if (key === 'price_kg' || key === 'new_price'){
                 recalcVat(idx);
             }
+        }
+
+        // ────────────────────────────────────────────────────────
+        //  ราคา (บาท/กก) = ผลรวมช่องราคาส่วนประกอบที่อยู่ข้างหน้า (16/10/2569)
+        //  - ทั่วไป (1.2 / 1.3 / 1.4 / อัตโนมัติ): ราคาเม็ดพลาสติก + ค่าผลิต(และค่าแม่สี) + ค่าแม่สี + % สูญเสีย
+        //  - 2.3: "รวมราคา ใหม่" = ค่าผลิต ใหม่ + ค่าแม่สี ใหม่
+        //  นับเฉพาะคอลัมน์ที่แสดงอยู่ในรูปแบบที่เลือก · คำนวณเฉพาะตอนผู้ใช้แก้ช่องส่วนประกอบ
+        //  (ไม่คำนวณทับตอนเปิดใบเดิม) · ช่องราคายังพิมพ์ทับเองได้
+        // ────────────────────────────────────────────────────────
+        function priceParts(){
+            var parts = ($('#q_col_format').val() === '2.3')
+                ? ['new_process_fee', 'new_pigment_price']
+                : ['resin_price', 'process_fee', 'pigment_price', 'loss_pct'];   // % สูญเสีย บวกตรง ๆ ตามที่ผู้ใช้สั่ง
+            var shown = activeCols().map(function(c){ return c.key; });
+            if (shown.indexOf('price_kg') < 0) return [];
+            return parts.filter(function(k){ return shown.indexOf(k) >= 0; });
+        }
+        function recalcPriceKg(idx){
+            var row = currentItems[idx];
+            if (!row) return;
+            var sum = 0, any = false;
+            priceParts().forEach(function(k){
+                var n = toNum(row[k]);
+                if (n !== null){ sum += n; any = true; }
+            });
+            if (!any) return;   // ไม่ได้กรอกส่วนประกอบเลย → ไม่แตะราคาที่พิมพ์ไว้
+            var val = (Math.round(sum * 100) / 100).toFixed(2);
+            row.price_kg = val;
+            if (row.__auto) delete row.__auto.price_kg;
+            setCellInput(idx, 'price_kg', val);
+            recalcVat(idx);
         }
 
         // ────────────────────────────────────────────────────────
@@ -1123,7 +1159,8 @@
         // ────────────────────────────────────────────────────────
         //  แก้ไข — ดึงข้อมูลเดิมมาเติมฟอร์ม
         // ────────────────────────────────────────────────────────
-        function quotationEdit(qno){
+        //  asCopy = true → "คัดลอกเป็นใบใหม่" (16/10/2569): เติมข้อมูลใบเก่าแล้วสลับเป็นโหมดสร้างใหม่ (ดูท้ายฟังก์ชัน)
+        function quotationEdit(qno, asCopy){
             $.getJSON("{{ $page_url }}/edit", {qno: qno}, function(res){
                 if (res.error){ Swal.fire('ไม่พบข้อมูล', qno, 'error'); return; }
                 var h = res.header || {};
@@ -1165,8 +1202,33 @@
                 // รายการ: ใช้ค่าแบน (cells) จาก server ตรงๆ (ฟอร์มโชว์ทุกคอลัมน์)
                 var items = (res.items || []).map(function(d){ return Object.assign({}, d.cells || {}); });
                 setItems(items);
+                if (asCopy) toCopyMode((h.Qno || '').trim());
                 new bootstrap.Modal('#quotationModal').show();
             }).fail(function(){ Swal.fire('เกิดข้อผิดพลาด', 'โหลดข้อมูลไม่สำเร็จ', 'error'); });
+        }
+
+        // ────────────────────────────────────────────────────────
+        //  คัดลอกเป็นใบใหม่ (16/10/2569) — ใช้ข้อมูลใบเก่าเป็นตั้งต้น บันทึกผ่าน insert ตามปกติ
+        // ────────────────────────────────────────────────────────
+        function quotationCopy(qno){
+            quotationEdit(qno, true);
+        }
+
+        // สลับฟอร์มที่เติมข้อมูลใบเก่าแล้ว → โหมดสร้างใหม่: เลขที่ใหม่ · วันที่เสนอราคา = วันนี้ · ล้างวันที่แก้ไข/ช่วงยืนราคา
+        function toCopyMode(fromQno){
+            qCreator = null;   // ใบใหม่ — ผู้สร้างคือคนที่กดบันทึก ไม่ต้องป้อนรหัสผ่าน
+            $('#q_mode').val('insert');
+            $('#q_qno_key').val('');
+            $('#quotationModalTitle').text('สร้างใบเสนอราคา (คัดลอกจาก ' + fromQno + ')');
+            $('#q_Qno').val('').prop('readonly', false);
+            setFp('q_Qdate', new Date().toISOString().slice(0,10));
+            setFp('q_Revisedate', '');
+            setFp('q_ValidFrom', '');
+            setFp('q_Validto', '');
+            // เลขที่ถัดไปตาม prefix ของหัวกระดาษของใบเก่า (แก้ไขได้)
+            $.getJSON("{{ $page_url }}/next-qno", {prefix: $('#q_letterhead').val()}, function(res){
+                if (res.qno) $('#q_Qno').val(res.qno);
+            });
         }
 
         // ตัดเวลาออกจาก datetime → 'YYYY-MM-DD' สำหรับ input[type=date]
@@ -1295,7 +1357,28 @@
             if ($('.modal.show').length) { $('body').addClass('modal-open'); }
         });
 
+        // ถามก่อนพิมพ์ว่าจะพิมพ์หัวกระดาษไหม (16/10/2569) → cb(true = พิมพ์หัวกระดาษ / false = ไม่พิมพ์)
+        // ปุ่มพิมพ์เปิดหน้าพิมพ์ใน iframe ซ่อนแล้วสั่งพิมพ์ทันที ผู้ใช้จึงไม่เห็นแถบปุ่มของหน้าพิมพ์ ต้องถามตรงนี้
+        function askLetterhead(cb){
+            Swal.fire({
+                title: 'พิมพ์หัวกระดาษด้วยไหม?',
+                icon: 'question',
+                showDenyButton: true,
+                showCancelButton: true,
+                confirmButtonText: 'พิมพ์พร้อมหัวกระดาษ',
+                denyButtonText: 'ไม่พิมพ์หัวกระดาษ',
+                cancelButtonText: 'ยกเลิก',
+                heightAuto: false
+            }).then(function(r){
+                if (r.isConfirmed) cb(true);
+                else if (r.isDenied) cb(false);
+            });
+        }
+
         function quotationPrint(qno){
+            askLetterhead(function(withLh){ doQuotationPrint(qno, withLh); });
+        }
+        function doQuotationPrint(qno, withLh){
             // พิมพ์ในหน้าเดิมผ่าน iframe ซ่อน (ไม่เปิดแท็บ/หน้าต่างใหม่)
             var frame = document.getElementById('printFrame');
             if (!frame){
@@ -1308,15 +1391,19 @@
                 try { frame.contentWindow.focus(); frame.contentWindow.print(); }
                 catch (e) { console.error(e); }
             };
-            frame.src = "{{ $page_url }}/print?qno=" + encodeURIComponent(qno);
+            frame.src = "{{ $page_url }}/print?qno=" + encodeURIComponent(qno) + (withLh ? '' : '&lh=0');
         }
 
         // ── พิมพ์ตัวอย่างจากฟอร์มที่ยังไม่บันทึก ──
         // fetch POST ข้อมูลฟอร์ม (+ items_json) → รับ HTML → ยัดเข้า iframe ซ่อนด้วย srcdoc แล้วสั่งพิมพ์
         // ไม่เปิดหน้า/แท็บใหม่, ไม่บันทึก DB, ไม่บังคับกรอกครบ — ดูตัวอย่างได้ทันที
         function quotationPrintPreview(){
+            askLetterhead(doQuotationPrintPreview);
+        }
+        function doQuotationPrintPreview(withLh){
             var fd = new FormData(document.getElementById('quotationForm'));   // รวม other_notes[] ครบ
             fd.append('_token', '{{ csrf_token() }}');
+            if (!withLh) fd.append('lh', '0');   // ไม่พิมพ์หัวกระดาษ
             // รายการสินค้า — ส่งเป็น items_json เหมือนตอนบันทึก (ตัด __auto ออก)
             var cleanItems = currentItems.map(function(r){
                 var o = {}; Object.keys(r).forEach(function(k){ if (k !== '__auto') o[k] = r[k]; }); return o;
