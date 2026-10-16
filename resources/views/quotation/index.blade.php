@@ -54,10 +54,14 @@
 .qf-sec-title i { font-size: 1.25rem; }
 
 /* ช่องกรอกในตารางรายการ (โชว์ทุกคอลัมน์ → ตารางกว้าง เลื่อนแนวนอนได้) */
-#quotationItemsTable th { white-space: nowrap; font-size: .82rem; }
-.qitem-input { min-width: 90px; }
-.qitem-input:not(.text-end) { min-width: 130px; }   /* คอลัมน์ข้อความ (ชื่อสินค้า/หมายเหตุ) กว้างกว่า */
-.qitem-input.qitem-name { min-width: 340px; }        /* ช่องชื่อสินค้า/รายละเอียด — ยาวเป็นพิเศษ */
+/* หัวคอลัมน์ตัดบรรทัดได้ (16/10/2569) — เดิม nowrap ทำให้ช่องราคากว้างตามหัว (เช่น "ราคาเม็ดพลาสติก") หดไม่ได้ */
+#quotationItemsTable th { white-space: normal; font-size: .82rem; line-height: 1.25; vertical-align: middle; }
+/* ความกว้างขั้นต่ำตอนช่องว่าง — qAutoGrow() ตั้ง min-width แบบ inline ทับให้โตตามข้อความที่พิมพ์
+   ⚠ ค่าเหล่านี้ต้องตรงกับ Q_BASE_W ใน JS (ใช้เป็นพื้นขั้นต่ำของ auto-grow) */
+.qitem-input { min-width: 72px; }                    /* ช่องตัวเลข/ราคา — หดลง 16/10/2569 (เดิม 90) */
+.qitem-input:not(.text-end) { min-width: 110px; }   /* คอลัมน์ข้อความ (หมายเหตุ ฯลฯ) */
+.qitem-input.qitem-code { min-width: 150px; }        /* รหัสสินค้า — ขยาย 16/10/2569 (เดิม 130) */
+.qitem-input.qitem-name { min-width: 200px; }        /* ชื่อสินค้า/รายละเอียด — หด 16/10/2569 (เดิม 340) */
 /* เรียงตาม — คลิกหัวตาราง + เน้นคอลัมน์ที่กำลังเรียง (เหมือนหน้าเทียบสี) */
 #table-data th.th-sort { cursor: pointer; user-select: none; }
 #table-data th.th-sort:hover { background-color: #e9ecef; }
@@ -897,7 +901,41 @@
             $('#quotationItems').html(body);
             // เปลี่ยนรูปแบบตาราง (คอลัมน์ VAT อาจเพิ่งโผล่มา) → เติม VAT ให้แถวที่ยังว่าง
             recalcAllVat();
+            qAutoGrowAll();   // ค่าที่โหลดมาจากใบเดิมต้องขยายช่องให้พอดีด้วย
         }
+
+        // ────────────────────────────────────────────────────────
+        //  ช่องในตารางรายการโตตามข้อความที่พิมพ์ (16/10/2569) — แพทเทิร์นเดียวกับ oiAutoGrow() ของฟอร์มใบสั่งซื้อ
+        //  วัดความกว้างข้อความด้วย canvas แล้วตั้ง min-width แบบ inline (ไม่ใช่ width — input ยังเต็มช่อง
+        //  ส่วน <td> ถูกบังคับให้กว้างตาม ตารางขยายได้เพราะอยู่ใน .table-responsive)
+        //  พื้นขั้นต่ำต่อชนิดช่อง = Q_BASE_W (ต้องตรงกับ CSS .qitem-input ด้านบน)
+        // ────────────────────────────────────────────────────────
+        var Q_BASE_W = {code: 150, name: 200, num: 72, text: 110},
+            Q_MAX_W  = 480,     // กันช่องเดียวบานจนตารางอ่านไม่ไหว
+            _qCanvas = null;
+
+        function qBaseWidth(el){
+            if (el.classList.contains('qitem-code')) return Q_BASE_W.code;
+            if (el.classList.contains('qitem-name')) return Q_BASE_W.name;
+            return el.classList.contains('text-end') ? Q_BASE_W.num : Q_BASE_W.text;
+        }
+        function qAutoGrow(el){
+            if (!el || !el.classList || !el.classList.contains('qitem-input')) return;
+            var cs = getComputedStyle(el);
+            if (!cs.fontSize || parseFloat(cs.fontSize) === 0) return;   // modal ยังซ่อนอยู่ วัดไม่ได้
+            if (!_qCanvas) _qCanvas = document.createElement('canvas').getContext('2d');
+            _qCanvas.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+            var pad = parseFloat(cs.paddingLeft)     + parseFloat(cs.paddingRight)
+                    + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
+            var w = _qCanvas.measureText(el.value || '').width + pad + 14;   // 14 = เผื่อ caret
+            el.style.minWidth = Math.min(Math.max(Math.ceil(w), qBaseWidth(el)), Q_MAX_W) + 'px';
+        }
+        function qAutoGrowAll(scope){
+            $(scope || '#quotationItems').find('.qitem-input').each(function(){ qAutoGrow(this); });
+        }
+        // input = พิมพ์เอง · change/blur = js-comma จัดรูปแบบตัวเลขใหม่
+        $(document).on('input change blur', '#quotationItems .qitem-input', function(){ qAutoGrow(this); });
+        $(function(){ $('#quotationModal').on('shown.bs.modal', function(){ qAutoGrowAll(); }); });
 
         // คอลัมน์นี้เป็นตัวเลขไหม (ใช้ตัดสินว่าต้องถอดคอมมา/ใส่คอมมา)
         function isNumCol(key){ return !!(COL_REG[key] && COL_REG[key].num); }
@@ -984,8 +1022,9 @@
             var pos = -1;
             activeCols().forEach(function(c, i){ if (c.key === key) pos = i; });
             if (pos < 0) return;
-            $('#quotationItems tr').eq(idx).find('input').eq(pos)
+            var $in = $('#quotationItems tr').eq(idx).find('input').eq(pos)
                 .val(isNumCol(key) ? commaFmt(val, 2) : val);
+            qAutoGrow($in[0]);   // ตั้งค่าด้วย .val() ไม่ยิง event ต้องสั่งขยายเอง
         }
 
         function recalcVat(idx){
@@ -1023,6 +1062,7 @@
                 if (c.key === 'code') return;   // อย่าแตะช่องที่กำลังพิมพ์
                 var v = currentItems[idx][c.key];
                 $inputs.eq(i).val(c.num ? commaFmt(v, 2) : (v == null ? '' : v));
+                qAutoGrow($inputs[i]);   // ค่าที่ค้นมาเติมด้วย .val() ไม่ยิง event
             });
         }
         function applyItemLookup(idx, code){
@@ -1076,7 +1116,8 @@
                     if ($('#q_Custid').val().trim() !== code) return;
                     if (res.found){
                         $('#q_CustName').val(res.name || '');
-                        if (res.nameEN) $('#q_Engname').val(res.nameEN);
+                        // ลูกค้าไม่มีชื่ออังกฤษ = ล้างช่อง (16/10/2569) — เดิมเติมเฉพาะตอนมีค่า ชื่อของลูกค้าก่อนหน้าจึงค้าง
+                        $('#q_Engname').val(res.nameEN || '');
                         // เทอมการชำระเงิน — ดึงจาก customer.term มาเติมให้ (ถ้าช่องยังว่าง)
                         // ยกเว้นค่า "CASH" (เงินสด) ที่ไม่ต้องการให้ขึ้นบนใบเสนอราคา → ปล่อยช่องว่างไว้
                         if (res.term && !$('#q_Term').val() && String(res.term).trim().toUpperCase() !== 'CASH') {
