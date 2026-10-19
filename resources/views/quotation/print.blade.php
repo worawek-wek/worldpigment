@@ -28,15 +28,26 @@
 
     // ── รูปหัวกระดาษ (16/10/2569) — ตามช่อง "หัวกระดาษ" ของใบ (qmast.letterhead) ไฟล์อยู่ที่ public/letter-head ──
     $letterheadFiles = [
-        'WH'  => 'WH LETTER HEAD.png',
-        'WPC' => 'WPC LETTER HEAD.png',
-        'WPI' => 'WPI LETTER HEAD.png',
+        'WH'  => 'WH QUOTATION.png',
+        'WPC' => 'WPC QUOTATION.png',
+        'WPI' => 'WPI QUOTATION.png',
     ];
     $lhFile = $letterheadFiles[strtoupper(trim($header->letterhead ?? ''))] ?? null;
     $letterheadUrl = $lhFile ? asset('letter-head/' . rawurlencode($lhFile)) : null;
     // ผู้ใช้เลือก "ไม่พิมพ์หัวกระดาษ" ตอนกดพิมพ์ → ส่ง lh=0 มา (query ของ /print หรือ POST ของ /print-preview)
     //  → ไม่แสดงรูป แต่ "เว้นที่ว่าง" สูงเท่าหัวกระดาษไว้ ให้เอากระดาษที่มีหัวพิมพ์แล้วมาใส่เอง
     $letterheadBlank = request('lh') === '0';
+
+    // ── ตราประทับ "REVISED" + วันที่ (19/10/2569) — ขึ้นเองเมื่อใบมี Revise Date (qmast.Revisedate) ──
+    //    ไทย: 21 ก.ย. 2569 · อังกฤษ: 21 Sep 2026 · วันที่ของใบ (Qdate) ยังเป็นวันเสนอราคาเดิม
+    $revisedStamp = null;
+    if (!empty($header->Revisedate)) {
+        $rv = \Carbon\Carbon::parse($header->Revisedate);
+        $thShort = [1=>'ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+        $revisedStamp = $headEn
+            ? $rv->day . ' ' . $rv->format('M') . ' ' . $rv->year
+            : $rv->day . ' ' . $thShort[$rv->month] . ' ' . ($rv->year + 543);
+    }
 
     $subject  = $isRevision ? 'ขอแจ้งปรับราคา' : 'ขอเสนอราคา';
     // ข้อความเนื้อจดหมาย — ตามแบบที่ลูกค้ากำหนด (12/09/2569)
@@ -73,6 +84,26 @@
         .letterhead.blank img { visibility: hidden; }
         .doc-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
         .doc-head .qno { font-weight: bold; }
+
+        /* ── ตราประทับ REVISED (19/10/2569) — ลอยใต้วันที่มุมขวาบน ไม่ดันเนื้อหาส่วนอื่น ── */
+        .doc-head .date-col { position: relative; }
+        .revised-stamp {
+            position: absolute; right: 0; top: 100%; margin-top: 10px;
+            text-align: center; transform: rotate(-4deg); transform-origin: right top;
+            white-space: nowrap; pointer-events: none;
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
+        }
+        .revised-stamp .word {
+            display: inline-block; padding: 0 12px;
+            border: 3px solid #d32f2f; border-radius: 6px;
+            color: #d32f2f; font-family: 'Arial Black', 'Arial', sans-serif;
+            font-size: 30px; font-weight: 900; letter-spacing: 2px; line-height: 1.15;
+            opacity: .85;
+        }
+        .revised-stamp .date {
+            margin-top: 4px; color: #1f3fa8; font-size: 22px; font-weight: bold;
+            letter-spacing: 3px; opacity: .85;
+        }
         .field-label { display: inline-block; }
         .subject { margin: 2px 0; }
         .body-text { text-indent: 40px; margin: 14px 0 10px; }
@@ -123,10 +154,15 @@
     @if ($headEn)
         <div class="doc-head">
             <div><span class="field-label">Quotation No.</span> &nbsp;&nbsp; <span class="qno">{{ $qno }}</span></div>
-            <div>{{ $enDate($header->Qdate) }}</div>
+            <div class="date-col">
+                {{ $enDate($header->Qdate) }}
+                @include('quotation.partials.revised-stamp')
+            </div>
         </div>
 
-        <div class="subject"><span class="field-label">Re:</span> &nbsp;&nbsp; {{ $subjectEn }}</div>{{-- ตัดชนิดสินค้า ($ptname) ออก 16/10/2569 --}}
+        {{-- บรรทัด "Re: Quotation / Price Revision" — เอาออกทั้งบรรทัด 16/10/2569 ตามที่ผู้ใช้สั่ง
+        <div class="subject"><span class="field-label">Re:</span> &nbsp;&nbsp; {{ $subjectEn }}</div>
+        --}}
         <div class="subject">
             <span class="field-label">ATTN:</span> &nbsp;&nbsp;
             {{ $tnameEn ?: '—' }} @if($header->Custid) ({{ $header->Custid }}) @endif
@@ -137,7 +173,10 @@
     @else
         <div class="doc-head">
             <div><span class="field-label">ใบเสนอราคาเลขที่</span> &nbsp;&nbsp; <span class="qno">{{ $qno }}</span></div>
-            <div>วันที่ {{ $thaiDate($header->Qdate) }}</div>
+            <div class="date-col">
+                วันที่ {{ $thaiDate($header->Qdate) }}
+                @include('quotation.partials.revised-stamp')
+            </div>
         </div>
 
         <div class="subject"><span class="field-label">เรื่อง</span> &nbsp;&nbsp; {{ $subject }} &nbsp; {{ $ptname }}</div>

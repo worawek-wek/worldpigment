@@ -1005,8 +1005,11 @@
             return isNaN(n) ? null : n;
         }
         // ราคาที่ใช้เป็นฐานคิด VAT ของแถวนี้ (ไม่มีเลย = null)
+        //  ใช้ "ราคาใหม่" เฉพาะตอนคอลัมน์นั้นแสดงอยู่ในรูปแบบที่เลือก (16/10/2569) — เดิมใช้เสมอถ้ามีค่า
+        //  ⇒ กรอกราคาใหม่ไว้ในโหมดอื่นแล้วสลับมา 1.1 (ไม่มีคอลัมน์ราคาใหม่) VAT คิดจากค่าที่มองไม่เห็น
         function vatBase(row){
-            var n = toNum(row.new_price);
+            var newShown = activeCols().some(function(c){ return c.key === 'new_price'; });
+            var n = newShown ? toNum(row.new_price) : null;
             return (n !== null) ? n : toNum(row.price_kg);
         }
         function vatOf(base){ return Math.round(base * (1 + VAT_RATE) * 100) / 100; }

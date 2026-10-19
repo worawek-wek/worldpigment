@@ -798,7 +798,7 @@
         function fillSdColorInfo($f, resp) {
             resp = resp || {};
             fillForm('#form_sample_delivery', {
-                STD:        resp.STD         ?? '', // Standard: ดึงจากใบนำส่งเทียบสี (readonly)
+                STD:        resp.STD         ?? '', // Standard: ดึงจากใบนำส่งเทียบสีเป็นค่าตั้งต้น (แก้ไขได้ 16/10/2569)
                 TestDesc:   resp.color       ?? '', // รายละเอียด: ดึงจาก "สี" (color) ของใบนำส่งเทียบสี
                 ResinMatch: resp.CustPigment ?? '', // Resin (Match): ดึงจาก "เม็ดที่ลูกค้าใช้" (CustPigment) เช่น AS50%+ABS50%
             });

@@ -99,7 +99,8 @@
                                 </div>
 
                                 <div class="row gx-3 gy-2 align-items-end">
-                                    <div class="col-md-6">
+                                    {{-- สั้นลงครึ่งหนึ่ง col-md-6 → 3 (16/10/2569 ตามที่ผู้ใช้สั่ง) --}}
+                                    <div class="col-md-3">
                                         <label class="form-label small mb-1 text-danger">
                                             <i class="ti ti-asterisk-simple"></i>
                                             เลขที่ใบส่ง ต.ย. ให้ลูกค้า <span class="text-muted fw-normal">(เช่น 53495-CP)</span>
@@ -149,11 +150,13 @@
                                 {{-- of-form: ใช้กับแถว 2 และ 3 (label ซ้าย ช่องกรอกขวา) — แถว 1 ไม่มี of-row จึงยังเป็น label อยู่บน --}}
                                 <div class="row gx-3 gy-2 align-items-end of-form" style="--of-lw: 150px;">
                                     {{-- แถว 1: Resin + PHR + น้ำหนัก + Standard --}}
-                                    <div class="col-md-6">
+                                    {{-- col-md-6 → 5: ยืม 1 ส่วนให้ PHR/น้ำหนัก กว้างเท่ากัน (16/10/2569) --}}
+                                    <div class="col-md-5">
                                         <label class="form-label small mb-1">Resin (Match) <span class="text-muted fw-normal">(เช่น PVC, ABS, PE)</span></label>
                                         <input type="text" name="ResinMatch" class="form-control">
                                     </div>
-                                    <div class="col-md-1">
+                                    {{-- PHR กับ น้ำหนัก กว้างเท่ากัน col-md-2 ทั้งคู่ (16/10/2569 ตามที่ผู้ใช้สั่ง — เดิม PHR 1 / น้ำหนัก 2) --}}
+                                    <div class="col-md-2">
                                         <label class="form-label small mb-1">PHR <span class="text-muted fw-normal">(0.0000)</span></label>
                                         <input type="number" step="0.0001" name="PHR" class="form-control text-end">
                                     </div>
@@ -165,7 +168,9 @@
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">Standard <span class="text-muted fw-normal">(เช่น PT 494 C)</span></label>
-                                        <input type="text" name="STD" class="form-control bg-label-secondary" readonly>
+                                        {{-- แก้ไขได้แล้ว (16/10/2569 ตามที่ผู้ใช้สั่ง) — เดิม readonly + พื้นเทา
+                                             ยังเติมค่าตั้งต้นจากใบนำส่งเทียบสีเมื่อกรอกเลขที่อ้างอิง (fillSdColorInfo) --}}
+                                        <input type="text" name="STD" class="form-control">
                                     </div>
                                     <div class="w-100"></div>
 
