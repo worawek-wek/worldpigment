@@ -391,6 +391,26 @@
                 </div>
             </div>
 
+            {{-- ตัวกรองแยกรายช่อง (19/10/2569) — ใช้ร่วมกับช่องค้นหารวมได้ (AND) --}}
+            <div class="row g-3 mt-0">
+                <div class="col-md-2">
+                    <label class="form-label small fw-medium mb-1">รหัสลูกค้า</label>
+                    <input type="text" name="f_custno" class="form-control p_search" oninput="loadData(page)">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-medium mb-1">ชื่อลูกค้า</label>
+                    <input type="text" name="f_custname" class="form-control p_search" oninput="loadData(page)">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-medium mb-1">ชื่อสินค้า</label>
+                    <input type="text" name="f_stcode" class="form-control p_search" oninput="loadData(page)">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-medium mb-1">รหัสสินค้า</label>
+                    <input type="text" name="f_itemno" class="form-control p_search" oninput="loadData(page)">
+                </div>
+            </div>
+
             </div>
             </div>
             {{-- /#saleinfoFilterBox --}}
@@ -537,6 +557,10 @@
     var FILTER_LABELS = {
         search:    'ค้นหา',
         label:     'Label DB',
+        f_custno:   'รหัสลูกค้า',
+        f_custname: 'ชื่อลูกค้า',
+        f_stcode:   'ชื่อสินค้า',
+        f_itemno:   'รหัสสินค้า',
         date_from: 'วันที่เริ่มราคาใหม่ ตั้งแต่',
         date_to:   'ถึง'
     };

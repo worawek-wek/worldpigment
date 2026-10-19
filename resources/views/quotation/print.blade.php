@@ -89,7 +89,7 @@
         .doc-head .date-col { position: relative; }
         .revised-stamp {
             position: absolute; right: 0; top: 100%; margin-top: 10px;
-            text-align: center; transform: rotate(-4deg); transform-origin: right top;
+            text-align: center;
             white-space: nowrap; pointer-events: none;
             -webkit-print-color-adjust: exact; print-color-adjust: exact;
         }
@@ -109,17 +109,23 @@
         .body-text { text-indent: 40px; margin: 14px 0 10px; }
 
         /* ── ตารางรายการ (ไม่มีเส้นตาราง; หัวคอลัมน์ขีดเส้นใต้อย่างเดียว) ── */
-        table.items { width: 100%; border-collapse: collapse; margin-top: 6px; }
+        /* ช่องไฟบน/ล่างตารางมากขึ้น (19/10/2569 ตามที่ผู้ใช้สั่ง 2 รอบ) — เดิม 6px / footer-info 20px → 28/40 → 48/64 */
+        table.items { width: 100%; border-collapse: collapse; margin-top: 48px; }
         table.items th, table.items td { padding: 4px 7px; vertical-align: top; }
         table.items thead th { text-align: left; font-weight: bold; line-height: 1.25; }
         table.items thead th small { font-weight: normal; color: #333; font-size: .78em; }
         table.items td { text-align: left; }
         .text-end { text-align: right; }
+        /* ต้อง qualify ด้วย table.items ไม่งั้นกฎ text-align:left ของ th/td ข้างบนชนะ (specificity สูงกว่า)
+           — ช่องยอดเงิน/น้ำหนักจึงเคยชิดซ้าย (แก้ 19/10/2569) */
+        table.items th.text-end, table.items td.text-end { text-align: right; }
         .text-center { text-align: center; }
         .code { font-family: ui-monospace, Consolas, monospace; }
         tfoot th { border-top: 1px solid #000; }
 
-        .footer-info { margin-top: 20px; }
+        /* ส่วนท้าย (หมายเหตุ + ลายเซ็น) — ระยะห่างจากตารางอย่างน้อย 64px (เดิมเป็น margin-top ของ .footer-info) */
+        .page-bottom { padding-top: 64px; }
+        .footer-info { margin-top: 0; }
         .footer-info .row { margin: 2px 0; }
         .sign { margin-top: 44px; display: flex; justify-content: flex-end; }
         /* กล่องเซ็นชื่อกว้างขึ้นให้รับกับรูปลายเซ็นขนาดใหญ่ (เส้นเซ็นชื่อยาวขึ้นตาม) */
@@ -135,6 +141,15 @@
         .fmt-tag { font-size: .75em; color: #888; }
 
         @media print { .toolbar { display: none; } body { padding: 10px 24px; } }
+
+        /* ── ส่วนท้ายชิดล่างของหน้ากระดาษ (19/10/2569 ตามที่ผู้ใช้สั่ง) ──
+           .page สูงเท่าพื้นที่พิมพ์ของ A4 (297mm − ขอบ 10mm×2 − padding ของ body) แล้วดัน .page-bottom ลงล่างด้วย margin-top:auto
+           ตั้งต่ำกว่าพื้นที่จริงเล็กน้อย กันปัดเศษแล้วล้นไปหน้า 2 · ใบที่ยาวเกิน 1 หน้า ส่วนท้ายจะต่อท้ายตารางตามปกติ */
+        @page { size: A4; margin: 10mm; }
+        @media print {
+            .page { display: flex; flex-direction: column; min-height: 270mm; }
+            .page-bottom { margin-top: auto; }
+        }
     </style>
 </head>
 <body>
@@ -145,6 +160,8 @@
         <span class="fmt-tag">{{ $isRevision ? 'แจ้งปรับราคา' : 'เสนอราคา' }}</span>
     </div>
 
+    {{-- .page = ตัวคุมให้ส่วนท้ายชิดล่างของหน้า (ดู CSS @media print) --}}
+    <div class="page">
     {{-- หัวกระดาษ (16/10/2569) --}}
     @if ($letterheadUrl)
         <div class="letterhead{{ $letterheadBlank ? ' blank' : '' }}" id="letterhead"><img src="{{ $letterheadUrl }}" alt="หัวกระดาษ {{ $header->letterhead }}"></div>
@@ -153,7 +170,7 @@
     {{-- หัวเอกสาร (สลับ TH/EN ตามภาษาที่เลือก) --}}
     @if ($headEn)
         <div class="doc-head">
-            <div><span class="field-label">Quotation No.</span> &nbsp;&nbsp; <span class="qno">{{ $qno }}</span></div>
+            <div><span class="field-label">QUOTATION NO.</span> &nbsp;&nbsp; <span class="qno">{{ $qno }}</span></div>
             <div class="date-col">
                 {{ $enDate($header->Qdate) }}
                 @include('quotation.partials.revised-stamp')
@@ -164,7 +181,7 @@
         <div class="subject"><span class="field-label">Re:</span> &nbsp;&nbsp; {{ $subjectEn }}</div>
         --}}
         <div class="subject">
-            <span class="field-label">ATTN:</span> &nbsp;&nbsp;
+            <span class="field-label">Customer:</span> &nbsp;&nbsp;
             {{ $tnameEn ?: '—' }} @if($header->Custid) ({{ $header->Custid }}) @endif
         </div>
         <div class="subject">Dear Purchasing Manager,</div>
@@ -179,10 +196,12 @@
             </div>
         </div>
 
+        {{-- บรรทัด "เรื่อง" — เอาออก 19/10/2569 ตามที่ผู้ใช้สั่ง
         <div class="subject"><span class="field-label">เรื่อง</span> &nbsp;&nbsp; {{ $subject }} &nbsp; {{ $ptname }}</div>
-        {{-- ATTN: ชื่อลูกค้า + รหัสลูกค้า แยกบรรทัดจาก "เรียน" เหมือนฉบับภาษาอังกฤษ (12/09/2569) --}}
+        --}}
+        {{-- ชื่อลูกค้า + รหัสลูกค้า แยกบรรทัดจาก "เรียน" (12/09/2569) · ป้ายเดิม "ATTN:" → "ลูกค้า:" (19/10/2569) --}}
         <div class="subject">
-            <span class="field-label">ATTN:</span> &nbsp;&nbsp;
+            <span class="field-label">ลูกค้า:</span> &nbsp;&nbsp;
             {{ $tname ?: '—' }} @if($header->Custid) ({{ $header->Custid }}) @endif
         </div>
         <div class="subject"><span class="field-label">เรียน</span> &nbsp;&nbsp; ผู้จัดการฝ่ายจัดซื้อ</div>
@@ -196,7 +215,8 @@
             <tr>
                 @foreach ($colConfig as $c)
                     @php $head = $headEn ? ($c['label_en'] ?? $c['label']) : $c['label']; @endphp
-                    <th class="{{ ($colRegistry[$c['key']]['num'] ?? false) ? 'text-end' : '' }}"><u>{{ $head }}</u></th>
+                    {{-- น้ำหนักส่งครั้งละ (delivery_qty) เก็บเป็นข้อความ แต่ให้ชิดขวาเหมือนช่องตัวเลข (19/10/2569) --}}
+                    <th class="{{ (($colRegistry[$c['key']]['num'] ?? false) || $c['key'] === 'delivery_qty') ? 'text-end' : '' }}"><u>{{ $head }}</u></th>
                 @endforeach
             </tr>
         </thead>
@@ -217,7 +237,7 @@
                                 $disp = preg_replace_callback('/(?<![\d,.])\d{4,}/', fn ($m) => number_format((int) $m[0]), (string) $disp);
                             }
                         @endphp
-                        <td class="{{ $num ? 'text-end' : '' }} {{ $k === 'code' ? 'code' : '' }}">{{ $disp }}</td>
+                        <td class="{{ ($num || $k === 'delivery_qty') ? 'text-end' : '' }} {{ $k === 'code' ? 'code' : '' }}">{{ $disp }}</td>
                     @endforeach
                 </tr>
             @empty
@@ -241,6 +261,7 @@
             ? $enDate
             : fn ($d) => $d ? \Carbon\Carbon::parse($d)->format('d/m/Y') : '-';
     @endphp
+    <div class="page-bottom">
     <div class="footer-info">
         @if ($header->resin_price_note)
             <div class="row">{{ $L['resin'] }} : {{ $header->resin_price_note }}</div>
@@ -276,6 +297,8 @@
             <div class="line"><span class="emp-name">{{ $empName }}</span></div>
         </div>
     </div>
+    </div>{{-- /.page-bottom --}}
+    </div>{{-- /.page --}}
 
 </body>
 </html>

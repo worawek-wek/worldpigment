@@ -562,6 +562,19 @@ class SaleinfoController extends Controller
         if ($label !== '') {
             $query->where('uprice.Label', 'LIKE', "%{$label}%");
         }
+        // ตัวกรองแยกรายช่อง (19/10/2569) — LIKE ต่อช่อง รวมกันแบบ AND
+        $fields = [
+            'f_custno'   => 'uprice.CustNo',
+            'f_custname' => 'c.name',
+            'f_stcode'   => 'uprice.st_code',
+            'f_itemno'   => 'uprice.ITEMNO',
+        ];
+        foreach ($fields as $param => $column) {
+            $v = trim((string) $request->input($param, ''));
+            if ($v !== '') {
+                $query->where($column, 'LIKE', "%{$v}%");
+            }
+        }
         if (@$request->date_from) {
             $d = $this->parseDate($request->date_from);
             if ($d) $query->whereDate('uprice.DATE', '>=', $d);

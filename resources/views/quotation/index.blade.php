@@ -516,7 +516,7 @@
                             </div>
                         </div>
                         <div class="alert alert-info py-2 px-3 mb-3 small">
-                            <i class="ti ti-info-circle me-1"></i>ช่องที่มี <span class="text-danger fw-bold">*</span> ต้องกรอก — ช่องที่ปล่อยว่างจะไม่แสดงในใบเสนอราคา
+                            <i class="ti ti-info-circle me-1"></i>ช่องที่ปล่อยว่างจะไม่แสดงในใบเสนอราคา
                         </div>
 
                         {{-- 06/10/2569: label ซ้าย (โครง .of-row / .of-ctl) — ตัวอย่างในวงเล็บ "(เช่น ...)" ย้ายจาก label
@@ -538,13 +538,12 @@
                             <div class="col-md-6 of-row">
                                 <label class="form-label">
                                     <span class="i18n-th">ราคานี้มีผลวันที่</span><span class="i18n-en">Price validity from</span>
-                                    <span class="text-danger">*</span>
                                 </label>
                                 <div class="of-ctl">
                                     <div class="d-flex align-items-center gap-2">
-                                        <input type="text" name="ValidFrom" id="q_ValidFrom" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" required>
+                                        <input type="text" name="ValidFrom" id="q_ValidFrom" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
                                         <span class="small fw-medium"><span class="i18n-th">ถึง</span><span class="i18n-en">to</span></span>
-                                        <input type="text" name="Validto" id="q_Validto" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" required>
+                                        <input type="text" name="Validto" id="q_Validto" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
                                     </div>
                                 </div>
                             </div>
@@ -553,11 +552,10 @@
                             <div class="col-md-6 of-row">
                                 <label class="form-label">
                                     <span class="i18n-th">จำนวนส่งมอบขั้นต่ำ</span><span class="i18n-en">Minimum Quantity</span>
-                                    <span class="text-danger">*</span>
                                 </label>
                                 <div class="of-ctl">
                                     <div class="input-group">
-                                        <input type="text" name="Qremark" id="q_Qremark" class="form-control" maxlength="50" required>
+                                        <input type="text" name="Qremark" id="q_Qremark" class="form-control" maxlength="50">
                                         <span class="input-group-text"><span class="i18n-th">กก.</span><span class="i18n-en">kg</span></span>
                                     </div>
                                     <div class="form-text text-muted fw-normal i18n-th">(เช่น 100)</div>
