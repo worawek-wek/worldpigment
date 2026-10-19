@@ -4,7 +4,9 @@
 
      ⚠ ไม่ใช่ Bootstrap modal ตัวที่ 2 โดยตั้งใจ — วางเป็นม่านซ้อน "ภายใน" #orderModal
        (modal ซ้อนกัน 2 ตัว focus trap ของ Bootstrap จะแย่งโฟกัสกัน พิมพ์ไม่ได้ และ event shown/hidden
-        ของตัวลูกจะไหลขึ้นไปเรียก handler ของฟอร์มใบสั่งซื้อ) · JS อยู่ที่ cpCheck*() ใน order/index.blade.php --}}
+        ของตัวลูกจะไหลขึ้นไปเรียก handler ของฟอร์มใบสั่งซื้อ) · JS อยู่ที่ cpCheck*() ใน order/index.blade.php
+     ใช้ซ้ำในฟอร์มอนุมัติใบสั่งซื้อแบบอ่านอย่างเดียว (cpCheckView, 19/10/2569) — JS ย้ายม่านนี้ไปไว้ใน
+       #orderApprovalModal ตอนเปิดดู แล้วย้ายกลับ #orderModal ตอนเปิดเพื่อกรอก (cpCheckSetMode) --}}
 <style>
     #cpCheckDialog { position: fixed; inset: 0; z-index: 1100; background: rgba(34, 48, 62, .55);
                      display: flex; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto; }
@@ -27,7 +29,7 @@
 <div id="cpCheckDialog" class="d-none" role="dialog" aria-modal="true" aria-labelledby="cpCheckTitle">
     <div class="cp-box">
         <div class="cp-head">
-            <h5 class="mb-0" id="cpCheckTitle"><i class="ti ti-calculator me-1"></i>ตรวจสอบราคาเม็ด CP ก่อนบันทึก</h5>
+            <h5 class="mb-0" id="cpCheckTitle"><i class="ti ti-calculator me-1"></i><span id="cpCheckTitleText">ตรวจสอบราคาเม็ด CP ก่อนบันทึก</span></h5>
             <button type="button" class="btn-close" onclick="cpCheckClose()" aria-label="Close"></button>
         </div>
 
@@ -124,7 +126,7 @@
         </div>
 
         <div class="d-flex justify-content-end gap-2 px-3 pb-3">
-            <button type="button" class="btn btn-label-secondary" onclick="cpCheckClose()">ยกเลิก</button>
+            <button type="button" id="btnCpCheckCancel" class="btn btn-label-secondary" onclick="cpCheckClose()">ยกเลิก</button>
             <button type="button" id="btnCpCheckSave" class="btn btn-primary" onclick="cpCheckConfirm()">
                 <i class="ti ti-device-floppy me-1"></i>บันทึกการรับคำสั่งซื้อ
             </button>

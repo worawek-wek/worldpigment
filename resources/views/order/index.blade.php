@@ -2007,7 +2007,32 @@
             || CP_CHECK_CUSTOMERS.indexOf(custno) !== -1;
     }
 
+    /* สลับโหมดของม่าน (19/10/2569)
+         view=false → กรอกก่อนบันทึก (อยู่ใน #orderModal)
+         view=true  → อ่านอย่างเดียวในฟอร์มอนุมัติ (ย้ายไปอยู่ใน #orderApprovalModal — ม่านเป็น position:fixed
+                      ถ้าค้างอยู่ใน #orderModal ที่ซ่อนอยู่จะมองไม่เห็น) */
+    function cpCheckSetMode(view){
+        var $d = $('#cpCheckDialog');
+        $d.appendTo(view ? '#orderApprovalModal' : '#orderModal');
+        $d.find('input').prop('disabled', view);
+        $('#btnCpCheckSave').toggleClass('d-none', view);
+        $('#btnCpCheckCancel').text(view ? 'ปิด' : 'ยกเลิก');
+        $('#cpCheckTitleText').text(view ? 'ราคาเม็ด CP ที่บันทึกไว้ตอนรับคำสั่งซื้อ' : 'ตรวจสอบราคาเม็ด CP ก่อนบันทึก');
+    }
+
+    // ฟอร์มอนุมัติใบสั่งซื้อ — ใบที่มีข้อมูลใน cp_itemprice เด้งขึ้นมาให้ดู (อ่านอย่างเดียว)
+    function cpCheckView(row, o){
+        cpPending = null;
+        cpCheckSetMode(true);
+        $('#cp_Orderno').val(row.Orderno || '');
+        $('#cp_itemno').val(row.itemno || '');
+        $('#cp_OrderPrice').val(commaFmt(row.OrderPrice != null ? row.OrderPrice : (o || {}).price, 2));
+        cpFill(row);
+        $('#cpCheckDialog').removeClass('d-none');
+    }
+
     function cpCheckOpen(isEdit, type, items){
+        cpCheckSetMode(false);
         cpPending = {isEdit: isEdit, type: type, items: items};
         var orderno = ($('#o_Orderno').val() || '').trim();
         var itemno  = (items[0].Itemno || '').trim();
@@ -2105,6 +2130,7 @@
         });
         // ปิดฟอร์มใบสั่งซื้อ = ปิดฟอร์มนี้ด้วย
         $('#orderModal').on('hidden.bs.modal', function(e){ if (e.target === this) cpCheckClose(); });
+        $('#orderApprovalModal').on('hidden.bs.modal', function(e){ if (e.target === this) cpCheckClose(); });
     });
 
     /* ถามยืนยันเมื่อมีรหัสสินค้าในใบที่สั่งครั้งล่าสุดเกิน 3 ปี — 15/10/2569 ตามที่ผู้ใช้สั่ง
@@ -2377,6 +2403,8 @@
         $.getJSON(OA_URL + '/record', {orderno: orderno}, function(res){
             if (!res.found){ oaClear(); return; }
             fillOrderApproval(res);
+            // ใบที่กรอกราคาเม็ด CP ไว้ตอนบันทึก → เด้งขึ้นมาให้ดู (19/10/2569)
+            if (res.cp) cpCheckView(res.cp, res.order); else cpCheckClose();
         });
     }
 
@@ -2399,6 +2427,9 @@
         $('#oa_RP').prop('checked', !!o.RP);
         $('#oa_Spec').prop('checked', !!o.Spec);
         $('#oa_Cer').prop('checked', !!o.Cer);
+        $('#oa_MSDS').prop('checked', !!o.MSDS);
+        $('#oa_ReqDoc').prop('checked', !!o.ReqDoc);
+        $('#oa_ReqDocRem').val(o.ReqDocRem || '');
 
         $('#oa_price').val(fmtNum(o.price, 2));
         $('#oa_appv').prop('checked', !!o.appv)

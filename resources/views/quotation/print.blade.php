@@ -83,6 +83,8 @@
         /* ไม่พิมพ์หัวกระดาษ — ซ่อนรูปแต่คงพื้นที่ไว้ (visibility ไม่ใช่ display) */
         .letterhead.blank img { visibility: hidden; }
         .doc-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+        /* ใบที่มีตรา REVISED — เว้นที่ใต้หัวเอกสารให้ตรา (ลอยใต้วันที่ สูง ~60px) ไม่ทับบรรทัดลูกค้า (19/10/2569) */
+        .doc-head.has-stamp { margin-bottom: 60px; }
         .doc-head .qno { font-weight: bold; }
 
         /* ── ตราประทับ REVISED (19/10/2569) — ลอยใต้วันที่มุมขวาบน ไม่ดันเนื้อหาส่วนอื่น ── */
@@ -94,23 +96,22 @@
             -webkit-print-color-adjust: exact; print-color-adjust: exact;
         }
         .revised-stamp .word {
-            display: inline-block; padding: 0 12px;
-            border: 3px solid #d32f2f; border-radius: 6px;
+            display: inline-block; padding: 0 8px;
+            border: 2px solid #d32f2f; border-radius: 5px;
             color: #d32f2f; font-family: 'Arial Black', 'Arial', sans-serif;
-            font-size: 30px; font-weight: 900; letter-spacing: 2px; line-height: 1.15;
+            font-size: 20px; font-weight: 900; letter-spacing: 1.5px; line-height: 1.15; /* ย่อจาก 30px (19/10/2569) */
             opacity: .85;
         }
         .revised-stamp .date {
-            margin-top: 4px; color: #1f3fa8; font-size: 22px; font-weight: bold;
-            letter-spacing: 3px; opacity: .85;
+            margin-top: 2px; color: #1f3fa8; font-size: 15px; font-weight: bold; /* ย่อจาก 22px */
+            letter-spacing: 2px; opacity: .85;
         }
         .field-label { display: inline-block; }
         .subject { margin: 2px 0; }
         .body-text { text-indent: 40px; margin: 14px 0 10px; }
 
         /* ── ตารางรายการ (ไม่มีเส้นตาราง; หัวคอลัมน์ขีดเส้นใต้อย่างเดียว) ── */
-        /* ช่องไฟบน/ล่างตารางมากขึ้น (19/10/2569 ตามที่ผู้ใช้สั่ง 2 รอบ) — เดิม 6px / footer-info 20px → 28/40 → 48/64 */
-        table.items { width: 100%; border-collapse: collapse; margin-top: 48px; }
+        table.items { width: 100%; border-collapse: collapse; margin-top: 6px; }
         table.items th, table.items td { padding: 4px 7px; vertical-align: top; }
         table.items thead th { text-align: left; font-weight: bold; line-height: 1.25; }
         table.items thead th small { font-weight: normal; color: #333; font-size: .78em; }
@@ -123,8 +124,8 @@
         .code { font-family: ui-monospace, Consolas, monospace; }
         tfoot th { border-top: 1px solid #000; }
 
-        /* ส่วนท้าย (หมายเหตุ + ลายเซ็น) — ระยะห่างจากตารางอย่างน้อย 64px (เดิมเป็น margin-top ของ .footer-info) */
-        .page-bottom { padding-top: 64px; }
+        /* ส่วนท้าย (หมายเหตุ + ลายเซ็น) — ระยะห่างจากตารางอย่างน้อย 20px (เดิมเป็น margin-top ของ .footer-info) */
+        .page-bottom { padding-top: 20px; }
         .footer-info { margin-top: 0; }
         .footer-info .row { margin: 2px 0; }
         .sign { margin-top: 44px; display: flex; justify-content: flex-end; }
@@ -138,6 +139,7 @@
            แยกความกว้างออกจากกล่อง เพื่อให้รูปลายเซ็นยังใหญ่เต็ม 420px ได้ */
         .sign .line { border-top: 1px dotted #000; padding-top: 4px; width: 210px; margin: 0 auto; white-space: nowrap; }
         .sign .emp-name { font-weight: bold; }
+        .sign .emp-dept { white-space: nowrap; }
         .fmt-tag { font-size: .75em; color: #888; }
 
         @media print { .toolbar { display: none; } body { padding: 10px 24px; } }
@@ -169,7 +171,7 @@
 
     {{-- หัวเอกสาร (สลับ TH/EN ตามภาษาที่เลือก) --}}
     @if ($headEn)
-        <div class="doc-head">
+        <div class="doc-head{{ $revisedStamp ? ' has-stamp' : '' }}">
             <div><span class="field-label">QUOTATION NO.</span> &nbsp;&nbsp; <span class="qno">{{ $qno }}</span></div>
             <div class="date-col">
                 {{ $enDate($header->Qdate) }}
@@ -188,8 +190,8 @@
 
         <div class="body-text">{{ $bodyTextEn }}</div>
     @else
-        <div class="doc-head">
-            <div><span class="field-label">ใบเสนอราคาเลขที่</span> &nbsp;&nbsp; <span class="qno">{{ $qno }}</span></div>
+        <div class="doc-head{{ $revisedStamp ? ' has-stamp' : '' }}">
+            <div><span class="field-label">ใบเสนอราคาเลขที่:</span> &nbsp;&nbsp; <span class="qno">{{ $qno }}</span></div>
             <div class="date-col">
                 วันที่ {{ $thaiDate($header->Qdate) }}
                 @include('quotation.partials.revised-stamp')
@@ -295,6 +297,10 @@
                 @endif
             </div>
             <div class="line"><span class="emp-name">{{ $empName }}</span></div>
+            {{-- คำอธิบายแผนกของผู้เสนอราคา (tb_departments.description) — 19/10/2569 --}}
+            @if (!empty($empDept))
+                <div class="emp-dept">{{ $empDept }}</div>
+            @endif
         </div>
     </div>
     </div>{{-- /.page-bottom --}}

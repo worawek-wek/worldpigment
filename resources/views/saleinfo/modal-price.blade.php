@@ -173,21 +173,25 @@
                                     <div class="col-12 of-row">
                                         <label class="form-label">
                                             <i class="ti ti-note me-1"></i>
-                                            หมายเหตุ 1
+                                            หมายเหตุ
                                         </label>
+                                        {{-- 19/10/2569: รวม label เหลืออันเดียว — 2 ช่องกรอก (REM1 / REM2) อยู่ใน .of-ctl เดียวกัน --}}
                                         <div class="of-ctl">
                                             <input type="text" name="REM1" maxlength="100" class="form-control">
-                                            <div class="form-text"><span class="text-muted fw-normal">(เช่น เฉพาะเบอร์คิดราคาพิเศษ เช็คราคาก่อนเปิด ORDER)</span></div>
+                                            <input type="text" name="REM2" maxlength="100" class="form-control mt-2">
+                                            {{-- 19/10/2569: ตัวอย่าง 2 ช่องรวมเป็นบรรทัดเดียวต่อกันใต้ช่องที่ 2 --}}
+                                            <div class="form-text"><span class="text-muted fw-normal">(เช่น เฉพาะเบอร์คิดราคาพิเศษ เช็คราคาก่อนเปิด ORDER) (เช่น เดิม 46.72.- ปรับลด 08/12/25 @44.62.-)</span></div>
                                         </div>
                                     </div>
+                                    {{-- STD Revise = uprice.STDrev varchar(50) (19/10/2569) --}}
                                     <div class="col-12 of-row">
                                         <label class="form-label">
-                                            <i class="ti ti-note me-1"></i>
-                                            หมายเหตุ 2
+                                            <i class="ti ti-file-check me-1"></i>
+                                            STD Revise
                                         </label>
                                         <div class="of-ctl">
-                                            <input type="text" name="REM2" maxlength="100" class="form-control">
-                                            <div class="form-text"><span class="text-muted fw-normal">(เช่น เดิม 46.72.- ปรับลด 08/12/25 @44.62.-)</span></div>
+                                            <input type="text" name="STDrev" maxlength="50" class="form-control">
+                                            <div class="form-text"><span class="text-muted fw-normal">(เช่น 16/10/26 MB RED L-691015/92 HDPE R1760=2 PHR)</span></div>
                                         </div>
                                     </div>
                                 </div>
@@ -216,6 +220,13 @@
                                         <label class="form-label">Label DB <span class="text-muted fw-normal d-block">(ข้อความบนฉลาก)</span></label>
                                         <div class="of-ctl">
                                             <input type="text" name="Label" maxlength="85" class="form-control">
+                                        </div>
+                                    </div>
+                                    {{-- ในบิล = uprice.inBill varchar(85) — ช่องยาวเต็มแถว (19/10/2569) --}}
+                                    <div class="col-12 of-row">
+                                        <label class="form-label">ในบิล</label>
+                                        <div class="of-ctl">
+                                            <input type="text" name="inBill" maxlength="85" class="form-control">
                                         </div>
                                     </div>
                                     <div class="col-md-6 of-row">

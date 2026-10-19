@@ -163,6 +163,18 @@
                         <input class="form-check-input" type="checkbox" id="oa_Cer" disabled>
                         <label class="form-check-label" for="oa_Cer">Cer</label>
                     </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="oa_MSDS" disabled>
+                        <label class="form-check-label" for="oa_MSDS">MSDS</label>
+                    </div>
+                </div>
+                {{-- Require Document — อ่านอย่างเดียว (morder.ReqDoc / ReqDocRem, 19/10/2569) --}}
+                <div class="d-flex align-items-center gap-2 mt-1">
+                    <div class="form-check mb-0 text-nowrap">
+                        <input class="form-check-input" type="checkbox" id="oa_ReqDoc" disabled>
+                        <label class="form-check-label" for="oa_ReqDoc">Require Document</label>
+                    </div>
+                    <input type="text" id="oa_ReqDocRem" class="form-control form-control-sm" readonly>
                 </div>
             </div>
         </div>

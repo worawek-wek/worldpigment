@@ -1042,7 +1042,7 @@
                 $('#form_saleinfo [name="_pk"]').val(id);
 
                 // เติมทุกช่องที่ชื่อตรงกับคอลัมน์ (ยกเว้น checkbox จัดการแยก)
-                ['CustNo', 'st_code', 'ITEMNO', 'DATE', 'PRICE', 'REM1', 'REM2', 'PackRem', 'Label', 'Author']
+                ['CustNo', 'st_code', 'ITEMNO', 'DATE', 'PRICE', 'REM1', 'REM2', 'STDrev', 'PackRem', 'Label', 'inBill', 'Author']
                     .forEach(function (name) {
                         const $f = $('#form_saleinfo [name="' + name + '"]');
                         // ช่องตัวเลขที่ใส่คอมมา (PRICE) → จัดรูปแบบก่อนเติม

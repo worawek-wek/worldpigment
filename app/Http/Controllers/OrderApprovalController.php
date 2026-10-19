@@ -142,8 +142,16 @@ class OrderApprovalController extends Controller
             $prices[$itemno] = $this->itemPrice($order->Custno, $itemno);
         }
 
+        // ราคาเม็ด CP ที่กรอกไว้ตอนบันทึกใบ (cp_itemprice) — ฟอร์มอนุมัติเด้งขึ้นมาให้ดูแบบอ่านอย่างเดียว (19/10/2569)
+        //   ตอนบันทึกผูกกับรหัสสินค้าแถวแรกของใบ → หาคู่นั้นก่อน ไม่เจอค่อยเอาแถวใดก็ได้ของใบนี้
+        $firstItemno = trim((string) optional($items->first())->Itemno);
+        $cp = DB::table('cp_itemprice')->where('Orderno', $orderno)
+            ->orderByRaw('itemno = ? DESC', [$firstItemno])
+            ->first();
+
         return response()->json([
             'found' => true,
+            'cp'    => $cp,
             'order' => [
                 'Orderno'  => $order->Orderno,
                 'Mdate'    => $order->Mdate,
@@ -161,7 +169,11 @@ class OrderApprovalController extends Controller
                 'RP'       => self::checked($order->RP),
                 'Spec'     => self::checked($order->Spec),
                 'Cer'      => self::checked($order->Cer),
-                'appv'     => self::checked($order->appv),
+                'MSDS'     => self::checked($order->MSDS),
+                // Require Document (19/10/2569 — ให้ครบเหมือนฟอร์มบันทึกใบสั่งซื้อ)
+                'ReqDoc'    => self::checked($order->ReqDoc ?? null),
+                'ReqDocRem' => $order->ReqDocRem ?? null,
+                'appv'   => self::checked($order->appv),
                 'appvDT'   => $order->appvDT,
                 // ท้ายฟอร์มเดิม: "(<เทอม> - <ส่วนลดเงินสด>%)"
                 'term'     => $cust->term ?? null,

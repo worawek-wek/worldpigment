@@ -32,6 +32,7 @@ class SaleinfoController extends Controller
     private const COLUMNS = [
         'CustNo', 'st_code', 'ITEMNO', 'DATE', 'PRICE',
         'REM1', 'REM2', 'PackRem', 'Label', 'Author',   // REM2 = ช่อง "หมายเหตุ 2" (เปิดคืน 07/09/2569)
+        'STDrev', 'inBill',   // ช่อง "STD Revise" / "ในบิล" (19/10/2569)
         // 'NotifyDate', 'MOQ',   // ถอดออกจากฟอร์มแล้ว 07/09/2569 — `uprice` ไม่มี 2 คอลัมน์นี้
         // 'NoAcp',   // ปิดไว้ก่อน — รอลูกค้ายืนยันความหมาย (ดู extractForm)
     ];

@@ -360,6 +360,7 @@ class QuotationController extends Controller
             'otherNotes'  => $otherNotes,
             'empName'     => $emp['name'],
             'empSign'     => $emp['sign'],                    // URL รูปลายเซ็น (ไม่มี = null)
+            'empDept'     => $emp['dept'],                    // คำอธิบายแผนก (ไม่มี = null)
         ]);
     }
 
@@ -571,6 +572,7 @@ class QuotationController extends Controller
             'otherNotes'  => $otherNotes,                     // หมายเหตุอื่น (section หมายเหตุ)
             'empName'     => $emp['name'],
             'empSign'     => $emp['sign'],                    // URL รูปลายเซ็น (ไม่มี = null)
+            'empDept'     => $emp['dept'],                    // คำอธิบายแผนก (ไม่มี = null)
         ];
     }
 
@@ -579,17 +581,19 @@ class QuotationController extends Controller
      * EmpID เก็บเป็น int ส่วน emp.empno เป็น varchar ที่เก็บเลขรหัส (เช่น 9013 = "9013")
      * ไม่พบ/ว่าง → คืน null ทั้งคู่ (view จะเว้นช่องเซ็นชื่อไว้เปล่า ๆ)
      *
-     * @return array{name: ?string, sign: ?string}  sign = URL รูปลายเซ็น (ไม่มี = null)
+     * dept = คำอธิบายแผนก (tb_departments.description) ของ emp.dept — แสดงใต้ชื่อบนหน้าพิมพ์ (19/10/2569)
+     *
+     * @return array{name: ?string, sign: ?string, dept: ?string}  sign = URL รูปลายเซ็น (ไม่มี = null)
      */
     private function empInfo($empId): array
     {
-        $none = ['name' => null, 'sign' => null];
+        $none = ['name' => null, 'sign' => null, 'dept' => null];
 
         $empId = trim((string) $empId);
         if ($empId === '') {
             return $none;
         }
-        $e = DB::table('emp')->where('empno', $empId)->first(['empname', 'empsur', 'signature']);
+        $e = DB::table('emp')->where('empno', $empId)->first(['empname', 'empsur', 'signature', 'dept']);
         if (!$e) {
             return $none;
         }
@@ -598,7 +602,23 @@ class QuotationController extends Controller
         return [
             'name' => $name !== '' ? $name : null,
             'sign' => $this->signatureUrl($e->signature ?? null),
+            'dept' => $this->deptDescription($e->dept ?? null),
         ];
+    }
+
+    /**
+     * emp.dept (ชื่อแผนก เช่น "MK") → tb_departments.description (เช่น "การตลาด")
+     * ไม่มี description → ใช้ชื่อแผนกแทน · ไม่พบ/ว่าง → null
+     */
+    private function deptDescription($dept): ?string
+    {
+        $dept = trim((string) $dept);
+        if ($dept === '') {
+            return null;
+        }
+        $desc = trim((string) DB::table('tb_departments')->where('name', $dept)->value('description'));
+
+        return $desc !== '' ? $desc : $dept;
     }
 
     /**
@@ -879,9 +899,14 @@ class QuotationController extends Controller
      */
     private function extractHeader(Request $request): array
     {
+        // ช่องที่ผู้ใช้ลบจนว่าง → null (19/10/2569) — เดิม reject ค่าว่างทิ้ง ทำให้ตอน update ช่องที่ลบออก
+        // ไม่ถูกเขียนทับ ค่าเดิมค้างอยู่ใน DB · ช่องที่ไม่ได้ส่งมาเลย only() ไม่คืน key จึงไม่ถูกแตะเหมือนเดิม
+        // ยกเว้น remark_lang (NOT NULL) / letterhead (มี default 'WH') — ค่าว่างยังตัดทิ้ง ให้ใช้ค่าเดิม/ค่า default
+        $keepWhenEmpty = ['remark_lang', 'letterhead'];
         $header = collect($request->only(self::QMAST_COLUMNS))
             ->map(fn ($v) => is_string($v) ? trim($v) : $v)
-            ->reject(fn ($v) => $v === null || $v === '')
+            ->reject(fn ($v, $k) => in_array($k, $keepWhenEmpty, true) && ($v === null || $v === ''))
+            ->map(fn ($v) => $v === '' ? null : $v)
             ->toArray();
 
         // checkbox พร้อมตัวอย่าง → 0/1
