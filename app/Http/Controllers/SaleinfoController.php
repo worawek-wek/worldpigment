@@ -181,8 +181,8 @@ class SaleinfoController extends Controller
      *
      * ราคา 1/2/3 + DB ใช้เครื่องคิดราคาตัวเดียวกับทั้งระบบ (ProductPriceService)
      * โดย **ต้นทุน = `access_testmai.TNet`** (= ผลรวม CNet ของสูตรในใบนั้น ตรวจกับข้อมูลจริงแล้ว)
-     * ส่วนรหัสที่ใช้เลือก "เงื่อนไข" คือเบอร์ที่ตั้งไว้ — เบอร์ใหม่ที่ยังไม่มีใน `access_pdprice`
-     * จึงยังคิดราคาได้ (ต่างจากจอค้นหาราคาสินค้าที่ต้องมีรหัสในตารางราคาทุนก่อน)
+     * ส่วนรหัสที่ใช้เลือก "เงื่อนไข" คือ `access_testmai.SPdCode` (19/10/2569 — เดิมใช้เบอร์จาก access_compo)
+     * จึงคิดราคาได้แม้ยังไม่ได้ตั้งเบอร์ / เบอร์ยังไม่มีใน `access_pdprice`
      */
     public function testPrice(Request $request, ProductPriceService $prices)
     {
@@ -262,15 +262,18 @@ class SaleinfoController extends Controller
         $setcode = $codes->implode(', ');
         $base    = (float) $row->TNet;
 
-        // คิดราคาจากเบอร์แรก (ปกติมีเบอร์เดียว) — ยังไม่ตั้งเบอร์ = เลือกเงื่อนไขไม่ได้
-        if ($codes->isEmpty()) {
+        // รหัสที่ใช้เลือกเงื่อนไขราคา = `access_testmai.SPdCode` (ตัวขึ้นต้นของเบอร์ เช่น 21 / 34)
+        // แทนเบอร์จาก access_compo (19/10/2569 ตามที่ผู้ใช้สั่ง) — ช่อง "ตั้งเบอร์เป็น" ยังโชว์จาก compo เหมือนเดิม
+        $spdcode = trim((string) ($row->SPdCode ?? ''));
+
+        if ($spdcode === '') {
             $calc = [
                 'found' => false, 'code' => null, 'base_price' => round($base, 2),
                 'rule'  => null,  'prices' => null,
-                'reason' => 'ใบเทสนี้ยังไม่ได้ตั้งเบอร์ — เลือกเงื่อนไขราคาไม่ได้',
+                'reason' => 'ใบเทสนี้ไม่มี SPdCode — เลือกเงื่อนไขราคาไม่ได้',
             ];
         } else {
-            $calc = $prices->quote($codes->first(), $base);
+            $calc = $prices->quote($spdcode, $base);
         }
 
         return response()->json([

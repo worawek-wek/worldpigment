@@ -1459,7 +1459,7 @@
             // ที่มาของราคา: ต้นทุนสูตรของใบเทส → เบอร์ที่ตั้ง → เงื่อนไข → สูตรคูณ/หาร/บวก
             const src = [];
             if (calc.base_price !== null && calc.base_price !== undefined) src.push('ต้นทุนสูตร ' + fmtNum(calc.base_price));
-            if (calc.code) src.push('เบอร์ ' + calc.code);
+            if (calc.code) src.push('SPdCode ' + calc.code);
             if (calc.rule && calc.rule.label) src.push(calc.rule.label);
             if (calc.rule) src.push('× ' + calc.rule.mul + ' ÷ ' + calc.rule.div + ' + ' + calc.rule.add);
             $note.text(src.join('  ·  '));
