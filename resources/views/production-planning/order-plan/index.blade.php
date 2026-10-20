@@ -45,7 +45,7 @@
                             <div class="col-md-4">
                                 <label class="form-label small mb-1">ค้นหา</label>
                                 <input id="searchInput" type="text" class="form-control"
-                                placeholder="รหัส Order, รหัสลูกค้า, ชื่อลูกค้า, ชื่อพนักงานผู้รับผิดชอบ">
+                                placeholder="รหัส Order, รหัสลูกค้า, ชื่อลูกค้า, Item No., ชื่อพนักงานผู้รับผิดชอบ">
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label small mb-1">รหัส Sale</label>

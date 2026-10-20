@@ -11,9 +11,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * หน้าพนักงานหน้างาน (Worker) — อัพเดทสถานะงานผลิต "ของตัวเอง" (11/08/2569)
+ * หน้าพนักงานหน้างาน (Worker) — อัพเดทสถานะงานผลิต (11/08/2569)
  *
- *  ความปลอดภัย: ทุกเมธอดกรอง/ตรวจ tb_planning.empno = empno ของผู้ล็อกอินที่ฝั่ง server เสมอ
+ *  ขอบเขตงานที่เข้าถึงได้ (20/10/2569): งานที่จ่ายให้ตัวเอง (tb_planning.empno = ผู้ล็อกอิน)
+ *  **หรือ** งานในแผนกที่ตัวเองสังกัด (แผนกของงาน = emp.dept) — ให้คนที่ทำแทนกรอกเลขที่ใบเบิกหางานเองได้
+ *  โดยไม่ต้องย้ายชื่อพนักงานในแผน · ตารางเริ่มต้นยังแสดงเฉพาะงานของตัวเอง งานของคนอื่นในแผนก
+ *  ต้องค้นด้วยเลขที่ใบเบิก (red_bill_code) เท่านั้น
+ *
+ *  ความปลอดภัย: ทุกเมธอดตรวจขอบเขตนี้ที่ฝั่ง server เสมอ (accessibleJobOrFail)
  *  (middleware 'worker' คุมชั้นแรกว่าเป็น Worker จริง)
  */
 class WorkerPlanningController extends Controller
@@ -30,21 +35,39 @@ class WorkerPlanningController extends Controller
         return $account?->empno;
     }
 
-    // ดึง planning ที่ต้องเป็น "งานของผู้ล็อกอิน" เท่านั้น (ไม่ใช่ → 403)
-    private function ownJobOrFail($id): Planning
+    // แผนกที่ผู้ล็อกอินสังกัด (emp.dept เก็บเป็นชื่อแผนก = ค่าเดียวกับ tb_planning.company)
+    private function currentDept(): ?string
     {
-        $empno = $this->currentEmpno();
+        $dept = trim((string) (AccessControl::currentAccount()?->dept ?? ''));
 
-        $job = Planning::with('planning_header')
-            ->where('id', $id)
-            ->where('empno', $empno)
-            ->first();
+        return $dept !== '' ? $dept : null;
+    }
 
-        if (!$job) {
-            abort(403, 'ไม่ใช่งานของคุณ');
+    // แผนกของงานใน SQL — ตรงกับ jobCompany() (ใช้ของ item ก่อน ว่างค่อยใช้ header)
+    private const JOB_COMPANY_SQL = "COALESCE(NULLIF(tb_planning.company, ''), tb_planning_header.company)";
+
+    // ดึง planning ที่ผู้ล็อกอินเข้าถึงได้ — งานของตัวเอง หรืองานในแผนกตัวเอง (ไม่ใช่ → 403)
+    private function accessibleJobOrFail($id): Planning
+    {
+        $job = Planning::with('planning_header')->find($id);
+
+        if (!$job || !$this->canAccess($job)) {
+            abort(403, 'ไม่มีสิทธิ์เข้าถึงงานนี้ (ต้องเป็นงานในแผนกของคุณ)');
         }
 
         return $job;
+    }
+
+    private function canAccess(Planning $job): bool
+    {
+        $empno = $this->currentEmpno();
+        if ($empno !== null && $job->empno === $empno) {
+            return true;
+        }
+
+        $dept = $this->currentDept();
+
+        return $dept !== null && $this->jobCompany($job) === $dept;
     }
 
     // แผนกของงาน (ใช้ของ item ก่อน ถ้าว่าง fallback ไป header)
@@ -86,17 +109,42 @@ class WorkerPlanningController extends Controller
         ]);
     }
 
-    // ตารางงานของตัวเอง — ค้นหารวม (red_bill_code / itemno / machine_no) + กรองวัน inplan
+    // ตารางงาน + กรองวัน inplan
+    //  - ไม่กรอกคำค้น = งานของตัวเอง (เหมือนเดิม)
+    //  - กรอกคำค้น  = งานของตัวเองที่ตรงกับ เลขที่ใบเบิก/รหัสสี/รหัสเครื่อง
+    //                 + งานของคนอื่นในแผนกตัวเองที่ตรงกับ "เลขที่ใบเบิก" (พิมพ์บางส่วนได้) — 20/10/2569
     public function datatable(Request $request)
     {
         $empno  = $this->currentEmpno();
+        $dept   = $this->currentDept();
         $search = trim((string) $request->get('search'));
         $date   = $request->get('date');
+        $like   = '%'.$search.'%';
 
         $jobs = Planning::query()
             ->leftJoin('tb_planning_header', 'tb_planning_header.id', '=', 'tb_planning.planning_header_id')
             ->leftJoin('customer', 'customer.code', '=', 'tb_planning_header.custno')
-            ->where('tb_planning.empno', $empno)
+            ->leftJoin('emp', 'emp.empno', '=', 'tb_planning.empno')
+            ->where(function ($q) use ($empno, $dept, $search, $like) {
+                // งานของตัวเอง
+                $q->where(function ($own) use ($empno, $search, $like) {
+                    $own->where('tb_planning.empno', $empno)
+                        ->when($search !== '', function ($w) use ($like) {
+                            $w->where(function ($sub) use ($like) {
+                                $sub->where('tb_planning.red_bill_code', 'LIKE', $like)
+                                    ->orWhere('tb_planning.itemno', 'LIKE', $like)
+                                    ->orWhere('tb_planning.machine_no', 'LIKE', $like);
+                            });
+                        });
+                });
+                // งานของคนอื่นในแผนกตัวเอง — ต้องค้นด้วยเลขที่ใบเบิกเท่านั้น
+                if ($search !== '' && $dept !== null) {
+                    $q->orWhere(function ($other) use ($dept, $like) {
+                        $other->whereRaw(self::JOB_COMPANY_SQL.' = ?', [$dept])
+                            ->where('tb_planning.red_bill_code', 'LIKE', $like);
+                    });
+                }
+            })
             // ตัดงานที่ปิดแล้วออก: ปิดงานราย item (end_job='Y') หรือปิดออเดอร์ทั้ง header (end_order='Y')
             // นับ NULL เป็น "ยังไม่ปิด" ด้วย (NULL != 'Y' ใน MySQL ให้ผล NULL ไม่ใช่ true)
             ->where(function ($q) {
@@ -106,13 +154,6 @@ class WorkerPlanningController extends Controller
             ->where(function ($q) {
                 $q->where('tb_planning_header.end_order', '!=', 'Y')
                     ->orWhereNull('tb_planning_header.end_order');
-            })
-            ->when($search !== '', function ($q) use ($search) {
-                $q->where(function ($sub) use ($search) {
-                    $sub->where('tb_planning.red_bill_code', 'LIKE', '%'.$search.'%')
-                        ->orWhere('tb_planning.itemno', 'LIKE', '%'.$search.'%')
-                        ->orWhere('tb_planning.machine_no', 'LIKE', '%'.$search.'%');
-                });
             })
             ->when(!empty($date), fn ($q) => $q->whereDate('tb_planning.inplan', $date))
             ->orderBy('tb_planning.inplan', 'desc')
@@ -126,19 +167,31 @@ class WorkerPlanningController extends Controller
                 'tb_planning.inplan',
                 'tb_planning.lot',
                 'tb_planning.planning_status',
+                'tb_planning.empno',
+                'emp.empname',
+                'emp.empsur',
                 'customer.name as cust_name',
             ]);
 
         return view('worker.planning.partials.table', [
-            'jobs'  => $jobs,
-            'total' => $jobs->count(),
+            'jobs'      => $jobs,
+            'total'     => $jobs->count(),
+            'my_empno'  => $empno,
+            'searching' => $search !== '',
+            'no_dept'   => $dept === null,
         ]);
+    }
+
+    // keep-alive ของ logout อัตโนมัติ — เวลาใช้งานล่าสุดถูกบันทึกใน middleware 'worker' แล้ว (20/10/2569)
+    public function ping()
+    {
+        return response()->json(['status' => 200]);
     }
 
     // Modal ดูรายละเอียด (อ่านอย่างเดียว) + ประวัติการเปลี่ยนสถานะล่าสุด
     public function detail(Request $request)
     {
-        $job = $this->ownJobOrFail($request->get('id'));
+        $job = $this->accessibleJobOrFail($request->get('id'));
 
         $logs = DB::table('tb_planning_status_log')
             ->where('planning_id', $job->id)
@@ -157,7 +210,7 @@ class WorkerPlanningController extends Controller
     // Modal เลือก/อัพเดทสถานะ
     public function statusForm(Request $request)
     {
-        $job = $this->ownJobOrFail($request->get('id'));
+        $job = $this->accessibleJobOrFail($request->get('id'));
 
         return view('worker.planning.partials.status-form', [
             'job'      => $job,
@@ -165,7 +218,8 @@ class WorkerPlanningController extends Controller
         ]);
     }
 
-    // บันทึกสถานะใหม่ — แตะเฉพาะ planning_status + เขียน log (ตรวจ ownership ซ้ำ)
+    // บันทึกสถานะใหม่ — แตะเฉพาะ planning_status + เขียน log (ตรวจสิทธิ์เข้าถึงซ้ำ)
+    //  changed_by = คนที่กดจริง (คนทำแทนก็บันทึกเป็นรหัสตัวเอง) · ไม่แตะ tb_planning.empno
     public function statusUpdate(Request $request)
     {
         $request->validate([
@@ -173,7 +227,7 @@ class WorkerPlanningController extends Controller
             'status' => 'required|string|max:255',
         ]);
 
-        $job   = $this->ownJobOrFail($request->get('id'));
+        $job   = $this->accessibleJobOrFail($request->get('id'));
         $empno = $this->currentEmpno();
         $new   = trim((string) $request->get('status'));
 

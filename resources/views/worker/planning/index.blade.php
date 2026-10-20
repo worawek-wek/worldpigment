@@ -6,24 +6,32 @@
     {{-- ── ค้นหา ── --}}
     <div class="card mb-3">
         <div class="card-body">
+            {{-- จัด layout 20/10/2569: คำอธิบายย้ายออกมาใต้แถว — เดิมอยู่ใต้ช่องค้นหาในแถว align-items-end
+                 ทำให้ช่องวันที่/ปุ่มถูกดันลงไม่ตรงกับช่องค้นหา · จอแคบ: ช่องค้นหาเต็มแถว วันที่+ปุ่มอยู่แถวถัดไป --}}
             <div class="row g-2 align-items-end">
-                <div class="col-md-6">
-                    <label class="form-label mb-1 small text-muted">ค้นหา (เลขที่ใบเบิก / รหัสสี / รหัสเครื่อง)</label>
-                    <input id="searchText" type="text" class="form-control" placeholder="พิมพ์คำค้นหา...">
+                <div class="col-12 col-lg-6">
+                    <label for="searchText" class="form-label mb-1 small text-muted">ค้นหา (เลขที่ใบเบิก / รหัสสี / รหัสเครื่อง)</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="ti ti-search"></i></span>
+                        <input id="searchText" type="text" class="form-control" placeholder="พิมพ์คำค้นหา..." autocomplete="off">
+                    </div>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label mb-1 small text-muted">วันที่ (Inplan)</label>
+                <div class="col-7 col-sm-6 col-lg-3">
+                    <label for="searchDate" class="form-label mb-1 small text-muted">วันที่ (Inplan)</label>
                     <input id="searchDate" type="text" class="form-control flatpickr-date"
                         autocomplete="off" placeholder="วว/ดด/ปปปป">
                 </div>
-                <div class="col-md-3 d-flex gap-2">
-                    <button id="btn_search" type="button" class="btn btn-primary w-100">
+                <div class="col-5 col-sm-6 col-lg-3 d-flex gap-2">
+                    <button id="btn_search" type="button" class="btn btn-primary flex-grow-1">
                         <i class="ti ti-search me-1"></i>ค้นหา
                     </button>
-                    <button id="btn_clear" type="button" class="btn btn-outline-secondary">
+                    <button id="btn_clear" type="button" class="btn btn-outline-secondary" title="ล้างการค้นหา">
                         <i class="ti ti-x"></i>
                     </button>
                 </div>
+            </div>
+            <div class="form-text mt-2 mb-0">
+                <i class="ti ti-info-circle me-1"></i>ทำงานแทนคนอื่น: กรอกเลขที่ใบเบิกเพื่อหางานในแผนกของคุณ (พิมพ์บางส่วนได้)
             </div>
         </div>
     </div>
@@ -31,7 +39,7 @@
     {{-- ── ตารางงานของตัวเอง ── --}}
     <div class="card">
         <div class="card-header">
-            <h5 class="mb-0"><i class="ti ti-list-check me-1"></i>งานของฉัน</h5>
+            <h5 class="mb-0"><i class="ti ti-list-check me-1"></i>รายการงาน</h5>
         </div>
         <div class="card-body">
             <div id="jobResult" class="table-responsive">

@@ -90,7 +90,8 @@ class OrderPlanController extends Controller
     }
 
     /**
-     * id ของ Order (header ระดับบนสุด) ที่มีพนักงานผู้รับผิดชอบตรงกับคำค้น
+     * id ของ Order (header ระดับบนสุด) ที่มีพนักงานผู้รับผิดชอบ หรือ Item No. (tb_planning.itemno,
+     * เพิ่ม 20/10/2569) ตรงกับคำค้น — ใช้ LEFT JOIN emp เพื่อให้รายการที่ไม่มีพนักงานยังค้น itemno ได้
      *
      * พนักงานถูกเก็บที่ tb_planning.empno (ระดับรายการ) ไม่ใช่ที่ header — และรายการอาจอยู่ใน
      * sub-header (semi/pigment) ลึกลงไปหลายชั้น จึงไล่ต้นไม้ด้วย recursive CTE
@@ -115,8 +116,9 @@ WITH RECURSIVE tree AS (
 SELECT DISTINCT t.root_id
 FROM tree t
 JOIN tb_planning p ON p.planning_header_id = t.header_id
-JOIN emp e ON e.empno = p.empno
-WHERE p.empno LIKE ?
+LEFT JOIN emp e ON e.empno = p.empno
+WHERE p.itemno LIKE ?
+   OR p.empno LIKE ?
    OR e.empname LIKE ?
    OR e.empsur LIKE ?
    OR CONCAT(e.empname, ' ', e.empsur) LIKE ?
@@ -124,7 +126,7 @@ SQL;
 
         return array_map(
             fn ($r) => $r->root_id,
-            DB::select($sql, [$like, $like, $like, $like])
+            DB::select($sql, [$like, $like, $like, $like, $like])
         );
     }
 
@@ -159,7 +161,7 @@ SQL;
             ->withMax('plannings', 'inplan')
             ->with('plannings.subHeadersRecursive')
             // ค้นหา: รหัส Order / รหัสลูกค้า / ชื่อลูกค้า (ชื่อลูกค้าอยู่ตาราง morder)
-            //        / พนักงานผู้รับผิดชอบ (อยู่ที่รายการในต้นไม้ของ Order นั้น)
+            //        / พนักงานผู้รับผิดชอบ + Item No. (อยู่ที่รายการในต้นไม้ของ Order นั้น)
             ->when(!empty($search), function ($query) use ($search) {
                 $empRootIds = $this->empSearchRootIds($search);
 
