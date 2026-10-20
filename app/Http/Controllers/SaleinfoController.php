@@ -274,7 +274,8 @@ class SaleinfoController extends Controller
                 'reason' => 'ใบเทสนี้ไม่มี SPdCode — เลือกเงื่อนไขราคาไม่ได้',
             ];
         } else {
-            $calc = $prices->quote($spdcode, $base);
+            // SPdCode → แถวเงื่อนไข ตามตาราง config('product_price.spdcode_rules') (19/10/2569)
+            $calc = $prices->quoteBySpdCode($spdcode, $base);
         }
 
         return response()->json([
@@ -285,6 +286,10 @@ class SaleinfoController extends Controller
             'loose'    => $loose,   // true = ไม่เจอ Lot แบบตรงตัว เลยค้นแบบใกล้เคียงให้
             'customer' => $customer ?: ['code' => $row->CCode, 'name' => $row->CName],
             'setcode'  => $setcode,
+            // Price Quotation = access_quote.Remark ของ TestNo นั้น (สำเนาตาราง Quote จาก Quote.mdb — 19/10/2569)
+            'quote'    => DB::table('access_quote')
+                ->whereRaw('TRIM(TestNo) = ?', [trim((string) $row->TestNo)])
+                ->value('Remark'),
             'test'     => [
                 'testno'      => trim((string) $row->TestNo),
                 'testdate'    => $row->Tdate ? Carbon::parse($row->Tdate)->format('d/m/Y') : '',

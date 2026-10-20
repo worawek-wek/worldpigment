@@ -810,6 +810,11 @@
                                 <input class="form-check-input" type="radio" name="pr_type" id="pr_type_s" value="S">
                                 <label class="form-check-label" for="pr_type_s">S (สต๊อก)</label>
                             </div>
+                            {{-- RP (20/10/2569 ผู้ใช้สั่ง) — เฉพาะใบที่ติ๊ก RP / Spec / Cer / MSDS อย่างน้อย 1 · น้ำหนัก = S + P --}}
+                            <div class="form-check mb-0" title="เฉพาะใบที่ติ๊ก RP / Spec / Cer / MSDS อย่างน้อย 1 ช่อง">
+                                <input class="form-check-input" type="radio" name="pr_type" id="pr_type_rp" value="RP">
+                                <label class="form-check-label" for="pr_type_rp">RP</label>
+                            </div>
                         </div>
                     </div>
                 </div>

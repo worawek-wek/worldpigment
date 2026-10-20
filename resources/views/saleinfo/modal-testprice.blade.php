@@ -7,7 +7,7 @@
 {{--   "ตั้งเบอร์เป็น" = access_compo.PdCode ของ TestNo นั้น                 --}}
 {{--   ชื่อลูกค้า = customer.name (CName ในไฟล์ Access เป็น "?" ถาวร)        --}}
 {{--   ราคา 1/2/3 + DB = ProductPriceService::quote(เบอร์ที่ตั้ง, TNet)      --}}
-{{-- ⚠ section Price Quotation ยังไม่ทำ (ยังคง wip)                         --}}
+{{--   Price Quotation = access_quote.Remark ของ TestNo นั้น (19/10/2569)   --}}
 {{-- 06/10/2569: ช่องกรอก/ช่องข้อมูลเทส เปลี่ยนเป็น label อยู่ซ้าย            --}}
 {{--   (โครง .of-form / .of-row / .of-ctl — CSS กลางใน layout/inc_header)    --}}
 {{--   กล่อง Price 1/2/3 + DB คงผังเดิม (label บน — กล่องราคาเล็กเรียงแนวนอน)  --}}
@@ -120,7 +120,8 @@
                 </div>
 
                 {{-- ─── Price Quotation + SEARCH ─── --}}
-                <div class="card shadow-sm mb-3 wip" style="border: 1px solid #cfe3c4;">
+                {{-- 19/10/2569: ช่องนี้ = access_quote.Remark ของ TestNo (ตาราง Quote จาก Quote.mdb) — ถอด wip แล้ว --}}
+                <div class="card shadow-sm mb-3" style="border: 1px solid #cfe3c4;">
                     <div class="card-header py-2 px-3"
                         style="background-color: #8fd18f; border-bottom: 2px solid #5aa85a; border-radius: 0.375rem 0.375rem 0 0;">
                         <h6 class="mb-0 fw-semibold" style="color: #1e4d1e;">
