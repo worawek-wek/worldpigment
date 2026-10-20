@@ -222,6 +222,12 @@
                                             @endforeach
                                         </select>
                                     </div>
+                                    {{-- คำนวณ Znst+EBS ร่วมในชิ้นงาน → testmain.ZnstEBS (20/10/2569) --}}
+                                    {{-- label กับช่องกรอกอยู่แถวเดียวกัน (ผู้ใช้สั่ง 20/10/2569) --}}
+                                    <div class="col-md-8 d-flex align-items-center align-self-end gap-2">
+                                        <label class="form-label small mb-0 text-nowrap">คำนวณ Znst+EBS ร่วมในชิ้นงาน =</label>
+                                        <input type="text" name="ZnstEBS" class="form-control" maxlength="50">
+                                    </div>
                                 </div>
                             </div>
 

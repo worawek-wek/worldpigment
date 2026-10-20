@@ -19,6 +19,7 @@ class ColorMatchingController extends Controller
         'TNDate', 'PHR', 'ResinMatch', 'startdate', 'SampleDate', 'ReadyDate',
         'RminWating', 'ColorMatcher', 'MI', 'Density', 'VR', 'Hardness',
         'ColorChar', 'ApprovedLot', 'ChemSafety', 'Brand',
+        'ZnstEBS', // คำนวณ Znst+EBS ร่วมในชิ้นงาน (20/10/2569)
     ];
 
     // ─── Field ที่เป็นวันที่ — flatpickr ส่งมาเป็น d/m/Y ต้อง parse ก่อน save ───

@@ -74,6 +74,7 @@
                 'นำไปทำชิ้นงาน (Model)' => $v($row->Model),
                 'ยี่ห้อ'                => $v($row->Brand),
                 'Chemical Safety'       => $v($row->ChemSafety),
+                'คำนวณ Znst+EBS ร่วมในชิ้นงาน' => $v($row->ZnstEBS),
             ]],
             ['วันที่ดำเนินการ และผู้เทียบสี', 'ti-calendar-event', [
                 'Start Date'    => $d($row->startdate),
