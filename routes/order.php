@@ -32,6 +32,9 @@ Route::prefix('order')->group(function () {
     // ปุ่ม "+ เพิ่ม" ข้างช่องสถานที่ส่ง — เขียนลง naddress ของลูกค้ารายนั้น (19/09/2569)
     Route::post('/dvpoint', [OrderController::class, 'addDvpoint'])->name('order.dvpoint_add');
 
+    // ─── รายงานคำสั่งซื้อรายวัน — เลือกแผนก + ช่วงวันที่ (20/10/2569) ───
+    Route::get('/daily-report-pdf', [\App\Http\Controllers\OrderDailyReportController::class, 'pdf'])->name('order.daily_report_pdf');
+
     // ─── ประมาณการยอดขาย ตามรหัสพนักงานขาย (ฟอร์ม Access "SaleOrder", 15/10/2569) ───
     Route::get('/sales-forecast/order-pdf', [SalesForecastController::class, 'orderPdf'])->name('order.salesforecast.order_pdf');
 

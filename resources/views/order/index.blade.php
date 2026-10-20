@@ -507,6 +507,11 @@
                             <i class="ti ti-printer me-1"></i>
                             พิมพ์รายงานที่ต้องผลิต
                         </button>
+                        {{-- รายงานคำสั่งซื้อรายวัน (20/10/2569) — เลือกแผนก + ช่วงวันที่ → OrderDailyReportController::pdf() --}}
+                        <button class="btn btn-label-secondary border" onclick="dailyReportOpen()">
+                            <i class="ti ti-calendar-event me-1"></i>
+                            รายงานคำสั่งซื้อรายวัน
+                        </button>
                         {{-- ประมาณการยอดขาย ตามรหัสพนักงานขาย (15/10/2569 — ฟอร์ม Access "SaleOrder") → #salesForecastModal --}}
                         <button class="btn btn-label-secondary border" onclick="salesForecastOpen()">
                             <i class="ti ti-report-money me-1"></i>
@@ -827,6 +832,48 @@
                         <i class="ti ti-printer me-1"></i>ออกรายงาน
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- ═══ หน้าต่าง "รายงานคำสั่งซื้อรายวัน" (20/10/2569) — เลือกแผนก + ช่วงวันที่ → PDF A4 แนวนอน ═══ --}}
+<div class="modal fade" id="dailyReportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="ti ti-calendar-event me-2"></i>รายงานคำสั่งซื้อรายวัน</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body of-form" style="--of-lw: 100px;">
+                <div class="of-row mb-2">
+                    <label class="form-label" for="dr_dept">แผนกผลิต</label>
+                    <div class="of-ctl">
+                        <select id="dr_dept" class="form-select no-enhance">
+                            @foreach ($companies as $c)
+                                <option value="{{ $c }}">{{ $c }}</option>
+                            @endforeach
+                            {{-- ทุกแผนก = ไม่กรองแผนก (รวมใบที่ไม่ได้ระบุ "ผลิตที่") — 20/10/2569 ผู้ใช้สั่ง --}}
+                            <option value="">ทุกแผนก</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="of-row">
+                    <label class="form-label" for="dr_from">วันที่</label>
+                    <div class="of-ctl">
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="text" id="dr_from" class="form-control" autocomplete="off">
+                            <span class="fw-semibold">ถึง</span>
+                            <input type="text" id="dr_to" class="form-control" autocomplete="off">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ปิด</button>
+                <button type="button" class="btn btn-primary" onclick="dailyReportPrint()">
+                    <i class="ti ti-printer me-1"></i>ออกรายงาน
+                </button>
             </div>
         </div>
     </div>
@@ -3394,6 +3441,33 @@
             return;
         }
         window.open('{{ url('order/order-approval/approved-today-pdf') }}?' + $.param(q), '_blank');
+    }
+
+    // ────────────────────────────────────────────────────────
+    //  รายงานคำสั่งซื้อรายวัน (20/10/2569) — ค่าเริ่มต้น: วันนี้ ถึง วันนี้
+    // ────────────────────────────────────────────────────────
+    var drFp = null;
+    function dailyReportOpen(){
+        if (!drFp) {
+            var opt = { dateFormat: 'd/m/Y', allowInput: true, static: true, disableMobile: true };
+            drFp = { from: flatpickr('#dr_from', opt), to: flatpickr('#dr_to', opt) };
+        }
+        drFp.from.setDate(new Date(), false);
+        drFp.to.setDate(new Date(), false);
+        $('#dailyReportModal').modal('show');
+    }
+    function dailyReportPrint(){
+        var from = drFp.from.selectedDates[0], to = drFp.to.selectedDates[0];
+        if (!from || !to) {
+            Swal.fire({ icon: 'warning', title: 'กรุณาเลือกวันที่', target: '#dailyReportModal', heightAuto: false });
+            return;
+        }
+        if (from > to) {
+            Swal.fire({ icon: 'warning', title: 'ช่วงวันที่ไม่ถูกต้อง', text: 'วันที่เริ่มต้องไม่มากกว่าวันที่สิ้นสุด', target: '#dailyReportModal', heightAuto: false });
+            return;
+        }
+        var q = { dept: $('#dr_dept').val() || '', date_from: $('#dr_from').val(), date_to: $('#dr_to').val() };
+        window.open('{{ url('order/daily-report-pdf') }}?' + $.param(q), '_blank');
     }
 
     function approvalPrint(){
