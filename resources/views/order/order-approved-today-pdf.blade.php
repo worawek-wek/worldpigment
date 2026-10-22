@@ -36,7 +36,7 @@
 
         table.head { width: 100%; border-collapse: collapse; }
         table.head td { padding: 1px 3px; vertical-align: bottom; }
-        .title { font-size: 14px; font-weight: bold; }
+        .title { font-size: 12px; font-weight: bold; }   /* 14 → 12px (20/10/2569 ผู้ใช้สั่ง) */
         .formno { font-size: 10px; text-align: right; }
         .sortby { font-size: 10px; font-weight: bold; color: #b22222; text-align: right; }
 
@@ -90,7 +90,14 @@
             </tr>
             <tr>
                 <td class="title" style="width: 46%;">
-                    รายงานผลิตภัณฑ์ที่ต้องผลิต ({{ $type }}) แผนกผลิต &nbsp;{{ $sec->dept !== '' ? $sec->dept : 'ไม่ระบุ' }}
+                    {{-- แผนก DB + ชนิด S ใช้ชื่อ "ต้องบรรจุเพื่อขาย" (20/10/2569 ผู้ใช้สั่ง) --}}
+                    {{-- ชนิด RP ใช้ชื่อ "รายงานผลิตภัณฑ์ที่ขอ RP" (20/10/2569 ผู้ใช้สั่ง) --}}
+                    @if ($type === 'RP')
+                        รายงานผลิตภัณฑ์ที่ขอ RP
+                    @else
+                        {{ ($type === 'S' && $sec->dept === 'DB') ? 'รายงานผลิตภัณฑ์ที่ต้องบรรจุเพื่อขาย' : 'รายงานผลิตภัณฑ์ที่ต้องผลิต' }} ({{ $type }})
+                    @endif
+                    แผนกผลิต &nbsp;{{ $sec->dept !== '' ? $sec->dept : 'ไม่ระบุ' }}
                 </td>
                 <td>วันที่ {{ $day->format('d/m/y') }} &nbsp;ระหว่างเวลา {{ $time_from }} ถึง {{ $time_to }}</td>
                 <td class="sortby">เรียงตาม Order No.</td>
@@ -110,7 +117,7 @@
                     <th style="width: 6%;">รหัส</th>
                     <th style="width: 4%;"></th>
                     <th>ตามคำสั่งลูกค้าเพื่อ</th>
-                    <th style="width: 8%;" class="text-end sm">ซื้อครั้งก่อน</th>
+                    <th style="width: 11%; white-space: nowrap;" class="text-end sm">ซื้อครั้งก่อน</th>
                 </tr>
             </thead>
             <tbody>
@@ -126,7 +133,7 @@
                         <td class="sm">{{ $r->Custno }}</td>
                         <td><table class="box"><tr><td style="padding: 0;">{!! $r->is_alist ? 'A' : '&nbsp;' !!}</td></tr></table></td>
                         <td class="sm">{{ $r->custname }}</td>
-                        <td class="text-end sm">{{ $r->last_label }}</td>
+                        <td class="text-end sm" style="white-space: nowrap;">{{ $r->last_label }}</td>
                     </tr>
                     <tr>
                         <td></td>
@@ -142,7 +149,10 @@
                                     <td style="padding: 0 3px 0 0;">{!! $chk($r->Spec) !!}</td>
                                     <td style="padding: 0 22px 0 0;">Spec</td>
                                     <td style="padding: 0 3px 0 0;">{!! $chk($r->Cer) !!}</td>
-                                    <td style="padding: 0;">Cer</td>
+                                    <td style="padding: 0 22px 0 0;">Cer</td>
+                                    {{-- MSDS เพิ่ม 20/10/2569 (ผู้ใช้ทักว่าแสดงไม่ครบ) --}}
+                                    <td style="padding: 0 3px 0 0;">{!! $chk($r->MSDS) !!}</td>
+                                    <td style="padding: 0;">MSDS</td>
                                 </tr>
                             </table>
                         </td>

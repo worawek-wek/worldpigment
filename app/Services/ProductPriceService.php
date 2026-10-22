@@ -69,6 +69,51 @@ class ProductPriceService
             return $this->fail($code, $base, 'ไม่มีเงื่อนไขราคารองรับรหัสที่ขึ้นต้นด้วยนี้');
         }
 
+        $hasDb = $this->matchedPrefix(strtoupper($code), (array) config('product_price.tier.db_prefix', [])) !== null;
+
+        return $this->compute($code, $base, $rule, $hasDb);
+    }
+
+    /**
+     * คำนวณราคาจาก SPdCode ของใบเทส (`access_testmai.SPdCode`) — จอ Test Price (19/10/2569)
+     *
+     * เลือกแถวเงื่อนไขจากตาราง `product_price.spdcode_rules` (SPdCode → key) ตามที่ลูกค้าให้มา
+     * แทนการเทียบตัวขึ้นต้นของรหัส · ราคา DB คิดเมื่อ prefix ของแถวนั้นขึ้นต้นด้วย db_prefix (2 / 36)
+     */
+    public function quoteBySpdCode(string $spdcode, float $base): array
+    {
+        $spdcode = trim($spdcode);
+        $key     = config('product_price.spdcode_rules.' . $spdcode);
+
+        $rule = null;
+        if ($key) {
+            foreach ($this->rules() as $r) {
+                if (($r['key'] ?? null) === $key) {
+                    $rule = $r;
+                    break;
+                }
+            }
+        }
+
+        if (!$rule) {
+            return $this->fail($spdcode, $base, 'ไม่มีเงื่อนไขราคารองรับ SPdCode นี้');
+        }
+
+        $dbPrefixes = (array) config('product_price.tier.db_prefix', []);
+        $hasDb = false;
+        foreach ((array) ($rule['prefix'] ?? []) as $p) {
+            if ($this->matchedPrefix(strtoupper($p), $dbPrefixes) !== null) {
+                $hasDb = true;
+                break;
+            }
+        }
+
+        return $this->compute($spdcode, $base, $rule, $hasDb);
+    }
+
+    /** คิดราคา 1/2/3 + DB จากแถวเงื่อนไขที่เลือกแล้ว (ใช้ร่วมกันทั้ง quote() และ quoteBySpdCode()) */
+    private function compute(string $code, float $base, array $rule, bool $hasDb): array
+    {
         // แถวที่ลูกค้าตั้งไว้ 0/0/0 (เช่นกลุ่ม "1") = ยังไม่ได้กำหนดสูตร — หารด้วย 0 ไม่ได้
         if ((float) $rule['div'] == 0.0) {
             return $this->fail($code, $base, 'เงื่อนไข "' . $rule['label'] . '" ยังไม่ได้กำหนดสูตรราคา (ตั้งไว้ 0)', $rule);
@@ -80,7 +125,7 @@ class ProductPriceService
         $price3 = $price2 * (float) config('product_price.tier.price_3_from_price_2', 1);
         // DB 3-4 / 1-2 Kg. = max(ราคาขาย 2 + ตัวบวก, ราคาขาย 3) — เฉพาะรหัสขึ้นต้นด้วย 2 / 36 (15/10/2569)
         $db34 = $db12 = null;
-        if ($this->matchedPrefix(strtoupper($code), (array) config('product_price.tier.db_prefix', [])) !== null) {
+        if ($hasDb) {
             $dbAdd = $this->dbAdds();
             $db34  = max($price2 + $dbAdd['db_3_4'], $price3);
             $db12  = max($price2 + $dbAdd['db_1_2'], $price3);

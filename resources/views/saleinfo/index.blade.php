@@ -1380,18 +1380,19 @@
     //    ตั้งเบอร์เป็น = access_compo.PdCode ของ TestNo นั้น
     //    ราคา 1/2/3 + DB = คิดจากต้นทุนสูตร (TNet) ด้วย ProductPriceService ตัวเดียวกับทั้งระบบ
     //
-    //  ⚠ ช่อง Price Quotation ยังไม่ทำ (การ์ดนั้นยังเป็น wip) — ไม่มีการเติมค่าให้
+    //    Price Quotation = access_quote.Remark ของ TestNo นั้น (19/10/2569) · ปุ่ม SEARCH = ค้นใหม่
     // ────────────────────────────────────────────────────────
     const TP_KEYS  = ['#tp_customer', '#tp_testno', '#tp_lottest'];   // ช่องที่กรอกได้
-    const TP_TEXT  = ['#tp_sample', '#tp_resin_cust', '#tp_resin_match'];
+    const TP_TEXT  = ['#tp_sample', '#tp_resin_cust', '#tp_resin_match', '#tp_quotation'];
     const TP_PRICE = ['#tp_price_1', '#tp_price_2', '#tp_price_3', '#tp_db_3_4', '#tp_db_1_2'];
     let tpTimer = null, tpXhr = null;
 
     // ช่องที่ "ระบบเติมให้เอง" จากใบที่ค้นเจอ (Test No. / Lot Test — ค้นด้วยช่องไหนก็เติมอีกช่องให้)
     // — ต้องแยกจากที่ผู้ใช้พิมพ์เอง ไม่งั้นค่าที่เติมไว้จะกลายเป็นเงื่อนไขค้นรอบถัดไป
     //   แล้วพอผู้ใช้แก้อีกช่อง ผลจะค้างอยู่ใบเดิม
-    const TP_AUTO_SEL = { testno: '#tp_testno', lottest: '#tp_lottest' };
-    const tpAuto = { testno: false, lottest: false };
+    // customer เพิ่ม 19/10/2569 — เติมรหัสลูกค้าของใบที่เจอให้ด้วย (กติกาเดียวกัน)
+    const TP_AUTO_SEL = { customer: '#tp_customer', testno: '#tp_testno', lottest: '#tp_lottest' };
+    const tpAuto = { customer: false, testno: false, lottest: false };
 
     function tpClearAuto(field) {
         if (!tpAuto[field]) return;
@@ -1439,6 +1440,7 @@
 
         if (!res.found) {
             // ที่เติมไว้รอบก่อนใช้ไม่ได้แล้ว
+            tpClearAuto('customer');
             tpClearAuto('testno');
             tpClearAuto('lottest');
             if (res.reason) $note.text(res.reason).addClass('saleinfo-price-note-warn');
@@ -1450,10 +1452,12 @@
         // ค้นด้วยช่องไหน ก็เติมอีกช่องให้จากใบที่เจอ (ผู้ใช้ยังพิมพ์ทับได้)
         if ($('#tp_testno').val().trim() === '')  tpSetAuto('testno', t.testno);
         if ($('#tp_lottest').val().trim() === '') tpSetAuto('lottest', t.lotno);
+        if ($('#tp_customer').val().trim() === '' && res.customer) tpSetAuto('customer', res.customer.code);
         $('#tp_sample').val(t.sample || '');
         $('#tp_resin_cust').val(t.cust_resin || '');
         $('#tp_resin_match').val(t.resin_match || '');
         $('#tp_setcode').text(res.setcode || '—');
+        $('#tp_quotation').val(res.quote || '');
 
         // หัวการ์ด: ใบที่หยิบมาแสดง + เตือนเมื่อ Lot เดียวมีหลายใบ
         const meta = [];
@@ -1503,7 +1507,7 @@
 
         if (tpXhr) tpXhr.abort();   // พิมพ์ต่อระหว่างรอผล → ทิ้งคำขอเก่า กันผลเก่ามาทับ
         tpXhr = $.getJSON("{{ $page_url }}/test-price", {
-            customer: $('#tp_customer').val().trim(),
+            customer: tpAuto.customer ? '' : $('#tp_customer').val().trim(),
             // ค่าที่ระบบเติมเอง ไม่นับเป็นเงื่อนไข — ไม่งั้นแก้อีกช่องแล้วจะค้างอยู่ใบเดิม
             testno:   tpAuto.testno  ? '' : $('#tp_testno').val().trim(),
             lottest:  tpAuto.lottest ? '' : $('#tp_lottest').val().trim()
@@ -1520,7 +1524,7 @@
     // พิมพ์ช่องไหน = ช่องนั้นเป็นเงื่อนไขของผู้ใช้ ส่วนช่องที่ระบบเติมไว้ให้ทิ้งแล้วค้นใหม่
     $('#tp_testno').on('input',   function () { tpUserTyped('testno');  tpQueueLookup(); });
     $('#tp_lottest').on('input',  function () { tpUserTyped('lottest'); tpQueueLookup(); });
-    $('#tp_customer').on('input', function () { tpUserTyped(null);      tpQueueLookup(); });
+    $('#tp_customer').on('input', function () { tpUserTyped('customer'); tpQueueLookup(); });
 
     function tpQueueLookup() {
         clearTimeout(tpTimer);
@@ -1545,6 +1549,7 @@
     $('#tp_refresh').on('click', function () {
         clearTimeout(tpTimer);
         if (tpXhr) { tpXhr.abort(); tpXhr = null; }
+        tpClearAuto('customer');
         tpClearAuto('testno');
         tpClearAuto('lottest');
         TP_KEYS.forEach(function (sel) { $(sel).val(''); });
@@ -1555,6 +1560,7 @@
     $('#testPriceModal').on('show.bs.modal', function () {
         clearTimeout(tpTimer);
         if (tpXhr) { tpXhr.abort(); tpXhr = null; }
+        tpClearAuto('customer');
         tpClearAuto('testno');
         tpClearAuto('lottest');
         TP_KEYS.forEach(function (sel) { $(sel).val(''); });

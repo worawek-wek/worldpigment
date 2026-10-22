@@ -307,6 +307,7 @@ class OrderApprovalController extends Controller
      *     ?date=02/10/2026        วันที่ (d/m/Y หรือ Y-m-d) — ไม่ส่ง = วันนี้
      *     ?time_from=08:00&time_to=18:00   ช่วงเวลา (ค่าเริ่มต้น 08:00–18:00)
      *     ?type=P                 P = น้ำหนักผลิต (suborder.Production) · S = สต๊อก (suborder.Stock)
+     *                             · RP = น้ำหนักรวม S+P เฉพาะใบที่ติ๊ก RP/Spec/Cer/MSDS อย่างน้อย 1 (20/10/2569)
      *
      *   เงื่อนไข: ใบสั่งซื้อที่ **อนุมัติ** ในวัน+ช่วงเวลานั้น (morder.appvDT) เรียงตามเลขที่ใบสั่ง
      *   ไม่รวมใบจอง R (approvableQuery) และ **ไม่รวมใบ HE** (ตามป้าย "ไม่รวม HE" บนฟอร์ม Access เดิม)
@@ -318,14 +319,20 @@ class OrderApprovalController extends Controller
         $day      = self::parseReportDate((string) $request->query('date', ''));
         $timeFrom = self::parseReportTime((string) $request->query('time_from', ''), '08:00');
         $timeTo   = self::parseReportTime((string) $request->query('time_to', ''), '18:00');
-        $type     = strtoupper((string) $request->query('type', 'P')) === 'S' ? 'S' : 'P';
+        $type     = strtoupper((string) $request->query('type', 'P'));
+        $type     = in_array($type, ['S', 'RP'], true) ? $type : 'P';
         $dept     = trim((string) $request->query('dept', ''));
 
         $from = $day->copy()->setTimeFromTimeString($timeFrom . ':00');
         $to   = $day->copy()->setTimeFromTimeString($timeTo . ':59');
 
-        // ชื่อคอลัมน์มาจากค่าคงที่ 2 ตัวนี้เท่านั้น (ไม่ได้เอาค่าจาก request ไปต่อ SQL)
-        $weightCol = $type === 'S' ? 's.Stock' : 's.Production';
+        // ชื่อคอลัมน์มาจากค่าคงที่เหล่านี้เท่านั้น (ไม่ได้เอาค่าจาก request ไปต่อ SQL)
+        //   RP (20/10/2569 ผู้ใช้สั่ง) = น้ำหนักรวม S + P · เฉพาะใบที่ติ๊ก RP / Spec / Cer / MSDS อย่างน้อย 1 ช่อง
+        $weightCol = match ($type) {
+            'S'     => 's.Stock',
+            'RP'    => '(COALESCE(s.Stock, 0) + COALESCE(s.Production, 0))',
+            default => 's.Production',
+        };
 
         $rows = $this->approvableQuery()
             ->join('suborder as s', 's.Orderno', '=', 'morder.Orderno')
@@ -337,14 +344,20 @@ class OrderApprovalController extends Controller
             ->when($dept !== '', fn ($q) => $q->where('morder.Company', $dept))
             // 1 ใบ = 1 แถว: เอาเฉพาะ "รายการแรก" ของใบ (Runno น้อยสุด) แม้ใบจะมีหลายรายการ (07/10/2569 ผู้ใช้สั่ง)
             ->whereRaw('s.Runno = (SELECT MIN(s0.Runno) FROM suborder s0 WHERE s0.Orderno = morder.Orderno)')
-            ->where($weightCol, '>', 0)
+            ->whereRaw($weightCol . ' > 0')
+            // RP: ติ๊กอย่างน้อย 1 ใน RP / Spec / Cer / MSDS (checkbox แบบ Access: ไม่ใช่ 0/NULL = ติ๊ก)
+            ->when($type === 'RP', fn ($q) => $q->where(function ($w) {
+                foreach (['RP', 'Spec', 'Cer', 'MSDS'] as $f) {
+                    $w->orWhere(fn ($x) => $x->whereNotNull('morder.' . $f)->where('morder.' . $f, '<>', 0));
+                }
+            }))
             ->orderBy('morder.Orderno')
             ->orderBy('s.Runno')
             ->get([
                 'morder.Orderno', 'morder.Mdate', 'morder.appvDT', 'morder.Company', 'morder.Custno', 'morder.supno',
-                'morder.Send', 'morder.RP', 'morder.Spec', 'morder.Cer',
+                'morder.Send', 'morder.RP', 'morder.Spec', 'morder.Cer', 'morder.MSDS',
                 'c.name as custname',
-                's.Itemno', 's.Lotno', $weightCol . ' as weight', 's.senddate', 's.custwant', 's.Remark',
+                's.Itemno', 's.Lotno', DB::raw($weightCol . ' as weight'), 's.senddate', 's.custwant', 's.Remark',
             ]);
 
         $alist = self::alistCustomers($rows->pluck('Custno')->unique()->all());
@@ -377,7 +390,7 @@ class OrderApprovalController extends Controller
             $r->is_alist = isset($alist[trim((string) $r->Custno)]);
 
             // checkbox แบบ Access: -1 = ติ๊ก
-            foreach (['Send', 'RP', 'Spec', 'Cer'] as $f) {
+            foreach (['Send', 'RP', 'Spec', 'Cer', 'MSDS'] as $f) {
                 $r->{$f} = (int) $r->{$f} !== 0;
             }
         }
