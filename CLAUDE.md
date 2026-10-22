@@ -1146,6 +1146,7 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 - คอลัมน์ใหม่ **`tb_planning_status.is_packing`** enum(`Y`/`N`) default `N` — migration `2026_10_22_100000_add_is_packing_to_tb_planning_status` (idempotent, **รันแล้ว** 22/10/2569)
 - ฟอร์ม (`planning-status/form.blade.php`): switch **"เปิดสถานะบรรจุ"** อยู่ก่อน "สถานะการใช้งาน" · ไม่ติ๊ก = ไม่ส่ง key → `PlanningStatusController::save()` บันทึก `N`
 - ตารางรายการมีคอลัมน์ "สถานะบรรจุ" (`is_packing_label`, sort ได้) ต่อจาก "ลำดับ" — default order `[[2,'asc']]` ไม่ต้องขยับ
+- **dropdown แผนก (ฟอร์ม + ตัวกรอง `#searchDept`) แสดงเฉพาะ CP / MB / DB / SPP** (22/10/2569 ตามที่ผู้ใช้สั่ง) — ค่าคงที่ `PlanningStatusController::DEPT_OPTIONS` (จับคู่ `tb_departments.name`, เรียงตามลำดับในค่าคงที่) ผ่าน `departmentOptions()` · แก้ไขรายการที่แผนกเดิมไม่อยู่ในรายการ = เติมแผนกนั้นกลับเข้า dropdown ให้ (กันค่าหาย) · `save()` ตีกลับ 422 ถ้าส่งแผนกอื่นมา (ยกเว้นคงแผนกเดิม) · ตัวกรอง "ทุกแผนก" ยังแสดงสถานะของทุกแผนกเหมือนเดิม · ⚠ ยังไม่ได้ทดสอบกับ DB (MySQL ในเครื่องปิดอยู่ตอนแก้)
 - **ใช้ที่ Worker portal** — เลือกสถานะที่ `is_packing='Y'` ใน modal อัพเดทสถานะ → ขึ้นการ์ดการบรรจุ (ดูหัวข้อ Worker portal "บันทึกการบรรจุจาก modal อัพเดทสถานะ") · ฟอร์มแก้ไข Planning Item ไม่ได้ใช้ค่านี้ (การ์ดบรรจุโชว์เสมอ)
 
 ## ข้อตกลงและข้อควรระวัง (Conventions & Gotchas)

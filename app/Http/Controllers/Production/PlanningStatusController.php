@@ -12,11 +12,33 @@ use App\Models\Department;
 
 class PlanningStatusController extends Controller
 {
+    // แผนกที่ให้เลือกใน dropdown ฟอร์ม + ตัวกรองค้นหา (22/10/2569 ตามที่ผู้ใช้สั่ง) — จับคู่ tb_departments.name
+    public const DEPT_OPTIONS = ['CP', 'MB', 'DB', 'SPP'];
+
+    /**
+     * แผนกที่แสดงใน dropdown — เฉพาะ DEPT_OPTIONS (เรียงตามลำดับในค่าคงที่)
+     * $keepId = แผนกเดิมของรายการที่แก้ไข: ถ้าไม่อยู่ในรายการ ให้เติมกลับเข้าไป กันค่าหายตอนบันทึกทับ
+     */
+    private function departmentOptions($keepId = null)
+    {
+        return Department::where('is_active', 'Y')
+            ->where(function ($q) use ($keepId) {
+                $q->whereIn('name', self::DEPT_OPTIONS);
+                if (!empty($keepId)) {
+                    $q->orWhere('id', $keepId);
+                }
+            })
+            ->get(['id', 'name'])
+            ->sortBy(function ($d) {
+                $pos = array_search($d->name, self::DEPT_OPTIONS, true);
+                return $pos === false ? 99 : $pos;
+            })
+            ->values();
+    }
+
     public function index()
     {
-        $departments = Department::where('is_active', 'Y')
-            ->orderBy('name', 'asc')
-            ->get(['id', 'name']);
+        $departments = $this->departmentOptions();
 
         return view('production-planning.planning-status.index', [
             'departments' => $departments,
@@ -82,9 +104,7 @@ class PlanningStatusController extends Controller
 
         $planning_status = $id ? PlanningStatus::find($id) : null;
 
-        $departments = Department::where('is_active', 'Y')
-            ->orderBy('name', 'asc')
-            ->get(['id', 'name']);
+        $departments = $this->departmentOptions($planning_status?->dept);
 
         $html = view('production-planning.planning-status.form', [
             'planning_status' => $planning_status,
@@ -113,6 +133,18 @@ class PlanningStatusController extends Controller
                 'message' => $validator->errors()->first(),
                 'errors'  => $validator->errors()
             ]);
+        }
+
+        // ด่านฝั่ง server: แผนกต้องอยู่ใน DEPT_OPTIONS (ยกเว้นคงแผนกเดิมของรายการที่แก้ไข)
+        if (!empty($request->dept)) {
+            $deptName = Department::where('id', $request->dept)->value('name');
+            $oldDept  = !empty($request->id) ? PlanningStatus::where('id', $request->id)->value('dept') : null;
+            if (!in_array($deptName, self::DEPT_OPTIONS, true) && (string) $oldDept !== (string) $request->dept) {
+                return response()->json([
+                    'status'  => 422,
+                    'message' => 'แผนกต้องเป็น ' . implode(', ', self::DEPT_OPTIONS) . ' เท่านั้น',
+                ]);
+            }
         }
 
         $fields = [
