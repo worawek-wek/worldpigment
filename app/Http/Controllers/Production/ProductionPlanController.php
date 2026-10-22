@@ -498,6 +498,11 @@ class ProductionPlanController extends Controller
                 ->value('itemno');
         }
 
+        // เพิ่ม item ใหม่: ตั้งต้น Lot / น้ำหนัก TP / วันที่ / หมายเหตุ MK จากใบสั่งซื้อของ header (22/10/2569)
+        $order_defaults = (!$planning_item && $parent_header)
+            ? $this->orderItemDefaults($parent_header, $last_itemno)
+            : null;
+
         // แผนกจริงของ item: ใช้แผนกที่ตั้งไว้ที่ item ก่อน ถ้าว่างจึง fallback ไปที่ header
         $item_company = ($planning_item && $planning_item->company)
             ? $planning_item->company
@@ -558,6 +563,7 @@ class ProductionPlanController extends Controller
             'pigment_list'       => $pigment_list,
             'parent_orderno'     => $parent_orderno,
             'last_itemno'        => $last_itemno,
+            'order_defaults'     => $order_defaults,
             'machines' => $machines,
             'planning_statuses' => $planning_statuses,
             'departments' => $departments,
@@ -596,6 +602,54 @@ class ProductionPlanController extends Controller
 
     // คืนตัวเลือกเครื่องจักร + สถานะ Planning + พนักงาน ตามแผนก (company) ที่เลือก
     // ใช้เมื่อผู้ใช้เปลี่ยน dropdown แผนกในโมดัลแก้ไข item เพื่อโหลดชุดตัวเลือกใหม่
+    // ค่าตั้งต้นจากใบสั่งซื้อ สำหรับฟอร์มเพิ่ม Planning Item — เรียกตอนผู้ใช้เปลี่ยน Item No. (22/10/2569)
+    public function orderDefaults(Request $request)
+    {
+        $header = PlanningHeader::find($request->get('planning_header_id'));
+
+        return response()->json([
+            'status' => 200,
+            'data'   => $header ? $this->orderItemDefaults($header, $request->get('itemno')) : null,
+        ]);
+    }
+
+    // หารายการใน suborder ของใบสั่งซื้อ (morder.Orderno = header.orderno) ที่ Itemno ตรงกับ $itemno
+    // → คืนค่าตั้งต้นของฟอร์ม Planning Item / ไม่พบ = null
+    // น้ำหนัก TP = suborder.Production (P) · วันที่สั่ง = morder.Mdate · มีหลายแถว Itemno ซ้ำ = แถวแรก (Runno น้อยสุด)
+    private function orderItemDefaults(PlanningHeader $header, ?string $itemno): ?array
+    {
+        $orderno = trim((string) $header->orderno);
+        $itemno  = trim((string) $itemno);
+        if ($orderno === '' || $itemno === '') {
+            return null;
+        }
+
+        $row = DB::table('suborder')
+            ->join('morder', 'morder.Orderno', '=', 'suborder.Orderno')
+            ->where('suborder.Orderno', $orderno)
+            ->where('suborder.Itemno', $itemno)
+            ->orderBy('suborder.Runno')
+            ->first([
+                'suborder.Lotno', 'suborder.Production', 'suborder.custwant',
+                'suborder.senddate', 'suborder.Remark', 'morder.Mdate',
+            ]);
+
+        if (!$row) {
+            return null;
+        }
+
+        $ymd = fn ($v) => $v ? substr((string) $v, 0, 10) : '';
+
+        return [
+            'lot'      => trim((string) $row->Lotno),
+            'weight'   => (float) ($row->Production ?? 0),
+            'mdate'    => $ymd($row->Mdate),
+            'custwant' => $ymd($row->custwant),
+            'senddate' => $ymd($row->senddate),
+            'remark'   => trim((string) $row->Remark),
+        ];
+    }
+
     public function deptOptions(Request $request)
     {
         $company = $request->get('company');

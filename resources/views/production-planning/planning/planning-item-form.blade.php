@@ -24,6 +24,12 @@
     $default_plan_type = $planning_item?->plan_type ?? $parent_header?->plan_type ?? '';
     // Item No.: แก้ไข = ค่าเดิมของ item / เพิ่มใหม่ = itemno ของ item ล่าสุดใน header เดียวกัน
     $default_itemno    = $planning_item ? ($planning_item->itemno ?? '') : ($last_itemno ?? '');
+    // เพิ่มใหม่: ค่าตั้งต้นจากใบสั่งซื้อ (suborder ที่ Itemno ตรงกับ Item No.) — lot/weight/mdate/custwant/senddate/remark (22/10/2569)
+    $od                = $planning_item ? [] : ($order_defaults ?? []);
+    // custwant: ใช้ทั้ง value และ data-original — ค่าที่ดึงจาก order ไม่นับเป็น "การแก้ไข" ตอนกดบันทึก
+    $default_custwant  = $planning_item
+        ? ($planning_item->custwant ? substr($planning_item->custwant, 0, 10) : '')
+        : ($od['custwant'] ?? '');
     // ค่า default สำหรับแถว semi/pigment ใหม่
     $default_mdate     = $parent_header?->mdate ? substr($parent_header->mdate, 0, 10) : '';
     $default_custno    = $parent_header?->company  ?? '';   // custno = company ของ header แม่
@@ -85,7 +91,7 @@
             <div class="col-md-4 mb-2">
                 <label class="form-label">ล๊อค (Lot)</label>
                 <input type="text" name="lot"
-                       value="{{ $planning_item?->lot ?? '' }}"
+                       value="{{ $planning_item ? ($planning_item->lot ?? '') : ($od['lot'] ?? '') }}"
                        class="form-control" placeholder="Lot">
             </div>
             <div class="col-md-4 mb-2">
@@ -109,7 +115,7 @@
             <div class="col-md-4 mb-2">
                 <label class="form-label">น้ำหนัก TP (Weight)</label>
                 <input type="text" name="weight" inputmode="decimal"
-                       value="{{ number_format((float) ($planning_item?->weight ?? 0), 2) }}"
+                       value="{{ number_format((float) ($planning_item ? ($planning_item->weight ?? 0) : ($od['weight'] ?? 0)), 2) }}"
                        class="form-control js-number-format" placeholder="0.00">
             </div>
             <div class="col-md-4 mb-2">
@@ -139,15 +145,15 @@
             <div class="col-md-4 mb-2">
                 <label class="form-label">วันที่สั่ง (mdate)</label>
                 <input type="text" name="mdate"
-                    value="{{ $planning_item?->mdate ? substr($planning_item->mdate, 0, 10) : '' }}"
+                    value="{{ $planning_item ? ($planning_item->mdate ? substr($planning_item->mdate, 0, 10) : '') : ($od['mdate'] ?? '') }}"
                     class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
             </div>
             <div class="col-md-4 mb-2">
                 <label class="form-label">วันที่ต้องการรับ (custwant)</label>
                 {{-- data-original เก็บค่าเดิม (Y-m-d) ไว้เทียบว่ามีการแก้ไขไหม → ถ้าเปลี่ยนต้องยืนยันก่อนบันทึก --}}
                 <input type="text" name="custwant"
-                    value="{{ $planning_item?->custwant ? substr($planning_item->custwant, 0, 10) : '' }}"
-                    data-original="{{ $planning_item?->custwant ? substr($planning_item->custwant, 0, 10) : '' }}"
+                    value="{{ $default_custwant }}"
+                    data-original="{{ $default_custwant }}"
                     class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
             </div>
             <div class="col-md-4 mb-2">
@@ -161,7 +167,7 @@
                     @endif
                 </label>
                 <input type="text" name="senddate"
-                    value="{{ $planning_item?->senddate ? substr($planning_item->senddate, 0, 10) : '' }}"
+                    value="{{ $planning_item ? ($planning_item->senddate ? substr($planning_item->senddate, 0, 10) : '') : ($od['senddate'] ?? '') }}"
                     class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
             </div>
         </div>
@@ -169,7 +175,7 @@
             <div class="col-md-6 mb-2">
                 <label class="form-label">หมายเหตุ MK (Remark)</label>
                 <input type="text" name="remark"
-                       value="{{ $planning_item?->remark ?? '' }}"
+                       value="{{ $planning_item ? ($planning_item->remark ?? '') : ($od['remark'] ?? '') }}"
                        class="form-control" placeholder="หมายเหตุ">
             </div>
             <div class="col-md-6 mb-2">
@@ -961,6 +967,56 @@ window.wpBindHolidayWarn = function (el, label) {
     ].forEach(function (f) {
         window.wpBindHolidayWarn($('#planning_item_form').find('input[name="' + f[0] + '"]')[0], f[1]);
     });
+
+    // ── เพิ่ม item ใหม่: เปลี่ยน Item No. → ดึง Lot / น้ำหนัก TP / วันที่ / หมายเหตุ MK จากใบสั่งซื้อใหม่ (22/10/2569) ──
+    // เติมทับเฉพาะช่องที่ว่าง หรือยังเป็นค่าที่ระบบเติมไว้เอง (data-autofill) — ช่องที่ผู้ใช้แก้เองไม่ถูกทับ
+    if (!PLANNING_ID) {
+        var URL_ORDER_DEFAULTS = '{{ route('production.planning.order-defaults') }}';
+        var HEADER_ID          = '{{ $planning_header_id ?? '' }}';
+        var OD_FIELDS          = ['lot', 'weight', 'mdate', 'custwant', 'senddate', 'remark'];
+        var $odForm            = $('#planning_item_form');
+        var odField = function (f) { return $odForm.find('input[name="' + f + '"]'); };
+        var odTimer = null;
+
+        // ค่าที่ server เติมมาตอนเปิดฟอร์ม = ค่าที่ระบบเติมเอง
+        OD_FIELDS.forEach(function (f) { odField(f).attr('data-autofill', odField(f).val() || ''); });
+        // ผู้ใช้แก้ช่องเอง → เลิกนับเป็นค่าที่ระบบเติม
+        OD_FIELDS.forEach(function (f) {
+            odField(f).on('input change', function () { $(this).removeAttr('data-autofill'); });
+        });
+
+        var odApply = function (d) {
+            d = d || {};
+            OD_FIELDS.forEach(function (f) {
+                var $el = odField(f);
+                var cur = $el.val() || '';
+                var auto = $el.attr('data-autofill');
+                var isZero = (f === 'weight') && parseFloat(String(cur).replace(/,/g, '')) === 0;
+                if (!(cur === '' || isZero || (auto !== undefined && auto === cur))) return;
+
+                var val = d[f] !== undefined && d[f] !== null ? d[f] : '';
+                if (f === 'weight') {
+                    val = Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                }
+                if (['mdate', 'custwant', 'senddate'].indexOf(f) !== -1) {
+                    setDateField($el, val);
+                    if (f === 'custwant') $el.attr('data-original', val); // ค่าจาก order ไม่นับเป็นการแก้ไข custwant
+                } else {
+                    $el.val(val);
+                }
+                $el.attr('data-autofill', $el.val() || '');
+            });
+        };
+
+        $odForm.find('input[name="itemno"]').on('input', function () {
+            var itemno = ($(this).val() || '').trim();
+            clearTimeout(odTimer);
+            odTimer = setTimeout(function () {
+                $.getJSON(URL_ORDER_DEFAULTS, { planning_header_id: HEADER_ID, itemno: itemno })
+                    .done(function (res) { odApply(res.data); });
+            }, 400);
+        });
+    }
 
     // ── เปลี่ยนแผนก (Company) → โหลดเครื่องจักร/สถานะของแผนกใหม่ แล้วล้างค่าที่เลือกไว้ ──
     // (ค่า machine_no/planning_status เดิมเป็นของแผนกเก่า จึงต้องเลือกใหม่)

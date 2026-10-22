@@ -11,6 +11,7 @@ use App\Models\Morder;
 use App\Models\PlanningHeader;
 use App\Models\Planning;
 use App\Models\Department;
+use App\Models\PlanningStatus;
 
 class OrderController extends Controller
 {
@@ -203,6 +204,12 @@ class OrderController extends Controller
         $suborders   = $order->suborders;
         $multi_items = $suborders->count() > 1;
 
+        // ขายสีสต๊อค (22/10/2569): แผนก DB + รายการที่ Stock > 0 และ Production = 0
+        // → สถานะ = สถานะบรรจุ (is_packing='Y') ของแผนก DB, หมายเหตุวางแผน = "ขายสีสต๊อค"
+        // ไม่มีสถานะบรรจุของแผนก DB = สถานะว่างตามเดิม
+        $is_db_order    = trim((string) $order->Company) === 'DB';
+        $packing_status = $is_db_order ? $this->packingStatusName('DB') : null;
+
         // ครอบ transaction: ถ้า item ใดชน unique (เช่น orderno ถูกใช้ที่อื่นแล้ว) ให้ rollback ทั้งชุด
         // (tb_planning / tb_planning_header เป็น InnoDB จึง rollback ได้จริง)
         DB::beginTransaction();
@@ -227,6 +234,17 @@ class OrderController extends Controller
                     'quantity'           => $order->netqty, // น้ำหนักสั่งตาม Order
                 ];
 
+                $is_stock_sale = $is_db_order
+                    && (float) $suborder->Stock > 0
+                    && (float) $suborder->Production == 0;
+
+                if ($is_stock_sale) {
+                    $planning['planning_remark'] = 'ขายสีสต๊อค';
+                    if ($packing_status) {
+                        $planning['planning_status'] = $packing_status;
+                    }
+                }
+
                 Planning::create($planning);
                 $seq++;
             }
@@ -245,5 +263,21 @@ class OrderController extends Controller
             'status' => 200,
             'message' => 'Success'
         ]);
+    }
+
+    // ชื่อสถานะบรรจุ (is_packing='Y') ตัวแรกตามลำดับของแผนก — ไม่มี = null
+    private function packingStatusName(string $company): ?string
+    {
+        $dept_id = Department::where('name', $company)->value('id');
+        if (!$dept_id) {
+            return null;
+        }
+
+        return PlanningStatus::where('dept', $dept_id)
+            ->where('is_active', 'Y')
+            ->where('is_packing', 'Y')
+            ->orderBy('sort', 'asc')
+            ->orderBy('id', 'asc')
+            ->value('name');
     }
 }
