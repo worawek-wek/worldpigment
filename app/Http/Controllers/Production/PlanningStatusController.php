@@ -38,12 +38,18 @@ class PlanningStatusController extends Controller
                 }
                 return '<span class="badge bg-label-secondary">ปิดใช้งาน</span>';
             })
+            ->addColumn('is_packing_label', function($row) {
+                if ($row->is_packing === 'Y') {
+                    return '<span class="badge bg-label-info">เปิด</span>';
+                }
+                return '<span class="badge bg-label-secondary">ปิด</span>';
+            })
             ->addColumn('btnedit', function($row) {
                 return '<button class="btn btn-sm btn-icon btn-warning me-2 btn_edit" data-id="'.$row->id.'" title="แก้ไข">
                     <i class="ti ti-pencil text-white ti-sm"></i>
                 </button>';
             })
-            ->rawColumns(['is_active_label', 'btnedit'])
+            ->rawColumns(['is_packing_label', 'is_active_label', 'btnedit'])
             ->make(true);
     }
 
@@ -97,6 +103,7 @@ class PlanningStatusController extends Controller
             'name'      => 'required|string|max:255',
             'dept'      => 'nullable|integer|exists:tb_departments,id',
             'sort'      => 'nullable|integer|min:0',
+            'is_packing' => 'nullable|in:Y,N',
             'is_active' => 'nullable|in:Y,N',
         ]);
 
@@ -112,6 +119,8 @@ class PlanningStatusController extends Controller
             'name'      => $request->name,
             'dept'      => $request->dept ?: null,
             'sort'      => $request->sort ?: 0,
+            // switch ไม่ติ๊ก = ไม่ส่ง key มา → N
+            'is_packing' => $request->is_packing === 'Y' ? 'Y' : 'N',
             'is_active' => $request->is_active ?: 'N',
         ];
 

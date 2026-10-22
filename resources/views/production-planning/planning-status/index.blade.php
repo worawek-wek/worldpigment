@@ -60,6 +60,7 @@
                                         <th class="col-1">แผนก (Dept)</th>
                                         <th class="col-4">ชื่อสถานะ</th>
                                         <th class="col-1">ลำดับ</th>
+                                        <th class="col-1">สถานะบรรจุ</th>
                                         <th class="col-2">สถานะ</th>
                                         <th class="col-1">จัดการ</th>
                                     </tr>
@@ -111,6 +112,8 @@
                 { 'className': "text-left", data: 'dept_name', name: 'tb_departments.name', orderable: true, searchable: false },
                 { 'className': "text-left", data: 'name', name: 'tb_planning_status.name', orderable: true },
                 { 'className': "text-center", data: 'sort', name: 'tb_planning_status.sort', orderable: true },
+                // สถานะบรรจุ (is_packing, 22/10/2569)
+                { 'className': "text-center", data: 'is_packing_label', name: 'tb_planning_status.is_packing', orderable: true, searchable: false },
                 // สถานะ: sort ตามคอลัมน์จริง is_active (แม้จะแสดงเป็น badge)
                 { 'className': "text-center", data: 'is_active_label', name: 'tb_planning_status.is_active', orderable: true, searchable: false },
                 { 'className': "text-center", data: 'btnedit', name: 'btnedit', orderable: false, searchable: false },

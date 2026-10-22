@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Models\Planning;
+use App\Models\PlanningPacking;
 use App\Models\PlanningStatus;
 use App\Services\AccessControl;
 use Illuminate\Http\Request;
@@ -96,7 +97,7 @@ class WorkerPlanningController extends Controller
             ->where('is_active', 'Y')
             ->orderBy('sort', 'asc')
             ->orderBy('id', 'asc')
-            ->get(['id', 'name']);
+            ->get(['id', 'name', 'is_packing']);
     }
 
     public function index()
@@ -193,12 +194,14 @@ class WorkerPlanningController extends Controller
     {
         $job = $this->accessibleJobOrFail($request->get('id'));
 
+        // แนบชื่อผู้เปลี่ยน (changed_by = emp.empno) สำหรับคอลัมน์ "โดย" (22/10/2569)
         $logs = DB::table('tb_planning_status_log')
-            ->where('planning_id', $job->id)
-            ->orderBy('changed_at', 'desc')
-            ->orderBy('id', 'desc')
+            ->leftJoin('emp', 'emp.empno', '=', 'tb_planning_status_log.changed_by')
+            ->where('tb_planning_status_log.planning_id', $job->id)
+            ->orderBy('tb_planning_status_log.changed_at', 'desc')
+            ->orderBy('tb_planning_status_log.id', 'desc')
             ->limit(20)
-            ->get();
+            ->get(['tb_planning_status_log.*', 'emp.empname', 'emp.empsur']);
 
         return view('worker.planning.partials.detail', [
             'job'     => $job,
@@ -213,8 +216,10 @@ class WorkerPlanningController extends Controller
         $job = $this->accessibleJobOrFail($request->get('id'));
 
         return view('worker.planning.partials.status-form', [
-            'job'      => $job,
-            'statuses' => $this->statusesForJob($job),
+            'job'          => $job,
+            'statuses'     => $this->statusesForJob($job),
+            // แถวบรรจุเดิมของงาน — แสดงในการ์ดบรรจุเมื่อเลือกสถานะที่ is_packing='Y' (22/10/2569)
+            'packing_rows' => $job->packings,
         ]);
     }
 
@@ -225,6 +230,16 @@ class WorkerPlanningController extends Controller
         $request->validate([
             'id'     => 'required|integer',
             'status' => 'required|string|max:255',
+            // การบรรจุ (ส่งมาเฉพาะเมื่อเลือกสถานะที่ is_packing='Y') — array คู่ขนานแบบเดียวกับฟอร์ม Planning Item
+            'packing_datetime'   => 'nullable|array',
+            'packing_datetime.*' => 'nullable|date_format:Y-m-d H:i',
+            'weight_packing'     => 'nullable|array',
+            'weight_packing.*'   => 'nullable|string|max:255',
+            'pack_remark'        => 'nullable|array',
+            'pack_remark.*'      => 'nullable|string|max:1000',
+        ], [
+            'packing_datetime.*.date_format' => 'รูปแบบวันเวลาที่บรรจุเสร็จไม่ถูกต้อง',
+            'pack_remark.*.max'              => 'หมายเหตุการบรรจุยาวเกินไป',
         ]);
 
         $job   = $this->accessibleJobOrFail($request->get('id'));
@@ -242,15 +257,36 @@ class WorkerPlanningController extends Controller
         }
 
         // ต้องเป็นสถานะที่เปิดใช้งานของแผนกงานนี้เท่านั้น (กันยิงค่าตามใจ)
-        $allowed = $this->statusesForJob($job)->pluck('name')->all();
-        if (!in_array($new, $allowed, true)) {
+        $statusRow = $this->statusesForJob($job)->firstWhere('name', $new);
+        if (!$statusRow) {
             return response()->json([
                 'status'  => 422,
                 'message' => 'สถานะไม่ถูกต้องสำหรับแผนกของงานนี้',
             ], 422);
         }
 
+        // สถานะที่เปิดสถานะบรรจุ (is_packing='Y') → บันทึกการบรรจุด้วย (22/10/2569)
+        // ยึดค่า is_packing จาก DB ไม่เชื่อฝั่งจอ · สถานะอื่น = ไม่แตะแถวบรรจุเลย
+        $savePacking = ($statusRow->is_packing ?? 'N') === 'Y' && $request->has('packing_datetime');
+
         $old = $job->planning_status;
+
+        if ($savePacking) {
+            DB::transaction(function () use ($job, $request) {
+                // เพิ่มได้อย่างเดียว — แถวเดิมไม่ถูกแก้ไข/ลบ (22/10/2569)
+                $total = PlanningPacking::appendRows(
+                    $job->id,
+                    (array) $request->input('packing_datetime', []),
+                    (array) $request->input('weight_packing', []),
+                    (array) $request->input('pack_remark', [])
+                );
+
+                // น้ำหนักที่ผลิตได้ = ผลรวมน้ำหนักบรรจุทุกแถว (เหมือนฟอร์ม Planning Item) — ไม่มีน้ำหนักเลย = คงค่าเดิม
+                if ($total !== null) {
+                    Planning::where('id', $job->id)->update(['weight_produced' => $total]);
+                }
+            });
+        }
 
         if ($old !== $new) {
             DB::transaction(function () use ($job, $old, $new, $empno) {

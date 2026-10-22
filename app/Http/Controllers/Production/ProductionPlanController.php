@@ -896,39 +896,13 @@ class ProductionPlanController extends Controller
      */
     private function syncPackings($planning_id, Request $request): void
     {
-        PlanningPacking::where('planning_id', $planning_id)->delete();
-
-        $datetimes = $request->input('packing_datetime', []);
-        $weights   = $request->input('weight_packing', []);
-        $remarks   = $request->input('pack_remark', []);
-
-        $count = max(count($datetimes), count($weights), count($remarks));
-
-        for ($i = 0; $i < $count; $i++) {
-            $datetime = $datetimes[$i] ?? null;
-            $weight   = $weights[$i]   ?? null;
-            $remark   = $remarks[$i]   ?? null;
-
-            $datetime = ($datetime !== null && trim((string) $datetime) !== '') ? trim((string) $datetime) : null;
-            $remark   = ($remark   !== null && trim((string) $remark)   !== '') ? trim((string) $remark)   : null;
-
-            // ช่องน้ำหนักมาจาก js-number-format (มีคอมมาหลักพัน) → ตัดคอมมาแล้วแปลงเป็นตัวเลข
-            $weight_raw = ($weight !== null) ? str_replace(',', '', trim((string) $weight)) : '';
-            $weight_val = ($weight_raw !== '' && is_numeric($weight_raw)) ? (float) $weight_raw : null;
-
-            // ข้ามแถวที่ว่างทั้งหมด
-            if ($datetime === null && $weight_val === null && $remark === null) {
-                continue;
-            }
-
-            PlanningPacking::create([
-                'planning_id'      => $planning_id,
-                'packing_datetime' => $datetime,
-                'weight_packing'   => $weight_val,
-                'pack_remark'      => $remark,
-                'sort'             => $i,
-            ]);
-        }
+        // ตรรกะย้ายไป PlanningPacking::syncRows() (22/10/2569) — ใช้ร่วมกับ Worker portal
+        PlanningPacking::syncRows(
+            $planning_id,
+            (array) $request->input('packing_datetime', []),
+            (array) $request->input('weight_packing', []),
+            (array) $request->input('pack_remark', [])
+        );
     }
 
     /**

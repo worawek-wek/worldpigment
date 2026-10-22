@@ -62,7 +62,7 @@
                         <th style="width:150px;">เวลา</th>
                         <th>จากสถานะ</th>
                         <th>เป็นสถานะ</th>
-                        <th style="width:120px;">โดย</th>
+                        <th style="width:180px;">โดย</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -71,7 +71,14 @@
                             <td>{{ $log->changed_at ? \Carbon\Carbon::parse($log->changed_at)->format('d/m/Y H:i') : '-' }}</td>
                             <td>{{ $log->old_status ?: '-' }}</td>
                             <td>{{ $log->new_status ?: '-' }}</td>
-                            <td>{{ $log->changed_by ?: '-' }}</td>
+                            @php $byName = trim(($log->empname ?? '').' '.($log->empsur ?? '')); @endphp
+                            <td>
+                                @if($byName !== '')
+                                    {{ $byName }}<div class="small text-muted">{{ $log->changed_by }}</div>
+                                @else
+                                    {{ $log->changed_by ?: '-' }}
+                                @endif
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>

@@ -53,14 +53,14 @@
 
     {{-- Modal: อัพเดทสถานะ --}}
     <div class="modal fade" id="statusModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-xl"> {{-- กว้างขึ้นให้การ์ดบรรจุอยู่แถวเดียว (22/10/2569) --}}
             <div class="modal-content" id="statusModalContent"></div>
         </div>
     </div>
 
     {{-- Modal: ดูรายละเอียด (อ่านอย่างเดียว) --}}
     <div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-xl"> {{-- กว้างขึ้น (22/10/2569) --}}
             <div class="modal-content" id="detailModalContent"></div>
         </div>
     </div>
@@ -110,6 +110,7 @@
             type: 'GET', url: URL_STATUS_F, data: { id: id },
             success: function (html) {
                 $('#statusModalContent').html(html);
+                initPackingCard();
                 new bootstrap.Modal(document.getElementById('statusModal')).show();
             },
             error: function () { Swal.fire('เปิดฟอร์มไม่สำเร็จ', '', 'error'); }
@@ -128,15 +129,70 @@
         });
     }
 
+    // ── การ์ดการบรรจุใน modal อัพเดทสถานะ (22/10/2569) ──
+    // แสดงเมื่อสถานะที่เลือกมี is_packing='Y' (data-packing ของ option) · ค่าเดิมโหลดมากับฟอร์มจาก tb_planning_packing
+    var WPK_DATETIME_OPTIONS = {
+        enableTime: true, time_24hr: true,
+        dateFormat: 'Y-m-d H:i', altInput: true, altFormat: 'd/m/Y H:i',
+        allowInput: true, disableMobile: true, static: true // static = ปฏิทินอยู่ใน modal ไม่จมใต้ modal
+    };
+
+    function initPackingRow($row) {
+        $row.find('.wpk-datetime').each(function () {
+            if (!this._flatpickr) flatpickr(this, WPK_DATETIME_OPTIONS);
+        });
+    }
+
+    function selectedIsPacking() {
+        return $('#status_select option:selected').data('packing') === 'Y';
+    }
+
+    function syncPackingCard() {
+        $('#worker_packing_card').toggleClass('d-none', !selectedIsPacking());
+    }
+
+    function initPackingCard() {
+        $('#worker_packing_rows .worker-packing-row').each(function () { initPackingRow($(this)); });
+        syncPackingCard();
+    }
+
+    $(document).on('change', '#status_select', syncPackingCard);
+
+    $(document).on('click', '#btn_worker_add_packing', function () {
+        var $row = $($('#worker_packing_row_tpl').html()).appendTo('#worker_packing_rows');
+        initPackingRow($row);
+    });
+
+    // ลบได้เฉพาะแถวใหม่ที่ยังไม่บันทึก (แถวเดิมไม่มีปุ่มลบ — server ก็ไม่ลบแถวเดิมเช่นกัน)
+    $(document).on('click', '.btn_worker_remove_packing', function () {
+        $(this).closest('.worker-packing-row').remove();
+    });
+
+    // รวบรวมเฉพาะแถวใหม่เป็น array คู่ขนาน (ตัดคอมมาจากน้ำหนัก) — แถวเดิมอ่านอย่างเดียว ไม่ส่งไป server
+    function collectPacking() {
+        var data = { packing_datetime: [], weight_packing: [], pack_remark: [] };
+        $('#worker_packing_rows .worker-packing-row.wpk-new').each(function () {
+            var $r = $(this);
+            data.packing_datetime.push($r.find('.wpk-datetime').val() || '');
+            data.weight_packing.push(String($r.find('.wpk-weight').val() || '').replace(/,/g, ''));
+            data.pack_remark.push($r.find('.wpk-remark').val() || '');
+        });
+        return data;
+    }
+
     // บันทึกสถานะ (เรียกจากฟอร์มใน modal)
     function submitStatus() {
         var id     = $('#status_planning_id').val();
         var status = $('#status_select').val();
         if (!status) { Swal.fire('กรุณาเลือกสถานะ', '', 'warning'); return; }
 
+        var payload = { _token: CSRF_TOKEN, id: id, status: status };
+        // ส่งการบรรจุเฉพาะสถานะบรรจุ (server ตรวจ is_packing ซ้ำอีกชั้น)
+        if (selectedIsPacking()) $.extend(payload, collectPacking());
+
         $.ajax({
             type: 'POST', url: URL_STATUS_U,
-            data: { _token: CSRF_TOKEN, id: id, status: status },
+            data: payload,
             success: function (res) {
                 bootstrap.Modal.getInstance(document.getElementById('statusModal')).hide();
                 Swal.fire({

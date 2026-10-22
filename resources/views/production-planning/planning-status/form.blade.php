@@ -34,6 +34,16 @@
                    class="form-control" placeholder="0">
         </div>
 
+        {{-- เปิดสถานะบรรจุ (is_packing) — ไม่ติ๊ก = ไม่ส่งค่า server บันทึกเป็น N (22/10/2569) --}}
+        <div class="mb-2">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="ps_is_packing"
+                       name="is_packing" value="Y"
+                       {{ ($planning_status?->is_packing ?? 'N') === 'Y' ? 'checked' : '' }}>
+                <label class="form-check-label" for="ps_is_packing">เปิดสถานะบรรจุ</label>
+            </div>
+        </div>
+
         <div class="mb-2">
             <label class="form-label">สถานะการใช้งาน</label>
             <select name="is_active" class="form-select">
