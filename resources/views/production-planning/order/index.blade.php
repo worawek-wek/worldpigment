@@ -68,6 +68,8 @@
                                         <th class="col-1">Custno</th>
                                         <th class="col-2">Custname</th>
                                         <th class="col-2">Item No</th>
+                                        <th class="col-1">Stock</th>
+                                        <th class="col-1">Production</th>
                                         <th class="col-2">แผนการผลิต</th>
                                         <th class="col-2">Manage</th>
                                     </tr>
@@ -145,6 +147,9 @@
                 { 'className': "text-left", data: 'Custname', name: 'Custname', orderable: true },
                 // Item No รวมจาก suborder (คำนวณฝั่ง PHP) จึง sort ที่ระดับ SQL ไม่ได้
                 { 'className': "text-left", data: 'itemno_list', name: 'itemno_list', orderable: false, searchable: false },
+                // น้ำหนักรวม S / P ของ suborder ทั้งออเดอร์ — sort ตาม alias จาก subquery SUM
+                { 'className': "text-end", data: 'stock_total', name: 'stock_total', orderable: true, searchable: false },
+                { 'className': "text-end", data: 'production_total', name: 'production_total', orderable: true, searchable: false },
                 // sort สถานะแผนตาม alias has_plan (EXISTS ว่ามีการสร้างแผน ORDER แล้วหรือยัง)
                 { 'className': "text-center", data: 'plan_badge', name: 'has_plan', orderable: true, searchable: false },
                 { 'className': "text-center", data: 'btnedit', name: 'btnedit', orderable: false, searchable: false },

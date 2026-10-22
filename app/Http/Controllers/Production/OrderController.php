@@ -44,6 +44,8 @@ class OrderController extends Controller
 
                 return $items->isEmpty() ? '-' : $items->implode(', ');
             })
+            ->editColumn('stock_total', fn ($row) => number_format((float) $row->stock_total, 2))
+            ->editColumn('production_total', fn ($row) => number_format((float) $row->production_total, 2))
             ->addColumn('plan_badge', function($row) {
                 if ($row->has_plan) {
                     return '<span class="badge bg-label-success">สร้างแล้ว</span>';
@@ -82,7 +84,10 @@ class OrderController extends Controller
                     SELECT 1 FROM tb_planning_header
                     WHERE tb_planning_header.orderno = morder.Orderno
                       AND tb_planning_header.plan_type = 'ORDER'
-                ) AS has_plan")
+                ) AS has_plan"),
+                // น้ำหนักรวม S (Stock) / P (Production) ของ suborder ทุกตัวในออเดอร์ (22/10/2569)
+                DB::raw("(SELECT COALESCE(SUM(s.Stock), 0) FROM suborder s WHERE s.Orderno = morder.Orderno) AS stock_total"),
+                DB::raw("(SELECT COALESCE(SUM(s.Production), 0) FROM suborder s WHERE s.Orderno = morder.Orderno) AS production_total"),
             ])
             // โหลด suborder ล่วงหน้า (เฉพาะคีย์ + Itemno) เพื่อรวมรหัสสินค้าโดยไม่เกิด N+1
             ->with(['suborders' => function ($query) {
