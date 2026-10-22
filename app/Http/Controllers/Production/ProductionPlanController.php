@@ -67,6 +67,10 @@ class ProductionPlanController extends Controller
                 }
                 return $text;
             })
+            // นน.ผลิตได้รวม (21/10/2569): ค่าจากช่อง "น้ำหนักที่ผลิตได้ (Weight Produced)" = tb_planning.weight_produced
+            ->editColumn('weight_produced', fn ($row) => $row->weight_produced !== null && $row->weight_produced !== ''
+                ? number_format((float) $row->weight_produced, 2)
+                : '-')
             // เลขที่ใบเบิก: ดึงจาก red_bill_code (ว่าง = แสดง -)
             ->addColumn('red_bill_code', fn ($row) => $row->red_bill_code ?: '-')
             // สถานะภายใน: สถานะของ planning item แถวนี้เอง (planning_status ของแถว)
