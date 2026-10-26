@@ -24,6 +24,7 @@ Route::prefix('quotation')->group(function () {
     Route::post('/print-preview', [QuotationController::class, 'printPreview'])->name('quotation.print_preview'); // → หน้าพิมพ์จากฟอร์มที่ยังไม่บันทึก
 
     // ─── เขียน ───────────────────────────────────────────────────────
+    Route::post('/create',   [QuotationController::class, 'create'])->name('quotation.create');   // ปุ่ม "สร้างใบเสนอราคา" — ออกเลขที่ + สร้างใบทันที (26/10/2569)
     Route::post('/insert',   [QuotationController::class, 'insert'])->name('quotation.insert');
     Route::post('/update',   [QuotationController::class, 'update'])->name('quotation.update');
     Route::post('/delete',   [QuotationController::class, 'destroy'])->name('quotation.delete');

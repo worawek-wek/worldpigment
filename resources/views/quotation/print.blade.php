@@ -79,7 +79,10 @@
         /* หัวกระดาษ — รูปกว้างเต็มหน้า */
         .letterhead { margin-bottom: 18px; }
         /* ขนาด 90% ของความกว้างหน้า (ย่อลง 10% ตามที่ผู้ใช้สั่ง 16/10/2569) จัดกึ่งกลาง */
-        .letterhead img { display: block; width: 90%; height: auto; margin: 0 auto; }
+        /* 26/10/2569: ย่อหน้าเนื้อหาด้านล่างให้เท่าขอบรูป — .page เว้นซ้าย/ขวา 5% แล้วรูปกว้าง 100% ของ .page
+           (= 90% ของหน้าเท่าเดิม) เนื้อหาทุกส่วนจึงตรงแนวขอบรูป */
+        .page { padding: 0 5%; }
+        .letterhead img { display: block; width: 100%; height: auto; margin: 0 auto; }
         /* ไม่พิมพ์หัวกระดาษ — ซ่อนรูปแต่คงพื้นที่ไว้ (visibility ไม่ใช่ display) */
         .letterhead.blank img { visibility: hidden; }
         .doc-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
@@ -216,9 +219,13 @@
         <thead>
             <tr>
                 @foreach ($colConfig as $c)
-                    @php $head = $headEn ? ($c['label_en'] ?? $c['label']) : $c['label']; @endphp
+                    @php
+                        $head = $headEn ? ($c['label_en'] ?? $c['label']) : $c['label'];
+                        // คำว่า "ปัจจุบัน" / "ใหม่" (รวมวงเล็บ) ขึ้นบรรทัดใหม่ — 26/10/2569 · escape ก่อนแล้วค่อยแทรก <br>
+                        $headHtml = preg_replace('/\s*(\(?(?:ปัจจุบัน|ใหม่)\)?)/u', '<br>$1', e($head), 1);
+                    @endphp
                     {{-- น้ำหนักส่งครั้งละ (delivery_qty) เก็บเป็นข้อความ แต่ให้ชิดขวาเหมือนช่องตัวเลข (19/10/2569) --}}
-                    <th class="{{ (($colRegistry[$c['key']]['num'] ?? false) || $c['key'] === 'delivery_qty') ? 'text-end' : '' }}"><u>{{ $head }}</u></th>
+                    <th class="{{ (($colRegistry[$c['key']]['num'] ?? false) || $c['key'] === 'delivery_qty') ? 'text-end' : '' }}"><u>{!! $headHtml !!}</u></th>
                 @endforeach
             </tr>
         </thead>
