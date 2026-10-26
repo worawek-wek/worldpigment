@@ -767,11 +767,20 @@
     });
     $('#saleinfoModal').on('hidden.bs.modal', function () { saleinfoEditing = false; });
 
+    // โหมดแก้ไข: รหัสลูกค้า / ชื่อสินค้า / รหัสสินค้า แก้ได้เฉพาะแผนก IT (26/10/2569) — server กันซ้ำใน update()
+    const SALEINFO_CAN_EDIT_KEYS = @json($can_edit_keys);
+    function setSaleinfoKeyLock(locked) {
+        $('#form_saleinfo').find('[name="CustNo"], [name="st_code"], [name="ITEMNO"]')
+            .prop('readonly', locked)
+            .toggleClass('bg-light', locked);
+    }
+
     function resetSaleinfoForm() {
         $('#form_saleinfo')[0].reset();
         $('#form_saleinfo [name="_mode"]').val('create');
         $('#form_saleinfo [name="_pk"]').val('');
         $('#btn_delete_saleinfo').addClass('d-none').removeData('id');
+        setSaleinfoKeyLock(false);
         setCustomerPanel(null);
         clearSaleinfoHistory();
         clearSaleinfoLastOrder();
@@ -1051,7 +1060,9 @@
                 // NoAcp ปิดไว้ก่อน — ช่องในฟอร์มถูกคอมเมนต์ไว้ รอลูกค้ายืนยันความหมาย
                 // $('#saleinfo_noacp').prop('checked', Number(d.NoAcp) === 1);
 
-                $('#btn_delete_saleinfo').removeClass('d-none').data('id', id);
+                // ปุ่ม "ลบราคานี้" ซ่อนไว้ (26/10/2569 ตามที่ผู้ใช้สั่ง) — เปิดคืน: ปลดคอมเมนต์บรรทัดนี้
+                // $('#btn_delete_saleinfo').removeClass('d-none').data('id', id);
+                setSaleinfoKeyLock(!SALEINFO_CAN_EDIT_KEYS);
                 lookupCustomer(d.CustNo);
                 // แก้ไขอยู่ → โชว์ประวัติของคู่นี้ แต่ไม่รวมแถวที่กำลังแก้เอง
                 loadSaleinfoHistory(id);

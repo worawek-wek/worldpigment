@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Emp;
 use App\Models\Saleinfo;
+use App\Services\AccessControl;
 use App\Services\ProductPriceService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -40,6 +42,8 @@ class SaleinfoController extends Controller
     public function index(Request $request)
     {
         $data['page_url'] = 'saleinfo';
+        // ฟอร์มแก้ไข: รหัสลูกค้า / ชื่อสินค้า / รหัสสินค้า แก้ได้เฉพาะแผนก IT (26/10/2569)
+        $data['can_edit_keys'] = self::canEditKeyFields();
 
         return view('saleinfo.index', $data);
     }
@@ -457,6 +461,13 @@ class SaleinfoController extends Controller
             $data = $this->extractForm($request);
             $data['AuthDate'] = now();   // เวลาที่แก้ราคาล่าสุด
 
+            // ไม่ใช่แผนก IT → คงค่า 3 ช่องนี้ตามของเดิม ไม่สนค่าที่ส่งมา (26/10/2569)
+            if (!self::canEditKeyFields()) {
+                foreach (self::KEY_FIELDS as $col) {
+                    $data[$col] = $row->{$col};
+                }
+            }
+
             $row->update($data);
 
             return response()->json(['ok' => true, 'id' => $row->id]);
@@ -487,6 +498,17 @@ class SaleinfoController extends Controller
     // ────────────────────────────────────────────────────────────────
     //  Helpers
     // ────────────────────────────────────────────────────────────────
+
+    /** ช่องที่ตอนแก้ไขราคา แก้ได้เฉพาะแผนก IT (26/10/2569) */
+    private const KEY_FIELDS = ['CustNo', 'st_code', 'ITEMNO'];
+
+    /** ผู้ล็อกอินเป็นพนักงานแผนก IT (emp.dept = 'IT') หรือไม่ */
+    private static function canEditKeyFields(): bool
+    {
+        $account = AccessControl::currentAccount();
+
+        return $account instanceof Emp && strtoupper(trim((string) $account->dept)) === 'IT';
+    }
 
     /**
      * ตรวจช่องบังคับ (ตรงกับ required ในฟอร์ม) — คืนข้อความ error หรือ null ถ้าผ่าน
