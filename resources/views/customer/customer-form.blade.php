@@ -129,7 +129,8 @@
             <div class="col-md-8 of-row">
                 <label class="form-label">เครดิต</label>
                 <div class="of-ctl">
-                    <select class="form-select force-select2" name="term">
+                    {{-- แก้ไขลูกค้าเดิม = ล็อกช่องเครดิต (26/10/2569) — server คงค่าเดิมเองอยู่แล้ว --}}
+                    <select class="form-select force-select2" name="term" {{ $customer ? 'disabled' : '' }}>
                         <option value="">- ไม่ระบุ -</option>
                         @if ($termCurrent !== '' && !$termInList)
                             <option value="{{ $termCurrent }}" selected>{{ $termCurrent }} (ค่าเดิม)</option>

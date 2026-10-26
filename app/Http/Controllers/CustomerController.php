@@ -289,10 +289,13 @@ class CustomerController extends Controller
             ], 404);
         }
 
-        // ─── เครดิต: ต้องเป็นตัวเลือกใน tb_credit_term หรือคงค่าเดิมของลูกค้า (26/10/2569) ───
-        $term = $this->nn($request->input('term'));
-        $oldTerm = $existing ? trim((string) $existing->term) : '';
-        if ($term !== null && $term !== $oldTerm
+        // ─── เครดิต (26/10/2569) ───
+        // แก้ไข = แก้เครดิตไม่ได้ คงค่าเดิมเสมอ (ช่องบนจอถูก disabled จึงไม่ส่งค่ามา)
+        // เพิ่มใหม่ = ต้องเป็นตัวเลือกใน tb_credit_term
+        $term = $mode === 'update'
+            ? $existing->term
+            : $this->nn($request->input('term'));
+        if ($mode === 'insert' && $term !== null
             && !CreditTerm::where('is_active', 'Y')->where('name_th', $term)->exists()) {
             return response()->json([
                 'status'  => 422,
