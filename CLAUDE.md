@@ -45,7 +45,7 @@ worldpigment/
 │   │   ├── OrderChangeController.php  # ฟอร์มลูกของ O-Order — การเปลี่ยนแปลงคำสั่งซื้อ เลื่อน/แยกส่ง/น้ำหนัก tb_order_change* (20/10/2569)
 │   │   ├── SalesForecastController.php  # ฟอร์มลูกของ O-Order — ประมาณการยอดขาย ตามรหัสพนักงานขาย (PDF) (15/10/2569)
 │   │   ├── QuotationController.php
-│   │   ├── CustomerController.php   # ฐานข้อมูลลูกค้า customer/contact/naddress/engname — CRUD (24/08/2569)
+│   │   ├── CustomerController.php   # ฐานข้อมูลลูกค้า customer/contact/naddress/engname — CRUD (24/08/2569) · ช่องเครดิตเลือกจาก tb_credit_term (26/10/2569)
 │   │   ├── ReportController.php
 │   │   ├── UserController.php
 │   │   ├── PermissionController.php
@@ -980,6 +980,11 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 | สถานที่ส่ง | `naddress.DVpoint` |
 
 **`customer.sale` = `emp.supno`** (ยืนยันแล้ว — ค่าเดียวกับ `morder.supno` ที่ฟอร์มใบสั่งซื้อดึงไปเติมช่อง "รหัสผู้ขาย") แต่ **`emp` มี `supno` แค่ 3 คน** ⇒ รหัสผู้ขายเก่าส่วนใหญ่แปลงเป็นชื่อไม่ได้ — `saleOptions()` จึงประกอบตัวเลือกจาก **ค่าที่เคยใช้จริงใน `customer.sale`** แล้วแนบชื่อให้เฉพาะรหัสที่จับคู่ได้ (ฟอร์มยังเติม option ของค่าที่บันทึกไว้เองด้วย กันค่าหายตอนบันทึกทับ)
+
+**ช่อง "เครดิต" เป็น select จากตาราง `tb_credit_term` (26/10/2569 ตามที่ผู้ใช้สั่ง)** — ตารางใหม่ InnoDB (`name_th` / `name_en` / `sort` / `is_active`) + ข้อมูลตั้งต้น 10 ตัวเลือก · Model `CreditTerm::activeList()` · migration `2026_10_26_100000_create_tb_credit_term_table` (idempotent, **รันแล้ว**) ซึ่ง**ขยาย `customer.term` varchar(15) → varchar(100)** ด้วย
+- 🔴 **`customer.term` เก็บ "ข้อความภาษาไทย" (`name_th`) ไม่ใช่ id** — ค่าเดิมเป็นข้อความอิสระ (`CASH` 2,423 · `90 วัน` 825 · `WC=90,WI=30` ฯลฯ) และหน้าอื่นอ่าน `customer.term` เป็นข้อความอยู่ (ใบสั่งซื้อ/อนุมัติ/MK/ใบเสนอราคา/กำหนดราคา) จึงยังทำงานได้ — ⚠ หน้าเหล่านั้นจะแสดงข้อความยาวขึ้น · ⚠ แก้ `name_th` ในตารางภายหลัง ลูกค้าที่บันทึกไว้แล้วไม่เปลี่ยนตาม · ภาษาอังกฤษยังไม่มีที่ไหนเอาไปใช้ (หาด้วย `name_th`)
+- **ค่าเดิมของลูกค้าไม่ถูกแปลง** — ค่าที่ไม่อยู่ในรายการโชว์เป็นตัวเลือก "<ค่า> (ค่าเดิม)" ที่เลือกไว้ (`customer-form.blade.php`) เปลี่ยนเป็นตัวเลือกใหม่ได้ · `save()` ยอมรับเฉพาะ `name_th` ที่ active หรือค่าเดิมของลูกค้ารายนั้น ไม่งั้น 422
+- ยังไม่มีหน้าจัดการ `tb_credit_term` (เพิ่ม/แก้ตัวเลือกต้องแก้ใน DB)
 
 **คอลัมน์ที่ `save()` จงใจไม่แตะ:** `black` / `blackdate` / `blackrem` (Blacklist), `zone` / `DV` / `flprt`
 - **Blacklist แสดงอย่างเดียว** (กล่องแดงบนหัวฟอร์ม + กล่องสรุปท้ายฟอร์ม + badge ในตาราง) — `save()` ไม่แตะ `black`/`blackdate`/`blackrem` เพราะสถานะเครดิต/blacklist มีตารางขออนุมัติของตัวเองอยู่แล้ว (`appvcredit`)

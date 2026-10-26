@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CreditTerm;
 use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -192,6 +193,8 @@ class CustomerController extends Controller
             'dvpoints'  => $dvpoints,
             'name_en'   => $nameEn,
             'types'     => DB::table('c_type')->orderBy('type')->get(),
+            // ตัวเลือกช่อง "เครดิต" (26/10/2569)
+            'credit_terms' => CreditTerm::activeList(),
             'sales'     => $this->saleOptions(),
             'sale_name' => $customer ? $this->saleName($customer->sale) : null,
         ])->render();
@@ -225,7 +228,7 @@ class CustomerController extends Controller
             'zip'       => ['nullable', 'string', 'max:6'],
             'tel'       => ['nullable', 'string', 'max:23'],
             'fax'       => ['nullable', 'string', 'max:12'],
-            'term'      => ['nullable', 'string', 'max:15'],
+            'term'      => ['nullable', 'string', 'max:100'],
             'cashdisc'  => ['nullable', 'numeric', 'min:0', 'max:100'],
             'sale'      => ['nullable', 'string', 'max:10'],
             'type'      => ['nullable', 'integer'],
@@ -286,6 +289,17 @@ class CustomerController extends Controller
             ], 404);
         }
 
+        // ─── เครดิต: ต้องเป็นตัวเลือกใน tb_credit_term หรือคงค่าเดิมของลูกค้า (26/10/2569) ───
+        $term = $this->nn($request->input('term'));
+        $oldTerm = $existing ? trim((string) $existing->term) : '';
+        if ($term !== null && $term !== $oldTerm
+            && !CreditTerm::where('is_active', 'Y')->where('name_th', $term)->exists()) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'กรุณาเลือกเครดิตจากรายการ',
+            ], 422);
+        }
+
         // ─── หัวข้อมูลลูกค้า ───────────────────────────────────────
         // เขียนเฉพาะคอลัมน์ที่ฟอร์มดูแล — คอลัมน์อื่น (black/blackdate/blackrem/zone/DV/flprt)
         // ไม่ถูกแตะ เพราะยังไม่ทราบความหมายหรือถูกจัดการจากที่อื่น
@@ -298,7 +312,7 @@ class CustomerController extends Controller
             'zip'       => $this->nn($request->input('zip')),
             'tel'       => $this->nn($request->input('tel')),
             'fax'       => $this->nn($request->input('fax')),
-            'term'      => $this->nn($request->input('term')),
+            'term'      => $term,
             'cashdisc'  => $request->filled('cashdisc') ? (int) $request->input('cashdisc') : null,
             'sale'      => $this->nn($request->input('sale')),
             'type'      => $request->filled('type') ? (int) $request->input('type') : null,

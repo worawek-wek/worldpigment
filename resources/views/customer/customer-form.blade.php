@@ -13,6 +13,11 @@
         $saleList = $saleList->push(['sale' => $saleCurrent, 'label' => $saleCurrent]);
     }
 
+    // เครดิต (26/10/2569): ตัวเลือกจาก tb_credit_term — ค่าเดิมของลูกค้าที่ไม่อยู่ในรายการ
+    // (ข้อความอิสระจากระบบเดิม เช่น CASH / 90 วัน) แสดงเป็นตัวเลือก "ค่าเดิม" ที่เลือกไว้ กันค่าหาย
+    $termCurrent = trim((string) $v('term'));
+    $termInList  = collect($credit_terms)->contains(fn ($t) => $t->name_th === $termCurrent);
+
     // ข้อมูล Blacklist — แสดงอย่างเดียว (ค่าใน DB มีทั้ง -1 / -3 / 0 / 2 / 5 ซึ่งยังไม่ทราบความหมายครบ)
     $blackValue = $v('black');
     $isBlack    = (int) $blackValue === -1;
@@ -121,10 +126,20 @@
         <div class="cf-sec-title"><i class="ti ti-businessplan"></i> เงื่อนไขการขาย</div>
 
         <div class="row gx-3 gy-2">
-            <div class="col-md-4 of-row">
+            <div class="col-md-8 of-row">
                 <label class="form-label">เครดิต</label>
                 <div class="of-ctl">
-                    <input type="text" class="form-control" name="term" maxlength="15" value="{{ $v('term') }}">
+                    <select class="form-select force-select2" name="term">
+                        <option value="">- ไม่ระบุ -</option>
+                        @if ($termCurrent !== '' && !$termInList)
+                            <option value="{{ $termCurrent }}" selected>{{ $termCurrent }} (ค่าเดิม)</option>
+                        @endif
+                        @foreach ($credit_terms as $t)
+                            <option value="{{ $t->name_th }}" {{ $termCurrent === $t->name_th ? 'selected' : '' }}>
+                                {{ $t->name_th }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
             </div>
             <div class="col-md-4 of-row">
