@@ -102,6 +102,11 @@
                                 onclick="quotationPrint('{{ $row->Qno }}')">
                                 <i class="ti ti-printer"></i>
                             </button>
+                            {{-- ลบ (26/10/2569) — ใบที่มีผู้สร้างต้องป้อนรหัสผ่านของผู้สร้าง (ดู quotationDelete) --}}
+                            <button class="btn btn-sm btn-icon btn-label-danger" title="ลบ"
+                                onclick="quotationDelete('{{ trim($row->Qno) }}')">
+                                <i class="ti ti-trash"></i>
+                            </button>
                         </div>
                     </td>
                 </tr>

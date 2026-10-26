@@ -226,6 +226,11 @@ class QuotationController extends Controller
     public function nextQno(Request $request)
     {
         $prefix = strtoupper(trim($request->query('prefix', 'WH')));
+        return response()->json(['qno' => $this->nextQnoFor($prefix)]);
+    }
+
+    private function nextQnoFor(string $prefix): string
+    {
         // ปี พ.ศ. 2 หลัก (2026 → 2569 → "69")
         $yy = str_pad((Carbon::now()->year + 543) % 100, 2, '0', STR_PAD_LEFT);
         $head = $prefix . $yy;
@@ -235,8 +240,55 @@ class QuotationController extends Controller
             ->selectRaw('MAX(CAST(SUBSTRING(TRIM(Qno), ?) AS UNSIGNED)) as m', [strlen($head) + 1])
             ->value('m');
 
-        $next = $head . str_pad($max + 1, 4, '0', STR_PAD_LEFT);
-        return response()->json(['qno' => $next]);
+        return $head . str_pad($max + 1, 4, '0', STR_PAD_LEFT);
+    }
+
+    // หัวกระดาษที่ใช้เป็น prefix ของเลขที่ได้
+    private const LETTERHEADS = ['WH', 'WPC', 'WPI'];
+
+    // session: เลขที่ใบที่ผู้ใช้คนนี้เพิ่งกดสร้าง — แก้ไขได้โดยไม่ต้องป้อนรหัสผ่านของผู้สร้าง (ผู้สร้างคือตัวเอง)
+    private const FRESH_SESSION_KEY = 'quotation_fresh_qnos';
+
+    /**
+     * POST — กดปุ่ม "สร้างใบเสนอราคา" (26/10/2569 ตามที่ผู้ใช้สั่ง — แบบเดียวกับปุ่ม "เพิ่มใบสั่งซื้อใหม่" ของหน้า Order)
+     * ออกเลขที่ตามหัวกระดาษแล้ว insert qmast ทันที ⇒ เปิดฟอร์มพร้อมกันหลายเครื่องก็ได้คนละเลข
+     * (เดิมแค่อ่านเลขถัดไปมาโชว์ แล้วค่อยจองตอนกดบันทึก — หลายเครื่องเห็นเลขเดียวกัน)
+     */
+    public function create(Request $request)
+    {
+        $letterhead = strtoupper(trim((string) $request->input('letterhead', 'WH')));
+        if (!in_array($letterhead, self::LETTERHEADS, true)) {
+            return response()->json(['error' => 'หัวกระดาษไม่ถูกต้อง'], 422);
+        }
+
+        $account = AccessControl::currentAccount();
+        $row = [
+            'letterhead'  => $letterhead,
+            'Qdate'       => now()->startOfDay(),
+            'remark_lang' => 'th',
+            'created_at'  => now(),
+            'updated_at'  => now(),
+        ];
+        if ($account) {
+            $row['created_by_type'] = $account instanceof Emp ? 'emp' : 'user';
+            $row['created_by']      = (string) $account->getKey();
+        }
+
+        for ($try = 0; $try < 5; $try++) {
+            $qno = $this->nextQnoFor($letterhead);
+            $id  = DB::table('qmast')->insertGetId($row + ['Qno' => $qno]);
+
+            // qmast เป็น MyISAM (ล็อกแถวไม่ได้) และไม่มี unique index ที่ Qno
+            // ⇒ ถ้ามีอีกเครื่องได้เลขเดียวกันไปก่อน (id น้อยกว่า) ให้ถอยแถวของเราแล้วขอเลขใหม่
+            $clash = DB::table('qmast')->whereRaw('TRIM(Qno) = ?', [$qno])->where('id', '<', $id)->exists();
+            if (!$clash) {
+                $request->session()->push(self::FRESH_SESSION_KEY, $qno);
+                return response()->json(['ok' => true, 'qno' => $qno]);
+            }
+            DB::table('qmast')->where('id', $id)->delete();
+        }
+
+        return response()->json(['error' => 'ออกเลขที่ใบเสนอราคาไม่สำเร็จ กรุณาลองใหม่'], 500);
     }
 
     /**
@@ -417,22 +469,8 @@ class QuotationController extends Controller
         $qno = trim((string) $row->Qno);
 
         // ต้องป้อนรหัสผ่านของ "ผู้สร้างใบ" ก่อนแก้ไข (12/10/2569) — ตรวจที่ server ก่อนแตะ DB
-        // ใบเก่าที่ไม่มีผู้สร้าง (หรือบัญชีผู้สร้างถูกลบไปแล้ว) = ไม่มีรหัสให้ตรวจ → แก้ไขได้ตามเดิม
-        $creator = $this->creatorOf($row);
-        if ($creator) {
-            $password = (string) $request->input('creator_password', '');
-            if ($password === '') {
-                return response()->json([
-                    'error' => 'กรุณาป้อนรหัสผ่านของผู้สร้างใบเสนอราคา (' . $creator['name'] . ')',
-                    'bad_password' => true,
-                ], 422);
-            }
-            if (!Hash::check($password, (string) $creator['password'])) {
-                return response()->json([
-                    'error' => 'รหัสผ่านของผู้สร้างใบเสนอราคาไม่ถูกต้อง',
-                    'bad_password' => true,
-                ], 422);
-            }
+        if ($deny = $this->creatorPasswordError($request, $row, $qno)) {
+            return $deny;
         }
 
         try {
@@ -470,6 +508,11 @@ class QuotationController extends Controller
         }
         $qno = trim((string) $row->Qno);
 
+        // ลบ = ต้องป้อนรหัสผ่านของผู้สร้างใบ เหมือนตอนแก้ไข (26/10/2569 — เพิ่มพร้อมปุ่มลบบนหน้าจอ)
+        if ($deny = $this->creatorPasswordError($request, $row, $qno)) {
+            return $deny;
+        }
+
         try {
             DB::beginTransaction();
             DB::table('qdetail')->whereRaw('TRIM(Qno) = ?', [$qno])->delete();
@@ -486,6 +529,37 @@ class QuotationController extends Controller
     // ────────────────────────────────────────────────────────────────
     //  Helpers
     // ────────────────────────────────────────────────────────────────
+
+    /**
+     * ตรวจรหัสผ่านของผู้สร้างใบ (ใช้ทั้ง update / destroy) — ผ่าน = null, ไม่ผ่าน = 422 + bad_password
+     * ไม่ต้องตรวจเมื่อ: ใบเก่าที่ไม่มีผู้สร้าง/บัญชีผู้สร้างถูกลบ (ไม่มีรหัสให้ตรวจ)
+     *                 หรือใบที่ผู้ใช้คนนี้เพิ่งกดสร้างใน session นี้ (create() — ผู้สร้างคือตัวเอง, 26/10/2569)
+     */
+    private function creatorPasswordError(Request $request, $row, string $qno): ?\Illuminate\Http\JsonResponse
+    {
+        $creator = $this->creatorOf($row);
+        $fresh = in_array($qno, (array) $request->session()->get(self::FRESH_SESSION_KEY, []), true);
+        if (!$creator || $fresh) {
+            return null;
+        }
+
+        $password = (string) $request->input('creator_password', '');
+        if ($password === '') {
+            return response()->json([
+                'error' => 'กรุณาป้อนรหัสผ่านของผู้สร้างใบเสนอราคา (' . $creator['name'] . ')',
+                'bad_password' => true,
+                'creator' => $creator['name'],
+            ], 422);
+        }
+        if (!Hash::check($password, (string) $creator['password'])) {
+            return response()->json([
+                'error' => 'รหัสผ่านของผู้สร้างใบเสนอราคาไม่ถูกต้อง',
+                'bad_password' => true,
+                'creator' => $creator['name'],
+            ], 422);
+        }
+        return null;
+    }
 
     /**
      * ค้น qmast จาก Qno (เทียบแบบ trim เพราะข้อมูลเก่าบางตัวมีช่องว่างนำหน้า)

@@ -318,6 +318,12 @@
 
             <div class="modal-header">
                 <h5 class="modal-title" id="quotationModalTitle">สร้างใบเสนอราคา</h5>
+                {{-- ลบใบที่เปิดอยู่ (26/10/2569) — อยู่บนหัว modal ชิดขวา (me-5 = เว้นให้ปุ่มปิดที่ theme วางแบบ absolute)
+                     ซ่อนตอนฟอร์มเปล่า (ยังไม่มีใบ) ดู setQuotationIdle() --}}
+                <button type="button" id="btnDeleteQuotation" class="btn btn-sm btn-label-danger ms-auto me-5 d-none"
+                    onclick="quotationDelete($('#q_qno_key').val(), true)">
+                    <i class="ti ti-trash me-1"></i>ลบใบเสนอราคานี้
+                </button>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
@@ -339,7 +345,7 @@
                             <div class="col-md-4 of-row">
                                 <label class="form-label">หัวกระดาษ</label>
                                 <div class="of-ctl">
-                                    <select name="letterhead" id="q_letterhead" class="form-select w-100" onchange="onLetterheadChange()">
+                                    <select name="letterhead" id="q_letterhead" class="form-select w-100">
                                         <option value="WPI">WPI</option>
                                         <option value="WPC">WPC</option>
                                         <option value="WH">WH</option>
@@ -347,8 +353,12 @@
                                 </div>
                             </div>
                             {{-- 06/10/2569: คำอธิบายในวงเล็บย้ายออกจาก label (label ซ้ายแคบ) มาอยู่ข้างช่องแทน --}}
-                            <div class="col-md-8 d-flex align-items-center">
+                            <div class="col-md-8 d-flex align-items-center gap-3">
                                 <span class="text-muted fw-normal small">(หัวเอกสารที่พิมพ์)</span>
+                                {{-- 26/10/2569: เลือกหัวกระดาษแล้วกดปุ่มนี้ = ออกเลขที่ + สร้างใบทันที (แบบหน้า Order) — แสดงเฉพาะฟอร์มเปล่า --}}
+                                <button type="button" id="btnCreateQno" class="btn btn-sm btn-primary d-none" onclick="quotationCreateNo()">
+                                    <i class="ti ti-plus me-1"></i>สร้างใบเสนอราคา
+                                </button>
                             </div>
                         </div>
                         {{-- แถว: เลขที่ / วันที่ / Revise Date --}}
@@ -1170,7 +1180,7 @@
             $('#q_mode').val('insert');
             $('#q_qno_key').val('');
             $('#quotationModalTitle').text('สร้างใบเสนอราคา');
-            $('#q_Qno').prop('readonly', false);
+            qCreator = null;
             // วันที่เสนอราคา = วันนี้ (ผ่าน flatpickr); เคลียร์ช่องวันที่อื่น (reset() ไม่ล้าง state flatpickr)
             setFp('q_Qdate', new Date().toISOString().slice(0,10));
             setFp('q_Revisedate', '');
@@ -1183,19 +1193,96 @@
             setRemarkLang('th');   // เริ่มที่ภาษาไทย
             $('#q_letterhead').val('WH');   // หัวกระดาษเริ่มต้น = WH (ตรงกับ prefix เลขที่ default)
             refreshPickers('#quotationForm');   // ให้ selectpicker วาดปุ่มตามค่าที่เพิ่ง set
-            // ขอเลขที่ถัดไปตาม prefix ของหัวกระดาษ (แก้ไขได้)
-            $.getJSON("{{ $page_url }}/next-qno", {prefix: $('#q_letterhead').val()}, function(res){
-                if (res.qno) $('#q_Qno').val(res.qno);
-            });
+            // 26/10/2569: ไม่ขอเลขที่ล่วงหน้าแล้ว — ล็อกฟอร์ม ให้เลือกหัวกระดาษแล้วกด "สร้างใบเสนอราคา"
+            $('#q_Qno').prop('readonly', true);
+            setQuotationIdle(true);
             new bootstrap.Modal('#quotationModal').show();
         }
 
-        // เปลี่ยนหัวกระดาษ (เฉพาะตอนสร้างใหม่) → ออกเลขที่ใหม่ตาม prefix ของหัวกระดาษที่เลือก
-        function onLetterheadChange(){
-            if ($('#q_mode').val() !== 'insert') return;   // โหมดแก้ไข: ไม่เปลี่ยนเลขที่ (เป็น key)
-            $.getJSON("{{ $page_url }}/next-qno", {prefix: $('#q_letterhead').val()}, function(res){
-                if (res.qno) $('#q_Qno').val(res.qno);
-            });
+        // ฟอร์มเปล่า (idle) = ล็อกทุกช่อง เหลือเลือกหัวกระดาษ + ปุ่มสร้าง + ปุ่มยกเลิก (26/10/2569 แบบ setOrderFormMode ของหน้า Order)
+        // ⚠ ฟอร์มนี้ไม่มีช่องที่ตั้งใจ disabled ไว้เอง จึงปลดล็อกทั้งหมดได้ตรง ๆ
+        function setQuotationIdle(idle){
+            $('#quotationForm').find('input, select, textarea, button')
+                .not('#q_letterhead, #btnCreateQno, [data-bs-dismiss], [type="hidden"]')
+                .prop('disabled', idle);
+            $('#btnCreateQno').toggleClass('d-none', !idle);
+            $('#btnDeleteQuotation').toggleClass('d-none', idle);   // ลบได้เฉพาะเมื่อมีใบแล้ว
+        }
+
+        // ลบใบเสนอราคา (26/10/2569) — ยืนยันก่อน แล้วยิงลบ · server ตอบ bad_password (ใบที่มีผู้สร้าง)
+        // → ถามรหัสผ่านของผู้สร้างแล้วยิงซ้ำ · fromForm = กดจากในฟอร์ม (ลบสำเร็จแล้วปิดฟอร์ม)
+        function quotationDelete(qno, fromForm){
+            qno = (qno || '').trim();
+            if (!qno) return;
+            // Swal ที่มีช่องกรอกต้องอยู่ใน modal เมื่อกดจากฟอร์ม ไม่งั้น focus trap ดึงโฟกัสกลับ
+            var inModal = fromForm ? { target: document.getElementById('quotationModal'), heightAuto: false } : {};
+
+            function send(password){
+                var data = { _token: '{{ csrf_token() }}', qno: qno };
+                if (password) data.creator_password = password;
+                $.post("{{ $page_url }}/delete", data)
+                    .done(function(res){
+                        if (!res.ok) { Swal.fire('ไม่สำเร็จ', res.error || 'ไม่ทราบสาเหตุ', 'error'); return; }
+                        if (fromForm) bootstrap.Modal.getInstance(document.getElementById('quotationModal')).hide();
+                        Swal.fire('ลบเรียบร้อย', 'เลขที่ ' + qno, 'success');
+                        loadData(page);
+                    })
+                    .fail(function(xhr){
+                        var r = xhr.responseJSON || {};
+                        if (r.bad_password) { askPassword(password ? r.error : null, r.creator); return; }
+                        Swal.fire('ไม่สำเร็จ', r.error || 'เกิดข้อผิดพลาด', 'error');
+                    });
+            }
+
+            function askPassword(errMsg, creatorName){
+                Swal.fire(Object.assign({
+                    title: 'ยืนยันการลบ ' + qno,
+                    text: errMsg || '',
+                    icon: errMsg ? 'error' : 'warning',
+                    input: 'password',
+                    inputLabel: 'รหัสผ่านของผู้สร้างใบ' + (creatorName ? ': ' + creatorName : ''),
+                    inputAttributes: { autocomplete: 'new-password' },
+                    inputValidator: function(v){ return v ? null : 'กรุณาป้อนรหัสผ่านของผู้สร้างใบ'; },
+                    showCancelButton: true,
+                    confirmButtonText: 'ลบ',
+                    cancelButtonText: 'ยกเลิก',
+                    confirmButtonColor: '#d33',
+                }, inModal)).then(function(r){ if (r.isConfirmed) send(r.value); });
+            }
+
+            Swal.fire(Object.assign({
+                title: 'ลบใบเสนอราคา ' + qno + '?',
+                text: 'ลบทั้งหัวใบและรายการ กู้คืนไม่ได้',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ลบ',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#d33',
+            }, inModal)).then(function(r){ if (r.isConfirmed) send(null); });
+        }
+
+        // กด "สร้างใบเสนอราคา" → server ออกเลขที่ + สร้างใบทันที แล้วเปิดใบนั้นเป็นโหมดแก้ไข
+        // copyFrom = เลขที่ใบต้นแบบ (มาจาก "คัดลอกเป็นใบใหม่") — ใช้แค่ทำชื่อหัว modal
+        function quotationCreateNo(copyFrom){
+            var $btn = $('#btnCreateQno').prop('disabled', true);
+            $.post("{{ $page_url }}/create", {_token: '{{ csrf_token() }}', letterhead: $('#q_letterhead').val()})
+                .done(function(res){
+                    if (!res.ok) { Swal.fire('ไม่สำเร็จ', res.error || 'ไม่ทราบสาเหตุ', 'error'); return; }
+                    qCreator = null;   // ใบที่เพิ่งสร้างเอง — server ไม่ถามรหัสผ่าน (session)
+                    $('#q_mode').val('update');
+                    $('#q_qno_key').val(res.qno);
+                    $('#q_Qno').val(res.qno).prop('readonly', true);
+                    $('#quotationModalTitle').text(copyFrom
+                        ? 'ใบเสนอราคา ' + res.qno + ' (คัดลอกจาก ' + copyFrom + ')'
+                        : 'ใบเสนอราคา ' + res.qno);
+                    setQuotationIdle(false);
+                    loadData(page);   // ใบใหม่ขึ้นในตารางรายการ
+                })
+                .fail(function(xhr){
+                    var msg = (xhr.responseJSON && xhr.responseJSON.error) ? xhr.responseJSON.error : 'สร้างใบเสนอราคาไม่สำเร็จ';
+                    Swal.fire('ไม่สำเร็จ', msg, 'error');
+                })
+                .always(function(){ $btn.prop('disabled', false); });
         }
 
         // ผู้สร้างของใบที่เปิดแก้ไขอยู่ {name} — null = ใบใหม่ / ใบเก่าที่ไม่มีผู้สร้าง (ไม่ต้องป้อนรหัสผ่าน)
@@ -1211,6 +1298,7 @@
                 var h = res.header || {};
                 qCreator = res.creator || null;   // ผู้สร้างใบ — มี = ตอนบันทึกต้องป้อนรหัสผ่านของคนนี้
                 document.getElementById('quotationForm').reset();
+                setQuotationIdle(false);   // ปลดล็อก เผื่อฟอร์มค้างสถานะ idle จากการเปิดฟอร์มเปล่าครั้งก่อน
                 $('#q_mode').val('update');
                 $('#q_qno_key').val(h.Qno);
                 $('#quotationModalTitle').text('แก้ไขใบเสนอราคา ' + (h.Qno || ''));
@@ -1259,21 +1347,21 @@
             quotationEdit(qno, true);
         }
 
-        // สลับฟอร์มที่เติมข้อมูลใบเก่าแล้ว → โหมดสร้างใหม่: เลขที่ใหม่ · วันที่เสนอราคา = วันนี้ · ล้างวันที่แก้ไข/ช่วงยืนราคา
+        // สลับฟอร์มที่เติมข้อมูลใบเก่าแล้ว → ใบใหม่: วันที่เสนอราคา = วันนี้ · ล้างวันที่แก้ไข/ช่วงยืนราคา
+        // 26/10/2569: ออกเลขที่ + สร้างใบทันทีด้วย quotationCreateNo() ตามหัวกระดาษของใบเก่า (เดิมแค่ขอเลขมาโชว์)
         function toCopyMode(fromQno){
-            qCreator = null;   // ใบใหม่ — ผู้สร้างคือคนที่กดบันทึก ไม่ต้องป้อนรหัสผ่าน
+            qCreator = null;
+            // ระหว่างรอเลขใหม่ ต้องไม่ชี้ใบเก่าอยู่ — กันกดบันทึกแล้วไปทับใบต้นแบบ
             $('#q_mode').val('insert');
             $('#q_qno_key').val('');
             $('#quotationModalTitle').text('สร้างใบเสนอราคา (คัดลอกจาก ' + fromQno + ')');
-            $('#q_Qno').val('').prop('readonly', false);
+            $('#q_Qno').val('').prop('readonly', true);
             setFp('q_Qdate', new Date().toISOString().slice(0,10));
             setFp('q_Revisedate', '');
             setFp('q_ValidFrom', '');
             setFp('q_Validto', '');
-            // เลขที่ถัดไปตาม prefix ของหัวกระดาษของใบเก่า (แก้ไขได้)
-            $.getJSON("{{ $page_url }}/next-qno", {prefix: $('#q_letterhead').val()}, function(res){
-                if (res.qno) $('#q_Qno').val(res.qno);
-            });
+            setQuotationIdle(true);
+            quotationCreateNo(fromQno);
         }
 
         // ตัดเวลาออกจาก datetime → 'YYYY-MM-DD' สำหรับ input[type=date]
