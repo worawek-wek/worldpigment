@@ -22,18 +22,36 @@ class OrderOutstandingController extends Controller
     /** จำนวนช่อง "เลื่อน" บนกระดาษเดิม */
     public const SHIFT_COLS = 3;
 
+    /**
+     * ชนิดรายงาน (26/10/2569) — ทุกชนิดเป็นรายการที่ยังไม่มีวันที่ลูกค้าได้รับ (DVDate ว่าง)
+     *   sale    ตามรหัสผู้ขายที่กรอก
+     *   done    เฉพาะผลิตเสร็จ    (EndP มีค่า) — ผู้ขายทุกคน
+     *   undone  เฉพาะผลิตไม่เสร็จ (EndP ว่าง)  — ผู้ขายทุกคน
+     */
+    public const TYPES = [
+        'sale'   => '',
+        'done'   => '(เฉพาะผลิตเสร็จ)',
+        'undone' => '(เฉพาะผลิตไม่เสร็จ)',
+    ];
+
     public function pdf(Request $request)
     {
+        $type = (string) $request->query('type', 'sale');
+        if (!isset(self::TYPES[$type])) {
+            $type = 'sale';
+        }
         $sale = trim((string) $request->query('sale', ''));
-        if ($sale === '') {
+        if ($type === 'sale' && $sale === '') {
             abort(422, 'กรุณาระบุรหัสผู้ขาย');
         }
 
         $rows = DB::table('suborder as s')
             ->join('morder as m', 'm.Orderno', '=', 's.Orderno')
             ->leftJoin('customer as c', 'c.code', '=', 'm.Custno')
-            ->where('m.supno', $sale)
             ->whereNull('s.DVDate')
+            ->when($type === 'sale', fn ($q) => $q->where('m.supno', $sale))
+            ->when($type === 'done', fn ($q) => $q->whereNotNull('s.EndP'))
+            ->when($type === 'undone', fn ($q) => $q->whereNull('s.EndP'))
             // เรียง supno → custno → senddate → itemno (26/10/2569 ตามที่ผู้ใช้สั่ง) · senddate ว่างไปท้ายกลุ่ม
             ->orderBy('m.supno')
             ->orderBy('m.Custno')
@@ -60,20 +78,34 @@ class OrderOutstandingController extends Controller
         }
 
         // ลำดับมาจาก SQL แล้ว — groupBy คงลำดับเดิมไว้
-        $groups = $rows
-            ->groupBy(fn ($r) => trim((string) $r->Custno))
-            ->map(fn ($items, $custno) => [
-                'custno' => $custno,
-                'name'   => trim((string) ($items->first()->cust_name ?: $items->first()->Custname)),
-                'items'  => $items->values(),
-                'stock'  => $items->sum(fn ($r) => (float) $r->Stock),
-                'prod'   => $items->sum(fn ($r) => (float) $r->Production),
+        // 1 section = 1 ผู้ขาย (หัวรายงาน + กรอบ # รหัส + ตารางของตัวเอง ต่อกันลงไป) → กลุ่มลูกค้า
+        // ลำดับมาจาก SQL แล้ว — groupBy คงลำดับเดิมไว้
+        $sections = $rows
+            ->groupBy(fn ($r) => trim((string) $r->supno))
+            ->map(fn ($saleRows, $supno) => [
+                'sale'   => (string) $supno,
+                'groups' => $saleRows
+                    ->groupBy(fn ($r) => trim((string) $r->Custno))
+                    ->map(fn ($items, $custno) => [
+                        'custno' => (string) $custno,
+                        'name'   => trim((string) ($items->first()->cust_name ?: $items->first()->Custname)),
+                        'items'  => $items->values(),
+                        'stock'  => $items->sum(fn ($r) => (float) $r->Stock),
+                        'prod'   => $items->sum(fn ($r) => (float) $r->Production),
+                    ])
+                    ->values(),
             ])
             ->values();
 
+        // ไม่มีข้อมูล → คง 1 section ว่างไว้พิมพ์หัวรายงาน + "ไม่พบ"
+        if ($sections->isEmpty()) {
+            $sections = collect([['sale' => $type === 'sale' ? $sale : '', 'groups' => collect()]]);
+        }
+
         $html = view('order.outstanding-pdf', [
-            'groups' => $groups,
-            'sale'   => $sale,
+            'sections' => $sections,
+            'subtitle' => self::TYPES[$type],
+            'type'     => $type,
             'shiftCols' => self::SHIFT_COLS,
         ])->render();
 
@@ -98,7 +130,7 @@ class OrderOutstandingController extends Controller
 
         return response($mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200, [
             'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="outstanding-' . preg_replace('/[^A-Za-z0-9_-]/', '', $sale) . '-' . now()->format('Ymd') . '.pdf"',
+            'Content-Disposition' => 'inline; filename="outstanding-' . ($type === 'sale' ? preg_replace('/[^A-Za-z0-9_-]/', '', $sale) : $type) . '-' . now()->format('Ymd') . '.pdf"',
         ]);
     }
 

@@ -34,16 +34,28 @@
         table.box { border-collapse: collapse; width: 100%; }
         table.box td { border: 1px solid #000; width: 19mm; text-align: right; padding: 3px 4px; }
         .arrow { font-family: 'dejavusanscondensed'; font-size: 9px; }
+        .crnote { font-size: 20px; font-weight: bold; font-style: italic; text-align: right; padding-right: 30mm; }
     </style>
 </head>
 <body>
+@foreach ($sections as $sec)
+    @php $sale = $sec['sale']; $groups = $sec['groups']; @endphp
+    {{-- 1 ผู้ขาย = หัวรายงาน + กรอบ # รหัส + ตารางของตัวเอง · ผู้ขายคนถัดไปขึ้นหน้าใหม่
+         ⚠ ใช้แท็ก <pagebreak /> ของ mPDF — page-break-before บน <table> mPDF ไม่ทำตาม (ทดสอบแล้ว) --}}
+    @if (!$loop->first)
+        <pagebreak />
+    @endif
     <table width="100%" class="head">
         <tr>
             <td style="width: 58%;">
-                <span class="title"><i>Order</i> ค้างส่งลูกค้า</span>
+                <span class="title"><i>Order</i> ค้างส่งลูกค้า {{ $subtitle }}</span>
                 <span class="sub">( เรียงตามกำหนดแรก )</span>
             </td>
-            <td><table class="salebox"><tr><td># {{ $sale }}</td></tr></table></td>
+            <td><table class="salebox"><tr><td># {{ $sale !== '' ? $sale : '-' }}</td></tr></table></td>
+            {{-- "รวม CR" มุมขวา (เหนือคอลัมน์ PO. NO.) — เฉพาะรายงานเฉพาะผลิตไม่เสร็จ ตามกระดาษเดิม (26/10/2569) --}}
+            @if ($type === 'undone')
+                <td class="crnote">รวม CR</td>
+            @endif
         </tr>
     </table>
 
@@ -101,9 +113,10 @@
                     <td colspan="{{ 6 + $shiftCols }}"></td>
                 </tr>
             @empty
-                <tr><td colspan="{{ 12 + $shiftCols }}" style="text-align: center; padding: 20px;">ไม่พบ Order ค้างส่งของรหัสผู้ขาย {{ $sale }}</td></tr>
+                <tr><td colspan="{{ 12 + $shiftCols }}" style="text-align: center; padding: 20px;">ไม่พบ Order ค้างส่ง{{ $sale !== '' ? 'ของรหัสผู้ขาย ' . $sale : '' }}</td></tr>
             @endforelse
         </tbody>
     </table>
+@endforeach
 </body>
 </html>

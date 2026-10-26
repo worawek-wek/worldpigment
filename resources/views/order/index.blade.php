@@ -909,12 +909,24 @@
                         </datalist>
                     </div>
                 </div>
+                <button type="button" class="btn btn-primary w-100 mt-2" onclick="outstandingPrint('sale')">
+                    <i class="ti ti-printer me-1"></i>Order ค้างส่งลูกค้า (ตามรหัสผู้ขาย)
+                </button>
+
+                {{-- 2 ชนิดนี้แสดงผู้ขายทุกคน ไม่ต้องกรอกรหัสผู้ขาย (26/10/2569) --}}
+                <hr class="my-3">
+                <div class="small text-muted mb-2">ผู้ขายทุกคน (ไม่ต้องกรอกรหัสผู้ขาย)</div>
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-success" onclick="outstandingPrint('done')">
+                        <i class="ti ti-printer me-1"></i>Order ค้างส่งลูกค้า (เฉพาะผลิตเสร็จ)
+                    </button>
+                    <button type="button" class="btn btn-outline-warning" onclick="outstandingPrint('undone')">
+                        <i class="ti ti-printer me-1"></i>Order ค้างส่งลูกค้า (เฉพาะผลิตไม่เสร็จ)
+                    </button>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ปิด</button>
-                <button type="button" class="btn btn-primary" onclick="outstandingPrint()">
-                    <i class="ti ti-printer me-1"></i>ออกรายงาน
-                </button>
             </div>
         </div>
     </div>
@@ -3537,16 +3549,22 @@
     function outstandingOpen(){
         $('#outstandingModal').modal('show');
     }
-    function outstandingPrint(){
-        var sale = $.trim($('#os_sale').val());
-        if (!sale) {
-            Swal.fire({ icon: 'warning', title: 'กรุณากรอกรหัสผู้ขาย', target: '#outstandingModal', heightAuto: false });
-            return;
+    // type: sale = ตามรหัสผู้ขาย · done / undone = ผู้ขายทุกคน เฉพาะผลิตเสร็จ / ไม่เสร็จ (26/10/2569)
+    function outstandingPrint(type){
+        type = type || 'sale';
+        var q = { type: type };
+        if (type === 'sale') {
+            var sale = $.trim($('#os_sale').val());
+            if (!sale) {
+                Swal.fire({ icon: 'warning', title: 'กรุณากรอกรหัสผู้ขาย', target: '#outstandingModal', heightAuto: false });
+                return;
+            }
+            q.sale = sale;
         }
-        window.open('{{ url('order/outstanding-pdf') }}?' + $.param({ sale: sale }), '_blank');
+        window.open('{{ url('order/outstanding-pdf') }}?' + $.param(q), '_blank');
     }
     $(document).on('shown.bs.modal', '#outstandingModal', function(){ $('#os_sale').trigger('focus').select(); });
-    $(document).on('keydown', '#os_sale', function(e){ if (e.key === 'Enter') { e.preventDefault(); outstandingPrint(); } });
+    $(document).on('keydown', '#os_sale', function(e){ if (e.key === 'Enter') { e.preventDefault(); outstandingPrint('sale'); } });
 
     function approvalPrint(){
         window.open(APPROVAL_URL + '/approved-pdf', '_blank');

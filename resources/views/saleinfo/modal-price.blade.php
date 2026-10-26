@@ -135,6 +135,8 @@
                                         <div class="of-ctl">
                                             <input type="text" name="PRICE" class="form-control text-end js-comma"
                                                 inputmode="decimal" autocomplete="off" placeholder="0.00" required>
+                                            {{-- ยืนราคาถึงวันที่ (26/10/2569) — zcustprice.enddate ของลูกค้า + สินค้านี้ · เติมใน loadSaleinfoLastOrder() --}}
+                                            <div class="form-text">ยืนราคาถึง: <span id="saleinfo_valid_to" class="fw-semibold">—</span></div>
                                         </div>
                                     </div>
 

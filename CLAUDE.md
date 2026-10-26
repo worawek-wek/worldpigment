@@ -821,6 +821,7 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 ### ปุ่ม "Order ค้างส่งลูกค้า" → PDF ตามรหัสผู้ขาย — 26/10/2569
 
 ปุ่มบนหัวหน้า `/order` → `#outstandingModal` (กรอก **รหัสผู้ขาย** = `morder.supno`, บังคับกรอก, datalist จาก `$sale_codes`, Enter = ออกรายงาน) → `GET order/outstanding-pdf?sale=` → **`OrderOutstandingController::pdf()`** (mPDF A4-L) → blade **`order/outstanding-pdf.blade.php`** · ผังตามกระดาษระบบเดิม "Order ค้างส่งลูกค้า (เรียงตามกำหนดแรก) # <sale>"
+- **3 ชนิดในหน้าต่างเดียวกัน (param `type`, `OrderOutstandingController::TYPES`, เพิ่ม 2 ชนิดหลัง 26/10/2569):** `sale` = ตามรหัสผู้ขายที่กรอก (บังคับกรอก) · **`done` = เฉพาะผลิตเสร็จ (`EndP` มีค่า)** · **`undone` = เฉพาะผลิตไม่เสร็จ (`EndP` ว่าง)** — 2 ชนิดหลังแสดง **ผู้ขายทุกคน** ไม่ต้องกรอกรหัส · **1 ผู้ขาย = 1 section** (หัวรายงาน + กรอบ `# supno` + ตารางของตัวเอง) **ผู้ขายคนถัดไปขึ้นหน้าใหม่** ด้วยแท็ก **`<pagebreak />`** ของ mPDF เฉพาะ `!$loop->first` (controller ส่ง `$sections`) · 🔴 `page-break-before` ที่ตั้งบน `<table>` mPDF **ไม่ทำตาม** (ลองแล้วไม่ตัดหน้า) · หัวรายงานต่อท้าย "(เฉพาะผลิตเสร็จ/ไม่เสร็จ)" · **ชนิด `undone` ขึ้นคำ "รวม CR"** ตัวเอียงหนามุมขวาของหัวรายงาน (`.crnote`) ตามกระดาษเดิม — เป็นข้อความอย่างเดียว ไม่ได้เปลี่ยนเงื่อนไขข้อมูล · `type` ไม่รู้จัก = `sale`
 - **ค้างส่ง = `suborder.DVDate` ว่าง** (ยังไม่มีวันที่ลูกค้าได้รับ — `outno` ว่างตรงกันทุกแถว) · ไม่ตัดใบจอง / ใบที่ยังไม่อนุมัติ / แถวน้ำหนัก 0
 - จัดกลุ่มตามลูกค้า (เรียงรหัส, ชื่อจาก `customer.name` → fallback `morder.Custname`) · **เรียง `supno` → `Custno` → `senddate` → `Itemno`** (→ Runno, senddate ว่างไปท้าย — ผู้ใช้สั่ง 26/10/2569, เรียงใน SQL) · ท้ายกลุ่ม = กล่องรวม Stock / Production
 - คอลัมน์: Orderno · `Mdate` · Itemno · Lotno · Stock · Production · `custwant` · **กำหนดแรก** · **เลื่อน 1-3** · เข้าคลัง (**`EndP`**) · ส่งก่อนได้ (▶ เมื่อ `morder.Send` ติ๊ก, ฟอนต์ dejavusanscondensed) · `PO`
@@ -1040,6 +1041,8 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 - ฝั่งจอ: `index()` ส่ง `$can_edit_keys` → `SALEINFO_CAN_EDIT_KEYS` · `setSaleinfoKeyLock()` ตั้ง 3 ช่องเป็น `readonly` + `bg-light` ตอน `viewSaleinfo()` · `resetSaleinfoForm()` ปลดล็อก ⇒ **โหมดเพิ่มใหม่กรอกได้ทุกคนตามเดิม**
 - ด่าน server: `update()` ไม่ใช่ IT → ทับ 3 ช่อง (`KEY_FIELDS`) ด้วยค่าเดิมของแถว ไม่สนค่าที่ส่งมา (ทดสอบแล้วกับพนักงาน MK / IT)
 - ปุ่ม "ลบราคานี้": คอมเมนต์บรรทัดที่ถอด `d-none` ใน `viewSaleinfo()` ไว้ (ปลดคอมเมนต์ = เปิดคืน) · ⚠ ซ่อนฝั่งจออย่างเดียว route `saleinfo/delete` ยังลบได้ถ้ายิงตรง
+
+**"ยืนราคาถึง" ใต้ช่องราคา (26/10/2569 ตามที่ผู้ใช้สั่ง)** — `#saleinfo_valid_to` ใน `modal-price.blade.php` = **`zcustprice.enddate`** (MAX) ของคู่ `custno` + `colorno` (รหัสจาก `saleinfoCalcCode()`: ITEMNO → st_code) · แนบมากับ `GET saleinfo/last-order` (key `valid_to` d/m/Y + `valid_to_expired`) จึงอัปเดตจังหวะเดียวกับกล่อง "สั่งซื้อล่าสุด" · เลยวันแล้ว = สีแดง + "(หมดอายุแล้ว)" · ไม่มีแถว = `—` · อ่านอย่างเดียว · ⚠ ข้อมูลปัจจุบันเกือบทุกคู่หมดอายุแล้ว (ดูหัวข้อราคาอนุมัติพิเศษ)
 
 **กด Enter ในฟอร์ม "กำหนดราคา" ไม่ submit (15/10/2569 ตามที่ผู้ใช้สั่ง)** — handler `keydown` บน `input` ของ `#form_saleinfo` (`saleinfo/index.blade.php`) `preventDefault()` เมื่อกด Enter ⇒ บันทึกได้ทางปุ่ม "บันทึก" เท่านั้น · textarea ยังขึ้นบรรทัดใหม่ได้ · ฝั่งจอล้วน
 

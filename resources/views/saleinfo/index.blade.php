@@ -963,6 +963,7 @@
         if (saleinfoLastXhr) { saleinfoLastXhr.abort(); saleinfoLastXhr = null; }
         $('#saleinfo_last_lot, #saleinfo_last_dv').text('—');
         $('#saleinfo_last_note').text('');
+        $('#saleinfo_valid_to').text('—').removeClass('text-danger');
     }
 
     function loadSaleinfoLastOrder() {
@@ -974,6 +975,10 @@
 
         saleinfoLastXhr = $.getJSON("{{ $page_url }}/last-order", { custno: custno, itemno: itemno })
             .done(function (res) {
+                // ยืนราคาถึง (26/10/2569) — เลยวันแล้วขึ้นสีแดง
+                $('#saleinfo_valid_to')
+                    .text(res.valid_to ? res.valid_to + (res.valid_to_expired ? ' (หมดอายุแล้ว)' : '') : '—')
+                    .toggleClass('text-danger', !!res.valid_to_expired);
                 // ไม่พบประวัติการสั่ง = ถือว่าเกิน 3 ปี เหมือนกัน (15/10/2569 ตามที่ผู้ใช้สั่ง)
                 if (!res.found) {
                     $('#saleinfo_last_note').text('เกิน 3 ปี');

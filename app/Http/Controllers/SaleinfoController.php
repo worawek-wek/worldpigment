@@ -395,8 +395,19 @@ class SaleinfoController extends Controller
                 ->where('s.Itemno', $itemno);
         };
 
+        // ยืนราคาถึงวันที่ (26/10/2569) — zcustprice.enddate ของคู่ ลูกค้า + สินค้า (ตัวเดียวกับฟอร์มขออนุมัติราคาพิเศษ)
+        $validTo = DB::table('zcustprice')
+            ->where('custno', $custno)
+            ->where('colorno', $itemno)
+            ->max('enddate');
+        $validTo = $validTo ? Carbon::parse($validTo) : null;
+        $validToOut = [
+            'valid_to'         => $validTo ? $validTo->format('d/m/Y') : null,
+            'valid_to_expired' => $validTo ? $validTo->lt(now()->startOfDay()) : false,
+        ];
+
         if (!$base()->exists()) {
-            return response()->json(['found' => false]);
+            return response()->json(['found' => false] + $validToOut);
         }
 
         // ใบล่าสุดมักยังไม่ได้ออก Lot → เอา Lot ของใบล่าสุด "ที่มี Lot แล้ว"
@@ -415,7 +426,7 @@ class SaleinfoController extends Controller
             'lot'        => $lot,
             'delivered'  => $delivered ? $delivered->format('d/m/y') : null,
             'over_3_years' => $delivered ? $delivered->lt(now()->subYears(3)) : false,
-        ]);
+        ] + $validToOut);
     }
 
     /**
