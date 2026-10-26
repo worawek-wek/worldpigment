@@ -1084,6 +1084,7 @@ class ReportController extends Controller
                 'tb_planning.end_time as p_end',
                 'emp.empname',
                 'emp.empsur',
+                'emp.dept as emp_dept',
             ])
             ->when(!empty($company), fn ($q) => $q->where('tb_planning.company', $company))
             ->when(!empty($empno), fn ($q) => $q->where('tb_planning.empno', $empno))
@@ -1202,14 +1203,28 @@ class ReportController extends Controller
 
                 return [
                     'empno'       => $empno,
+                    'dept'        => trim((string) ($first->emp_dept ?? '')),
                     'label'       => $label,
                     'cells'       => $cells,
                     'unscheduled' => $unscheduled,
                     'job_count'   => $items->count(),
                 ];
             })
-            // เรียงตามชื่อพนักงาน กลุ่ม "ไม่ระบุ" ไปท้ายสุด
-            ->sortBy(fn ($g) => $g['empno'] === '' ? 'zzzz' : mb_strtolower($g['label']))
+            // เรียงตาม รหัสแผนก (emp.dept) → รหัสพนักงาน จากน้อยไปมาก (26/10/2569 ตามที่ผู้ใช้สั่ง)
+            // พนักงานที่ไม่มีแผนกต่อท้ายแผนกอื่น · กลุ่ม "ไม่ระบุพนักงาน" ไปท้ายสุด
+            ->sort(function ($a, $b) {
+                $byNoEmp = ($a['empno'] === '') <=> ($b['empno'] === '');
+                if ($byNoEmp !== 0) {
+                    return $byNoEmp;
+                }
+                $byNoDept = ($a['dept'] === '') <=> ($b['dept'] === '');
+                if ($byNoDept !== 0) {
+                    return $byNoDept;
+                }
+
+                return strnatcasecmp($a['dept'], $b['dept'])
+                    ?: strnatcasecmp((string) $a['empno'], (string) $b['empno']);
+            })
             ->values();
 
         return [

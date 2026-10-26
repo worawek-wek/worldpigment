@@ -78,6 +78,10 @@ class OrderController extends Controller
     {
         $search = request('search');
         $company = request('company');
+        $planStatus = request('plan_status');
+        // วันที่สั่ง (Mdate) จาก flatpickr รูปแบบ Y-m-d — รูปแบบผิด = ไม่กรอง (26/10/2569)
+        $mdate = request('mdate');
+        $mdate = (is_string($mdate) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $mdate)) ? $mdate : null;
 
         $data = Morder::select([
                 'morder.*',
@@ -89,10 +93,14 @@ class OrderController extends Controller
                 // น้ำหนักรวม S (Stock) / P (Production) ของ suborder ทุกตัวในออเดอร์ (22/10/2569)
                 DB::raw("(SELECT COALESCE(SUM(s.Stock), 0) FROM suborder s WHERE s.Orderno = morder.Orderno) AS stock_total"),
                 DB::raw("(SELECT COALESCE(SUM(s.Production), 0) FROM suborder s WHERE s.Orderno = morder.Orderno) AS production_total"),
+                // คีย์สำหรับ sort คอลัมน์ Item No (26/10/2569) — รหัสสินค้าของออเดอร์ต่อกันตาม Runno
+                // ลำดับเดียวกับที่แสดงในคอลัมน์ (eager-load ด้านล่างเรียง Runno เหมือนกัน)
+                DB::raw("(SELECT GROUP_CONCAT(TRIM(s.Itemno) ORDER BY s.Runno SEPARATOR ', ') FROM suborder s
+                          WHERE s.Orderno = morder.Orderno AND TRIM(s.Itemno) <> '') AS itemno_sort"),
             ])
             // โหลด suborder ล่วงหน้า (เฉพาะคีย์ + Itemno) เพื่อรวมรหัสสินค้าโดยไม่เกิด N+1
             ->with(['suborders' => function ($query) {
-                $query->select('Orderno', 'Itemno');
+                $query->select('Orderno', 'Itemno')->orderBy('Runno');
             }])
             ->where('morder.appv', '-1') // เฉพาะ order ที่อนุมัติแล้ว
             // เงื่อนไขการแสดงผล (22/09/2569): ต้องมี suborder ที่ยังไม่ปิดงาน (EndP เป็นค่าว่าง)
@@ -129,11 +137,31 @@ class OrderController extends Controller
                 $query->where(function ($query) use ($search) {
                     $query->where('morder.Orderno', 'LIKE', '%'.$search.'%')
                         ->orWhere('morder.Custno', 'LIKE', '%'.$search.'%')
-                        ->orWhere('morder.Custname', 'LIKE', '%'.$search.'%');
+                        ->orWhere('morder.Custname', 'LIKE', '%'.$search.'%')
+                        // ค้นรหัสสินค้า (Item No.) ใน suborder ของออเดอร์ (26/10/2569)
+                        ->orWhereHas('suborders', function ($sq) use ($search) {
+                            $sq->where('Itemno', 'LIKE', '%'.$search.'%');
+                        });
                 });
             })
             ->when(!empty($company), function ($query) use ($company) {
                 $query->where('morder.Company', 'LIKE', '%'.$company.'%');
+            })
+            // กรองวันที่สั่งทั้งวัน (ช่วงเวลา แทน DATE() เพื่อให้ใช้ index ได้)
+            ->when($mdate, function ($query) use ($mdate) {
+                $query->where('morder.Mdate', '>=', $mdate.' 00:00:00')
+                    ->where('morder.Mdate', '<=', $mdate.' 23:59:59');
+            })
+            // กรองสถานะแผนการผลิต (26/10/2569): created = สร้างแล้ว / not_created = ยังไม่สร้าง
+            // เงื่อนไขเดียวกับ alias has_plan (มี tb_planning_header plan_type ORDER ของออเดอร์นี้)
+            ->when(in_array($planStatus, ['created', 'not_created'], true), function ($query) use ($planStatus) {
+                $exists = function ($q) {
+                    $q->select(DB::raw(1))
+                        ->from('tb_planning_header')
+                        ->whereColumn('tb_planning_header.orderno', 'morder.Orderno')
+                        ->where('tb_planning_header.plan_type', 'ORDER');
+                };
+                $planStatus === 'created' ? $query->whereExists($exists) : $query->whereNotExists($exists);
             });
         // หมายเหตุ: ไม่ hard-code orderBy ที่นี่แล้ว — ให้ Yajra จัดการเรียงตามที่คลิกหัวคอลัมน์
         // (ลำดับเริ่มต้น Mdate จากมากไปน้อย ถูกกำหนดเป็นค่า default order ในฝั่ง DataTables ของ order/index)

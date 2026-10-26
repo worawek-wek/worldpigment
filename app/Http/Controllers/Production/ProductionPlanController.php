@@ -820,6 +820,7 @@ class ProductionPlanController extends Controller
 
         // ธงบอกว่ามีการปิดออเดอร์ให้อัตโนมัติในรอบนี้หรือไม่ (ใช้ประกอบข้อความตอบกลับ)
         $auto_closed_order = false;
+        $weight_short = null; // ผลเช็คน้ำหนัก เมื่อจบงานครบแต่ไม่ปิดออเดอร์เพราะน้ำหนักไม่ถึง (26/10/2569)
 
         DB::beginTransaction();
         try {
@@ -875,11 +876,18 @@ class ProductionPlanController extends Controller
             //    - ใช้ predicate เดิม allEndJobsDone ซึ่งเป็นด่านเดียวกับการกดปิดออเดอร์เอง จึงคงเงื่อนไขเดิม
             //    - ครอบคลุมทั้งกรณี header มี planning เดียว และกรณีเหลือ item สุดท้ายที่เพิ่งปิด
             //    - ทำเฉพาะขา "ปิด" เท่านั้น (ไม่ auto-ปลด) และไม่แตะ end_close (ที่ต้องมีหมายเหตุ)
+            //    - (26/10/2569 ตามที่ผู้ใช้สั่ง) ต้องผ่านเงื่อนไขน้ำหนักด้วย: ผลรวม weight_produced ของทุก item
+            //      ใน header ≥ จำนวนสุทธิ (header.netqty) — ไม่ผ่าน = ไม่ปิดออเดอร์ (item ยังบันทึกตามปกติ)
             if (($request->end_job ?? 'N') === 'Y') {
                 $header = PlanningHeader::find($fields['planning_header_id']);
                 if ($header && ($header->end_order ?? 'N') !== 'Y' && $this->allEndJobsDone($header)) {
-                    $header->update(['end_order' => 'Y']);
-                    $auto_closed_order = true;
+                    $weight_check = $this->weightProducedCheck($header);
+                    if ($weight_check['enough']) {
+                        $header->update(['end_order' => 'Y']);
+                        $auto_closed_order = true;
+                    } else {
+                        $weight_short = $weight_check;
+                    }
                 }
             }
 
@@ -895,6 +903,10 @@ class ProductionPlanController extends Controller
         $message = $is_update ? 'แก้ไขข้อมูล Planning สำเร็จ' : 'เพิ่มข้อมูล Planning สำเร็จ';
         if ($auto_closed_order) {
             $message .= ' และปิดออเดอร์ (End Order) อัตโนมัติแล้ว เพราะทุกรายการจบงานครบ';
+        } elseif ($weight_short) {
+            $message .= ' แต่ยังไม่ปิดออเดอร์ (End Order) อัตโนมัติ เพราะน้ำหนักที่ผลิตได้รวมของทุกรายการ ('
+                . number_format($weight_short['produced'], 2) . ') น้อยกว่าจำนวนสุทธิ ('
+                . number_format($weight_short['netqty'], 2) . ')';
         }
 
         return response()->json([
@@ -902,6 +914,7 @@ class ProductionPlanController extends Controller
             'message'            => $message,
             'planning_header_id' => $fields['planning_header_id'],
             'end_order_auto_closed' => $auto_closed_order,
+            'end_order_weight_short' => (bool) $weight_short,
         ]);
     }
 
@@ -971,6 +984,25 @@ class ProductionPlanController extends Controller
                 $this->collectEndJobs($header->planningsRecursive, $jobs);
             }
         }
+    }
+
+    /**
+     * เงื่อนไขน้ำหนักก่อนปิดออเดอร์อัตโนมัติ (26/10/2569):
+     * ผลรวม weight_produced ของ item ตรงของ header (tb_planning ที่ planning_header_id = header นี้ — "แผนย่อย")
+     * ต้อง ≥ จำนวนสุทธิ (tb_planning_header.netqty)
+     * - netqty ว่าง / ไม่ใช่ตัวเลข / ≤ 0 = ไม่มีเกณฑ์ ⇒ ผ่าน (คงพฤติกรรมเดิม)
+     * - ไม่นับ item ในแผน semi/pigment ลูก (มี netqty ของตัวเอง)
+     */
+    private function weightProducedCheck(PlanningHeader $header): array
+    {
+        $netqty   = is_numeric($header->netqty) ? (float) $header->netqty : 0.0;
+        $produced = (float) Planning::where('planning_header_id', $header->id)->sum('weight_produced');
+
+        return [
+            'enough'   => $netqty <= 0 || round($produced, 6) >= round($netqty, 6),
+            'produced' => $produced,
+            'netqty'   => $netqty,
+        ];
     }
 
     /**
@@ -1051,6 +1083,20 @@ class ProductionPlanController extends Controller
                 'status'  => 422,
                 'message' => 'ยังปิดออเดอร์ไม่ได้ เพราะยังมีรายการที่ยังไม่จบงาน (End Job)',
             ]);
+        }
+
+        // (26/10/2569 ตามที่ผู้ใช้สั่ง) ติ๊กปิดออเดอร์เองก็ต้องผ่านเงื่อนไขน้ำหนักเดียวกับการปิดอัตโนมัติ
+        if ($request->end_order === 'Y') {
+            $weight_check = $this->weightProducedCheck($header);
+            if (!$weight_check['enough']) {
+                return response()->json([
+                    'status'  => 422,
+                    'message' => 'ยังปิดออเดอร์ไม่ได้ เพราะน้ำหนักที่ผลิตได้รวมของทุกรายการ ('
+                        . number_format($weight_check['produced'], 2) . ') น้อยกว่าจำนวนสุทธิ ('
+                        . number_format($weight_check['netqty'], 2) . ')',
+                    'weight_short' => true,
+                ]);
+            }
         }
 
         $header->update(['end_order' => $request->end_order]);

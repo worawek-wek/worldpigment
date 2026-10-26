@@ -30,7 +30,7 @@
                         <div class="row g-3 align-items-center">
                             <div class="col-md-3">
                                 <input id="searchInput" type="text" class="form-control"
-                                placeholder="ค้นหาเลขที่ใบสั่งซื้อ, รหัสลูกค้า, ขื่อลูกค้า">
+                                placeholder="ค้นหาเลขที่ใบสั่งซื้อ, รหัสลูกค้า, ขื่อลูกค้า, Item No.">
                             </div>
                             <div class="col-md-2">
                                 <select id="searchCompany" class="form-select">
@@ -41,16 +41,16 @@
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <select class="form-select">
-                                    <option>ทุกสถานะ</option>
-                                    <option>Pending</option>
-                                    <option>Production</option>
-                                    <option>Completed</option>
+                                {{-- กรองสถานะแผนการผลิต (has_plan) — 26/10/2569 แทน dropdown mockup เดิม --}}
+                                <select id="searchPlanStatus" class="form-select">
+                                    <option value="">ทุกสถานะ</option>
+                                    <option value="created">สร้างแล้ว</option>
+                                    <option value="not_created">ยังไม่สร้าง</option>
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                {{-- หมายเหตุ: ตัวกรองวันที่นี้ยังเป็น mockup (ยังไม่ผูกกับการค้นหา) — แปลงเป็น flatpickr เพื่อให้แสดง d/m/Y เหมือนหน้าอื่น --}}
-                                <input type="text"
+                                {{-- กรองวันที่สั่ง (morder.Mdate) ทั้งวัน — 26/10/2569 · flatpickr แสดง d/m/Y ค่าจริงเป็น Y-m-d --}}
+                                <input type="text" id="searchMdate"
                                     class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
                             </div>
                         </div>
@@ -131,6 +131,8 @@
                 data: function(d) {
                     d.search = $('#searchInput').val();
                     d.company = $('#searchCompany').val();
+                    d.plan_status = $('#searchPlanStatus').val();
+                    d.mdate = $('#searchMdate').val();
                 },
                 error: function(xhr, error, thrown) {
                     console.error('AJAX Error:', error, thrown);
@@ -145,8 +147,8 @@
                 { 'className': "text-center", data: 'Company', name: 'Company', orderable: true },
                 { 'className': "text-left", data: 'Custno', name: 'Custno', orderable: true },
                 { 'className': "text-left", data: 'Custname', name: 'Custname', orderable: true },
-                // Item No รวมจาก suborder (คำนวณฝั่ง PHP) จึง sort ที่ระดับ SQL ไม่ได้
-                { 'className': "text-left", data: 'itemno_list', name: 'itemno_list', orderable: false, searchable: false },
+                // Item No รวมจาก suborder (แสดงจาก PHP) — sort ตาม alias itemno_sort (GROUP_CONCAT ใน SQL, 26/10/2569)
+                { 'className': "text-left", data: 'itemno_list', name: 'itemno_sort', orderable: true, searchable: false },
                 // น้ำหนักรวม S / P ของ suborder ทั้งออเดอร์ — sort ตาม alias จาก subquery SUM
                 { 'className': "text-end", data: 'stock_total', name: 'stock_total', orderable: true, searchable: false },
                 { 'className': "text-end", data: 'production_total', name: 'production_total', orderable: true, searchable: false },
@@ -172,7 +174,7 @@
         oTable.draw();
     });
 
-    $(document).on('change', '#searchCompany', function(e){
+    $(document).on('change', '#searchCompany, #searchPlanStatus, #searchMdate', function(e){
         e.preventDefault();
         oTable.draw();
     });

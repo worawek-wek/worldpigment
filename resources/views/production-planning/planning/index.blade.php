@@ -878,6 +878,14 @@
                             text: response.message,
                             confirmButtonText: 'รับทราบ'
                         });
+                    } else if (response.end_order_weight_short) {
+                        // จบงานครบแต่ น้ำหนักที่ผลิตได้รวม < จำนวนสุทธิ → บันทึกแล้วแต่ไม่ปิดออเดอร์ (26/10/2569)
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'ยังไม่ปิดออเดอร์',
+                            text: response.message,
+                            confirmButtonText: 'รับทราบ'
+                        });
                     } else {
                         Swal.fire({
                             icon: 'success',
