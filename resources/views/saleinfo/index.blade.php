@@ -1065,8 +1065,10 @@
                 // NoAcp ปิดไว้ก่อน — ช่องในฟอร์มถูกคอมเมนต์ไว้ รอลูกค้ายืนยันความหมาย
                 // $('#saleinfo_noacp').prop('checked', Number(d.NoAcp) === 1);
 
-                // ปุ่ม "ลบราคานี้" ซ่อนไว้ (26/10/2569 ตามที่ผู้ใช้สั่ง) — เปิดคืน: ปลดคอมเมนต์บรรทัดนี้
-                // $('#btn_delete_saleinfo').removeClass('d-none').data('id', id);
+                // ปุ่ม "ลบราคานี้" เห็นเฉพาะแผนก IT (26/10/2569) — server กันซ้ำใน destroy()
+                if (SALEINFO_CAN_EDIT_KEYS) {
+                    $('#btn_delete_saleinfo').removeClass('d-none').data('id', id);
+                }
                 setSaleinfoKeyLock(!SALEINFO_CAN_EDIT_KEYS);
                 lookupCustomer(d.CustNo);
                 // แก้ไขอยู่ → โชว์ประวัติของคู่นี้ แต่ไม่รวมแถวที่กำลังแก้เอง

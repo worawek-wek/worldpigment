@@ -492,6 +492,11 @@ class SaleinfoController extends Controller
      */
     public function destroy(Request $request)
     {
+        // ลบราคาได้เฉพาะแผนก IT (26/10/2569) — กันยิง endpoint ตรง
+        if (!self::canEditKeyFields()) {
+            return response()->json(['error' => 'ลบราคาได้เฉพาะแผนก IT'], 403);
+        }
+
         $row = Saleinfo::find($request->id);
         if (!$row) {
             return response()->json(['error' => 'not_found'], 404);

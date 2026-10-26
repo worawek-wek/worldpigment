@@ -1040,7 +1040,7 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 - เกณฑ์ IT = ล็อกอินเป็นพนักงาน (guard `emp`) ที่ `emp.dept = 'IT'` — `SaleinfoController::canEditKeyFields()` · ⚠ **admin (ตาราง `users`) ไม่มีแผนก จึงถูกล็อกด้วย**
 - ฝั่งจอ: `index()` ส่ง `$can_edit_keys` → `SALEINFO_CAN_EDIT_KEYS` · `setSaleinfoKeyLock()` ตั้ง 3 ช่องเป็น `readonly` + `bg-light` ตอน `viewSaleinfo()` · `resetSaleinfoForm()` ปลดล็อก ⇒ **โหมดเพิ่มใหม่กรอกได้ทุกคนตามเดิม**
 - ด่าน server: `update()` ไม่ใช่ IT → ทับ 3 ช่อง (`KEY_FIELDS`) ด้วยค่าเดิมของแถว ไม่สนค่าที่ส่งมา (ทดสอบแล้วกับพนักงาน MK / IT)
-- ปุ่ม "ลบราคานี้": คอมเมนต์บรรทัดที่ถอด `d-none` ใน `viewSaleinfo()` ไว้ (ปลดคอมเมนต์ = เปิดคืน) · ⚠ ซ่อนฝั่งจออย่างเดียว route `saleinfo/delete` ยังลบได้ถ้ายิงตรง
+- ปุ่ม "ลบราคานี้": **เห็นเฉพาะแผนก IT** (เปลี่ยนจาก "ซ่อนทุกคน" 26/10/2569) — `viewSaleinfo()` ถอด `d-none` เมื่อ `SALEINFO_CAN_EDIT_KEYS` · ด่าน server: `destroy()` ไม่ใช่ IT = **403** ⇒ ยิง `saleinfo/delete` ตรงก็ลบไม่ได้
 
 **"ยืนราคาถึง" ใต้ช่องราคา (26/10/2569 ตามที่ผู้ใช้สั่ง)** — `#saleinfo_valid_to` ใน `modal-price.blade.php` = **`zcustprice.enddate`** (MAX) ของคู่ `custno` + `colorno` (รหัสจาก `saleinfoCalcCode()`: ITEMNO → st_code) · แนบมากับ `GET saleinfo/last-order` (key `valid_to` d/m/Y + `valid_to_expired`) จึงอัปเดตจังหวะเดียวกับกล่อง "สั่งซื้อล่าสุด" · เลยวันแล้ว = สีแดง + "(หมดอายุแล้ว)" · ไม่มีแถว = `—` · อ่านอย่างเดียว · ⚠ ข้อมูลปัจจุบันเกือบทุกคู่หมดอายุแล้ว (ดูหัวข้อราคาอนุมัติพิเศษ)
 
