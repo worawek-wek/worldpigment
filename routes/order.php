@@ -4,6 +4,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderApprovalController;
 use App\Http\Controllers\PriceApprovalController;
 use App\Http\Controllers\SalesForecastController;
+use App\Http\Controllers\OrderChangeController;
 
 Route::prefix('order')->group(function () {
 
@@ -34,6 +35,9 @@ Route::prefix('order')->group(function () {
 
     // ─── รายงานคำสั่งซื้อรายวัน — เลือกแผนก + ช่วงวันที่ (20/10/2569) ───
     Route::get('/daily-report-pdf', [\App\Http\Controllers\OrderDailyReportController::class, 'pdf'])->name('order.daily_report_pdf');
+
+    // ─── Order ค้างส่งลูกค้า ตามรหัสผู้ขาย (26/10/2569) ───
+    Route::get('/outstanding-pdf', [\App\Http\Controllers\OrderOutstandingController::class, 'pdf'])->name('order.outstanding_pdf');
 
     // ─── ประมาณการยอดขาย ตามรหัสพนักงานขาย (ฟอร์ม Access "SaleOrder", 15/10/2569) ───
     Route::get('/sales-forecast/order-pdf', [SalesForecastController::class, 'orderPdf'])->name('order.salesforecast.order_pdf');
@@ -66,6 +70,12 @@ Route::prefix('order')->group(function () {
 
         Route::post('/save',   [PriceApprovalController::class, 'save'])->name('order.approval.save');
         Route::post('/delete', [PriceApprovalController::class, 'destroy'])->name('order.approval.delete');
+    });
+
+    // ─── การเปลี่ยนแปลงคำสั่งซื้อ — เลื่อนกำหนดส่ง / แยกส่ง / เปลี่ยนน้ำหนัก (20/10/2569) ───
+    Route::prefix('order-change')->group(function () {
+        Route::get('/data',  [OrderChangeController::class, 'data'])->name('order.change.data');
+        Route::post('/save', [OrderChangeController::class, 'save'])->name('order.change.save');
     });
 
     // ─── ฟอร์มอนุมัติใบสั่งซื้อ (morderAPPV) ────────────────────────

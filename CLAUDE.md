@@ -41,6 +41,8 @@ worldpigment/
 │   │   ├── PriceApprovalController.php  # ฟอร์มลูกของ O-Order — ขออนุมัติราคาพิเศษ appvreq (12/08/2569)
 │   │   ├── OrderApprovalController.php  # ฟอร์มลูกของ O-Order — อนุมัติใบสั่งซื้อ morder.appv (12/08/2569)
 │   │   ├── OrderDailyReportController.php  # เมนู O-Order — รายงานคำสั่งซื้อรายวัน PDF แนวนอน (20/10/2569)
+│   │   ├── OrderOutstandingController.php  # เมนู O-Order — รายงาน Order ค้างส่งลูกค้า ตามรหัสผู้ขาย PDF แนวนอน (26/10/2569)
+│   │   ├── OrderChangeController.php  # ฟอร์มลูกของ O-Order — การเปลี่ยนแปลงคำสั่งซื้อ เลื่อน/แยกส่ง/น้ำหนัก tb_order_change* (20/10/2569)
 │   │   ├── SalesForecastController.php  # ฟอร์มลูกของ O-Order — ประมาณการยอดขาย ตามรหัสพนักงานขาย (PDF) (15/10/2569)
 │   │   ├── QuotationController.php
 │   │   ├── CustomerController.php   # ฐานข้อมูลลูกค้า customer/contact/naddress/engname — CRUD (24/08/2569)
@@ -791,6 +793,21 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 - **ฟอร์มอนุมัติใบสั่งซื้อเด้งฟอร์มนี้ขึ้นมาแบบอ่านอย่างเดียว (19/10/2569 ตามที่ผู้ใช้สั่ง)** — `OrderApprovalController::record()` แนบ key **`cp`** (แถว `cp_itemprice` ของใบ — คู่รหัสสินค้าแถวแรกก่อน ไม่มี = null) → `oaLoadRecord()` เรียก **`cpCheckView(row, order)`** ทุกครั้งที่เปิดใบ (รวมเดินระเบียน/Refresh) · ใช้ markup ตัวเดิม: **`cpCheckSetMode(view)`** ย้ายม่านไป `#orderApprovalModal` (view) / กลับ `#orderModal` (กรอก — `cpCheckOpen()` เรียกให้) + disable ทุก input · ซ่อนปุ่มบันทึก · ปุ่มยกเลิกเป็น "ปิด" · เปลี่ยนชื่อหัว · สถานะ/ข้อ 4/ข้อ 5 คำนวณใหม่จากค่าที่เก็บ (สูตรเดียวกับ server) · ข้อความเตือนใบราคาเกิน 90 วันนับจากวันนี้ · ปิดแล้วเปิดดูซ้ำต้องเปิดใบใหม่ (ยังไม่มีปุ่มเรียกซ้ำ)
 - ⚠ **ไม่บล็อกการบันทึก** แม้ราคาไม่ผ่าน (บันทึกสถานะไว้เฉย ๆ) · เงื่อนไขตัดสินที่ฝั่งจอ (server เขียนเมื่อมี key `cp`) · `cp_itemprice` เป็น MyISAM · เปลี่ยนรหัสสินค้าแถวแรกของใบเดิม = แถวเก่าค้างอยู่ · ⚠ ยังไม่ได้กดในเบราว์เซอร์
 
+### ฟอร์มลูก: การเปลี่ยนแปลงคำสั่งซื้อ (เลื่อน / แยกส่ง / เปลี่ยนน้ำหนัก) — 20/10/2569
+
+แทนฟอร์ม Access "การเปลี่ยนแปลงคำสั่งซื้อ" ที่มีช่อง "เลื่อนครั้งที่ 1-3" (`suborder.Cdate1-3`/`Cno1-3`/`Change1-3`) + `Oldweight`/`Weightno`/`WeightDate` ตายตัว — **ออกแบบตารางใหม่ตามที่ผู้ใช้สั่ง · ไม่มีขั้นอนุมัติ**
+- `OrderChangeController` (`GET order/order-change/data?orderno=` · `POST order/order-change/save`) + modal `order/order-change.blade.php` (markup + JS ในไฟล์เดียว, include ใน `order/index`) · เปิดจากปุ่ม **"เปลี่ยนแปลงคำสั่งซื้อ"** บนหัวหน้า หรือปุ่ม `ti-calendar-time` ในแถวของตารางรายการ
+- 🔴 **`suborder` = สถานะปัจจุบัน:** **`senddate` = กำหนดส่งปัจจุบัน** (ระบบเดิม = กำหนดแรก ไม่เคยถูกแก้) · `Stock`/`Production` = น้ำหนักปัจจุบัน · ประวัติทั้งหมดอยู่ในตารางใหม่ (InnoDB):
+  - **`tb_order_change`** หัวใบ (`change_no` unique · `change_date` · `orderno` · `reason` · `source` web/legacy · ผู้บันทึก `created_by_type/created_by/created_by_name`)
+  - **`tb_order_change_line`** 1 แถว = 1 การกระทำกับ 1 รายการ (`runno` · `action` postpone/split/weight · `old/new_senddate` · `old/new_stock/prod` · `split_runno/split_stock/split_prod`) — ป้าย/สี `OrderChangeLine::ACTIONS`
+  - **`tb_order_change_run`** เลขรันต่อ prefix · **`suborder.parent_runno`** (คอลัมน์ใหม่ + index) แถวที่แยกออกมาชี้กลับแถวต้นทาง ⇒ แยกซ้อนได้ไม่จำกัดชั้น · ฝั่งจอเรียงเป็นต้นไม้ (`sortAsTree()`, เยื้องตาม `depth`)
+- **3 การกระทำ (1 ครั้งที่กดบันทึก = 1 ใบ):** เลื่อน = เลือกได้หลายรายการ (ข้ามรายการที่วันเท่าเดิม) · แยกส่ง = 1 รายการ แยก S/P บางส่วนเป็น**แถว `suborder` ใหม่** (คัดลอก Itemno/Lotno/nold/prodname/custwant/Remark — ไม่คัดลอก EndP/DVDate/outno) + กำหนดส่งของส่วนที่แยก, แยกหมดไม่ได้ · เปลี่ยนน้ำหนัก = 1 รายการ, **`morder.netqty` ปรับตามส่วนต่าง** (netqty ว่าง = ไม่แตะ)
+- **เลขที่ใบ = `morder.Company` + 6 หลัก** (เช่น `CP000122`) ใบที่ไม่มีแผนก = `OC` · ตั้งต้นจากเลขเดิมสูงสุดใน `Cno1-3`/`Weightno` (CP 121 · MB 3732 · ⚠ DB 690424 — เลขเดิมของ DB ดูเหมือนเลข Lot ⇒ ใบ DB ใหม่เริ่มที่ `DB690425`) · `allocateChangeNo()` ล็อกด้วย `lockForUpdate` ได้จริง (ตาราง InnoDB)
+- **ย้ายข้อมูลเก่าแล้ว** (migration `2026_10_20_120000_import_legacy_order_changes`, `source='legacy'`): เลื่อน 813 บรรทัด + เปลี่ยนน้ำหนัก 282 บรรทัด = 702 ใบ (1 เลขที่ใบเดิมครอบหลายรายการ/หลายใบสั่งได้ เช่น `CP000115` 19 รายการ) · **ตั้ง `senddate` ของ 633 แถวเป็นวันที่เลื่อนครั้งล่าสุด** (กำหนดแรกอยู่ใน `old_senddate` ของบรรทัดแรก → `down()` คืนค่าได้) · ไม่มีเลขที่ใบ = `L<Runno>-<ครั้งที่>` / `LW<Runno>` · คอลัมน์ `Cdate*`/`Oldweight` เดิมไม่ลบ ไม่แก้ และ**ระบบใหม่ไม่เขียนลงไปอีก** · แถวที่ระบบเดิมแยกส่งด้วยมือ (เช่น `WI23953` 6 แถว) ไม่มีข้อมูลให้ผูกกลับ จึงไม่มี `parent_runno` · สำรอง `suborder` ก่อนรันไว้ใน scratchpad ของ session
+- 🔴 **ล็อกในฟอร์มใบสั่งซื้อ:** รายการที่มีประวัติ (`OrderChangeController::lockedRunnos()` = อยู่ใน line เป็น `runno`/`split_runno` หรือมี `parent_runno`) → `itemPayload()` ส่ง `locked` · `orderItemRow()` ทำให้ S/P/กำหนดส่งทบทวนเป็น readonly (ช่องวันที่ใช้ class `oi-date-locked` จึงไม่ผูกปฏิทิน) + ไอคอนกุญแจแทนปุ่มลบ · **`syncItems()` ไม่เขียน Stock/Production/senddate ของรายการเหล่านี้ และไม่ลบแม้หายไปจากฟอร์ม** (กันฟอร์มที่เปิดค้างไว้ลบแถวที่เพิ่งแยกออกมา) · ช่องอื่นของรายการยังแก้ได้
+- ผลกับรายงานเดิมที่อ่าน `suborder.senddate`: แสดง**กำหนดปัจจุบัน**แทนกำหนดแรก (รายงานที่ต้องผลิต · รายงานคำสั่งซื้อรายวัน Lead Time · ฟอร์มอนุมัติ)
+- ⚠ ยังไม่มี: ยกเลิก/แก้ใบเปลี่ยนแปลงที่บันทึกแล้ว · พิมพ์ใบเปลี่ยนแปลง · sync ไปแผนผลิต (`tb_planning` มี senddate ของตัวเอง) · สิทธิ์แยกสำหรับการเขียน (ใช้สิทธิ์เมนู Order) · ⚠ `suborder`/`morder` เป็น MyISAM ⇒ แยกส่งพังกลางทางอาจเหลือข้อมูลครึ่ง ๆ (เพิ่มแถวใหม่ก่อน แล้วค่อยลดแถวต้นทาง) · ทดสอบผ่าน controller จริงแล้ว (ใบทดสอบลบแล้ว) **ยังไม่ได้กดในเบราว์เซอร์**
+
 ### ปุ่ม "รายงานคำสั่งซื้อรายวัน" → PDF A4 แนวนอน — 20/10/2569
 
 ปุ่มบนหัวหน้า `/order` → หน้าต่าง `#dailyReportModal` (เลือก **แผนกผลิต** `dept` = `morder.Company` + **ช่วงวันที่** `date_from`/`date_to` d/m/Y ค่าเริ่มต้นวันนี้) → `GET order/daily-report-pdf` → **`OrderDailyReportController::pdf()`** (mPDF **A4-L**) → blade **`order/daily-report-pdf.blade.php`** · ผังตามกระดาษระบบเดิม "รายงานคำสั่งซื้อรายวัน ประจำวันที่ … แผนกผลิต …"
@@ -800,6 +817,16 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 - เว้นช่องไฟระหว่างแต่ละ Order (แถวแรกของใบใหม่ `tr.new-order` padding-top 12px)
 - ⚠ **Lead Time = วันจาก `Mdate` ถึง `senddate` นับรวมวันแรก (+1)** — เดาจากกระดาษ (สั่ง 20/10 ส่ง 02/11 = 14) ยังไม่ได้ยืนยันกับผู้ใช้ · ใบในกระดาษตัวอย่าง (CI43392…) ไม่มีใน DB เครื่อง dev จึงเทียบตรงไม่ได้
 - ⚠ ยังไม่ได้กดในเบราว์เซอร์ (ทดสอบผ่าน controller แล้ว)
+
+### ปุ่ม "Order ค้างส่งลูกค้า" → PDF ตามรหัสผู้ขาย — 26/10/2569
+
+ปุ่มบนหัวหน้า `/order` → `#outstandingModal` (กรอก **รหัสผู้ขาย** = `morder.supno`, บังคับกรอก, datalist จาก `$sale_codes`, Enter = ออกรายงาน) → `GET order/outstanding-pdf?sale=` → **`OrderOutstandingController::pdf()`** (mPDF A4-L) → blade **`order/outstanding-pdf.blade.php`** · ผังตามกระดาษระบบเดิม "Order ค้างส่งลูกค้า (เรียงตามกำหนดแรก) # <sale>"
+- **ค้างส่ง = `suborder.DVDate` ว่าง** (ยังไม่มีวันที่ลูกค้าได้รับ — `outno` ว่างตรงกันทุกแถว) · ไม่ตัดใบจอง / ใบที่ยังไม่อนุมัติ / แถวน้ำหนัก 0
+- จัดกลุ่มตามลูกค้า (เรียงรหัส, ชื่อจาก `customer.name` → fallback `morder.Custname`) · **เรียง `supno` → `Custno` → `senddate` → `Itemno`** (→ Runno, senddate ว่างไปท้าย — ผู้ใช้สั่ง 26/10/2569, เรียงใน SQL) · ท้ายกลุ่ม = กล่องรวม Stock / Production
+- คอลัมน์: Orderno · `Mdate` · Itemno · Lotno · Stock · Production · `custwant` · **กำหนดแรก** · **เลื่อน 1-3** · เข้าคลัง (**`EndP`**) · ส่งก่อนได้ (▶ เมื่อ `morder.Send` ติ๊ก, ฟอนต์ dejavusanscondensed) · `PO`
+- **กำหนดแรก/เลื่อน มาจาก `tb_order_change_line`** (`dueHistory()`): กำหนดแรก = `old_senddate` ของการเลื่อนครั้งแรก (ไม่เคยเลื่อน = `senddate`) · เลื่อน = `new_senddate` ตามลำดับ · แถวที่แยกส่ง (บรรทัด `split` ที่ `split_runno` = แถวนี้) ได้ประวัติของแถวต้นทาง*ก่อน*แยก + วันที่ของส่วนที่แยก + การเลื่อนของตัวเอง · เลื่อนเกิน 3 ครั้ง = แสดง **3 ครั้งล่าสุด** · ตรวจกับกระดาษแล้ว (HI57651 กำหนดแรก 01/09 เลื่อน 3/10)
+- ⚠ **"เลย Due ส่งแล้ว" (คอลัมน์ท้าย) = เดาจากกระดาษ**: `suborder.senddate` (กำหนดปัจจุบัน) ≤ วันนี้ — ยังไม่ได้ยืนยันกับผู้ใช้
+- ⚠ ข้อมูลเครื่อง dev มีรายการค้างเก่ามาก (DVDate ไม่เคยถูกกรอก) จึงขึ้น "เลย Due" เยอะ · ทดสอบผ่าน controller แล้ว (sale 8 / 1 / รหัสที่ไม่มี) **ยังไม่ได้กดในเบราว์เซอร์**
 
 ### ปุ่ม "ประมาณการยอดขาย" → PDF "รายงานยอดรับ Order ตามรหัสพนักงานขาย" — 15/10/2569
 

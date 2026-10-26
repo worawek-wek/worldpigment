@@ -299,6 +299,8 @@ class OrderController extends Controller
             ->orderBy('Runno')
             ->get();
 
+        $locked = OrderChangeController::lockedRunnos($orderno);
+
         // รหัสสินค้าหลักของใบ (ฟอร์มเดิมโชว์ช่องเดียวมุมขวาบน) = รหัสแรกที่พบในรายการ
         $itemno = optional($items->first(function ($r) {
             return trim((string) $r->Itemno) !== '';
@@ -307,7 +309,8 @@ class OrderController extends Controller
         return response()->json([
             'found'     => true,
             'order'     => $this->orderPayload($order),
-            'items'     => $items->map(fn ($r) => $this->itemPayload($r))->values(),
+            // รายการที่มีประวัติการเปลี่ยนแปลงแล้ว → ฟอร์มล็อกน้ำหนัก/กำหนดส่ง + ห้ามลบ (20/10/2569)
+            'items'     => $items->map(fn ($r) => $this->itemPayload($r, $locked))->values(),
             'customer'  => $this->customerPayload($order->Custno),
             'dvpoints'  => $this->dvpoints($order->Custno),
             'itemno'    => $itemno,
@@ -357,9 +360,12 @@ class OrderController extends Controller
     }
 
     /** 1 รายการในตารางล่างของฟอร์ม */
-    private function itemPayload(SubOrder $row): array
+    private function itemPayload(SubOrder $row, array $locked = []): array
     {
         return [
+            // มีประวัติในฟอร์ม "การเปลี่ยนแปลงคำสั่งซื้อ" แล้ว — แก้ S/P/กำหนดส่ง + ลบแถว ต้องทำผ่านฟอร์มนั้น (20/10/2569)
+            'locked'       => in_array((int) $row->Runno, $locked, true),
+            'parent_runno' => $row->parent_runno,
             'Runno'      => $row->Runno,
             'Itemno'     => $row->Itemno,
             'nold'       => $row->nold,   // ช่อง "รหัส" — เดิมไม่ได้ส่งกลับ เปิดใบแล้วว่าง บันทึกซ้ำจึงทับเป็นค่าว่าง (แก้ 12/09/2569)
@@ -1384,7 +1390,11 @@ class OrderController extends Controller
      */
     private function syncItems(string $orderno, array $items): void
     {
-        $keep = [];
+        /* รายการที่มีประวัติการเปลี่ยนแปลงแล้ว (20/10/2569) — น้ำหนัก/กำหนดส่งต้องเปลี่ยนผ่านฟอร์ม
+           "การเปลี่ยนแปลงคำสั่งซื้อ" เท่านั้น จึงไม่เขียนทับด้วยค่าจากฟอร์มนี้ (อาจเป็นค่าเก่าที่ค้างบนจอ)
+           และไม่ลบทิ้ง แม้จะหายไปจากฟอร์ม (เช่น แถวที่เพิ่งแยกออกมาหลังเปิดฟอร์มนี้ค้างไว้) */
+        $locked = OrderChangeController::lockedRunnos($orderno);
+        $keep = $locked;
 
         foreach ($items as $row) {
             $data = [
@@ -1410,6 +1420,9 @@ class OrderController extends Controller
                 ->where('Orderno', $orderno)->where('Runno', $runno)->exists();
 
             if ($isOld) {
+                if (in_array($runno, $locked, true)) {
+                    unset($data['Stock'], $data['Production'], $data['senddate']);
+                }
                 DB::table('suborder')->where('Orderno', $orderno)->where('Runno', $runno)->update($data);
                 $keep[] = $runno;
             } else {

@@ -194,7 +194,7 @@
                                     {{-- Chemical Safety — มาตรฐานความปลอดภัยสารเคมี (เลือกได้หลายค่า 29/08/2569) --}}
                                     {{-- select2 ของ modal นี้ตั้ง tags:true → พิมพ์ค่านอกรายการเองได้ (= ช่อง "อื่นๆ ระบุ" ในฟอร์มกระดาษ) --}}
                                     {{-- หลายค่าเก็บลง testmain.ChemSafety คอลัมน์เดียว คั่นด้วย ", " (ดู ColorMatchingController::joinMulti) --}}
-                                    <div class="col-md-4">
+                                    <div class="col-md-5">
                                         <label class="form-label small mb-1">
                                             <i class="ti ti-shield-check me-1"></i>
                                             Chemical Safety <span class="text-muted fw-normal">(เลือกได้หลายค่า หรือพิมพ์ค่าอื่นได้)</span>
@@ -224,7 +224,7 @@
                                     </div>
                                     {{-- คำนวณ Znst+EBS ร่วมในชิ้นงาน → testmain.ZnstEBS (20/10/2569) --}}
                                     {{-- label กับช่องกรอกอยู่แถวเดียวกัน (ผู้ใช้สั่ง 20/10/2569) --}}
-                                    <div class="col-md-8 d-flex align-items-center align-self-end gap-2">
+                                    <div class="col-md-5 d-flex align-items-center align-self-end gap-2">
                                         <label class="form-label small mb-0 text-nowrap">คำนวณ Znst+EBS ร่วมในชิ้นงาน =</label>
                                         <input type="text" name="ZnstEBS" class="form-control" maxlength="50">
                                     </div>

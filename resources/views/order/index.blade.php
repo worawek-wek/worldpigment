@@ -503,6 +503,11 @@
                         {{-- พิมพ์ PDF ใบสั่งซื้อที่อนุมัติ เรียงตามเลขที่ใบสั่ง (06/10/2569) — 07/10/2569: เปิดหน้าต่างเลือก
                              แผนก / วันที่ / ช่วงเวลา / S-P ก่อน (#prodReportModal ตามฟอร์ม Access เดิม)
                              → OrderApprovalController::approvedTodayPdf() --}}
+                        {{-- การเปลี่ยนแปลงคำสั่งซื้อ — เลื่อนกำหนดส่ง / แยกส่ง / เปลี่ยนน้ำหนัก (20/10/2569) → #orderChangeModal --}}
+                        <button class="btn btn-label-warning border" onclick="orderChangeOpen()">
+                            <i class="ti ti-calendar-time me-1"></i>
+                            เปลี่ยนแปลงคำสั่งซื้อ
+                        </button>
                         <button class="btn btn-label-secondary border" onclick="prodReportOpen()">
                             <i class="ti ti-printer me-1"></i>
                             พิมพ์รายงานที่ต้องผลิต
@@ -511,6 +516,11 @@
                         <button class="btn btn-label-secondary border" onclick="dailyReportOpen()">
                             <i class="ti ti-calendar-event me-1"></i>
                             รายงานคำสั่งซื้อรายวัน
+                        </button>
+                        {{-- Order ค้างส่งลูกค้า ตามรหัสผู้ขาย (26/10/2569) → #outstandingModal → OrderOutstandingController::pdf() --}}
+                        <button class="btn btn-label-secondary border" onclick="outstandingOpen()">
+                            <i class="ti ti-truck-delivery me-1"></i>
+                            Order ค้างส่งลูกค้า
                         </button>
                         {{-- ประมาณการยอดขาย ตามรหัสพนักงานขาย (15/10/2569 — ฟอร์ม Access "SaleOrder") → #salesForecastModal --}}
                         <button class="btn btn-label-secondary border" onclick="salesForecastOpen()">
@@ -879,6 +889,37 @@
     </div>
 </div>
 
+{{-- ═══ หน้าต่าง "Order ค้างส่งลูกค้า" (26/10/2569) — กรอกรหัสผู้ขาย (morder.supno) → PDF A4 แนวนอน ═══ --}}
+<div class="modal fade" id="outstandingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="ti ti-truck-delivery me-2"></i>Order ค้างส่งลูกค้า</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body of-form" style="--of-lw: 100px;">
+                <div class="of-row">
+                    <label class="form-label" for="os_sale">รหัสผู้ขาย *</label>
+                    <div class="of-ctl">
+                        <input type="text" id="os_sale" class="form-control" list="os_sale_list" maxlength="10" autocomplete="off">
+                        <datalist id="os_sale_list">
+                            @foreach ($sale_codes as $s)
+                                <option value="{{ $s }}"></option>
+                            @endforeach
+                        </datalist>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ปิด</button>
+                <button type="button" class="btn btn-primary" onclick="outstandingPrint()">
+                    <i class="ti ti-printer me-1"></i>ออกรายงาน
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {{-- ═══ หน้าต่าง "ประมาณการยอดขาย ตามรหัสพนักงานขาย" (15/10/2569 — ฟอร์ม Access "SaleOrder") ═══
      ใช้ได้แล้วเฉพาะปุ่ม "ยอดรับ Order" → SalesForecastController::orderPdf()
      อีก 3 ปุ่มยังไม่รู้เงื่อนไข (class wip) --}}
@@ -1023,6 +1064,7 @@
 
     <!-- / Layout wrapper -->
     @include('color-rate.lookup-modal')   {{-- modal "ดูกลุ่มราคา" (อ่านอย่างเดียว) — 19/09/2569 --}}
+    @include('order.order-change')        {{-- modal "การเปลี่ยนแปลงคำสั่งซื้อ" (เลื่อน / แยกส่ง / เปลี่ยนน้ำหนัก) — 20/10/2569 --}}
     @include('layout/inc_js')
 <script>
     var page = "{{ $page_url }}/datatable";
@@ -1678,6 +1720,23 @@
                  + ' autocomplete="off" placeholder="วว/ดด/ปปปป" value="' + esc(fmtDate(val, true)) + '">';
         };
 
+        /* รายการที่มีประวัติในฟอร์ม "การเปลี่ยนแปลงคำสั่งซื้อ" แล้ว (20/10/2569)
+           → S / P / กำหนดส่งทบทวน อ่านอย่างเดียว + ลบแถวไม่ได้ (server ก็ไม่เขียนทับ/ไม่ลบให้อยู่แล้ว)
+           ช่องวันที่ใช้ class oi-date-locked แทน oi-date จึงไม่ถูกผูกปฏิทิน */
+        var lockNote = 'เปลี่ยนน้ำหนัก/กำหนดส่งได้ที่ปุ่ม "เปลี่ยนแปลงคำสั่งซื้อ"';
+        if (r.locked){
+            num = function(field, val){
+                return '<input type="text" class="form-control form-control-sm text-end oi-input bg-light" data-f="' + field + '"'
+                     + ' readonly title="' + lockNote + '" value="' + esc(commaFmt(val, 2)) + '">';
+            };
+            var datEditable = dat;
+            dat = function(field, val){
+                if (field !== 'senddate') return datEditable(field, val);
+                return '<input type="text" class="form-control form-control-sm oi-date-locked oi-input bg-light" data-f="' + field + '"'
+                     + ' readonly title="' + lockNote + '" value="' + esc(fmtDate(val, true)) + '">';
+            };
+        }
+
         return '<tr>'
             + '<input type="hidden" data-f="Runno" value="' + esc(r.Runno || '') + '">'
             + td('<span class="oi-no"></span>', 'text-center text-muted')
@@ -1697,8 +1756,10 @@
             + td(dat('DVDate', r.DVDate))
             + td(txt('outno', r.outno, ' maxlength="20"'))
             + td(txt('Remark', r.Remark, ' list="ordremList"'))
-            + td('<button type="button" class="btn btn-sm btn-icon btn-label-danger" title="ลบแถว"'
-                + ' onclick="removeOrderItem(this)"><i class="ti ti-trash"></i></button>', 'text-center')
+            + td(r.locked
+                ? '<span class="text-muted" title="' + lockNote + '"><i class="ti ti-lock"></i></span>'
+                : '<button type="button" class="btn btn-sm btn-icon btn-label-danger" title="ลบแถว"'
+                    + ' onclick="removeOrderItem(this)"><i class="ti ti-trash"></i></button>', 'text-center')
             + '</tr>';
     }
 
@@ -3469,6 +3530,23 @@
         var q = { dept: $('#dr_dept').val() || '', date_from: $('#dr_from').val(), date_to: $('#dr_to').val() };
         window.open('{{ url('order/daily-report-pdf') }}?' + $.param(q), '_blank');
     }
+
+    // ────────────────────────────────────────────────────────
+    //  Order ค้างส่งลูกค้า (26/10/2569) — กรอกรหัสผู้ขายแล้วเปิด PDF
+    // ────────────────────────────────────────────────────────
+    function outstandingOpen(){
+        $('#outstandingModal').modal('show');
+    }
+    function outstandingPrint(){
+        var sale = $.trim($('#os_sale').val());
+        if (!sale) {
+            Swal.fire({ icon: 'warning', title: 'กรุณากรอกรหัสผู้ขาย', target: '#outstandingModal', heightAuto: false });
+            return;
+        }
+        window.open('{{ url('order/outstanding-pdf') }}?' + $.param({ sale: sale }), '_blank');
+    }
+    $(document).on('shown.bs.modal', '#outstandingModal', function(){ $('#os_sale').trigger('focus').select(); });
+    $(document).on('keydown', '#os_sale', function(e){ if (e.key === 'Enter') { e.preventDefault(); outstandingPrint(); } });
 
     function approvalPrint(){
         window.open(APPROVAL_URL + '/approved-pdf', '_blank');

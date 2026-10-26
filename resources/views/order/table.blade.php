@@ -123,6 +123,11 @@
                             onclick="orderOpen('{{ $row->Orderno }}')">
                             <i class="ti ti-edit"></i>
                         </button>
+                        {{-- การเปลี่ยนแปลงคำสั่งซื้อ (20/10/2569) --}}
+                        <button class="btn btn-sm btn-icon btn-label-warning" title="เปลี่ยนแปลงคำสั่งซื้อ (เลื่อน / แยกส่ง / น้ำหนัก)"
+                            onclick="orderChangeOpen('{{ $row->Orderno }}')">
+                            <i class="ti ti-calendar-time"></i>
+                        </button>
                     </td>
                 </tr>
             @empty

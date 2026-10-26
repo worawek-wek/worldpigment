@@ -41,7 +41,9 @@ CREATE TABLE `suborder` (
   `prodname` varchar(20) DEFAULT NULL,
   `custwant` datetime DEFAULT NULL,
   `outno` varchar(20) DEFAULT NULL,
-  PRIMARY KEY (`Runno`,`Orderno`)
+  `parent_runno` int(11) DEFAULT NULL,
+  PRIMARY KEY (`Runno`,`Orderno`),
+  KEY `suborder_parent_runno_index` (`parent_runno`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- ----------------------------
