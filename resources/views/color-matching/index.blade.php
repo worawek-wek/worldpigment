@@ -739,13 +739,15 @@
         // ── Auto-fill ชื่อลูกค้าจากรหัส (custno) ในฟอร์มเทียบสี ──
         // พิมพ์รหัส → ดึง name(ไทย)/nameEN(อังกฤษ) จากตาราง customer มาเติม + ล็อกแก้ไขไม่ได้
         // ถ้าไม่พบรหัส → ปลดล็อกให้กรอกเองเหมือนเดิม
-        let custLookupTimer = null;
-        $('#form_color_matching').on('input', '[name="custno"]', function () {
+        // ใช้กับฟอร์มใบส่ง ต.ย. (SD) ด้วย (27/10/2569) — ตัวจับเวลาแยกต่อฟอร์ม
+        $('#form_color_matching, #form_sample_delivery').on('input', '[name="custno"]', function () {
+            const $f   = $(this).closest('form');
             const code = $(this).val().trim();
-            const $th  = $('#form_color_matching [name="custname"]');
-            const $en  = $('#form_color_matching [name="custnameEN"]');
+            const $th  = $f.find('[name="custname"]');
+            const $en  = $f.find('[name="custnameEN"]');
+            const form = $f[0];
 
-            clearTimeout(custLookupTimer);
+            clearTimeout(form._custLookupTimer);
 
             // รหัสว่าง → ปลดล็อกให้กรอกเอง
             if (code === '') {
@@ -753,7 +755,7 @@
                 return;
             }
 
-            custLookupTimer = setTimeout(function () {
+            form._custLookupTimer = setTimeout(function () {
                 $.ajax({
                     type: 'GET',
                     url: '{{$page_url}}/customer/' + encodeURIComponent(code),
@@ -783,6 +785,7 @@
         function resetSampleDeliveryForm() {
             $('#form_sample_delivery')[0].reset();
             $('#form_sample_delivery select').val('').trigger('change.select2');
+            $('#form_sample_delivery [name="custname"], #form_sample_delivery [name="custnameEN"]').prop('readonly', false);
             $('#form_sample_delivery [name="_mode"]').val('create');
             $('#form_sample_delivery [name="_pk"]').val('');
             $('#form_sample_delivery [name="SendNo"]').val('');
