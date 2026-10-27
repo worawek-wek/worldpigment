@@ -34,6 +34,12 @@ class OrderOutstandingController extends Controller
         'undone' => '(เฉพาะผลิตไม่เสร็จ)',
     ];
 
+    /**
+     * ประเภทใบสั่ง (2 ตัวหน้าเลขที่ใบ) ที่ดึงมาในรายงาน sale / done (27/10/2569 ตามที่ผู้ใช้สั่ง)
+     * ⇒ ตัดใบสั่งทำสต๊อก (CM/HM/WM) และใบจอง (CR/HR/WR) ออก · แบบ undone ไม่กรอง (ดึงทุกประเภทเหมือนเดิม)
+     */
+    public const ORDER_TYPES_FILTERED = ['HI', 'WI', 'CI', 'HE', 'WE', 'CE'];
+
     public function pdf(Request $request)
     {
         $type = (string) $request->query('type', 'sale');
@@ -52,6 +58,7 @@ class OrderOutstandingController extends Controller
             ->when($type === 'sale', fn ($q) => $q->where('m.supno', $sale))
             ->when($type === 'done', fn ($q) => $q->whereNotNull('s.EndP'))
             ->when($type === 'undone', fn ($q) => $q->whereNull('s.EndP'))
+            ->when($type !== 'undone', fn ($q) => $q->whereIn(DB::raw('UPPER(LEFT(m.Orderno, 2))'), self::ORDER_TYPES_FILTERED))
             // เรียง supno → custno → senddate → itemno (26/10/2569 ตามที่ผู้ใช้สั่ง) · senddate ว่างไปท้ายกลุ่ม
             ->orderBy('m.supno')
             ->orderBy('m.Custno')
