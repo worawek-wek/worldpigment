@@ -163,6 +163,13 @@
                                 </button>
                             @endif
 
+                            {{-- คัดลอกเป็นใบใหม่ (27/10/2569 — แบบเดียวกับใบเสนอราคา) --}}
+                            <button class="btn btn-sm btn-icon btn-label-secondary"
+                                title="คัดลอกเป็นใบใหม่"
+                                onclick="{{ $isSD ? 'copySampleDelivery' : 'copyColorMatching' }}('{{ $row->id }}')">
+                                <i class="ti ti-copy"></i>
+                            </button>
+
                             {{-- ปุ่มลบย้ายไปอยู่ใน form แก้ไข (modal-cm / modal-sd) แล้ว --}}
                         </div>
                     </td>

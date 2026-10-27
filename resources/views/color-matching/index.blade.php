@@ -892,6 +892,79 @@
         }
 
         // ────────────────────────────────────────────────────────
+        //  คัดลอกเป็นใบใหม่ (27/10/2569 — แบบเดียวกับใบเสนอราคา)
+        //  โหลดใบเดิมเติมฟอร์ม → สลับเป็นโหมดสร้างใหม่ (_pk ว่าง = insert) → ล้างเลขที่ใบ + ค่าที่เป็นของใบเดิม
+        //  เลขที่ใบในระบบนี้ผู้ใช้พิมพ์เอง (ไม่มีตัวเดินเลข) ⇒ ช่องเลขที่ว่างไว้ให้กรอกใหม่ · server ไม่ได้แก้ (ใช้ /insert เดิม)
+        // ────────────────────────────────────────────────────────
+
+        function todayYmd() {
+            const d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+
+        // ป้าย "คัดลอกจาก …" บนหัว modal — ลบทิ้งเองเมื่อปิด modal
+        function setCopyBadge(modalSel, label) {
+            const $title = $(modalSel + ' .modal-title');
+            $title.find('.copy-from').remove();
+            $title.append($('<span class="badge bg-label-secondary ms-2 copy-from">')
+                .text('คัดลอกจาก ' + (label || '-')));
+        }
+        $('#colorMatchingModal, #sampleDeliveryModal').on('hidden.bs.modal', function () {
+            $(this).find('.modal-title .copy-from').remove();
+        });
+
+        // ── คัดลอกใบนำส่งเทียบสี (CM) ──
+        function copyColorMatching(id) {
+            $.ajax({
+                type: "GET",
+                url: "{{$page_url}}/" + encodeURIComponent(id),
+                success: function(row) {
+                    resetColorMatchingForm();          // โหมด create + ซ่อนปุ่มลบ
+                    fillForm('#form_color_matching', row);
+                    // ล้างเลขที่ใบ + ความคืบหน้าของใบเดิม · วันที่ส่งเทียบสี = วันนี้
+                    fillForm('#form_color_matching', {
+                        SendNo: '', DsendT: todayYmd(),
+                        startdate: null, SampleDate: null, ReadyDate: null, TNDate: null, RminWating: '',
+                    });
+                    $('#form_color_matching [name="_mode"]').val('create');
+                    $('#form_color_matching [name="_pk"]').val('');
+                    setCopyBadge('#colorMatchingModal', row.SendNo);
+                    cmEditing = true;                  // กัน show.bs.modal reset ค่าที่เพิ่งเติม
+                    $('#colorMatchingModal').one('shown.bs.modal', function () {
+                        $('#form_color_matching [name="SendNo"]').trigger('focus');
+                    }).modal('show');
+                },
+                error: function() { Swal.fire('ไม่พบข้อมูล', '', 'error'); }
+            });
+        }
+
+        // ── คัดลอกใบส่ง ต.ย. (SD) — คงเลขที่ใบนำส่งเทียบสี (อ้างอิง) ไว้ ──
+        function copySampleDelivery(id) {
+            $.ajax({
+                type: "GET",
+                url: "{{$page_url}}/" + encodeURIComponent(id),
+                success: function(row) {
+                    resetSampleDeliveryForm();
+                    fillForm('#form_sample_delivery', row);
+                    $('#form_sample_delivery [name="SendNo"]').val(row.SendNo ?? '');
+                    // ล้างเลขที่ใบ + ค่าที่ผูกกับใบเดิม (ใบรายงานผล · Lot · เบอร์/Lot ที่ลูกค้าอนุมัติ · ยกเลิก) · วันที่เบิก = วันนี้
+                    fillForm('#form_sample_delivery', {
+                        Testno: '', TestDate: todayYmd(), rptno: '', lotno: '',
+                        CodeNo: '', ApprovedLot: '', cancel: 0, CancalRes: '',
+                    });
+                    $('#form_sample_delivery [name="_mode"]').val('create');
+                    $('#form_sample_delivery [name="_pk"]').val('');
+                    setCopyBadge('#sampleDeliveryModal', row.Testno);
+                    sdEditing = true;
+                    $('#sampleDeliveryModal').one('shown.bs.modal', function () {
+                        $('#form_sample_delivery [name="Testno"]').trigger('focus');
+                    }).modal('show');
+                },
+                error: function() { Swal.fire('ไม่พบข้อมูล', '', 'error'); }
+            });
+        }
+
+        // ────────────────────────────────────────────────────────
         //  ผลการทดสอบตัวอย่างสี (ของใบส่ง ต.ย. แต่ละใบ) — 10/08/2569
         //  บันทึกลง testmain: TyResp (ตัวเลือก) / Resp (ระบุ) / Respdate (วันที่ทราบผล)
         // ────────────────────────────────────────────────────────
