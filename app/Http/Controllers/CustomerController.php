@@ -291,17 +291,10 @@ class CustomerController extends Controller
 
         // ─── เครดิต (26/10/2569) ───
         // แก้ไข = แก้เครดิตไม่ได้ คงค่าเดิมเสมอ (ช่องบนจอถูก disabled จึงไม่ส่งค่ามา)
-        // เพิ่มใหม่ = ต้องเป็นตัวเลือกใน tb_credit_term
+        // เพิ่มใหม่ = เลือกจาก tb_credit_term หรือพิมพ์เอง ("อื่น ๆ", 27/10/2569) — ยาวไม่เกิน 100 ตาม validator
         $term = $mode === 'update'
             ? $existing->term
             : $this->nn($request->input('term'));
-        if ($mode === 'insert' && $term !== null
-            && !CreditTerm::where('is_active', 'Y')->where('name_th', $term)->exists()) {
-            return response()->json([
-                'status'  => 422,
-                'message' => 'กรุณาเลือกเครดิตจากรายการ',
-            ], 422);
-        }
 
         // ─── หัวข้อมูลลูกค้า ───────────────────────────────────────
         // เขียนเฉพาะคอลัมน์ที่ฟอร์มดูแล — คอลัมน์อื่น (black/blackdate/blackrem/zone/DV/flprt)
