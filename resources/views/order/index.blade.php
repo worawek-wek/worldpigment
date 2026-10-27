@@ -977,7 +977,7 @@
                         <button type="button" class="btn btn-outline-primary w-100 wip" onclick="salesForecastPrint('latest')">เลื่อนล่าสุด</button>
                     </div>
                     <div class="col-12">
-                        <button type="button" class="btn btn-outline-secondary w-100 wip" onclick="salesForecastPrint('delivered')">ยอดขาย ที่จัดส่งลูกค้า เฉพาะราคาผ่านช่อง 2</button>
+                        <button type="button" class="btn btn-outline-secondary w-100" onclick="salesForecastPrint('delivered')">ยอดขาย ที่จัดส่งลูกค้า เฉพาะราคาผ่านช่อง 2</button>
                     </div>
                 </div>
             </div>
@@ -3590,7 +3590,12 @@
         $('#salesForecastModal').modal('show');
     }
     function salesForecastPrint(kind){
-        if (kind !== 'order') {
+        // ปุ่มที่ทำแล้ว → endpoint PDF (delivered = ยอดขายที่ส่งลูกค้า เฉพาะราคาผ่านช่อง 2, 27/10/2569)
+        var urls = {
+            order:     '{{ url('order/sales-forecast/order-pdf') }}',
+            delivered: '{{ url('order/sales-forecast/delivered-pdf') }}',
+        };
+        if (!urls[kind]) {
             Swal.fire({ icon: 'info', title: 'ยังไม่เปิดใช้งาน', text: 'รายงานนี้ยังไม่ได้ทำ', target: '#salesForecastModal', heightAuto: false });
             return;
         }
@@ -3604,7 +3609,7 @@
             return;
         }
         var q = { sale: $('#sf_sale').val() || '', from: $('#sf_from').val(), to: $('#sf_to').val() };
-        window.open('{{ url('order/sales-forecast/order-pdf') }}?' + $.param(q), '_blank');
+        window.open(urls[kind] + '?' + $.param(q), '_blank');
     }
 
     // ────────────────────────────────────────────────────────

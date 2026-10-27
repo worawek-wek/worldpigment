@@ -11,8 +11,8 @@ use Mpdf\Mpdf;
  * ประมาณการยอดขาย ตามรหัสพนักงานขาย (15/10/2569) — แปลงจากฟอร์ม Access "SaleOrder"
  * ปุ่มบนหัวหน้า /order → หน้าต่างเลือกเงื่อนไข (#salesForecastModal) → PDF
  *
- * ตอนนี้ทำแค่ปุ่ม "ยอดรับ Order" (มีกระดาษตัวอย่างให้เทียบ) — อีก 3 ปุ่มของฟอร์มเดิม
- * (กำหนดส่ง (แรก) / เลื่อนล่าสุด / ยอดขายที่จัดส่งลูกค้า เฉพาะราคาผ่านช่อง 2) ยังไม่รู้เงื่อนไข
+ * ทำแล้ว: "ยอดรับ Order" · "ยอดขายที่จัดส่งลูกค้า เฉพาะราคาผ่านช่อง 2" (27/10/2569)
+ * ยังไม่ทำ: กำหนดส่ง (แรก) / เลื่อนล่าสุด — ยังไม่รู้เงื่อนไข
  */
 class SalesForecastController extends Controller
 {
@@ -110,6 +110,108 @@ class SalesForecastController extends Controller
         return response($mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200, [
             'Content-Type'        => 'application/pdf',
             'Content-Disposition' => 'inline; filename="sales-order-' . $from->format('Ymd') . '-' . $to->format('Ymd') . '.pdf"',
+        ]);
+    }
+
+    /**
+     * รายงานยอดขายที่ส่งลูกค้า เฉพาะเบอร์ที่ราคาผ่านช่อง 2 (27/10/2569 — ผังตามกระดาษของระบบเดิม)
+     *
+     * 1 แถว = 1 รายการ suborder ที่ส่งแล้ว (suborder.DVDate อยู่ในช่วงวันที่) · กรองพนักงานขายด้วย morder.supno
+     *   นน.       = suborder.Stock + Production
+     *   ราคาขาย   = morder.price · รวมเงิน = นน. × ราคาขาย
+     *   ราคาช่อง 2 = ราคาขาย 2 ของ ProductPriceService (คิดจากราคาทุนปัจจุบัน) ปัดเป็นจำนวนเต็ม — เหมือนช่อง "ราคาช่อง 2" ในฟอร์มใบสั่งซื้อ
+     *   กำไร      = ราคาขาย − ราคาช่อง 2
+     * "ผ่านช่อง 2" = ราคาขาย ≥ ราคาช่อง 2 · คำนวณราคาช่อง 2 ไม่ได้ = ไม่แสดงในรายงาน
+     * จัดกลุ่มตามเซลส์ (ยอดรวม นน./รวมเงิน ท้ายกลุ่ม) + ยอดรวมทุกเซลส์ท้ายรายงาน · เรียง เซลส์ → ลูกค้า → รหัสสินค้า
+     */
+    public function deliveredPdf(Request $request)
+    {
+        $from = self::parseDateTime((string) $request->query('from', ''), now()->startOfMonth());
+        $to   = self::parseDateTime((string) $request->query('to', ''), now()->endOfMonth()->startOfMinute());
+        $sale = trim((string) $request->query('sale', ''));   // ว่าง = รวม (ทุกพนักงานขาย)
+
+        $rows = DB::table('suborder as s')
+            ->join('morder as m', 'm.Orderno', '=', 's.Orderno')
+            ->leftJoin('customer as c', 'c.code', '=', 'm.Custno')
+            ->whereBetween('s.DVDate', [$from, $to->copy()->second(59)])
+            ->when($sale !== '', fn ($q) => $q->where('m.supno', $sale))
+            ->orderBy('m.supno')
+            ->orderBy('m.Custno')
+            ->orderBy('s.Itemno')
+            ->orderBy('s.Orderno')
+            ->orderBy('s.Runno')
+            ->get([
+                'm.supno', 'm.Company', 'm.Custno', 'm.Custname', 'm.price',
+                's.Orderno', 's.Itemno', 's.Stock', 's.Production', 's.DVDate',
+                'c.name as cust_name', 'c.nickname',
+            ]);
+
+        $svc    = app(\App\Services\ProductPriceService::class);
+        $price2 = [];   // cache ราคาช่อง 2 ต่อรหัสสินค้า
+        $groups = [];
+        $grand  = ['weight' => 0.0, 'amount' => 0.0];
+
+        foreach ($rows as $r) {
+            $item = trim((string) $r->Itemno);
+            if (!array_key_exists($item, $price2)) {
+                $p2 = $svc->lookup($item)['prices']['price_2'] ?? null;
+                $price2[$item] = $p2 === null ? null : round((float) $p2);
+            }
+            $p2    = $price2[$item];
+            $price = (float) $r->price;
+            if ($p2 === null || $price < $p2) {
+                continue;   // คำนวณราคาช่อง 2 ไม่ได้ / ราคาไม่ผ่านช่อง 2
+            }
+
+            $r->weight = (float) $r->Stock + (float) $r->Production;
+            $r->amount = $r->weight * $price;
+            $r->price2 = $p2;
+            $r->profit = $price - $p2;
+            // ชื่อย่อ (customer.nickname) ตามกระดาษเดิม — ไม่มีค่อยใช้ชื่อเต็ม
+            $r->name   = trim((string) ($r->nickname ?: ($r->cust_name ?: $r->Custname)));
+
+            $sup = trim((string) $r->supno);
+            if (!isset($groups[$sup])) {
+                $groups[$sup] = ['sale' => $sup, 'rows' => [], 'weight' => 0.0, 'amount' => 0.0];
+            }
+            $groups[$sup]['rows'][]  = $r;
+            $groups[$sup]['weight'] += $r->weight;
+            $groups[$sup]['amount'] += $r->amount;
+            $grand['weight'] += $r->weight;
+            $grand['amount'] += $r->amount;
+        }
+
+        $html = view('order.sales-delivered-pdf', [
+            'groups' => array_values($groups),
+            'grand'  => $grand,
+            'from'   => $from,
+            'to'     => $to,
+        ])->render();
+
+        $mpdf = new Mpdf([
+            'mode'          => 'utf-8',
+            'format'        => 'A4-L',
+            'margin_left'   => 12,
+            'margin_right'  => 12,
+            'margin_top'    => 12,
+            'margin_bottom' => 14,
+        ]);
+        $mpdf->autoScriptToLang = true;
+        $mpdf->autoLangToFont   = true;
+        $mpdf->SetFont('sarabun');
+        $mpdf->SetHTMLFooter(
+            '<table width="100%" style="font-family: sarabun; font-size: 10px;"><tr>'
+            . '<td>' . now()->format('d/m/y') . '</td>'
+            . '<td style="text-align: right;">หน้า {PAGENO} จาก {nbpg}</td>'
+            . '</tr></table>'
+        );
+        // ช่วงวันที่ยาว (หลายเดือน) HTML เกิน default 1,000,000 → mPDF throw (แบบเดียวกับ PriceApprovalController::customerHistoryPdf)
+        ini_set('pcre.backtrack_limit', '10000000');
+        $mpdf->WriteHTML($html);
+
+        return response($mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="sales-delivered-' . $from->format('Ymd') . '-' . $to->format('Ymd') . '.pdf"',
         ]);
     }
 

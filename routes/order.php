@@ -41,6 +41,8 @@ Route::prefix('order')->group(function () {
 
     // ─── ประมาณการยอดขาย ตามรหัสพนักงานขาย (ฟอร์ม Access "SaleOrder", 15/10/2569) ───
     Route::get('/sales-forecast/order-pdf', [SalesForecastController::class, 'orderPdf'])->name('order.salesforecast.order_pdf');
+    // ยอดขายที่ส่งลูกค้า เฉพาะเบอร์ที่ราคาผ่านช่อง 2 (27/10/2569)
+    Route::get('/sales-forecast/delivered-pdf', [SalesForecastController::class, 'deliveredPdf'])->name('order.salesforecast.delivered_pdf');
 
     // ─── ฟอร์มขออนุมัติราคาพิเศษ (MD) — ฟอร์มลูกของเมนูนี้ ─────────────
     Route::prefix('price-approval')->group(function () {
