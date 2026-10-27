@@ -59,7 +59,7 @@ class OrderOutstandingController extends Controller
             ->orderBy('s.Itemno')
             ->orderBy('s.Runno')
             ->get([
-                'm.supno', 'm.Orderno', 'm.Mdate', 'm.Custno', 'm.Custname', 'm.PO', 'm.Send',
+                'm.supno', 'm.Orderno', 'm.Mdate', 'm.Custno', 'm.Custname', 'm.PO', 'm.Send', 'm.price',
                 's.Runno', 's.parent_runno', 's.Itemno', 's.Lotno', 's.Stock', 's.Production',
                 's.custwant', 's.senddate', 's.EndP',
                 'c.name as cust_name',
@@ -77,13 +77,21 @@ class OrderOutstandingController extends Controller
             $r->overdue = $r->senddate && Carbon::parse($r->senddate)->startOfDay()->lte($today);
         }
 
+        // Baht = (Stock + Production) × @ — สูตรเดียวกับคอลัมน์ Baht ใน blade
+        $stock = fn ($c) => $c->sum(fn ($r) => (float) $r->Stock);
+        $prod  = fn ($c) => $c->sum(fn ($r) => (float) $r->Production);
+        $bath  = fn ($c) => $c->sum(fn ($r) => ((float) $r->Stock + (float) $r->Production) * (float) $r->price);
+
         // ลำดับมาจาก SQL แล้ว — groupBy คงลำดับเดิมไว้
         // 1 section = 1 ผู้ขาย (หัวรายงาน + กรอบ # รหัส + ตารางของตัวเอง ต่อกันลงไป) → กลุ่มลูกค้า
-        // ลำดับมาจาก SQL แล้ว — groupBy คงลำดับเดิมไว้
+        // stock/prod/bath ของ section = แถว "Sale Total" ท้ายผู้ขาย (27/10/2569)
         $sections = $rows
             ->groupBy(fn ($r) => trim((string) $r->supno))
             ->map(fn ($saleRows, $supno) => [
                 'sale'   => (string) $supno,
+                'stock'  => $stock($saleRows),
+                'prod'   => $prod($saleRows),
+                'bath'   => $bath($saleRows),
                 'groups' => $saleRows
                     ->groupBy(fn ($r) => trim((string) $r->Custno))
                     ->map(fn ($items, $custno) => [
@@ -99,11 +107,15 @@ class OrderOutstandingController extends Controller
 
         // ไม่มีข้อมูล → คง 1 section ว่างไว้พิมพ์หัวรายงาน + "ไม่พบ"
         if ($sections->isEmpty()) {
-            $sections = collect([['sale' => $type === 'sale' ? $sale : '', 'groups' => collect()]]);
+            $sections = collect([['sale' => $type === 'sale' ? $sale : '', 'groups' => collect(), 'stock' => 0, 'prod' => 0, 'bath' => 0]]);
         }
+
+        // ยอดรวมทุก Sale — แถวสุดท้ายของรายงาน (27/10/2569)
+        $grand = ['count' => $rows->count(), 'stock' => $stock($rows), 'prod' => $prod($rows), 'bath' => $bath($rows)];
 
         $html = view('order.outstanding-pdf', [
             'sections' => $sections,
+            'grand'    => $grand,
             'subtitle' => self::TYPES[$type],
             'type'     => $type,
             'shiftCols' => self::SHIFT_COLS,
