@@ -131,6 +131,11 @@
         .page-bottom { padding-top: 20px; }
         .footer-info { margin-top: 0; }
         .footer-info .row { margin: 2px 0; }
+        /* หมายเหตุอื่น — ป้ายซ้าย + รายการเรียงลงมาในคอลัมน์ขวา */
+        .footer-info table.other-notes { border-collapse: collapse; font: inherit; }
+        .footer-info table.other-notes td { padding: 0; vertical-align: top; font: inherit; }
+        .footer-info table.other-notes td.on-label { white-space: nowrap; padding-right: 4px; }
+        .footer-info table.other-notes td div { margin-bottom: 2px; }
         .sign { margin-top: 44px; display: flex; justify-content: flex-end; }
         /* กล่องเซ็นชื่อกว้างขึ้นให้รับกับรูปลายเซ็นขนาดใหญ่ (เส้นเซ็นชื่อยาวขึ้นตาม) */
         .sign .box { text-align: center; width: 420px; }
@@ -290,9 +295,19 @@
         @if ($header->Term)
             <div class="row">{{ $L['pay'] }} : {{ $header->Term }}</div>
         @endif
-        @foreach ($otherNotes as $note)
-            <div class="row">{{ $note }}</div>
-        @endforeach
+        {{-- หมายเหตุอื่น: ป้าย "หมายเหตุ :" ครั้งเดียว แล้วต่อด้วยรายการที่พิมพ์ — รายการถัดไปเรียงลงมาตรงแนวเดียวกัน (27/10/2569 ตามที่ผู้ใช้สั่ง) --}}
+        @if (count($otherNotes))
+            <table class="row other-notes">
+                <tr>
+                    <td class="on-label">{{ $isEn ? 'Remark' : 'หมายเหตุ' }} :</td>
+                    <td>
+                        @foreach ($otherNotes as $note)
+                            <div>{{ $note }}</div>
+                        @endforeach
+                    </td>
+                </tr>
+            </table>
+        @endif
     </div>
 
     <div class="sign">
