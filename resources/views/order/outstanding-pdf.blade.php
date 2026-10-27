@@ -66,15 +66,21 @@
         </tr>
     </table>
 
+    {{-- แบบแรก (ตามรหัสผู้ขาย) ไม่แสดงคอลัมน์ Baht / @ (27/10/2569 ตามที่ผู้ใช้สั่ง) — ความกว้างที่เหลือแบ่งให้ช่องข้อความ (รวม 100% ทั้ง 2 แบบ) --}}
+    @php
+        $showPrice = $type !== 'sale';
+        $pc = $showPrice ? 2 : 0;                       // จำนวนคอลัมน์ราคา (ใช้ใน colspan)
+        $w  = fn ($withPrice, $noPrice) => $showPrice ? $withPrice : $noPrice;
+    @endphp
     <table class="list">
         <thead>
             <tr>
                 <th style="width: 5.5%;">Orderno</th>
                 <th style="width: 5%;"></th>
-                <th style="width: 10%;">รหัสสินค้า</th>
-                <th style="width: 6%;">Lotno</th>
-                <th class="num" style="width: 6%;">Stock</th>
-                <th class="num" style="width: 6.5%;">Production</th>
+                <th style="width: {{ $w(10, 12.5) }}%;">รหัสสินค้า</th>
+                <th style="width: {{ $w(6, 8) }}%;">Lotno</th>
+                <th class="num" style="width: {{ $w(6, 7) }}%;">Stock</th>
+                <th class="num" style="width: {{ $w(6.5, 7.5) }}%;">Production</th>
                 <th style="width: 5%;">กำหนด ที่<br>ลูกค้า<br>ต้องการ</th>
                 <th style="width: 5%;">กำหนดแรก</th>
                 @for ($i = 1; $i <= $shiftCols; $i++)
@@ -82,19 +88,21 @@
                 @endfor
                 <th style="width: 5%;">เข้าคลัง</th>
                 <th style="width: 2.5%; text-align: center;">ส่ง<br>ก่อน<br>ได้</th>
-                <th style="width: 11%;">PO. NO.</th>
-                <th style="width: 6.5%;"></th>
+                <th style="width: {{ $w(11, 15) }}%;">PO. NO.</th>
+                <th style="width: {{ $w(6.5, 8.5) }}%;"></th>
+                @if ($showPrice)
                 {{-- ต้อง text-align inline — กฎ table.list th (ชิดซ้าย) ชนะ class .num --}}
                 <th style="width: 7.5%; text-align: right;">Baht</th>
                 {{-- ราคาขายต่อหน่วย = morder.price (26/10/2569 ตามที่ผู้ใช้สั่ง) --}}
                 <th style="width: 5%; text-align: center;">@</th>
+                @endif
             </tr>
         </thead>
         <tbody>
             @forelse ($groups as $g)
                 <tr class="cust">
                     <td></td>
-                    <td colspan="{{ 13 + $shiftCols }}">
+                    <td colspan="{{ 11 + $pc + $shiftCols }}">
                         <span>{{ $g['custno'] }}</span> &nbsp;&nbsp; <span>{{ $g['name'] }}</span>
                     </td>
                 </tr>
@@ -115,8 +123,10 @@
                         <td style="text-align: center;">@if ($tick($r->Send))<span class="arrow">&#9654;</span>@endif</td>
                         <td>{{ $r->PO }}</td>
                         <td>{{ $r->overdue ? 'เลย Due ส่งแล้ว' : '' }}</td>
-                        <td class="num">{{ $n($bath($r)) }}</td>
-                        <td class="num">{{ $n($r->price) }}</td>
+                        @if ($showPrice)
+                            <td class="num">{{ $n($bath($r)) }}</td>
+                            <td class="num">{{ $n($r->price) }}</td>
+                        @endif
                     </tr>
                 @endforeach
                 @php $bathTotal = collect($g['items'])->sum($bath); @endphp
@@ -125,11 +135,13 @@
                     <td><table class="box"><tr><td>{!! $n($g['stock']) ?: '&nbsp;' !!}</td></tr></table></td>
                     <td><table class="box"><tr><td>{!! $n($g['prod']) ?: '&nbsp;' !!}</td></tr></table></td>
                     <td colspan="{{ 6 + $shiftCols }}"></td>
-                    <td><table class="box"><tr><td>{!! $n($bathTotal) ?: '&nbsp;' !!}</td></tr></table></td>
-                    <td></td>
+                    @if ($showPrice)
+                        <td><table class="box"><tr><td>{!! $n($bathTotal) ?: '&nbsp;' !!}</td></tr></table></td>
+                        <td></td>
+                    @endif
                 </tr>
             @empty
-                <tr><td class="wrap" colspan="{{ 14 + $shiftCols }}" style="text-align: center; padding: 20px;">ไม่พบ Order ค้างส่ง{{ $sale !== '' ? 'ของรหัสผู้ขาย ' . $sale : '' }}</td></tr>
+                <tr><td class="wrap" colspan="{{ 12 + $pc + $shiftCols }}" style="text-align: center; padding: 20px;">ไม่พบ Order ค้างส่ง{{ $sale !== '' ? 'ของรหัสผู้ขาย ' . $sale : '' }}</td></tr>
             @endforelse
             {{-- Sale Total = ยอดรวมของผู้ขายคนนี้ · แถวสุดท้ายของรายงาน = ยอดรวมทุก Sale (27/10/2569 ตามที่ผู้ใช้สั่ง) --}}
             @php
@@ -148,8 +160,10 @@
                     <td class="sep"><table class="box"><tr><td>{!! $n($tStock) ?: '&nbsp;' !!}</td></tr></table></td>
                     <td class="sep"><table class="box"><tr><td>{!! $n($tProd) ?: '&nbsp;' !!}</td></tr></table></td>
                     <td class="sep" colspan="{{ 6 + $shiftCols }}"></td>
-                    <td class="sep"><table class="box"><tr><td>{!! $n($tBath) ?: '&nbsp;' !!}</td></tr></table></td>
-                    <td class="sep"></td>
+                    @if ($showPrice)
+                        <td class="sep"><table class="box"><tr><td>{!! $n($tBath) ?: '&nbsp;' !!}</td></tr></table></td>
+                        <td class="sep"></td>
+                    @endif
                 </tr>
             @endforeach
         </tbody>
