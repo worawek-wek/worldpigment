@@ -26,11 +26,7 @@
                 'เลขที่ใบนำส่งเทียบสี (อ้างอิง)' => $v($row->SendNo),
                 'เลขที่ใบส่ง ต.ย.'               => $v($row->Testno),
             ]],
-            ['ข้อมูลลูกค้า', 'ti-user-circle', [
-                'รหัสลูกค้า'       => [$v($row->custno), 'col-12'],
-                'ชื่อบริษัท (TH)'  => $v($row->custname),
-                'ชื่อบริษัท (EN)'  => $v($row->custnameEN),
-            ]],
+            // กลุ่ม "ข้อมูลลูกค้า" เอาออกจาก View ใบส่ง ต.ย. (28/10/2569 ตามที่ผู้ใช้สั่ง)
             ['รายละเอียดผลิตภัณฑ์', 'ti-flask', [
                 'รหัสสินค้า'      => $v($row->CodeNo),
                 'Lot No.'        => $v($row->lotno),
@@ -178,8 +174,7 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th class="text-center" style="width:50px;">#</th>
-                                        <th>เลขที่ใบส่ง ต.ย.</th>
-                                        {{-- วันที่เบิก / รหัสสินค้า เอาออก → แสดง Resin / PHR แทน (28/10/2569 ตามที่ผู้ใช้สั่ง) --}}
+                                        {{-- เลขที่ใบส่ง ต.ย. / วันที่เบิก / รหัสสินค้า เอาออก → แสดง รายละเอียด / Resin / PHR แทน (28/10/2569 ตามที่ผู้ใช้สั่ง) --}}
                                         <th>Lot No.</th>
                                         <th>รายละเอียด</th>
                                         <th>Resin (Match)</th>
@@ -195,7 +190,6 @@
                                     @foreach ($relatedSd as $i => $sd)
                                         <tr>
                                             <td class="text-center text-muted">{{ $i + 1 }}</td>
-                                            <td><strong class="text-primary">{{ $v($sd->Testno) }}</strong></td>
                                             <td>{{ $v($sd->lotno) }}</td>
                                             {{-- $v() escape ให้แล้ว จึงใช้ {!! !!} กัน & กลายเป็น &amp; --}}
                                             <td>{!! $v($sd->TestDesc) !!}</td>
