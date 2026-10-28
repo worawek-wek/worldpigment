@@ -35,9 +35,12 @@
                 'รหัสสินค้า'      => $v($row->CodeNo),
                 'Lot No.'        => $v($row->lotno),
                 'น้ำหนัก (กรัม)'  => $v($row->Wage),
+                // Resin / PHR (28/10/2569 ตามที่ผู้ใช้สั่ง)
+                'Resin (Match)'  => $v($row->ResinMatch),
+                'PHR'            => $v($row->PHR),
             ]],
             ['ข้อมูลการขาย / การยกเลิก', 'ti-alert-circle', [
-                'Saleman Code'    => $v($row->sale),
+                // Saleman Code เอาออก (28/10/2569 ตามที่ผู้ใช้สั่ง)
                 'สถานะ'           => $row->cancel == 1
                     ? '<span class="badge bg-label-danger">ยกเลิก</span>'
                     : '<span class="badge bg-label-success">ปกติ</span>',
@@ -222,13 +225,15 @@
     </div>
 
     <!-- Footer -->
-    <div class="modal-footer justify-content-between flex-wrap gap-2">
-        {{-- ลบเอกสารนี้ — ป้ายกำกับยืนยัน = เลขที่ SD (Testno) หรือ CM (SendNo) --}}
-        <button type="button" class="btn btn-label-danger"
-            onclick='deleteFromDetail({{ $row->id }}, @json($isSD ? ($row->Testno ?: "") : ($row->SendNo ?: "")))'>
-            <i class="ti ti-trash me-1"></i>
-            {{ $isSD ? 'ลบใบส่ง ต.ย.' : 'ลบใบนำส่งเทียบสี' }}
-        </button>
+    <div class="modal-footer {{ $isSD ? 'justify-content-end' : 'justify-content-between' }} flex-wrap gap-2">
+        {{-- ลบเอกสารนี้ — เฉพาะใบนำส่งเทียบสี (CM) · ใบส่ง ต.ย. เอาปุ่มลบออก (28/10/2569 ตามที่ผู้ใช้สั่ง — ยังลบได้จากฟอร์มแก้ไข) --}}
+        @unless ($isSD)
+            <button type="button" class="btn btn-label-danger"
+                onclick='deleteFromDetail({{ $row->id }}, @json($row->SendNo ?: ""))'>
+                <i class="ti ti-trash me-1"></i>
+                ลบใบนำส่งเทียบสี
+            </button>
+        @endunless
         <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ปิด</button>
     </div>
 
