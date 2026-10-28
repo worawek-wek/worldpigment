@@ -179,11 +179,16 @@
                                     <tr>
                                         <th class="text-center" style="width:50px;">#</th>
                                         <th>เลขที่ใบส่ง ต.ย.</th>
-                                        <th>วันที่เบิก</th>
-                                        <th>รหัสสินค้า</th>
+                                        {{-- วันที่เบิก / รหัสสินค้า เอาออก → แสดง Resin / PHR แทน (28/10/2569 ตามที่ผู้ใช้สั่ง) --}}
                                         <th>Lot No.</th>
+                                        <th>รายละเอียด</th>
+                                        <th>Resin (Match)</th>
+                                        <th class="text-end">PHR</th>
                                         <th>สถานะ</th>
+                                        {{-- คอลัมน์ "ดู" ปิดไว้ (28/10/2569 ตามที่ผู้ใช้สั่ง) — เปิดคืน: เอา @if(false) ออกทั้งหัวและแถว --}}
+                                        @if (false)
                                         <th class="text-center" style="width:70px;">ดู</th>
+                                        @endif
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -191,9 +196,11 @@
                                         <tr>
                                             <td class="text-center text-muted">{{ $i + 1 }}</td>
                                             <td><strong class="text-primary">{{ $v($sd->Testno) }}</strong></td>
-                                            <td>{{ $d($sd->TestDate) }}</td>
-                                            <td>{{ $v($sd->CodeNo) }}</td>
                                             <td>{{ $v($sd->lotno) }}</td>
+                                            {{-- $v() escape ให้แล้ว จึงใช้ {!! !!} กัน & กลายเป็น &amp; --}}
+                                            <td>{!! $v($sd->TestDesc) !!}</td>
+                                            <td>{!! $v($sd->ResinMatch) !!}</td>
+                                            <td class="text-end">{{ $v($sd->PHR) }}</td>
                                             <td>
                                                 @if ($sd->cancel == 1)
                                                     <span class="badge bg-label-danger">ยกเลิก</span>
@@ -201,12 +208,14 @@
                                                     <span class="badge bg-label-success">ปกติ</span>
                                                 @endif
                                             </td>
+                                            @if (false)
                                             <td class="text-center">
                                                 <button type="button" class="btn btn-sm btn-icon btn-label-secondary"
                                                     title="ดูรายละเอียดใบส่ง ต.ย." onclick="viewDetail2('{{ $sd->id }}')">
                                                     <i class="ti ti-eye"></i>
                                                 </button>
                                             </td>
+                                            @endif
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -225,15 +234,8 @@
     </div>
 
     <!-- Footer -->
-    <div class="modal-footer {{ $isSD ? 'justify-content-end' : 'justify-content-between' }} flex-wrap gap-2">
-        {{-- ลบเอกสารนี้ — เฉพาะใบนำส่งเทียบสี (CM) · ใบส่ง ต.ย. เอาปุ่มลบออก (28/10/2569 ตามที่ผู้ใช้สั่ง — ยังลบได้จากฟอร์มแก้ไข) --}}
-        @unless ($isSD)
-            <button type="button" class="btn btn-label-danger"
-                onclick='deleteFromDetail({{ $row->id }}, @json($row->SendNo ?: ""))'>
-                <i class="ti ti-trash me-1"></i>
-                ลบใบนำส่งเทียบสี
-            </button>
-        @endunless
+    <div class="modal-footer justify-content-end flex-wrap gap-2">
+        {{-- ปุ่มลบเอาออกจากหน้า View ทั้ง CM และ SD (28/10/2569 ตามที่ผู้ใช้สั่ง) — ยังลบได้จากฟอร์มแก้ไข (modal-cm / modal-sd) --}}
         <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ปิด</button>
     </div>
 
