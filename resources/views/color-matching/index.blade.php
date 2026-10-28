@@ -159,7 +159,8 @@
 #table-data tbody tr.tr-sd { --bs-table-bg: #e6e1fb; }
 /* ช่องสถานะ + จัดการ — พื้นหลังขาว (ไม่อิงสีพื้นแถว) */
 #table-data tbody td.td-status,
-#table-data tbody td.td-action { background-color: #fff; }
+#table-data tbody td.td-action,
+#table-data tbody td.td-sdcount { background-color: #fff; }
 
 /* filter ประเภทเอกสาร — option ที่ไม่ติ๊กให้จางลง เห็นชัดว่าอันไหนกำลังแสดง */
 .doc-filter {

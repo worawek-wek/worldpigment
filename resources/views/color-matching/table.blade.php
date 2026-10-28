@@ -32,6 +32,7 @@
                 <th class="align-middle th-sort{{ $sortActive('lotno') }}" data-sort="lotno">Lot No. {!! $sortIcon('lotno') !!}</th>
                 <th class="align-middle text-center th-sort{{ $sortActive('status') }}" data-sort="status">สถานะ {!! $sortIcon('status') !!}</th>
                 <th class="align-middle text-center" width="160">จัดการ</th>
+                <th class="align-middle text-center" style="width: 80px;">ใบส่ง ต.ย.<br><small class="text-body-secondary fw-normal">(ใบ)</small></th>
             </tr>
         </thead>
 
@@ -173,10 +174,17 @@
                             {{-- ปุ่มลบย้ายไปอยู่ใน form แก้ไข (modal-cm / modal-sd) แล้ว --}}
                         </div>
                     </td>
+
+                    {{-- จำนวนใบส่ง ต.ย. ที่อ้างอิงใบนำส่งเทียบสีนี้ (28/10/2569) — คอลัมน์ท้ายสุด · แถวใบส่ง ต.ย. เว้นว่าง --}}
+                    <td class="text-center td-sdcount">
+                        @unless ($isSD)
+                            <span class="fs-5 fw-bold {{ $row->sd_count > 0 ? 'text-primary' : 'text-muted' }}">{{ number_format($row->sd_count) }}</span>
+                        @endunless
+                    </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="9" class="text-center py-5 text-muted">
+                    <td colspan="10"class="text-center py-5 text-muted">
                         <i class="ti ti-database-off fs-2 d-block mb-2 opacity-50"></i>
                         ไม่พบข้อมูลที่ตรงกับเงื่อนไข
                     </td>

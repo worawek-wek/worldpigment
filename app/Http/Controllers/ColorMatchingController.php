@@ -149,6 +149,20 @@ class ColorMatchingController extends Controller
 
         $results = $results->paginate($limit);
 
+        // จำนวนใบส่ง ต.ย. (SD) ของแต่ละใบนำส่งเทียบสี (CM) ในหน้านี้ (28/10/2569)
+        // เงื่อนไขเดียวกับ relatedSd ใน detail() — SendNo เดียวกัน + มี Testno
+        $cmSendNos = $results->getCollection()
+            ->filter(fn ($r) => trim((string) $r->Testno) === '' && trim((string) $r->SendNo) !== '')
+            ->pluck('SendNo')->unique()->values();
+        $sdCounts = $cmSendNos->isEmpty() ? collect() : Testmain::whereIn('SendNo', $cmSendNos)
+            ->whereNotNull('Testno')->where('Testno', '!=', '')
+            ->groupBy('SendNo')
+            ->selectRaw('SendNo, COUNT(*) AS cnt')
+            ->pluck('cnt', 'SendNo');
+        $results->getCollection()->each(function ($r) use ($sdCounts) {
+            $r->sd_count = (int) ($sdCounts[$r->SendNo] ?? 0);
+        });
+
         $data['list_data'] = $results->appends(request()->query());
         $data['query'] = request()->query();
         $data['query']['limit'] = $limit;
