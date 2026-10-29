@@ -37,7 +37,7 @@ class EmpController extends Controller
         $employees = Emp::query()
             ->leftJoin('roles', 'roles.id', '=', 'emp.role_id')
             ->select([
-                'emp.empno', 'emp.empname', 'emp.empsur', 'emp.supno',
+                'emp.empno', 'emp.empname', 'emp.empsur', 'emp.sname_e', 'emp.spost', 'emp.supno',
                 'emp.user', 'emp.dept', 'emp.role_id', 'emp.is_active',
                 'roles.name as role_name',
             ]);
@@ -48,6 +48,8 @@ class EmpController extends Controller
                 $query->where('emp.empno', 'LIKE', '%'.$search.'%')
                     ->orWhere('emp.empname', 'LIKE', '%'.$search.'%')
                     ->orWhere('emp.empsur', 'LIKE', '%'.$search.'%')
+                    ->orWhere('emp.sname_e', 'LIKE', '%'.$search.'%')
+                    ->orWhere('emp.spost', 'LIKE', '%'.$search.'%')
                     ->orWhere('emp.supno', 'LIKE', '%'.$search.'%')
                     ->orWhere('emp.user', 'LIKE', '%'.$search.'%');
             });
@@ -71,6 +73,12 @@ class EmpController extends Controller
         return DataTables::of($employees)
             ->addColumn('rownum', function () use (&$rownum) {
                 return ++$rownum;
+            })
+            ->editColumn('sname_e', function ($emp) {
+                return $emp->sname_e ?: '-';
+            })
+            ->editColumn('spost', function ($emp) {
+                return $emp->spost ?: '-';
             })
             ->addColumn('department_name', function ($emp) {
                 return $emp->dept ?: '-';
@@ -135,7 +143,9 @@ class EmpController extends Controller
             'empname'       => 'required|string|max:10',
             'empsur'        => 'nullable|string|max:20',
             'supno'         => 'nullable|string|max:2',
-            'password'      => 'nullable|string|min:4|max:255',
+            'sname_e'       => 'nullable|string|max:255',
+            'spost'         => 'nullable|string|max:255',
+            'password'     => 'nullable|string|min:4|max:255',
             'dept'          => 'nullable|string|exists:tb_departments,name',
             'role_id'       => 'nullable|integer|exists:roles,id',
             'is_active'     => 'nullable|in:Y,N',
@@ -174,7 +184,9 @@ class EmpController extends Controller
             'empname'       => $request->empname,
             'empsur'        => $request->empsur,
             'supno'         => $request->supno,
-            'user'          => $request->user ?: null,
+            'sname_e'       => $request->sname_e ?: null,
+            'spost'         => $request->spost ?: null,
+            'user'         => $request->user ?: null,
             'dept'          => $request->dept ?: null,
             'role_id'       => $request->role_id ?: null,
             // switch ในฟอร์ม: ติ๊ก = ส่ง is_active (Y), ไม่ติ๊ก = ไม่ส่ง (N)

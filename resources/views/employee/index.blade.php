@@ -66,8 +66,10 @@
                                     <tr>
                                         <th class="col-1">#</th>
                                         <th class="col-1">รหัสพนักงาน</th>
-                                        <th class="col-2">ชื่อ</th>
-                                        <th class="col-2">นามสกุล</th>
+                                        <th class="col-1">ชื่อ</th>
+                                        <th class="col-1">นามสกุล</th>
+                                        <th class="col-2">ชื่อ-นามสกุล (อังกฤษ)</th>
+                                        <th class="col-1">ตำแหน่ง</th>
                                         <th class="col-1">แผนก</th>
                                         <th class="col-1">Role</th>
                                         <th class="col-1">ผู้ใช้</th>
@@ -134,6 +136,9 @@
                 { 'className': "text-center", data: 'empno', name: 'emp.empno', orderable: true },
                 { 'className': "text-center", data: 'empname', name: 'emp.empname', orderable: true },
                 { 'className': "text-center", data: 'empsur', name: 'emp.empsur', orderable: true },
+                // ชื่อ-นามสกุลภาษาอังกฤษ / ตำแหน่ง (29/10/2569) — ว่างแสดง '-' ผ่าน editColumn
+                { 'className': "text-center", data: 'sname_e', name: 'emp.sname_e', orderable: true },
+                { 'className': "text-center", data: 'spost', name: 'emp.spost', orderable: true },
                 // sort แผนก/สถานะ/role ตามคอลัมน์จริง (แม้จะแสดงผ่าน addColumn)
                 { 'className': "text-center", data: 'department_name', name: 'emp.dept', orderable: true, searchable: false },
                 { 'className': "text-center", data: 'role_name', name: 'roles.name', orderable: true, searchable: false },

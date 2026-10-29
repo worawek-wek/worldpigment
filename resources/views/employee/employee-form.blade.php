@@ -48,6 +48,19 @@
             value="{{ $employee?->empsur }}" maxlength="20" placeholder="กรอกนามสกุล">
     </div>
 
+    {{-- ชื่อ-นามสกุลภาษาอังกฤษ + ตำแหน่ง (emp.sname_e / emp.spost, 29/10/2569) --}}
+    <div class="mb-2">
+        <label class="form-label" for="employee_sname_e">ชื่อ-นามสกุล (ภาษาอังกฤษ)</label>
+        <input type="text" class="form-control" id="employee_sname_e" name="sname_e"
+            value="{{ $employee?->sname_e }}" maxlength="255" placeholder="เช่น Somchai Jaidee">
+    </div>
+
+    <div class="mb-2">
+        <label class="form-label" for="employee_spost">ตำแหน่ง</label>
+        <input type="text" class="form-control" id="employee_spost" name="spost"
+            value="{{ $employee?->spost }}" maxlength="255" placeholder="กรอกตำแหน่ง">
+    </div>
+
     <div class="mb-2">
         <label class="form-label" for="employee_supno">รหัสสังกัด (Sup No.)</label>
         <input type="text" class="form-control" id="employee_supno" name="supno"
