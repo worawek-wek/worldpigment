@@ -18,6 +18,9 @@
         background-color: #cfe2ff !important;
         color: #084298 !important;
     }
+    /* ส่วนบนของฟอร์ม (ก่อนแผนก) เป็นผัง label ซ้าย (.of-form) — flatpickr static:true ห่อช่องวันที่ด้วย .flatpickr-wrapper (inline-block)
+       ต้องให้เต็มความกว้าง .of-ctl ไม่งั้นช่องวันที่หดสั้นกว่าช่องอื่น (29/10/2569) */
+    #planning_item_form .pi-top .flatpickr-wrapper { display: block; width: 100%; }
 </style>
 @php
     // plan_type: ใช้ของ planning item ก่อน ถ้าไม่มีดึงจาก parent header
@@ -81,132 +84,165 @@
         <input type="hidden" name="planning_id"        value="{{ $planning_item?->id ?? '' }}">
         <input type="hidden" name="planning_header_id" value="{{ $planning_header_id ?? '' }}">
 
-        {{-- ── ข้อมูลหลัก ── --}}
-        <div class="row">
-            <div class="col-md-4 mb-2">
+        {{-- ── ข้อมูลหลัก ──
+             ผังแบบ "label อยู่ซ้าย ต่อด้วยช่องกรอก" (โครงกลาง .of-form / .of-row / .of-ctl ใน layout/inc_header — 29/10/2569 ตามที่ผู้ใช้สั่ง)
+             ⚠ ช่องกรอกต้องอยู่ใน .of-ctl เสมอ · name ของทุกช่องคงเดิม JS ไม่ได้แก้ --}}
+        <div class="of-form pi-top" style="--of-lw: 140px;">
+        <div class="row gx-3 gy-2">
+            <div class="col-md-4 of-row">
                 <label class="form-label">รหัสสินค้า (Item No.) <span class="text-danger">*</span></label>
-                <input type="text" name="itemno"
-                       value="{{ $default_itemno }}"
-                       class="form-control" placeholder="กรอก Item No.">
+                <div class="of-ctl">
+                    <input type="text" name="itemno"
+                           value="{{ $default_itemno }}"
+                           class="form-control" placeholder="กรอก Item No.">
+                </div>
             </div>
-            <div class="col-md-4 mb-2">
+            <div class="col-md-4 of-row">
                 <label class="form-label">ล๊อค (Lot)</label>
-                <input type="text" name="lot"
-                       value="{{ $planning_item ? ($planning_item->lot ?? '') : ($od['lot'] ?? '') }}"
-                       class="form-control" placeholder="Lot">
+                <div class="of-ctl">
+                    <input type="text" name="lot"
+                           value="{{ $planning_item ? ($planning_item->lot ?? '') : ($od['lot'] ?? '') }}"
+                           class="form-control" placeholder="Lot">
+                </div>
             </div>
-            <div class="col-md-4 mb-2">
+            <div class="col-md-4 of-row">
                 <label class="form-label">Plan Type</label>
-                {{-- auto-fill จาก planning_header.plan_type --}}
-                <input type="text" name="plan_type"
-                       value="{{ $default_plan_type }}"
-                       class="form-control bg-light" readonly
-                       placeholder="ประเภทแผน (จาก Header)">
+                <div class="of-ctl">
+                    {{-- auto-fill จาก planning_header.plan_type --}}
+                    <input type="text" name="plan_type"
+                           value="{{ $default_plan_type }}"
+                           class="form-control bg-light" readonly
+                           placeholder="ประเภทแผน (จาก Header)">
+                </div>
             </div>
         </div>
-        <div class="row">
-            <div class="col-md-4 mb-2">
+        <div class="row gx-3 gy-2 mt-0">
+            <div class="col-md-4 of-row">
                 <label class="form-label">น้ำหนักสั่งตาม Order (Quantity)</label>
-                {{-- เพิ่มใหม่: ดึง netqty จาก header มาตั้งต้น / แก้ไข: ใช้ค่าเดิมของ item --}}
-                {{-- js-number-format: จัดรูปแบบหลักพันสดขณะพิมพ์ (เก็บค่าดิบ server ตัดจุลภาคเอง) --}}
-                <input type="text" name="quantity" inputmode="decimal"
-                       value="{{ $planning_item ? number_format((float) ($planning_item->quantity ?? 0), 2) : number_format((float) ($parent_header?->netqty ?? 0), 2) }}"
-                       class="form-control js-number-format" placeholder="0.00">
+                <div class="of-ctl">
+                    {{-- เพิ่มใหม่: ดึง netqty จาก header มาตั้งต้น / แก้ไข: ใช้ค่าเดิมของ item --}}
+                    {{-- js-number-format: จัดรูปแบบหลักพันสดขณะพิมพ์ (เก็บค่าดิบ server ตัดจุลภาคเอง) --}}
+                    <input type="text" name="quantity" inputmode="decimal"
+                           value="{{ $planning_item ? number_format((float) ($planning_item->quantity ?? 0), 2) : number_format((float) ($parent_header?->netqty ?? 0), 2) }}"
+                           class="form-control js-number-format" placeholder="0.00">
+                </div>
             </div>
-            <div class="col-md-4 mb-2">
+            <div class="col-md-4 of-row">
                 <label class="form-label">น้ำหนัก TP (Weight)</label>
-                <input type="text" name="weight" inputmode="decimal"
-                       value="{{ number_format((float) ($planning_item ? ($planning_item->weight ?? 0) : ($od['weight'] ?? 0)), 2) }}"
-                       class="form-control js-number-format" placeholder="0.00">
+                <div class="of-ctl">
+                    <input type="text" name="weight" inputmode="decimal"
+                           value="{{ number_format((float) ($planning_item ? ($planning_item->weight ?? 0) : ($od['weight'] ?? 0)), 2) }}"
+                           class="form-control js-number-format" placeholder="0.00">
+                </div>
             </div>
-            <div class="col-md-4 mb-2">
+            <div class="col-md-4 of-row">
                 <label class="form-label">น้ำหนักที่ผลิตได้ (Weight Produced)</label>
-                <input type="text" name="weight_produced" inputmode="decimal"
-                       value="{{ $planning_item && $planning_item->weight_produced !== null ? number_format((float) $planning_item->weight_produced, 2) : '' }}"
-                       class="form-control js-number-format" placeholder="0.00">
+                <div class="of-ctl">
+                    <input type="text" name="weight_produced" inputmode="decimal"
+                           value="{{ $planning_item && $planning_item->weight_produced !== null ? number_format((float) $planning_item->weight_produced, 2) : '' }}"
+                           class="form-control js-number-format" placeholder="0.00">
+                </div>
             </div>
         </div>
-        <div class="row">
-            <div class="col-md-4 mb-2">
+        <div class="row gx-3 gy-2 mt-0">
+            <div class="col-md-4 of-row">
                 <label class="form-label">เลขที่ใบเบิกออกใบแดง (Red Bill)</label>
-                {{-- เพิ่มใหม่: ดึง orderno จาก header มาตั้งต้น / แก้ไข: ใช้ค่าเดิมของ item --}}
-                <input type="text" name="red_bill_code"
-                       value="{{ $planning_item ? ($planning_item->red_bill_code ?? '') : ($parent_header?->orderno ?? '') }}"
-                       class="form-control" placeholder="เลขที่ใบเบิกออกใบแดง">
+                <div class="of-ctl">
+                    {{-- เพิ่มใหม่: ดึง orderno จาก header มาตั้งต้น / แก้ไข: ใช้ค่าเดิมของ item --}}
+                    <input type="text" name="red_bill_code"
+                           value="{{ $planning_item ? ($planning_item->red_bill_code ?? '') : ($parent_header?->orderno ?? '') }}"
+                           class="form-control" placeholder="เลขที่ใบเบิกออกใบแดง">
+                </div>
             </div>
             {{-- เพิ่มใหม่: รอบการผลิต (คอลัมน์ cycles ของ tb_planning) --}}
-            <div class="col-md-4 mb-2">
+            <div class="col-md-4 of-row">
                 <label class="form-label">รอบการผลิต (Cycles)</label>
-                <input type="text" name="cycles" maxlength="25"
-                       value="{{ $planning_item ? ($planning_item->cycles ?? '') : '' }}"
-                       class="form-control" placeholder="รอบการผลิต">
+                <div class="of-ctl">
+                    <input type="text" name="cycles" maxlength="25"
+                           value="{{ $planning_item ? ($planning_item->cycles ?? '') : '' }}"
+                           class="form-control" placeholder="รอบการผลิต">
+                </div>
             </div>
         </div>
-        <div class="row">
-            <div class="col-md-4 mb-2">
+        <div class="row gx-3 gy-2 mt-0">
+            <div class="col-md-4 of-row">
                 <label class="form-label">วันที่สั่ง (mdate)</label>
-                <input type="text" name="mdate"
-                    value="{{ $planning_item ? ($planning_item->mdate ? substr($planning_item->mdate, 0, 10) : '') : ($od['mdate'] ?? '') }}"
-                    class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
+                <div class="of-ctl">
+                    <input type="text" name="mdate"
+                        value="{{ $planning_item ? ($planning_item->mdate ? substr($planning_item->mdate, 0, 10) : '') : ($od['mdate'] ?? '') }}"
+                        class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
+                </div>
             </div>
-            <div class="col-md-4 mb-2">
+            <div class="col-md-4 of-row">
                 <label class="form-label">วันที่ต้องการรับ (custwant)</label>
-                {{-- data-original เก็บค่าเดิม (Y-m-d) ไว้เทียบว่ามีการแก้ไขไหม → ถ้าเปลี่ยนต้องยืนยันก่อนบันทึก --}}
-                <input type="text" name="custwant"
-                    value="{{ $default_custwant }}"
-                    data-original="{{ $default_custwant }}"
-                    class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
+                <div class="of-ctl">
+                    {{-- data-original เก็บค่าเดิม (Y-m-d) ไว้เทียบว่ามีการแก้ไขไหม → ถ้าเปลี่ยนต้องยืนยันก่อนบันทึก --}}
+                    <input type="text" name="custwant"
+                        value="{{ $default_custwant }}"
+                        data-original="{{ $default_custwant }}"
+                        class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
+                </div>
             </div>
-            <div class="col-md-4 mb-2">
-                <label class="form-label d-flex align-items-center justify-content-between">
-                    <span>วันที่กำหนดทบทวน (senddate)</span>
+            <div class="col-md-4 of-row">
+                <label class="form-label">วันที่กำหนดทบทวน (senddate)</label>
+                <div class="of-ctl">
+                    <input type="text" name="senddate"
+                        value="{{ $planning_item ? ($planning_item->senddate ? substr($planning_item->senddate, 0, 10) : '') : ($od['senddate'] ?? '') }}"
+                        class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
+                    {{-- ปุ่มประวัติ senddate ย้ายจากใน label มาไว้ใต้ช่อง (label อยู่ซ้ายแล้ว ไม่มีที่ให้ปุ่ม) --}}
                     @if($planning_item && count($senddate_logs))
-                        <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none" id="btn_senddate_log">
-                            <i class="ti ti-history me-1"></i>ประวัติ
-                            <span class="badge bg-label-secondary ms-1">{{ count($senddate_logs) }}</span>
-                        </button>
+                        <div class="form-text">
+                            <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none" id="btn_senddate_log">
+                                <i class="ti ti-history me-1"></i>ประวัติ
+                                <span class="badge bg-label-secondary ms-1">{{ count($senddate_logs) }}</span>
+                            </button>
+                        </div>
                     @endif
-                </label>
-                <input type="text" name="senddate"
-                    value="{{ $planning_item ? ($planning_item->senddate ? substr($planning_item->senddate, 0, 10) : '') : ($od['senddate'] ?? '') }}"
-                    class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
+                </div>
             </div>
         </div>
-        <div class="row">
-            <div class="col-md-6 mb-2">
+        <div class="row gx-3 gy-2 mt-0">
+            <div class="col-md-6 of-row">
                 <label class="form-label">หมายเหตุ MK (Remark)</label>
-                <input type="text" name="remark"
-                       value="{{ $planning_item ? ($planning_item->remark ?? '') : ($od['remark'] ?? '') }}"
-                       class="form-control" placeholder="หมายเหตุ">
+                <div class="of-ctl">
+                    <input type="text" name="remark"
+                           value="{{ $planning_item ? ($planning_item->remark ?? '') : ($od['remark'] ?? '') }}"
+                           class="form-control" placeholder="หมายเหตุ">
+                </div>
             </div>
-            <div class="col-md-6 mb-2">
+            <div class="col-md-6 of-row">
                 <label class="form-label">ขาดวัตถุดิบ (Shortage Remark)</label>
-                <input type="text" name="shortage_remark"
-                       value="{{ $planning_item?->shortage_remark ?? '' }}"
-                       class="form-control" placeholder="รายละเอียดวัตถุดิบที่ขาด">
+                <div class="of-ctl">
+                    <input type="text" name="shortage_remark"
+                           value="{{ $planning_item?->shortage_remark ?? '' }}"
+                           class="form-control" placeholder="รายละเอียดวัตถุดิบที่ขาด">
+                </div>
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-md-12 mb-2">
+        <div class="row gx-3 gy-2 mt-0">
+            <div class="col-md-12 of-row">
                 <label class="form-label">หมายเหตุวางแผน (Planning Remark)</label>
                 @php
                     // เก็บลง tb_planning.planning_remark เป็น "ข้อความ" (snapshot) — datalist เป็นแค่ตัวช่วยกรอกให้เป็นมาตรฐาน
                     $current_remark = $planning_item?->planning_remark ?? '';
                 @endphp
-                {{-- input + datalist: คลิกช่องเด้งรายการจาก master ให้เลือก พอเลือกแล้วพิมพ์ต่อ/แก้ได้ทันที
-                     ค่าเดิม/ค่าที่พิมพ์เองที่ไม่มีใน master คงไว้ในช่องตรง ๆ (value) — ส่งเป็น string เหมือนเดิม --}}
-                <input type="text" name="planning_remark" class="form-control"
-                       list="planning_remark_options"
-                       value="{{ $current_remark }}"
-                       placeholder="เลือกหรือพิมพ์หมายเหตุ" autocomplete="off">
-                <datalist id="planning_remark_options">
-                    @foreach(($planning_remarks ?? collect()) as $rm)
-                        <option value="{{ $rm }}"></option>
-                    @endforeach
-                </datalist>
+                <div class="of-ctl">
+                    {{-- input + datalist: คลิกช่องเด้งรายการจาก master ให้เลือก พอเลือกแล้วพิมพ์ต่อ/แก้ได้ทันที
+                         ค่าเดิม/ค่าที่พิมพ์เองที่ไม่มีใน master คงไว้ในช่องตรง ๆ (value) — ส่งเป็น string เหมือนเดิม --}}
+                    <input type="text" name="planning_remark" class="form-control"
+                           list="planning_remark_options"
+                           value="{{ $current_remark }}"
+                           placeholder="เลือกหรือพิมพ์หมายเหตุ" autocomplete="off">
+                    <datalist id="planning_remark_options">
+                        @foreach(($planning_remarks ?? collect()) as $rm)
+                            <option value="{{ $rm }}"></option>
+                        @endforeach
+                    </datalist>
+                </div>
             </div>
         </div>
+        </div>{{-- /.of-form --}}
 
         <div class="row mt-2"><hr /></div>
 
