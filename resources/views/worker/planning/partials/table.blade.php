@@ -19,7 +19,7 @@
             <th>เลขที่ใบเบิก</th>
             <th>รหัสสี</th>
             <th>รหัสเครื่อง</th>
-            <th class="text-end">จำนวน</th>
+            <th class="text-end">น้ำหนัก TP</th>
             <th class="text-center">วันที่ (Inplan)</th>
             <th>ผู้รับผิดชอบ (ตามแผน)</th>
             <th class="text-center">สถานะ</th>
@@ -33,7 +33,7 @@
                 <td>{{ $job->red_bill_code ?: '-' }}</td>
                 <td><strong>{{ $job->itemno ?: '-' }}</strong></td>
                 <td>{{ $job->machine_no ?: '-' }}</td>
-                <td class="text-end">{{ $job->quantity !== null ? number_format($job->quantity, 2) : '-' }}</td>
+                <td class="text-end">{{ $job->weight !== null ? number_format($job->weight, 2) : '-' }}</td>
                 <td class="text-center">{{ $job->inplan ? \Carbon\Carbon::parse($job->inplan)->format('d/m/Y') : '-' }}</td>
                 <td>
                     @if($job->empno !== null && $job->empno === $my_empno)

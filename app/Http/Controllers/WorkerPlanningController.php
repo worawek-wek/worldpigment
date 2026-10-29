@@ -165,7 +165,7 @@ class WorkerPlanningController extends Controller
                 'tb_planning.red_bill_code',
                 'tb_planning.itemno',
                 'tb_planning.machine_no',
-                'tb_planning.quantity',
+                'tb_planning.weight', // น้ำหนัก TP (เดิมแสดง quantity = น้ำหนัก PO — เปลี่ยน 29/10/2569 ตามที่ผู้ใช้สั่ง)
                 'tb_planning.inplan',
                 'tb_planning.lot',
                 'tb_planning.planning_status',

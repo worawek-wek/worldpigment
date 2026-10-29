@@ -174,7 +174,7 @@
                         <th>Item No.</th>
                         {{-- <th class="text-center">Quantity</th> --}}
                         {{-- <th class="text-center">Lot</th> --}}
-                        <th class="text-center">Weight</th>
+                        <th class="text-center">น้ำหนัก TP</th>
                         <th class="text-center col-inplan">Inplan</th>
                         <th class="text-center">วันที่ส่งสินค้า</th>
                         <th class="text-center">Machine No.</th>

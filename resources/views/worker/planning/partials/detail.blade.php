@@ -18,8 +18,8 @@
             <div class="fw-semibold">{{ $job->machine_no ?: '-' }}</div>
         </div>
         <div class="col-md-4">
-            <div class="small text-muted">จำนวน</div>
-            <div class="fw-semibold">{{ $job->quantity !== null ? number_format($job->quantity, 2) : '-' }}</div>
+            <div class="small text-muted">น้ำหนัก TP</div>
+            <div class="fw-semibold">{{ $job->weight !== null ? number_format($job->weight, 2) : '-' }}</div>
         </div>
         <div class="col-md-4">
             <div class="small text-muted">Lot</div>

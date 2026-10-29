@@ -118,7 +118,7 @@
         </div>
         <div class="row gx-3 gy-2 mt-0">
             <div class="col-md-4 of-row">
-                <label class="form-label">น้ำหนักสั่งตาม Order (Quantity)</label>
+                <label class="form-label">น้ำหนัก PO (Quantity)</label>
                 <div class="of-ctl">
                     {{-- เพิ่มใหม่: ดึง netqty จาก header มาตั้งต้น / แก้ไข: ใช้ค่าเดิมของ item --}}
                     {{-- js-number-format: จัดรูปแบบหลักพันสดขณะพิมพ์ (เก็บค่าดิบ server ตัดจุลภาคเอง) --}}
@@ -656,7 +656,7 @@
                         <th style="min-width:120px" class="sp-custwant">วันที่ต้องการรับ</th>
                         <th style="min-width:100px">Cust No.</th>
                         <th style="min-width:130px">Item No.</th>
-                        <th style="min-width:80px">Quantity</th>
+                        <th style="min-width:80px">น้ำหนัก PO</th>
                         <th class="text-center" style="min-width:90px">สถานะ</th>
                         <th class="text-center" style="min-width:90px">จัดการ</th>
                     </tr>
