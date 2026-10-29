@@ -413,6 +413,8 @@ class QuotationController extends Controller
             'empName'     => $emp['name'],
             'empSign'     => $emp['sign'],                    // URL รูปลายเซ็น (ไม่มี = null)
             'empDept'     => $emp['dept'],                    // คำอธิบายแผนก (ไม่มี = null)
+            'empNameEn'   => $emp['name_en'],                 // ชื่ออังกฤษ (ฉบับ en)
+            'empPost'     => $emp['post'],                    // ตำแหน่ง (ฉบับ en)
         ]);
     }
 
@@ -647,6 +649,8 @@ class QuotationController extends Controller
             'empName'     => $emp['name'],
             'empSign'     => $emp['sign'],                    // URL รูปลายเซ็น (ไม่มี = null)
             'empDept'     => $emp['dept'],                    // คำอธิบายแผนก (ไม่มี = null)
+            'empNameEn'   => $emp['name_en'],                 // ชื่ออังกฤษ (ฉบับ en)
+            'empPost'     => $emp['post'],                    // ตำแหน่ง (ฉบับ en)
         ];
     }
 
@@ -661,22 +665,27 @@ class QuotationController extends Controller
      */
     private function empInfo($empId): array
     {
-        $none = ['name' => null, 'sign' => null, 'dept' => null];
+        $none = ['name' => null, 'sign' => null, 'dept' => null, 'name_en' => null, 'post' => null];
 
         $empId = trim((string) $empId);
         if ($empId === '') {
             return $none;
         }
-        $e = DB::table('emp')->where('empno', $empId)->first(['empname', 'empsur', 'signature', 'dept']);
+        $e = DB::table('emp')->where('empno', $empId)->first(['empname', 'empsur', 'signature', 'dept', 'sname_e', 'spost']);
         if (!$e) {
             return $none;
         }
-        $name = trim(($e->empname ?? '') . ' ' . ($e->empsur ?? ''));
+        $name   = trim(($e->empname ?? '') . ' ' . ($e->empsur ?? ''));
+        $nameEn = trim((string) ($e->sname_e ?? ''));
+        $post   = trim((string) ($e->spost ?? ''));
 
         return [
-            'name' => $name !== '' ? $name : null,
-            'sign' => $this->signatureUrl($e->signature ?? null),
-            'dept' => $this->deptDescription($e->dept ?? null),
+            'name'    => $name !== '' ? $name : null,
+            'sign'    => $this->signatureUrl($e->signature ?? null),
+            'dept'    => $this->deptDescription($e->dept ?? null),
+            // ฉบับภาษาอังกฤษ (29/10/2569): ชื่อ-นามสกุลอังกฤษ (emp.sname_e) + ตำแหน่ง (emp.spost)
+            'name_en' => $nameEn !== '' ? $nameEn : null,
+            'post'    => $post !== '' ? $post : null,
         ];
     }
 

@@ -148,6 +148,7 @@
         .sign .line { border-top: 1px dotted #000; padding-top: 4px; width: 210px; margin: 0 auto; white-space: nowrap; }
         .sign .emp-name { font-weight: bold; }
         .sign .emp-dept { white-space: nowrap; }
+        .sign .closing { white-space: nowrap; }
         .fmt-tag { font-size: .75em; color: #888; }
 
         @media print { .toolbar { display: none; } body { padding: 10px 24px; } }
@@ -312,16 +313,24 @@
 
     <div class="sign">
         <div class="box">
+            {{-- คำลงท้ายเหนือลายเซ็น (29/10/2569 ตามที่ผู้ใช้สั่ง) --}}
+            <div class="closing">{{ $isEn ? 'Sincerely Yours,' : 'ขอแสดงความนับถืออย่างสูง' }}</div>
             {{-- รูปลายเซ็นของพนักงานผู้เสนอราคา (emp.signature) — ไม่มีก็เว้นช่องไว้ให้เซ็นมือ --}}
             <div class="sign-space">
                 @if (!empty($empSign))
                     <img src="{{ $empSign }}" alt="ลายเซ็น {{ $empName }}">
                 @endif
             </div>
-            <div class="line"><span class="emp-name">{{ $empName }}</span></div>
+            {{-- ฉบับภาษาอังกฤษ: ชื่ออังกฤษ (emp.sname_e) + ตำแหน่ง (emp.spost) — 29/10/2569
+                 ไม่ได้กรอกไว้ = ใช้ชื่อไทย / คำอธิบายแผนกแทน --}}
+            @php
+                $signName = $isEn ? (($empNameEn ?? null) ?: $empName) : $empName;
+                $signDept = $isEn ? (($empPost ?? null) ?: $empDept) : $empDept;
+            @endphp
+            <div class="line"><span class="emp-name">{{ $signName }}</span></div>
             {{-- คำอธิบายแผนกของผู้เสนอราคา (tb_departments.description) — 19/10/2569 --}}
-            @if (!empty($empDept))
-                <div class="emp-dept">{{ $empDept }}</div>
+            @if (!empty($signDept))
+                <div class="emp-dept">{{ $signDept }}</div>
             @endif
         </div>
     </div>
