@@ -16,6 +16,9 @@ Route::prefix('color-matching')->group(function () {
     // ใช้ query string (?sendno=) เพราะ SendNo มี "/" (เช่น 69/0143) — Apache บล็อก %2F ใน path (404)
     Route::get('/ref',                 [ColorMatchingController::class, 'lookupBySendNo'])->name('color_matching.ref');
 
+    // ─── ตรวจ Lot No. ซ้ำ (ฟอร์มใบส่ง ต.ย., 29/10/2569) — query string เพราะ Lot มี "/" ───
+    Route::get('/check-lot',           [ColorMatchingController::class, 'checkLot'])->name('color_matching.check_lot');
+
     // ─── รายละเอียด (อ่านอย่างเดียว) — อ้างอิงด้วย id ───
     Route::get('/detail/{id}',         [ColorMatchingController::class, 'detail'])->whereNumber('id')->name('color_matching.detail');
 

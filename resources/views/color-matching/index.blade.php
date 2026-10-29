@@ -343,18 +343,19 @@
                 </div>
             </div>
             <div class="d-flex justify-content-center align-items-center my-3">
-                {{-- ประเภทเอกสาร (อยู่ตรงกลาง) — กลุ่ม checkbox เลือกได้หลายอัน (ติ๊ก=แสดง) --}}
+                {{-- ประเภทเอกสาร (อยู่ตรงกลาง) — กลุ่ม checkbox เลือกได้หลายอัน (ติ๊ก=แสดง)
+                     ค่าเริ่มต้น (data-default): ติ๊กใบนำส่งเทียบสี · ไม่ติ๊กใบส่ง ต.ย. (29/10/2569 ตามที่ผู้ใช้สั่ง) --}}
                 <div class="doc-filter d-flex align-items-center flex-wrap justify-content-center gap-3 py-2">
                     <div class="form-check mb-0">
                         <input class="form-check-input p_search" type="checkbox"
-                            name="show_cm" value="1" id="filter_show_cm" checked onchange="loadData(page)">
+                            name="show_cm" value="1" id="filter_show_cm" data-default="1" checked onchange="loadData(page)">
                         <label class="form-check-label fw-medium d-flex align-items-center" for="filter_show_cm">
                             <i class="ti ti-file-text text-primary me-1"></i>ใบนำส่งเทียบสี
                         </label>
                     </div>
                     <div class="form-check mb-0">
                         <input class="form-check-input p_search" type="checkbox"
-                            name="show_sd" value="1" id="filter_show_sd" checked onchange="loadData(page)">
+                            name="show_sd" value="1" id="filter_show_sd" data-default="0" onchange="loadData(page)">
                         <label class="form-check-label fw-medium d-flex align-items-center" for="filter_show_sd">
                             <i class="ti ti-package text-info me-1"></i>ใบส่ง ต.ย.
                         </label>
@@ -537,6 +538,15 @@
             return data;
         }
 
+        // ประเภทเอกสาร (checkbox) ต่างจากค่าเริ่มต้น data-default หรือไม่
+        function docFilterChanged(){
+            var changed = false;
+            $('.p_search[type="checkbox"]').each(function(){
+                if ($(this).is(':checked') !== (String($(this).data('default')) === '1')) changed = true;
+            });
+            return changed;
+        }
+
         // อัปเดตสีปุ่ม "ล้างตัวกรอง" ตามว่ามี filter ใช้งานอยู่กี่ตัว (ไม่นับ limit)
         function updateFilterButtonState(){
             var count = 0;
@@ -545,9 +555,8 @@
                 var v = $(this).val();
                 if (v !== '' && v !== null) count++;
             });
-            // ประเภทเอกสาร: นับเป็น filter เมื่อ "ไม่ใช่ติ๊กครบทั้งคู่" (default = ติ๊กครบ = แสดงทั้งหมด)
-            var $cb = $('.p_search[type="checkbox"]');
-            if ($cb.length && $cb.filter(':checked').length !== $cb.length) count++;
+            // ประเภทเอกสาร: นับเป็น filter เมื่อสถานะต่างจากค่าเริ่มต้น (data-default — 29/10/2569)
+            if (docFilterChanged()) count++;
             var $btn = $('#btnResetFilters');
             if (count > 0) {
                 $btn.removeClass('btn-label-secondary').addClass('btn-danger');
@@ -579,9 +588,9 @@
                     + '<span class="text-dark fw-medium">' + escHtml(label) + ':</span> '
                     + escHtml(val) + '</span>');
             });
-            // ประเภทเอกสาร: บอกเฉพาะเมื่อ "ไม่ได้ติ๊กครบ" (ติ๊กครบ = แสดงทั้งหมด = ไม่ได้กรอง)
+            // ประเภทเอกสาร: บอกเฉพาะเมื่อต่างจากค่าเริ่มต้น (ติ๊กใบนำส่งเทียบสี · ไม่ติ๊กใบส่ง ต.ย.)
             var $cb = $('.p_search[type="checkbox"]');
-            if ($cb.length && $cb.filter(':checked').length !== $cb.length) {
+            if (docFilterChanged()) {
                 var docs = $cb.filter(':checked').map(function(){
                     return $('label[for="' + this.id + '"]').text().trim();
                 }).get();
@@ -694,9 +703,9 @@
                     $input.val('').trigger('change.select2');
                     return;
                 }
-                // ประเภทเอกสาร: ล้างตัวกรอง = ติ๊กกลับทั้งหมด (default แสดงทั้งหมด)
+                // ประเภทเอกสาร: ล้างตัวกรอง = กลับเป็นค่าเริ่มต้น (data-default — 29/10/2569)
                 if ($input.is(':checkbox')) {
-                    $input.prop('checked', true);
+                    $input.prop('checked', String($input.data('default')) === '1');
                     return;
                 }
                 $input.val('');
@@ -792,6 +801,7 @@
             $('#form_sample_delivery [name="SendNo"]').val('');
             // โหมดสร้างใหม่ → ยังไม่มี record ให้ลบ
             $('#btn_delete_sd').addClass('d-none').removeData('id').removeData('label');
+            $('#form_sample_delivery').data('sdSiblings', 0);
             sdItemsReset();
             sdItemsSetSingle(false);
         }
@@ -816,8 +826,45 @@
         // เหลือแถวแรกแถวเดียว (ค่าของแถวแรกไม่แตะ)
         function sdItemsReset() {
             $('#sd_items_body tr.sd-item').not('.sd-item-first').remove();
+            $('#sd_items_body [data-f="lotno"]').removeClass('is-invalid');
             sdItemsRenumber();
         }
+
+        // ── ตรวจ Lot No. ซ้ำตอนกรอก (29/10/2569) — ซ้ำกับแถวอื่นในตาราง หรือซ้ำกับใบที่มีอยู่แล้ว ──
+        // server ตรวจซ้ำอีกชั้นตอนบันทึก (ColorMatchingController::lotDuplicateError)
+        function sdLotMark(el, msg) {
+            $(el).toggleClass('is-invalid', !!msg).siblings('.sd-lot-msg').text(msg || '');
+        }
+
+        function sdLotCheck(el) {
+            const v = String($(el).val() ?? '').trim();
+            sdLotMark(el, '');
+            if (v === '') return;
+
+            // ซ้ำกับแถวอื่นในตาราง (ไม่สนตัวพิมพ์เล็ก/ใหญ่)
+            const dupInTable = $('#sd_items_body [data-f="lotno"]').not(el).filter(function () {
+                return String($(this).val() ?? '').trim().toLowerCase() === v.toLowerCase();
+            }).length > 0;
+            if (dupInTable) { sdLotMark(el, 'Lot No. ซ้ำกับแถวอื่นในรายการ'); return; }
+
+            // ซ้ำกับใบที่มีอยู่แล้ว — โหมดแก้ไขไม่นับใบตัวเอง
+            $.ajax({
+                type: 'GET',
+                url: '{{$page_url}}/check-lot',
+                data: { lotno: v, exclude_id: $('#form_sample_delivery [name="_pk"]').val() || '' },
+                success: function (resp) {
+                    if (String($(el).val() ?? '').trim() !== v) return;   // ผู้ใช้พิมพ์ต่อไปแล้ว
+                    if (resp && resp.exists) sdLotMark(el, 'Lot No. นี้มีอยู่แล้ว: ' + (resp.used || []).join(', '));
+                }
+            });
+        }
+
+        function sdLotCheckAll() {
+            $('#sd_items_body [data-f="lotno"]').each(function () { sdLotCheck(this); });
+        }
+
+        $('#sd_items_body').on('change', '[data-f="lotno"]', function () { sdLotCheck(this); });
+        $('#sd_items_body').on('input', '[data-f="lotno"]', function () { sdLotMark(this, ''); });
 
         // single = โหมดแก้ไข (แก้ 1 ใบ) → ซ่อนปุ่มเพิ่ม/ลบแถว
         function sdItemsSetSingle(single) {
@@ -843,6 +890,7 @@
             });
             if ($rows.length > 1) $rows.last().remove();
             sdItemsRenumber();
+            sdLotCheckAll();   // ค่าเลื่อนแถวแล้ว → ตรวจซ้ำใหม่ทั้งตาราง
         }
 
         // แถวที่จะบันทึก — ตัดแถวที่ว่างทั้ง 4 ช่องทิ้ง
@@ -942,6 +990,8 @@
                     // แก้ไข = 1 ใบ → ตารางรายการตัวอย่างเหลือแถวเดียว ไม่มีปุ่มเพิ่ม/ลบแถว
                     sdItemsReset();
                     sdItemsSetSingle(true);
+                    // จำนวนใบส่ง ต.ย. อื่นของใบเทียบสีเดียวกัน — ใช้ถามตอนบันทึกว่าจะแก้ใบเดียวหรือทุกใบ
+                    $('#form_sample_delivery').data('sdSiblings', parseInt(row.sd_siblings, 10) || 0);
                     $('#form_sample_delivery [name="_mode"]').val('edit');
                     $('#form_sample_delivery [name="_pk"]').val(row.id);
                     $('#form_sample_delivery [name="SendNo"]').val(row.SendNo ?? '');
@@ -1237,6 +1287,15 @@
 
         // ชั้น 1 — เปิดจากปุ่มในตาราง
         function viewDetail(id)  { loadDetailInto(id, '#detailView',  '#detailModal');  }
+
+        // ปุ่มดินสอในตาราง "ใบส่ง ต.ย. ให้ลูกค้า" ของหน้า View ใบนำส่งเทียบสี (29/10/2569)
+        // → เปิดฟอร์มแก้ไขใบส่ง ต.ย. ซ้อนบนหน้า View · บันทึกแล้วโหลดหน้า View ใหม่ (ไม่ให้ค่าในตารางค้าง)
+        let sdReturnDetail = null;   // id ของใบนำส่งเทียบสีที่ต้องโหลดหน้า View ใหม่หลังบันทึก
+        function editSdFromDetail(sdId, cmId) {
+            sdReturnDetail = cmId;
+            viewSampleDelivery(sdId);
+        }
+        $('#sampleDeliveryModal').on('hidden.bs.modal', function () { sdReturnDetail = null; });
         // ชั้น 2 — เปิดจากปุ่ม "ดู" ของใบส่ง ต.ย. ในรายละเอียด CM (ซ้อนทับ ชั้น 1 ยังอยู่)
         function viewDetail2(id) { loadDetailInto(id, '#detailView2', '#detailModal2'); }
 
@@ -1377,7 +1436,31 @@
             // สร้างใหม่: 1 แถวในตารางรายการตัวอย่าง = 1 ใบ (ไม่มีแถวที่กรอก = สร้าง 1 ใบตามเดิม)
             const sdItems = isUpdate ? [] : sdItemsCollect();
 
-            Swal.fire({
+            // Lot No. ที่ถูกทำเครื่องหมายว่าซ้ำ → ยังไม่ให้บันทึก (server ตรวจอีกชั้น)
+            const $badLot = $('#sd_items_body [data-f="lotno"].is-invalid');
+            if ($badLot.length) {
+                Swal.fire('Lot No. ซ้ำ', $badLot.first().siblings('.sd-lot-msg').text(), 'warning');
+                $badLot.first().trigger('focus');
+                return;
+            }
+
+            // แก้ไข + ใบเทียบสีนี้มีใบส่ง ต.ย. ใบอื่นด้วย → ให้เลือกแก้ใบเดียว หรือทุกใบ (29/10/2569)
+            // ทุกใบ = ช่องอื่นตามใบนี้ แต่ รายละเอียด / Resin / PHR / Lot No. ของใครของมัน (server ไม่ทับ)
+            const siblings = isUpdate ? ($(this).data('sdSiblings') || 0) : 0;
+            const askScope = siblings > 0;
+
+            Swal.fire(askScope ? {
+                title: 'แก้ไขใบส่ง ต.ย.',
+                html: 'ใบเทียบสีนี้มีใบส่ง ต.ย. อีก <b>' + siblings + '</b> ใบ<br>ต้องการบันทึกการแก้ไขกับใบไหน?'
+                    + '<div class="small text-muted mt-2">เลือก "ทุกใบ" — รายละเอียด / Resin (Match) / PHR / Lot No. ของแต่ละใบไม่ถูกเปลี่ยน</div>',
+                icon: 'question',
+                showCancelButton: true,
+                showDenyButton: true,
+                confirmButtonText: 'เฉพาะใบนี้',
+                denyButtonText: 'ทุกใบ (' + (siblings + 1) + ' ใบ)',
+                cancelButtonText: 'ยกเลิก',
+                denyButtonColor: '#6c5ce7',
+            } : {
                 title: 'ยืนยันการดำเนินการ?',
                 text: sdItems.length > 1
                     ? 'สร้างใบส่ง ต.ย. ให้ลูกค้า ' + sdItems.length + ' ใบ?'
@@ -1387,7 +1470,8 @@
                 confirmButtonText: 'ตกลง',
                 cancelButtonText: 'ยกเลิก'
             }).then((result) => {
-                if (!result.isConfirmed) return;
+                if (!result.isConfirmed && !result.isDenied) return;
+                const applyAll = askScope && result.isDenied;
 
                 // ⚠ TODO(ชั่วคราว): SD create ที่ยังไม่กรอก SendNo อ้างอิง — gen เลขชั่วคราวให้ insert ผ่านก่อน
                 // SendNo เป็น varchar(12) → ('SD' + 10 หลักท้ายของ timestamp = 12 ตัว)
@@ -1399,6 +1483,7 @@
                 const fd = new FormData(this);
                 fd.append('_token', CSRF);
                 if (sdItems.length) fd.append('sd_items', JSON.stringify(sdItems));
+                if (applyAll) fd.append('apply_all', '1');
 
                 const url = isUpdate
                     ? '{{$page_url}}/update/' + encodeURIComponent(pk)
@@ -1409,8 +1494,12 @@
                     contentType: false, processData: false,
                     success: function(resp) {
                         if (resp && resp.ok) {
-                            Swal.fire(resp.created > 1 ? 'สร้างใบส่ง ต.ย. ' + resp.created + ' ใบเรียบร้อย' : 'บันทึกเรียบร้อย', '', 'success');
+                            Swal.fire(resp.created > 1 ? 'สร้างใบส่ง ต.ย. ' + resp.created + ' ใบเรียบร้อย'
+                                : (resp.updated > 1 ? 'แก้ไขใบส่ง ต.ย. ' + resp.updated + ' ใบเรียบร้อย' : 'บันทึกเรียบร้อย'), '', 'success');
+                            // แก้จากหน้า View ใบนำส่งเทียบสี → โหลดหน้า View ใหม่ (อ่านค่าก่อน hide ล้าง sdReturnDetail)
+                            const backTo = sdReturnDetail;
                             $('#sampleDeliveryModal').modal('hide');
+                            if (backTo && $('#detailModal').is(':visible')) loadDetailInto(backTo, '#detailView', '#detailModal');
                             loadData(page);
                         } else {
                             Swal.fire('เกิดข้อผิดพลาด', resp.error ?? '', 'error');

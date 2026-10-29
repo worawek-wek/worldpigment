@@ -233,7 +233,26 @@ class ColorMatchingController extends Controller
             return response()->json(['error' => 'not_found'], 404);
         }
 
-        return response()->json($row);
+        // ใบส่ง ต.ย. อื่นของใบเทียบสีเดียวกัน — ฟอร์มใช้ถามว่าจะแก้ใบเดียวหรือทุกใบ (29/10/2569)
+        return response()->json($row->toArray() + [
+            'sd_siblings' => $this->sdSiblingsQuery($row)->count(),
+        ]);
+    }
+
+    /**
+     * ใบส่ง ต.ย. อื่น (ไม่รวมตัวเอง) ที่อ้างอิงใบเทียบสีเดียวกัน = SendNo เดียวกัน + มี Testno
+     * ใบที่ไม่ใช่ SD หรือไม่มี SendNo → ไม่มีพี่น้อง
+     */
+    private function sdSiblingsQuery(Testmain $row)
+    {
+        $sendNo = trim((string) $row->SendNo);
+        $isSd   = trim((string) $row->Testno) !== '';
+
+        return Testmain::query()
+            ->when(!$isSd || $sendNo === '', fn ($q) => $q->whereRaw('1 = 0'))
+            ->where('SendNo', $sendNo)
+            ->whereNotNull('Testno')->where('Testno', '!=', '')
+            ->where('id', '!=', $row->id);
     }
 
     /**
@@ -325,6 +344,16 @@ class ColorMatchingController extends Controller
             // ใบส่ง ต.ย. หลายแถว (29/10/2569) — 1 แถวในตาราง "รายการตัวอย่าง" = 1 ใบ
             // ข้อมูลอื่นเหมือนกันทุกใบ ต่างกันแค่ 4 ช่องใน SD_ITEM_FIELDS · ไม่มี sd_items = สร้างใบเดียวตามเดิม
             $items = $this->sdItems($request);
+
+            // Lot No. ต้องไม่ซ้ำ — ทั้งกับใบที่มีอยู่แล้ว และระหว่างแถวที่สร้างพร้อมกัน (29/10/2569)
+            $lots = empty($items)
+                ? [(string) ($payload['lotno'] ?? '')]
+                : array_column($items, 'lotno');
+            if ($dupMsg = $this->lotDuplicateError($lots)) {
+                DB::rollBack();
+                return response()->json(['error' => $dupMsg, 'lot_duplicate' => true], 422);
+            }
+
             if (empty($items)) {
                 Testmain::create($payload);
                 $created = 1;
@@ -381,6 +410,60 @@ class ColorMatchingController extends Controller
     }
 
     /**
+     * ตรวจ Lot No. ซ้ำ (29/10/2569) — คืนข้อความ error หรือ null ถ้าไม่ซ้ำ
+     * เทียบแบบ TRIM (collation ของคอลัมน์ไม่สนตัวพิมพ์เล็ก/ใหญ่) · ค่าว่างไม่นับ
+     * $excludeId = id ของใบที่กำลังแก้ไข (ไม่นับตัวเอง)
+     */
+    private function lotDuplicateError(array $lots, ?int $excludeId = null): ?string
+    {
+        $lots = array_values(array_filter(array_map(fn ($l) => trim((string) $l), $lots), fn ($l) => $l !== ''));
+        if (empty($lots)) return null;
+
+        // ซ้ำกันเองในชุดที่ส่งมา
+        $seen = [];
+        foreach ($lots as $l) {
+            $k = mb_strtolower($l);
+            if (isset($seen[$k])) return "Lot No. \"{$l}\" กรอกซ้ำกันมากกว่า 1 แถว";
+            $seen[$k] = true;
+        }
+
+        // ซ้ำกับใบที่มีอยู่แล้ว
+        $used = $this->lotsInUse($lots, $excludeId);
+        if (!empty($used)) {
+            return 'Lot No. นี้มีอยู่แล้ว: ' . implode(', ', $used);
+        }
+        return null;
+    }
+
+    /**
+     * Lot No. ใน $lots ที่มีใบอื่นใช้อยู่แล้ว (แนบเลขที่ใบส่ง ต.ย. ของใบนั้นให้รู้ว่าซ้ำกับใบไหน)
+     */
+    private function lotsInUse(array $lots, ?int $excludeId = null): array
+    {
+        $placeholders = implode(',', array_fill(0, count($lots), '?'));
+        return DB::table('testmain')
+            ->whereRaw("TRIM(lotno) IN ({$placeholders})", $lots)
+            ->when($excludeId, fn ($q) => $q->where('id', '!=', $excludeId))
+            ->get(['lotno', 'Testno'])
+            ->map(fn ($r) => trim($r->lotno) . (trim((string) $r->Testno) !== '' ? " (ใบ {$r->Testno})" : ''))
+            ->unique()->values()->all();
+    }
+
+    /**
+     * GET — ตรวจ Lot No. ซ้ำ ให้ฟอร์มใบส่ง ต.ย. เช็คตอนกรอก (29/10/2569)
+     * ?lotno=…&exclude_id=… (id ของใบที่กำลังแก้ไข)
+     */
+    public function checkLot(Request $request)
+    {
+        $lot = trim((string) $request->query('lotno', ''));
+        if ($lot === '') return response()->json(['exists' => false]);
+
+        $excludeId = (int) $request->query('exclude_id') ?: null;
+        $used = $this->lotsInUse([$lot], $excludeId);
+        return response()->json(['exists' => !empty($used), 'used' => $used]);
+    }
+
+    /**
      * POST — อัพเดท testmain row (ระบุด้วย SendNo เดิม)
      */
     public function update(Request $request, $id)
@@ -395,14 +478,34 @@ class ColorMatchingController extends Controller
 
             $payload = $this->extractPayload($request);
 
+            // Lot No. ต้องไม่ซ้ำกับใบอื่น — ตรวจเฉพาะตอนเปลี่ยนค่า (29/10/2569)
+            $newLot = trim((string) ($payload['lotno'] ?? ''));
+            if ($newLot !== '' && $newLot !== trim((string) $row->lotno)) {
+                if ($dupMsg = $this->lotDuplicateError([$newLot], (int) $row->id)) {
+                    DB::rollBack();
+                    return response()->json(['error' => $dupMsg, 'lot_duplicate' => true], 422);
+                }
+            }
+
             // ชื่อพนักงานที่กรอก (ผู้รับเอกสาร/Color Matcher) ถ้าใหม่ → สร้างใน emp
             $this->ensureEmployee($request->TNname);
             $this->ensureEmployee($request->ColorMatcher);
 
+            // หาใบพี่น้องจาก SendNo "เดิม" ก่อนบันทึก (เผื่อผู้ใช้แก้ SendNo ในฟอร์ม)
+            $applyAll = $request->boolean('apply_all');
+            $siblings = $applyAll ? $this->sdSiblingsQuery($row)->get() : collect();
+
             $row->fill($payload)->save();
 
+            // แก้ทุกใบของใบเทียบสีนี้ (29/10/2569) — ใช้ค่าชุดเดียวกัน ยกเว้น 4 ช่องที่เป็นของแต่ละใบ
+            // (SD_ITEM_FIELDS: รายละเอียด / Resin / PHR / Lot No.) ⇒ ไม่ทับกัน
+            $shared = collect($payload)->except(self::SD_ITEM_FIELDS)->all();
+            foreach ($siblings as $sib) {
+                $sib->fill($shared)->save();
+            }
+
             DB::commit();
-            return response()->json(['ok' => true]);
+            return response()->json(['ok' => true, 'updated' => 1 + $siblings->count()]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['error' => $e->getMessage()], 500);
