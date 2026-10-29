@@ -320,10 +320,13 @@
                 <h5 class="modal-title" id="quotationModalTitle">สร้างใบเสนอราคา</h5>
                 {{-- ลบใบที่เปิดอยู่ (26/10/2569) — อยู่บนหัว modal ชิดขวา (me-5 = เว้นให้ปุ่มปิดที่ theme วางแบบ absolute)
                      ซ่อนตอนฟอร์มเปล่า (ยังไม่มีใบ) ดู setQuotationIdle() --}}
+                {{-- ปิดไว้ 29/10/2569 ตามที่ผู้ใช้สั่ง "เอาปุ่มลบออกให้หมด" (เปิดคืน: @if(true)) --}}
+                @if(false)
                 <button type="button" id="btnDeleteQuotation" class="btn btn-sm btn-label-danger ms-auto me-5 d-none"
                     onclick="quotationDelete($('#q_qno_key').val(), true)">
                     <i class="ti ti-trash me-1"></i>ลบใบเสนอราคานี้
                 </button>
+                @endif
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
@@ -1129,11 +1132,13 @@
                         $('#q_CustName').val(res.name || '');
                         // ลูกค้าไม่มีชื่ออังกฤษ = ล้างช่อง (16/10/2569) — เดิมเติมเฉพาะตอนมีค่า ชื่อของลูกค้าก่อนหน้าจึงค้าง
                         $('#q_Engname').val(res.nameEN || '');
-                        // เทอมการชำระเงิน — ดึงจาก customer.term มาเติมให้ (ถ้าช่องยังว่าง)
-                        // ยกเว้นค่า "CASH" (เงินสด) ที่ไม่ต้องการให้ขึ้นบนใบเสนอราคา → ปล่อยช่องว่างไว้
-                        if (res.term && !$('#q_Term').val() && String(res.term).trim().toUpperCase() !== 'CASH') {
-                            $('#q_Term').val(res.term);
-                        }
+                        // เทอมการชำระเงิน = เครดิตของลูกค้า (customer.term) — เติมใหม่ทุกครั้งที่เปลี่ยนลูกค้า (29/10/2569)
+                        // ฉบับ EN ใช้ข้อความอังกฤษจาก tb_credit_term (ไม่มี = ข้อความเดิม) — ดู fillTermFromCredit()
+                        // ยกเว้นค่า "CASH" (เงินสด) ที่ไม่ต้องการให้ขึ้นบนใบเสนอราคา → ช่องว่าง
+                        var term = String(res.term || '').trim();
+                        if (term.toUpperCase() === 'CASH') term = '';
+                        $('#q_Term').data('credit', { th: term, en: term ? String(res.term_en || '').trim() || term : '' });
+                        fillTermFromCredit();
                     } else {
                         // ไม่เจอ → เคลียร์ชื่อไทย + อังกฤษ เงียบๆ (ไม่เด้ง popup)
                         $('#q_CustName').val('');
@@ -1170,6 +1175,16 @@
             $('#q_remark_lang').val(lang);
             $('#btnLangEn').toggleClass('active', lang === 'en');
             $('#btnLangTh').toggleClass('active', lang !== 'en');
+            fillTermFromCredit(true);
+        }
+
+        // เติมเทอมการชำระเงินจากเครดิตลูกค้าตามภาษาที่เลือก (29/10/2569)
+        // onlyIfAuto = สลับภาษา: เปลี่ยนเฉพาะเมื่อค่าในช่องยังเป็นค่าที่ระบบเติมไว้ (ไม่ทับที่ผู้ใช้พิมพ์เอง)
+        function fillTermFromCredit(onlyIfAuto){
+            var $t = $('#q_Term'), c = $t.data('credit');
+            if (!c) return;
+            if (onlyIfAuto && $t.val() !== c.th && $t.val() !== c.en) return;
+            $t.val($('#q_remark_lang').val() === 'en' ? c.en : c.th);
         }
 
         // ────────────────────────────────────────────────────────
@@ -1177,6 +1192,7 @@
         // ────────────────────────────────────────────────────────
         function openCreate(){
             document.getElementById('quotationForm').reset();
+            $('#q_Term').removeData('credit');   // ล้างเครดิตของลูกค้าใบก่อน (29/10/2569)
             $('#q_mode').val('insert');
             $('#q_qno_key').val('');
             $('#quotationModalTitle').text('สร้างใบเสนอราคา');
@@ -1298,6 +1314,7 @@
                 var h = res.header || {};
                 qCreator = res.creator || null;   // ผู้สร้างใบ — มี = ตอนบันทึกต้องป้อนรหัสผ่านของคนนี้
                 document.getElementById('quotationForm').reset();
+            $('#q_Term').removeData('credit');   // ล้างเครดิตของลูกค้าใบก่อน (29/10/2569)
                 setQuotationIdle(false);   // ปลดล็อก เผื่อฟอร์มค้างสถานะ idle จากการเปิดฟอร์มเปล่าครั้งก่อน
                 $('#q_mode').val('update');
                 $('#q_qno_key').val(h.Qno);

@@ -647,18 +647,37 @@ class ColorMatchingController extends Controller
         }
         // ประเภทเอกสาร (checkbox) — CM=ไม่มี Testno, SD=มี Testno
         // ติ๊กทั้งคู่ → แสดงทั้งหมด; ติ๊กข้างเดียว → กรองชนิดนั้น; ไม่ติ๊กเลย → ไม่พบ
-        $showCm = $request->filled('show_cm');
-        $showSd = $request->filled('show_sd');
-        if (!$showCm && !$showSd) {
+        // 3 ตัวเลือกไม่ซ้อนกัน (29/10/2569): show_sd = ใบส่ง ต.ย. ที่มีใบเทียบสี (มีแถว CM ที่ SendNo เดียวกัน)
+        // · show_sd_orphan = ใบส่ง ต.ย. ที่ไม่มีใบเทียบสี · ติ๊กทั้งคู่ = ใบส่ง ต.ย. ทั้งหมด · ติ๊กครบ 3 = ไม่กรอง
+        $showCm     = $request->filled('show_cm');
+        $showSd     = $request->filled('show_sd');
+        $showOrphan = $request->filled('show_sd_orphan');
+        if (!$showCm && !$showSd && !$showOrphan) {
             $query->whereRaw('1 = 0');                       // ไม่ติ๊กเลย → ไม่พบข้อมูล
-        } elseif ($showCm && !$showSd) {
-            $query->where(function ($q) {                    // เฉพาะ CM
-                $q->whereNull('Testno')->orWhere('Testno', '');
+        } elseif (!($showCm && $showSd && $showOrphan)) {
+            // มีแถว CM (ไม่มี Testno) ที่ SendNo เดียวกัน
+            $hasCm = function ($e) {
+                $e->from('testmain as cm')
+                  ->whereColumn('cm.SendNo', 'testmain.SendNo')
+                  ->where(function ($c) {
+                      $c->whereNull('cm.Testno')->orWhere('cm.Testno', '');
+                  });
+            };
+            $query->where(function ($q) use ($showCm, $showSd, $showOrphan, $hasCm) {
+                if ($showCm) {                               // CM = ไม่มี Testno
+                    $q->orWhere(function ($w) {
+                        $w->whereNull('Testno')->orWhere('Testno', '');
+                    });
+                }
+                if ($showSd || $showOrphan) {                // SD = มี Testno
+                    $q->orWhere(function ($w) use ($showSd, $showOrphan, $hasCm) {
+                        $w->whereNotNull('Testno')->where('Testno', '!=', '');
+                        if ($showSd && !$showOrphan) $w->whereExists($hasCm);
+                        if ($showOrphan && !$showSd) $w->whereNotExists($hasCm);
+                    });
+                }
             });
-        } elseif ($showSd && !$showCm) {
-            $query->whereNotNull('Testno')->where('Testno', '!=', '');  // เฉพาะ SD
         }
-        // ติ๊กทั้งคู่ → ไม่กรอง (แสดงทั้งหมด)
 
         if (@$request->job_type) {
             $query->where('Type_Work', $request->job_type);

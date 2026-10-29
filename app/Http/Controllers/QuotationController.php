@@ -148,11 +148,19 @@ class QuotationController extends Controller
             return response()->json(['found' => false]);
         }
 
+        // เครดิตของลูกค้า (customer.term เก็บ name_th ของ tb_credit_term) → หาข้อความอังกฤษ ให้ฉบับ EN (29/10/2569)
+        // ค่าเดิมที่ไม่อยู่ในรายการ (เช่น "90 วัน") ไม่มีคำแปล = null → ฝั่งจอใช้ข้อความเดิม
+        $term   = trim((string) $cust->term);
+        $termEn = $term !== ''
+            ? DB::table('tb_credit_term')->where('name_th', $term)->value('name_en')
+            : null;
+
         return response()->json([
-            'found'  => true,
-            'name'   => $cust->name,
-            'nameEN' => $cust->nameEN,
-            'term'   => $cust->term,
+            'found'   => true,
+            'name'    => $cust->name,
+            'nameEN'  => $cust->nameEN,
+            'term'    => $cust->term,
+            'term_en' => $termEn,
         ]);
     }
 

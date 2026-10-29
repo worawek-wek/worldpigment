@@ -325,7 +325,8 @@
                  ไม่ได้กรอกไว้ = ใช้ชื่อไทย / คำอธิบายแผนกแทน --}}
             @php
                 $signName = $isEn ? (($empNameEn ?? null) ?: $empName) : $empName;
-                $signDept = $isEn ? (($empPost ?? null) ?: $empDept) : $empDept;
+                // ใต้ชื่อ = ตำแหน่ง (emp.spost) ทั้งไทย/อังกฤษ (29/10/2569 ตามที่ผู้ใช้สั่ง) · ไม่ได้กรอก = คำอธิบายแผนก
+                $signDept = ($empPost ?? null) ?: $empDept;
             @endphp
             <div class="line"><span class="emp-name">{{ $signName }}</span></div>
             {{-- คำอธิบายแผนกของผู้เสนอราคา (tb_departments.description) — 19/10/2569 --}}

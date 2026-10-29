@@ -344,7 +344,7 @@
             </div>
             <div class="d-flex justify-content-center align-items-center my-3">
                 {{-- ประเภทเอกสาร (อยู่ตรงกลาง) — กลุ่ม checkbox เลือกได้หลายอัน (ติ๊ก=แสดง)
-                     ค่าเริ่มต้น (data-default): ติ๊กใบนำส่งเทียบสี · ไม่ติ๊กใบส่ง ต.ย. (29/10/2569 ตามที่ผู้ใช้สั่ง) --}}
+                     ค่าเริ่มต้น (data-default): ติ๊กใบนำส่งเทียบสี + ใบส่ง ต.ย. ที่ไม่มีใบเทียบสี · ไม่ติ๊กใบส่ง ต.ย. (29/10/2569 ตามที่ผู้ใช้สั่ง) --}}
                 <div class="doc-filter d-flex align-items-center flex-wrap justify-content-center gap-3 py-2">
                     <div class="form-check mb-0">
                         <input class="form-check-input p_search" type="checkbox"
@@ -358,6 +358,14 @@
                             name="show_sd" value="1" id="filter_show_sd" data-default="0" onchange="loadData(page)">
                         <label class="form-check-label fw-medium d-flex align-items-center" for="filter_show_sd">
                             <i class="ti ti-package text-info me-1"></i>ใบส่ง ต.ย.
+                        </label>
+                    </div>
+                    {{-- ใบส่ง ต.ย. ที่ไม่มีใบเทียบสี (29/10/2569 ตามที่ผู้ใช้สั่ง) — "ใบส่ง ต.ย." ข้างบน = เฉพาะใบที่มีใบเทียบสี (ไม่ซ้อนกัน) --}}
+                    <div class="form-check mb-0">
+                        <input class="form-check-input p_search" type="checkbox"
+                            name="show_sd_orphan" value="1" id="filter_show_sd_orphan" data-default="1" checked onchange="loadData(page)">
+                        <label class="form-check-label fw-medium d-flex align-items-center" for="filter_show_sd_orphan">
+                            <i class="ti ti-package-off text-warning me-1"></i>ใบส่ง ต.ย. ที่ไม่มีใบเทียบสี
                         </label>
                     </div>
                 </div>
