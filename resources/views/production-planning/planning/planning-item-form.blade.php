@@ -74,7 +74,8 @@
         <span>ออเดอร์นี้ถูกปิดแล้ว (End Order) — ไม่สามารถแก้ไขได้ กดได้เฉพาะปุ่ม "ยกเลิก"</span>
     </div>
     @endif
-    {{-- ช่องเวลาในฟอร์มนี้ใช้ flatpickr (class flatpickr-time, time_24hr) แทน <input type="time"> (05/10/2569)
+    {{-- ช่องเวลาในฟอร์มนี้ใช้ flatpickr (class wp-time-field, time_24hr) แทน <input type="time"> (05/10/2569)
+         ⚠ ห้ามตั้งชื่อ class ว่า flatpickr-time — ชนกับ class ภายในของ flatpickr.css (height:0) ช่องว่างจะหดแบน (เปลี่ยนชื่อ 29/10/2569)
          เพราะ type="time" แสดง 12/24 ชม. ตาม region ของแต่ละเครื่อง และ lang="en-GB" ที่เคยใส่ไว้บังคับไม่ได้จริง --}}
     <form id="planning_item_form">
         <input type="hidden" name="planning_id"        value="{{ $planning_item?->id ?? '' }}">
@@ -315,72 +316,6 @@
 
         {{-- <div class="row mt-2"><hr /></div> --}}
 
-        {{-- ── การ์ดสีน้ำเงิน: สถานะวิธีการผลิต (บันทึกลง tb_planning_prod_method) ── --}}
-        <div class="row p-3 rounded mt-2" style="background-color: rgb(211, 250, 160); border: 1px dashed #33cc05;">
-            <div class="col-12 d-flex justify-content-between align-items-center mb-2">
-                <h6 class="mb-0 text-primary">
-                    <i class="ti ti-clipboard-list me-1"></i>สถานะวิธีการผลิต
-                </h6>
-                <button type="button" id="btn_add_prod_method" class="btn btn-sm btn-primary">
-                    <i class="ti ti-plus me-1"></i>เพิ่ม
-                </button>
-            </div>
-            <div class="col-12">
-                {{-- หัวคอลัมน์ (แสดงครั้งเดียว) --}}
-                <div class="row g-2 fw-semibold small text-muted mb-1 d-none d-md-flex">
-                    <div class="col-md-4">วิธีการผลิต</div>
-                    <div class="col-md-3">วันที่</div>
-                    <div class="col-md-2">เวลาเริ่ม</div>
-                    <div class="col-md-2">เวลาที่เสร็จ</div>
-                    <div class="col-md-1"></div>
-                </div>
-                @php
-                    // สร้างตัวเลือก <option> ของวิธีการผลิต (ใช้ซ้ำในทุกแถวที่ render ฝั่ง server)
-                    $prodMethodOptions = function ($selected = null) use ($prod_methods) {
-                        $out = '<option value="">เลือกวิธีการผลิต</option>';
-                        foreach ($prod_methods as $pm) {
-                            $sel = ((string) $selected === (string) $pm->id) ? 'selected' : '';
-                            $out .= '<option value="'.$pm->id.'" '.$sel.'>'.e($pm->name).'</option>';
-                        }
-                        return $out;
-                    };
-                @endphp
-                <div id="prod_method_rows">
-                    @forelse($prod_method_rows as $row)
-                        <div class="row g-2 align-items-center mb-2 prod-method-row">
-                            <div class="col-md-4">
-                                <select name="prod_method_id[]" class="form-select form-select-sm">{!! $prodMethodOptions($row->prod_method_id) !!}</select>
-                            </div>
-                            <div class="col-md-3"><input type="text" name="prod_method_date[]" class="form-control form-control-sm flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" value="{{ $row->work_date ? substr($row->work_date, 0, 10) : '' }}"></div>
-                            <div class="col-md-2"><input type="text" name="prod_method_start[]" class="form-control form-control-sm flatpickr-time" autocomplete="off" value="{{ $row->start_time ? substr($row->start_time, 0, 5) : '' }}"></div>
-                            <div class="col-md-2"><input type="text" name="prod_method_end[]" class="form-control form-control-sm flatpickr-time" autocomplete="off" value="{{ $row->end_time ? substr($row->end_time, 0, 5) : '' }}"></div>
-                            <div class="col-md-1">
-                                <button type="button" class="btn btn-sm btn-outline-danger btn_remove_prod_method" title="ลบ">
-                                    <i class="ti ti-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                    @empty
-                        <div class="row g-2 align-items-center mb-2 prod-method-row">
-                            <div class="col-md-4">
-                                <select name="prod_method_id[]" class="form-select form-select-sm">{!! $prodMethodOptions() !!}</select>
-                            </div>
-                            <div class="col-md-3"><input type="text" name="prod_method_date[]" class="form-control form-control-sm flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป"></div>
-                            <div class="col-md-2"><input type="text" name="prod_method_start[]" class="form-control form-control-sm flatpickr-time" autocomplete="off"></div>
-                            <div class="col-md-2"><input type="text" name="prod_method_end[]" class="form-control form-control-sm flatpickr-time" autocomplete="off"></div>
-                            <div class="col-md-1">
-                                <button type="button" class="btn btn-sm btn-outline-danger btn_remove_prod_method" title="ลบ">
-                                    <i class="ti ti-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                    @endforelse
-                </div>
-            </div>
-        </div>
-
-        {{-- <div class="row mt-2"><hr /></div> --}}
-
         <div class="row p-3 rounded mt-2" style="background-color: rgb(241, 211, 250);  border: 1px dashed #9e05bd;">
             <div class="row">
                 <div class="col-md-3 mb-2">
@@ -393,7 +328,7 @@
                     <label class="form-label">เวลาที่เริ่มผลิต (Start Time)</label>
                     <input type="text" name="start_time"
                         value="{{ $planning_item?->start_time ? substr($planning_item->start_time, 0, 5) : '' }}"
-                        class="form-control flatpickr-time" autocomplete="off">
+                        class="form-control wp-time-field" autocomplete="off">
                 </div>
                 <div class="col-md-3 mb-2">
                     <label class="form-label">วันที่ผลิตเสร็จ (End Date)</label>
@@ -405,7 +340,7 @@
                     <label class="form-label">เวลาที่ผลิตเสร็จ (End Time)</label>
                     <input type="text" name="end_time"
                         value="{{ $planning_item?->end_time ? substr($planning_item->end_time, 0, 5) : '' }}"
-                        class="form-control flatpickr-time" autocomplete="off">
+                        class="form-control wp-time-field" autocomplete="off">
                 </div>
             </div>
             <div class="row">
@@ -419,7 +354,7 @@
                     <label class="form-label">เวลาที่ส่ง Qc (QC Time)</label>
                     <input type="text" name="qc_time"
                         value="{{ $planning_item?->qc_time ? substr($planning_item->qc_time, 0, 5) : '' }}"
-                        class="form-control flatpickr-time" autocomplete="off" placeholder="HH:MM">
+                        class="form-control wp-time-field" autocomplete="off" placeholder="HH:MM">
                 </div>
                 <div class="col-md-4 mb-2">
                 <label class="form-label">สถานะ Qc (QC Status) </label>
@@ -437,39 +372,80 @@
             </div>
         </div>
 
-        {{-- <div class="row my-2"><hr /></div> --}}
+        {{-- <div class="row mt-2"><hr /></div> --}}
 
-        <div class="row">
-            <div class="col-md-6 mb-2">
+        {{-- ── การ์ดสีเขียว: สถานะวิธีการล้าง (บันทึกลง tb_planning_prod_method) — เปลี่ยนชื่อจาก "สถานะวิธีการผลิต" + ย้ายไปอยู่ใต้กล่องวันที่เริ่ม/ผลิตเสร็จ/QC (29/10/2569 ตามที่ผู้ใช้สั่ง) ── --}}
+        <div class="row p-3 rounded mt-2" style="background-color: rgb(211, 250, 160); border: 1px dashed #33cc05;">
+            <div class="col-12 d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0 text-primary">
+                    <i class="ti ti-clipboard-list me-1"></i>สถานะวิธีการล้าง
+                </h6>
+                <button type="button" id="btn_add_prod_method" class="btn btn-sm btn-primary">
+                    <i class="ti ti-plus me-1"></i>เพิ่ม
+                </button>
+            </div>
+            <div class="col-12">
+                {{-- หัวคอลัมน์ (แสดงครั้งเดียว) --}}
+                <div class="row g-2 fw-semibold small text-muted mb-1 d-none d-md-flex">
+                    <div class="col-md-4">วิธีการล้าง</div>
+                    <div class="col-md-3">วันที่</div>
+                    <div class="col-md-2">เวลาเริ่ม</div>
+                    <div class="col-md-2">เวลาที่เสร็จ</div>
+                    <div class="col-md-1"></div>
+                </div>
                 @php
-                    $item_end_job     = ($planning_item?->end_job ?? 'N') === 'Y';
-                    $semi_jobs_done   = $item_semi_jobs_done ?? true;
-                    // ปิดใช้งานเฉพาะตอน "ยังไม่จบงาน และงาน Semi ยังไม่ครบ" (จบงานอยู่แล้วยังปลดได้เสมอ)
-                    $end_job_disabled = !$item_end_job && !$semi_jobs_done;
+                    // สร้างตัวเลือก <option> ของวิธีการผลิต (ใช้ซ้ำในทุกแถวที่ render ฝั่ง server)
+                    $prodMethodOptions = function ($selected = null) use ($prod_methods) {
+                        $out = '<option value="">เลือกวิธีการล้าง</option>';
+                        foreach ($prod_methods as $pm) {
+                            $sel = ((string) $selected === (string) $pm->id) ? 'selected' : '';
+                            $out .= '<option value="'.$pm->id.'" '.$sel.'>'.e($pm->name).'</option>';
+                        }
+                        return $out;
+                    };
                 @endphp
-                <div class="p-2 rounded mt-4" style="background-color: #f8adad; border: 1px dashed #f72020;">
-                    <div class="form-check">
-                        {{-- hidden ส่งค่า N เมื่อไม่ติ๊ก (checkbox N มาก่อน, ค่า Y จะ override เมื่อติ๊ก) --}}
-                        <input type="hidden" name="end_job" value="N">
-                        <input type="checkbox" class="form-check-input" id="planning_item_end_job"
-                            name="end_job" value="Y"
-                            {{ $item_end_job ? 'checked' : '' }}
-                            {{ $end_job_disabled ? 'disabled' : '' }}>
-                        <label class="form-check-label" for="planning_item_end_job">จบงาน (End Job)</label>
-                    </div>
-                    @if($end_job_disabled)
-                        <div class="form-text fw-bold mt-1" style="color: #7a0000;">
-                            <i class="ti ti-alert-triangle me-1"></i>ต้องปิดออเดอร์ (End Order) ของแผน Semi ให้ครบทุกใบก่อน
+                <div id="prod_method_rows">
+                    @forelse($prod_method_rows as $row)
+                        <div class="row g-2 align-items-center mb-2 prod-method-row">
+                            <div class="col-md-4">
+                                <select name="prod_method_id[]" class="form-select form-select-sm">{!! $prodMethodOptions($row->prod_method_id) !!}</select>
+                            </div>
+                            <div class="col-md-3"><input type="text" name="prod_method_date[]" class="form-control form-control-sm flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" value="{{ $row->work_date ? substr($row->work_date, 0, 10) : '' }}"></div>
+                            <div class="col-md-2"><input type="text" name="prod_method_start[]" class="form-control form-control-sm wp-time-field" autocomplete="off" value="{{ $row->start_time ? substr($row->start_time, 0, 5) : '' }}"></div>
+                            <div class="col-md-2"><input type="text" name="prod_method_end[]" class="form-control form-control-sm wp-time-field" autocomplete="off" value="{{ $row->end_time ? substr($row->end_time, 0, 5) : '' }}"></div>
+                            <div class="col-md-1">
+                                <button type="button" class="btn btn-sm btn-outline-danger btn_remove_prod_method" title="ลบ">
+                                    <i class="ti ti-trash"></i>
+                                </button>
+                            </div>
                         </div>
-                    @endif
+                    @empty
+                        <div class="row g-2 align-items-center mb-2 prod-method-row">
+                            <div class="col-md-4">
+                                <select name="prod_method_id[]" class="form-select form-select-sm">{!! $prodMethodOptions() !!}</select>
+                            </div>
+                            <div class="col-md-3"><input type="text" name="prod_method_date[]" class="form-control form-control-sm flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป"></div>
+                            <div class="col-md-2"><input type="text" name="prod_method_start[]" class="form-control form-control-sm wp-time-field" autocomplete="off"></div>
+                            <div class="col-md-2"><input type="text" name="prod_method_end[]" class="form-control form-control-sm wp-time-field" autocomplete="off"></div>
+                            <div class="col-md-1">
+                                <button type="button" class="btn btn-sm btn-outline-danger btn_remove_prod_method" title="ลบ">
+                                    <i class="ti ti-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    @endforelse
                 </div>
             </div>
         </div>
 
+        {{-- <div class="row my-2"><hr /></div> --}}
+
+        {{-- ช่อง "จบงาน (End Job)" ย้ายไปอยู่ใต้การ์ดการเข้าคลัง ก่อนส่วน Semi (29/10/2569 ตามที่ผู้ใช้สั่ง) --}}
+
         {{-- ── การ์ดการบรรจุ: เพิ่มได้หลายแถว (บันทึกลงตารางลูก tb_planning_packing) ── --}}
         {{-- item ที่จบงานแล้ว (end_job = Y) → ล็อกการบรรจุ: เพิ่ม/แก้ไข/ลบไม่ได้ (ฝั่ง server ก็ไม่ sync ให้ ดู saveItem) --}}
         @php $packing_locked = ($planning_item?->end_job ?? 'N') === 'Y'; @endphp
-        <div class="row p-3 rounded" style="background-color: #eaffd9; border: 1px dashed #04ac2e;">
+        <div class="row p-3 rounded mt-3" style="background-color: #eaffd9; border: 1px dashed #04ac2e;">
             <div class="col-12 d-flex justify-content-between align-items-center mb-2">
                 <h6 class="mb-0 text-primary">
                     <i class="ti ti-package me-1"></i>การบรรจุ
@@ -583,6 +559,34 @@
                                 <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger btn_remove_warehouse" title="ลบ"><i class="ti ti-trash"></i></button></div>
                             </div>
                         @endforelse
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        {{-- ── จบงาน (End Job) — อยู่ก่อนส่วน Semi (ย้ายจากเหนือการ์ดการบรรจุ 29/10/2569) ── --}}
+        <div class="row">
+            <div class="col-md-6">
+                @php
+                    $item_end_job     = ($planning_item?->end_job ?? 'N') === 'Y';
+                    $semi_jobs_done   = $item_semi_jobs_done ?? true;
+                    // ปิดใช้งานเฉพาะตอน "ยังไม่จบงาน และงาน Semi ยังไม่ครบ" (จบงานอยู่แล้วยังปลดได้เสมอ)
+                    $end_job_disabled = !$item_end_job && !$semi_jobs_done;
+                @endphp
+                <div class="p-2 rounded mt-3" style="background-color: #f8adad; border: 1px dashed #f72020;">
+                    <div class="form-check">
+                        {{-- hidden ส่งค่า N เมื่อไม่ติ๊ก (checkbox N มาก่อน, ค่า Y จะ override เมื่อติ๊ก) --}}
+                        <input type="hidden" name="end_job" value="N">
+                        <input type="checkbox" class="form-check-input" id="planning_item_end_job"
+                            name="end_job" value="Y"
+                            {{ $item_end_job ? 'checked' : '' }}
+                            {{ $end_job_disabled ? 'disabled' : '' }}>
+                        <label class="form-check-label" for="planning_item_end_job">จบงาน (End Job)</label>
+                    </div>
+                    @if($end_job_disabled)
+                        <div class="form-text fw-bold mt-1" style="color: #7a0000;">
+                            <i class="ti ti-alert-triangle me-1"></i>ต้องปิดออเดอร์ (End Order) ของแผน Semi ให้ครบทุกใบก่อน
+                        </div>
                     @endif
                 </div>
             </div>
@@ -913,9 +917,9 @@ window.wpInitDateFields = function (scope) {
         if (!this._flatpickr) flatpickr(this, window.wpFpDateOptions);
     });
 };
-// ผูก flatpickr แบบเวลาอย่างเดียวให้ทุก .flatpickr-time ภายใน scope (กัน init ซ้ำด้วย _flatpickr)
+// ผูก flatpickr แบบเวลาอย่างเดียวให้ทุก .wp-time-field ภายใน scope (กัน init ซ้ำด้วย _flatpickr)
 window.wpInitTimeFields = function (scope) {
-    $(scope).find('.flatpickr-time').addBack('.flatpickr-time').each(function () {
+    $(scope).find('.wp-time-field').addBack('.wp-time-field').each(function () {
         if (!this._flatpickr) flatpickr(this, window.wpFpTimeOptions);
     });
 };
@@ -1130,10 +1134,10 @@ window.wpBindHolidayWarn = function (el, label) {
         });
     });
 
-    // ── การ์ดสีน้ำเงิน "สถานะวิธีการผลิต": เพิ่ม/ลบแถว (บันทึกลง tb_planning_prod_method) ──
+    // ── การ์ดสีเขียว "สถานะวิธีการล้าง" (เดิม "สถานะวิธีการผลิต"): เพิ่ม/ลบแถว (บันทึกลง tb_planning_prod_method) ──
     var PROD_METHOD_OPTIONS = @json($prod_methods);
     function prodMethodSelectHtml() {
-        var opts = '<option value="">เลือกวิธีการผลิต</option>';
+        var opts = '<option value="">เลือกวิธีการล้าง</option>';
         (PROD_METHOD_OPTIONS || []).forEach(function (pm) {
             opts += '<option value="' + esc(pm.id) + '">' + esc(pm.name) + '</option>';
         });
@@ -1143,8 +1147,8 @@ window.wpBindHolidayWarn = function (el, label) {
         return '<div class="row g-2 align-items-center mb-2 prod-method-row">'
             + '<div class="col-md-4">' + prodMethodSelectHtml() + '</div>'
             + '<div class="col-md-3"><input type="text" name="prod_method_date[]" class="form-control form-control-sm flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป"></div>'
-            + '<div class="col-md-2"><input type="text" name="prod_method_start[]" class="form-control form-control-sm flatpickr-time" autocomplete="off"></div>'
-            + '<div class="col-md-2"><input type="text" name="prod_method_end[]" class="form-control form-control-sm flatpickr-time" autocomplete="off"></div>'
+            + '<div class="col-md-2"><input type="text" name="prod_method_start[]" class="form-control form-control-sm wp-time-field" autocomplete="off"></div>'
+            + '<div class="col-md-2"><input type="text" name="prod_method_end[]" class="form-control form-control-sm wp-time-field" autocomplete="off"></div>'
             + '<div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger btn_remove_prod_method" title="ลบ"><i class="ti ti-trash"></i></button></div>'
             + '</div>';
     }
