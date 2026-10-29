@@ -150,7 +150,7 @@
                                                 <td><input type="text" name="TestDesc" data-f="TestDesc" maxlength="60" class="form-control form-control-sm"></td>
                                                 <td><input type="text" name="ResinMatch" data-f="ResinMatch" maxlength="30" class="form-control form-control-sm"></td>
                                                 <td><input type="number" step="0.0001" name="PHR" data-f="PHR" class="form-control form-control-sm text-end"></td>
-                                                <td><input type="text" name="lotno" data-f="lotno" maxlength="20" class="form-control form-control-sm"></td>
+                                                <td><input type="text" name="lotno" data-f="lotno" maxlength="20" class="form-control form-control-sm"><div class="invalid-feedback sd-lot-msg"></div></td>
                                                 <td class="text-center sd-item-del-col">
                                                     <button type="button" class="btn btn-sm btn-icon btn-label-danger sd-item-del" title="ลบแถว">
                                                         <i class="ti ti-trash"></i>
@@ -167,7 +167,7 @@
                                         <td><input type="text" data-f="TestDesc" maxlength="60" class="form-control form-control-sm"></td>
                                         <td><input type="text" data-f="ResinMatch" maxlength="30" class="form-control form-control-sm"></td>
                                         <td><input type="number" step="0.0001" data-f="PHR" class="form-control form-control-sm text-end"></td>
-                                        <td><input type="text" data-f="lotno" maxlength="20" class="form-control form-control-sm"></td>
+                                        <td><input type="text" data-f="lotno" maxlength="20" class="form-control form-control-sm"><div class="invalid-feedback sd-lot-msg"></div></td>
                                         <td class="text-center sd-item-del-col">
                                             <button type="button" class="btn btn-sm btn-icon btn-label-danger sd-item-del" title="ลบแถว">
                                                 <i class="ti ti-trash"></i>

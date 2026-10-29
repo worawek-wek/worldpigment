@@ -816,8 +816,45 @@
         // เหลือแถวแรกแถวเดียว (ค่าของแถวแรกไม่แตะ)
         function sdItemsReset() {
             $('#sd_items_body tr.sd-item').not('.sd-item-first').remove();
+            $('#sd_items_body [data-f="lotno"]').removeClass('is-invalid');
             sdItemsRenumber();
         }
+
+        // ── ตรวจ Lot No. ซ้ำตอนกรอก (29/10/2569) — ซ้ำกับแถวอื่นในตาราง หรือซ้ำกับใบที่มีอยู่แล้ว ──
+        // server ตรวจซ้ำอีกชั้นตอนบันทึก (ColorMatchingController::lotDuplicateError)
+        function sdLotMark(el, msg) {
+            $(el).toggleClass('is-invalid', !!msg).siblings('.sd-lot-msg').text(msg || '');
+        }
+
+        function sdLotCheck(el) {
+            const v = String($(el).val() ?? '').trim();
+            sdLotMark(el, '');
+            if (v === '') return;
+
+            // ซ้ำกับแถวอื่นในตาราง (ไม่สนตัวพิมพ์เล็ก/ใหญ่)
+            const dupInTable = $('#sd_items_body [data-f="lotno"]').not(el).filter(function () {
+                return String($(this).val() ?? '').trim().toLowerCase() === v.toLowerCase();
+            }).length > 0;
+            if (dupInTable) { sdLotMark(el, 'Lot No. ซ้ำกับแถวอื่นในรายการ'); return; }
+
+            // ซ้ำกับใบที่มีอยู่แล้ว — โหมดแก้ไขไม่นับใบตัวเอง
+            $.ajax({
+                type: 'GET',
+                url: '{{$page_url}}/check-lot',
+                data: { lotno: v, exclude_id: $('#form_sample_delivery [name="_pk"]').val() || '' },
+                success: function (resp) {
+                    if (String($(el).val() ?? '').trim() !== v) return;   // ผู้ใช้พิมพ์ต่อไปแล้ว
+                    if (resp && resp.exists) sdLotMark(el, 'Lot No. นี้มีอยู่แล้ว: ' + (resp.used || []).join(', '));
+                }
+            });
+        }
+
+        function sdLotCheckAll() {
+            $('#sd_items_body [data-f="lotno"]').each(function () { sdLotCheck(this); });
+        }
+
+        $('#sd_items_body').on('change', '[data-f="lotno"]', function () { sdLotCheck(this); });
+        $('#sd_items_body').on('input', '[data-f="lotno"]', function () { sdLotMark(this, ''); });
 
         // single = โหมดแก้ไข (แก้ 1 ใบ) → ซ่อนปุ่มเพิ่ม/ลบแถว
         function sdItemsSetSingle(single) {
@@ -843,6 +880,7 @@
             });
             if ($rows.length > 1) $rows.last().remove();
             sdItemsRenumber();
+            sdLotCheckAll();   // ค่าเลื่อนแถวแล้ว → ตรวจซ้ำใหม่ทั้งตาราง
         }
 
         // แถวที่จะบันทึก — ตัดแถวที่ว่างทั้ง 4 ช่องทิ้ง
@@ -1376,6 +1414,14 @@
             const isUpdate = !!pk;
             // สร้างใหม่: 1 แถวในตารางรายการตัวอย่าง = 1 ใบ (ไม่มีแถวที่กรอก = สร้าง 1 ใบตามเดิม)
             const sdItems = isUpdate ? [] : sdItemsCollect();
+
+            // Lot No. ที่ถูกทำเครื่องหมายว่าซ้ำ → ยังไม่ให้บันทึก (server ตรวจอีกชั้น)
+            const $badLot = $('#sd_items_body [data-f="lotno"].is-invalid');
+            if ($badLot.length) {
+                Swal.fire('Lot No. ซ้ำ', $badLot.first().siblings('.sd-lot-msg').text(), 'warning');
+                $badLot.first().trigger('focus');
+                return;
+            }
 
             Swal.fire({
                 title: 'ยืนยันการดำเนินการ?',

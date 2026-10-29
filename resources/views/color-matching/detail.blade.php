@@ -19,6 +19,27 @@
     $tr      = $row->testResult();
     $trBadge = '<span class="badge ' . $tr['class'] . '">' . e($tr['label']) . '</span>';
 
+    // ช่องของกลุ่ม "รายละเอียดผลิตภัณฑ์" ของใบส่ง ต.ย. — ใช้ทั้งหน้า View ของ SD
+    // และแถวที่กางออกในตาราง "ใบส่ง ต.ย. ให้ลูกค้า" ของหน้า CM (29/10/2569) ⇒ แก้ที่นี่ที่เดียว
+    $sdProductItems = fn ($r) => [
+        'รหัสสินค้า'      => $v($r->CodeNo),
+        'Lot No.'        => $v($r->lotno),
+        'น้ำหนัก (กรัม)'  => $v($r->Wage),
+        // Resin / PHR (28/10/2569 ตามที่ผู้ใช้สั่ง)
+        'Resin (Match)'  => $v($r->ResinMatch),
+        'PHR'            => $v($r->PHR),
+    ];
+
+    // ไอคอน + โทนสีของแต่ละช่องใน popup รายละเอียดผลิตภัณฑ์ (ตาม mockup ผู้ใช้ 29/10/2569)
+    // key = label ใน $sdProductItems · ช่องที่ไม่มีใน map ใช้ค่า default
+    $sdTileMeta = [
+        'รหัสสินค้า'      => ['ti-tag',       'purple'],
+        'Lot No.'        => ['ti-packages',  'blue'],
+        'น้ำหนัก (กรัม)'  => ['ti-box',       'green'],
+        'Resin (Match)'  => ['ti-flask',     'pink'],
+        'PHR'            => ['ti-barcode',   'indigo'],
+    ];
+
     // กลุ่มข้อมูล: title / icon / items[label => value]
     if ($isSD) {
         $sections = [
@@ -27,14 +48,7 @@
                 'เลขที่ใบส่ง ต.ย.'               => $v($row->Testno),
             ]],
             // กลุ่ม "ข้อมูลลูกค้า" เอาออกจาก View ใบส่ง ต.ย. (28/10/2569 ตามที่ผู้ใช้สั่ง)
-            ['รายละเอียดผลิตภัณฑ์', 'ti-flask', [
-                'รหัสสินค้า'      => $v($row->CodeNo),
-                'Lot No.'        => $v($row->lotno),
-                'น้ำหนัก (กรัม)'  => $v($row->Wage),
-                // Resin / PHR (28/10/2569 ตามที่ผู้ใช้สั่ง)
-                'Resin (Match)'  => $v($row->ResinMatch),
-                'PHR'            => $v($row->PHR),
-            ]],
+            ['รายละเอียดผลิตภัณฑ์', 'ti-flask', $sdProductItems($row)],
             ['ข้อมูลการขาย / การยกเลิก', 'ti-alert-circle', [
                 // Saleman Code เอาออก (28/10/2569 ตามที่ผู้ใช้สั่ง)
                 'สถานะ'           => $row->cancel == 1
@@ -187,9 +201,47 @@
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    {{-- กดแถว = popup "รายละเอียดผลิตภัณฑ์" ของใบนั้น (29/10/2569 ตามที่ผู้ใช้สั่ง — ผังตาม mockup)
+                                         เนื้อหาอยู่ใน <template class="sd-pop"> ของแถว · Swal ลอยเหนือ modal ได้ (inc_header ตั้ง z-index 9999)
+                                         CSS อยู่ใน <style> .sdpop ท้ายไฟล์ · ปุ่มปิด/กากบาทวาดเองใน markup (เรียก Swal.close()) --}}
                                     @foreach ($relatedSd as $i => $sd)
-                                        <tr>
-                                            <td class="text-center text-muted">{{ $i + 1 }}</td>
+                                        <tr class="sd-row" role="button" title="คลิกเพื่อดูรายละเอียดผลิตภัณฑ์"
+                                            onclick="Swal.fire({ html: $(this).find('template.sd-pop').html(), width: 780, padding: 0, showConfirmButton: false, customClass: { popup: 'sdpop-swal', htmlContainer: 'sdpop-html' } });">
+                                            <td class="text-center text-muted">
+                                                {{ $i + 1 }}
+                                                <template class="sd-pop">
+                                                    <div class="sdpop text-start">
+                                                        <div class="sdpop-head">
+                                                            <span class="sdpop-head-icon"><i class="ti ti-file-text"></i></span>
+                                                            <span class="sdpop-head-sep"></span>
+                                                            <span class="sdpop-head-title">รายละเอียดผลิตภัณฑ์</span>
+                                                            <span class="sdpop-head-badge">ใบส่ง ต.ย. {!! $v($sd->Testno) !!}</span>
+                                                            <button type="button" class="sdpop-x" onclick="Swal.close()" aria-label="ปิด"><i class="ti ti-x"></i></button>
+                                                        </div>
+                                                        <div class="sdpop-body">
+                                                            <div class="row g-3">
+                                                                @foreach ($sdProductItems($sd) as $label => $val)
+                                                                    @php [$tIcon, $tTone] = $sdTileMeta[$label] ?? ['ti-info-circle', 'indigo']; @endphp
+                                                                    <div class="col-md-6">
+                                                                        <div class="sdpop-tile sdpop-{{ $tTone }}">
+                                                                            <span class="sdpop-tile-icon"><i class="ti {{ $tIcon }}"></i></span>
+                                                                            <div class="min-w-0">
+                                                                                <div class="sdpop-tile-label">{{ $label }}</div>
+                                                                                <div class="sdpop-tile-value">{!! $val !!}</div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                @endforeach
+                                                            </div>
+                                                            <div class="sdpop-foot">
+                                                                <button type="button" class="sdpop-btn" onclick="Swal.close()">
+                                                                    <i class="ti ti-circle-check me-1"></i>ปิด
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </td>
                                             <td>{{ $v($sd->lotno) }}</td>
                                             {{-- $v() escape ให้แล้ว จึงใช้ {!! !!} กัน & กลายเป็น &amp; --}}
                                             <td>{!! $v($sd->TestDesc) !!}</td>
@@ -234,3 +286,57 @@
     </div>
 
 </div>
+
+{{-- popup รายละเอียดผลิตภัณฑ์ของใบส่ง ต.ย. (Swal) — ผังตาม mockup ผู้ใช้ 29/10/2569 --}}
+<style>
+    .sdpop-swal { border-radius: 1.25rem !important; overflow: hidden; }
+    .sdpop-html { margin: 0 !important; padding: 0 !important; overflow: visible !important; }
+    .sdpop-head {
+        display: flex; align-items: center; gap: .9rem;
+        padding: 1.1rem 1.5rem;
+        background: linear-gradient(120deg, #f6f4ff 0%, #ffffff 55%, #f3f1ff 100%);
+        border-bottom: 1px solid #ebe8f7;
+    }
+    .sdpop-head-icon {
+        width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: linear-gradient(135deg, #8b7cf6, #6c5ce7); color: #fff; font-size: 1.4rem;
+        box-shadow: 0 4px 12px rgba(108, 92, 231, .3);
+    }
+    .sdpop-head-sep { width: 1px; height: 26px; background: #d6d1f2; }
+    .sdpop-head-title { font-size: 1.35rem; font-weight: 700; color: #2b2560; }
+    .sdpop-head-badge {
+        padding: .3rem .85rem; border-radius: 999px;
+        background: #ece9fd; color: #4b3fb8; font-weight: 600; font-size: .85rem;
+    }
+    .sdpop-x {
+        margin-left: auto; border: 0; background: transparent; color: #6b6f86;
+        font-size: 1.5rem; line-height: 1; padding: .25rem;
+    }
+    .sdpop-x:hover { color: #2b2560; }
+    .sdpop-body { padding: 1.25rem 1.5rem 1.25rem; }
+    .sdpop-tile {
+        display: flex; align-items: center; gap: 1rem; height: 100%;
+        padding: 1rem 1.1rem; border-radius: 14px;
+        border: 1px solid var(--t-border); background: var(--t-bg);
+    }
+    .sdpop-tile-icon {
+        width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: var(--t-icon-bg); color: var(--t-icon); font-size: 1.5rem;
+    }
+    .sdpop-tile-label { color: #5d6178; font-size: .9rem; margin-bottom: .15rem; }
+    .sdpop-tile-value { color: #1f2346; font-size: 1.35rem; font-weight: 700; word-break: break-word; }
+    .sdpop-purple { --t-bg: #f8f7fd; --t-border: #ebe8f7; --t-icon-bg: #ece8fc; --t-icon: #6c5ce7; }
+    .sdpop-blue   { --t-bg: #f7f9fd; --t-border: #e6ebf5; --t-icon-bg: #e3ecfb; --t-icon: #2f6fe0; }
+    .sdpop-green  { --t-bg: #f2fbf7; --t-border: #dcf0e6; --t-icon-bg: #dcf3e8; --t-icon: #2fa37a; }
+    .sdpop-pink   { --t-bg: #fdf5fa; --t-border: #f4e2ee; --t-icon-bg: #f8e3f0; --t-icon: #b04fc0; }
+    .sdpop-indigo { --t-bg: #f7f9fd; --t-border: #e6ebf5; --t-icon-bg: #e3eafb; --t-icon: #3b5bdb; }
+    .sdpop-foot { border-top: 1px solid #eceef4; margin-top: 1.25rem; padding-top: 1rem; text-align: center; }
+    .sdpop-btn {
+        border: 0; border-radius: 10px; padding: .6rem 3rem;
+        background: linear-gradient(135deg, #7b6cf0, #5a4bd6); color: #fff;
+        font-weight: 600; font-size: 1rem; box-shadow: 0 4px 12px rgba(90, 75, 214, .3);
+    }
+    .sdpop-btn:hover { filter: brightness(1.05); }
+</style>
