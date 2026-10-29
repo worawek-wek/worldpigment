@@ -66,12 +66,18 @@ class PlanningStatusController extends Controller
                 }
                 return '<span class="badge bg-label-secondary">ปิด</span>';
             })
+            ->addColumn('is_warehouse_label', function($row) {
+                if ($row->is_warehouse === 'Y') {
+                    return '<span class="badge bg-label-warning">เปิด</span>';
+                }
+                return '<span class="badge bg-label-secondary">ปิด</span>';
+            })
             ->addColumn('btnedit', function($row) {
                 return '<button class="btn btn-sm btn-icon btn-warning me-2 btn_edit" data-id="'.$row->id.'" title="แก้ไข">
                     <i class="ti ti-pencil text-white ti-sm"></i>
                 </button>';
             })
-            ->rawColumns(['is_packing_label', 'is_active_label', 'btnedit'])
+            ->rawColumns(['is_packing_label', 'is_warehouse_label', 'is_active_label', 'btnedit'])
             ->make(true);
     }
 
@@ -124,6 +130,7 @@ class PlanningStatusController extends Controller
             'dept'      => 'nullable|integer|exists:tb_departments,id',
             'sort'      => 'nullable|integer|min:0',
             'is_packing' => 'nullable|in:Y,N',
+            'is_warehouse' => 'nullable|in:Y,N',
             'is_active' => 'nullable|in:Y,N',
         ]);
 
@@ -153,6 +160,8 @@ class PlanningStatusController extends Controller
             'sort'      => $request->sort ?: 0,
             // switch ไม่ติ๊ก = ไม่ส่ง key มา → N
             'is_packing' => $request->is_packing === 'Y' ? 'Y' : 'N',
+            // สถานะเข้าคลัง (29/10/2569) — กติกาเดียวกับ is_packing
+            'is_warehouse' => $request->is_warehouse === 'Y' ? 'Y' : 'N',
             'is_active' => $request->is_active ?: 'N',
         ];
 

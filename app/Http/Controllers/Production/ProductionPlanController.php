@@ -18,6 +18,7 @@ use App\Models\Emp;
 use App\Models\ProdMethod;
 use App\Models\PlanningProdMethod;
 use App\Models\PlanningPacking;
+use App\Models\PlanningWarehouse;
 use App\Services\HolidayService;
 
 class ProductionPlanController extends Controller
@@ -574,6 +575,8 @@ class ProductionPlanController extends Controller
             'prod_method_rows' => $prod_method_rows,
             // การบรรจุ (tb_planning_packing) — แถวเดิมของ item (item ใหม่ = ว่าง)
             'packing_rows'     => $planning_item ? $planning_item->packings : collect(),
+            // การเข้าคลัง (tb_planning_warehouse, 29/10/2569) — แถวเดิมของ item (item ใหม่ = ว่าง)
+            'warehouse_rows'   => $planning_item ? $planning_item->warehouses : collect(),
             'planning_remarks' => $planning_remarks,
             'qc_statuses'      => $qc_statuses,
             // วันหยุด (tb_holiday ที่เปิดใช้งาน) + วันหยุดประจำสัปดาห์ — ให้ JS เตือนตอนเลือกวันหยุด
@@ -670,10 +673,14 @@ class ProductionPlanController extends Controller
             ->orderBy('sort', 'asc')
             ->orderBy('id', 'asc')
             ->get()
-            ->pluck('name')
+            // คืน is_warehouse ด้วย ให้ฟอร์มเปิด/ปิดการ์ดการเข้าคลังตามสถานะ (29/10/2569)
+            ->map(fn ($s) => [
+                'name'         => $s->name,
+                'is_warehouse' => $s->is_warehouse === 'Y' ? 'Y' : 'N',
+            ])
             ->values();
 
-        $employees = $this->employeesByDept($company)->map(fn ($e) => [
+        $employees =$this->employeesByDept($company)->map(fn ($e) => [
             'empno' => $e->empno,
             'name'  => trim($e->empname.' '.$e->empsur),
         ])->values();
@@ -730,6 +737,13 @@ class ProductionPlanController extends Controller
             'weight_packing.*'   => 'nullable|string|max:255',
             'pack_remark'        => 'nullable|array',
             'pack_remark.*'      => 'nullable|string|max:1000',
+            // การเข้าคลัง (ตารางลูก tb_planning_warehouse, 29/10/2569) — array คู่ขนาน
+            'warehouse_datetime'   => 'nullable|array',
+            'warehouse_datetime.*' => 'nullable|string|max:255',
+            'weight_warehouse'     => 'nullable|array',
+            'weight_warehouse.*'   => 'nullable|string|max:255',
+            'warehouse_remark'     => 'nullable|array',
+            'warehouse_remark.*'   => 'nullable|string|max:1000',
             'shortage_remark'    => 'nullable|string|max:1000',
             'planning_remark'    => 'nullable|string|max:1000',
             'mdate'              => 'nullable|date',
@@ -868,6 +882,18 @@ class ProductionPlanController extends Controller
             //      ข้ามเมื่อ item จบงานอยู่แล้ว (การบรรจุถูกล็อก) → ไม่แตะแถวบรรจุเดิม
             if (!$was_ended) {
                 $this->syncPackings($planning_id, $request);
+
+                // 2.2) sync การเข้าคลัง (การ์ดสีส้ม, 29/10/2569) — กติกาเดียวกับการบรรจุ (ล็อกเมื่อจบงานแล้ว)
+                //      + ทำเฉพาะเมื่อสถานะที่บันทึกเป็น "สถานะเข้าคลัง" (is_warehouse='Y' ใน DB ไม่เชื่อฝั่งจอ)
+                //      สถานะอื่น = ไม่แตะแถวเข้าคลังเดิม
+                if ($this->isWarehouseStatus(Planning::find($planning_id))) {
+                    PlanningWarehouse::syncRows(
+                        $planning_id,
+                        (array) $request->input('warehouse_datetime', []),
+                        (array) $request->input('weight_warehouse', []),
+                        (array) $request->input('warehouse_remark', [])
+                    );
+                }
             }
 
             // 3) ปิดออเดอร์อัตโนมัติ (auto-close end_order):
@@ -954,6 +980,26 @@ class ProductionPlanController extends Controller
                 'sort'           => $i,
             ]);
         }
+    }
+
+    /**
+     * สถานะการวางแผนของ item เป็น "สถานะเข้าคลัง" หรือไม่ (tb_planning_status.is_warehouse = Y, 29/10/2569)
+     * จับคู่ด้วยชื่อสถานะ + แผนกของ item (company ว่าง = ใช้แผนกของ header) เหมือนตอนเติม dropdown
+     */
+    private function isWarehouseStatus(?Planning $planning): bool
+    {
+        if (!$planning || trim((string) $planning->planning_status) === '') {
+            return false;
+        }
+
+        $company = $planning->company
+            ?: PlanningHeader::where('id', $planning->planning_header_id)->value('company');
+        $dept_id = Department::where('name', $company)->value('id');
+
+        return PlanningStatus::where('dept', $dept_id)
+            ->where('name', $planning->planning_status)
+            ->where('is_warehouse', 'Y')
+            ->exists();
     }
 
     /**

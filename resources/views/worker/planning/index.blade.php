@@ -154,9 +154,55 @@
     function initPackingCard() {
         $('#worker_packing_rows .worker-packing-row').each(function () { initPackingRow($(this)); });
         syncPackingCard();
+        initWarehouseCard(); // การ์ดเข้าคลังโหลดมากับฟอร์มเดียวกัน
     }
 
     $(document).on('change', '#status_select', syncPackingCard);
+
+    // ── การ์ดการเข้าคลังใน modal อัพเดทสถานะ (29/10/2569) — ทำแบบเดียวกับการบรรจุ ──
+    // แสดงเมื่อสถานะที่เลือกมี is_warehouse='Y' (data-warehouse ของ option)
+    function initWarehouseRow($row) {
+        $row.find('.wwh-datetime').each(function () {
+            if (!this._flatpickr) flatpickr(this, WPK_DATETIME_OPTIONS);
+        });
+    }
+
+    function selectedIsWarehouse() {
+        return $('#status_select option:selected').attr('data-warehouse') === 'Y';
+    }
+
+    function syncWarehouseCard() {
+        $('#worker_warehouse_card').toggleClass('d-none', !selectedIsWarehouse());
+    }
+
+    function initWarehouseCard() {
+        $('#worker_warehouse_rows .worker-warehouse-row').each(function () { initWarehouseRow($(this)); });
+        syncWarehouseCard();
+    }
+
+    $(document).on('change', '#status_select', syncWarehouseCard);
+
+    $(document).on('click', '#btn_worker_add_warehouse', function () {
+        var $row = $($('#worker_warehouse_row_tpl').html()).appendTo('#worker_warehouse_rows');
+        initWarehouseRow($row);
+    });
+
+    // ลบได้เฉพาะแถวใหม่ที่ยังไม่บันทึก
+    $(document).on('click', '.btn_worker_remove_warehouse', function () {
+        $(this).closest('.worker-warehouse-row').remove();
+    });
+
+    // รวบรวมเฉพาะแถวใหม่เป็น array คู่ขนาน (ตัดคอมมาจากน้ำหนัก)
+    function collectWarehouse() {
+        var data = { warehouse_datetime: [], weight_warehouse: [], warehouse_remark: [] };
+        $('#worker_warehouse_rows .worker-warehouse-row.wwh-new').each(function () {
+            var $r = $(this);
+            data.warehouse_datetime.push($r.find('.wwh-datetime').val() || '');
+            data.weight_warehouse.push(String($r.find('.wwh-weight').val() || '').replace(/,/g, ''));
+            data.warehouse_remark.push($r.find('.wwh-remark').val() || '');
+        });
+        return data;
+    }
 
     $(document).on('click', '#btn_worker_add_packing', function () {
         var $row = $($('#worker_packing_row_tpl').html()).appendTo('#worker_packing_rows');
@@ -189,6 +235,8 @@
         var payload = { _token: CSRF_TOKEN, id: id, status: status };
         // ส่งการบรรจุเฉพาะสถานะบรรจุ (server ตรวจ is_packing ซ้ำอีกชั้น)
         if (selectedIsPacking()) $.extend(payload, collectPacking());
+        // ส่งการเข้าคลังเฉพาะสถานะเข้าคลัง (server ตรวจ is_warehouse ซ้ำอีกชั้น, 29/10/2569)
+        if (selectedIsWarehouse()) $.extend(payload, collectWarehouse());
 
         $.ajax({
             type: 'POST', url: URL_STATUS_U,

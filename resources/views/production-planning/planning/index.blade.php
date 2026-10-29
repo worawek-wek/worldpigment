@@ -470,7 +470,8 @@
             success: function (res) {
                 var opts = '<option value="">ทุกสถานะ</option>';
                 (res.statuses || []).forEach(function (s) {
-                    opts += '<option value="' + escOption(s) + '">' + escOption(s) + '</option>';
+                    // s = { name, is_warehouse } (เปลี่ยนจาก string 29/10/2569)
+                    opts += '<option value="' + escOption(s.name) + '">' + escOption(s.name) + '</option>';
                 });
                 $status.html(opts).prop('disabled', false);
             },

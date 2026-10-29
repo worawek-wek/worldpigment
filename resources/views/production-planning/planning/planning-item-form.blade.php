@@ -248,7 +248,8 @@
                 <select name="planning_status" id="planning_item_status" class="form-select">
                     <option value="">เลือกสถานะ</option>
                     @foreach($planning_statuses as $status)
-                        <option value="{{ $status->name }}" {{ $current_status === $status->name ? 'selected' : '' }}>
+                        {{-- data-warehouse: สถานะเข้าคลัง (is_warehouse) — ใช้เปิด/ปิดการ์ดการเข้าคลัง (29/10/2569) --}}
+                        <option value="{{ $status->name }}" data-warehouse="{{ ($status->is_warehouse ?? 'N') === 'Y' ? 'Y' : 'N' }}" {{ $current_status === $status->name ? 'selected' : '' }}>
                             {{ $status->name }}
                         </option>
                     @endforeach
@@ -518,6 +519,68 @@
                                 <div class="col-md-3"><input type="text" name="weight_packing[]" inputmode="decimal" class="form-control form-control-sm js-number-format" placeholder="0.00"></div>
                                 <div class="col-md-4"><input type="text" name="pack_remark[]" class="form-control form-control-sm" placeholder="หมายเหตุการบรรจุ"></div>
                                 <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger btn_remove_packing" title="ลบ"><i class="ti ti-trash"></i></button></div>
+                            </div>
+                        @endforelse
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        {{-- ── การ์ดการเข้าคลัง: เพิ่มได้หลายแถว (บันทึกลงตารางลูก tb_planning_warehouse, 29/10/2569) ── --}}
+        {{-- ล็อกเมื่อจบงานแล้ว (end_job = Y) เหมือนการบรรจุ — ฝั่ง server ก็ไม่ sync ให้ (ดู saveItem) --}}
+        {{-- แก้ไขได้เฉพาะเมื่อ "สถานะการวางแผน" ที่เลือกมี is_warehouse = Y (29/10/2569) — คุมด้วย syncWarehouseCard()
+             สถานะอื่น: การ์ดยังแสดงแต่ล็อกช่อง · server ไม่ sync ให้ (ดู saveItem) --}}
+        <div id="warehouse_card" class="row p-3 rounded mt-3" style="background-color: #fff6e5; border: 1px dashed #e08a00;"
+             data-locked="{{ $packing_locked ? '1' : '0' }}">
+            <div class="col-12 d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0 text-primary">
+                    <i class="ti ti-building-warehouse me-1"></i>การเข้าคลัง
+                    @if($packing_locked)
+                        <span class="badge bg-label-success ms-2"><i class="ti ti-lock me-1"></i>จบงานแล้ว — แก้ไขการเข้าคลังไม่ได้</span>
+                    @endif
+                    <span id="warehouse_status_hint" class="badge bg-label-secondary ms-2 d-none"><i class="ti ti-lock me-1"></i>เลือกสถานะเข้าคลังก่อน จึงจะแก้ไขได้</span>
+                </h6>
+                @unless($packing_locked)
+                    <button type="button" id="btn_add_warehouse" class="btn btn-sm btn-primary">
+                        <i class="ti ti-plus me-1"></i>เพิ่ม
+                    </button>
+                @endunless
+            </div>
+            <div class="col-12">
+                {{-- หัวคอลัมน์ (แสดงครั้งเดียว) --}}
+                <div class="row g-2 fw-semibold small text-muted mb-1 d-none d-md-flex">
+                    <div class="col-md-4">วันเวลาที่เข้าคลัง (Warehouse Datetime)</div>
+                    <div class="col-md-3">น้ำหนักเข้าคลัง (Weight Warehouse)</div>
+                    <div class="col-md-4">หมายเหตุการเข้าคลัง (Warehouse Remark)</div>
+                    <div class="col-md-1"></div>
+                </div>
+                <div id="warehouse_rows">
+                    @if($packing_locked)
+                        {{-- ล็อก: แสดงอ่านอย่างเดียว (ไม่มี name → ไม่ถูกส่ง, ไม่มีปุ่มลบ) --}}
+                        @forelse($warehouse_rows as $row)
+                            <div class="row g-2 align-items-center mb-2 warehouse-row">
+                                <div class="col-md-4"><input type="text" class="form-control form-control-sm" value="{{ $row->warehouse_datetime ? \Carbon\Carbon::parse($row->warehouse_datetime)->format('d/m/Y H:i') : '' }}" disabled></div>
+                                <div class="col-md-3"><input type="text" class="form-control form-control-sm text-end" value="{{ $row->weight_warehouse !== null ? number_format((float) $row->weight_warehouse, 2) : '' }}" disabled></div>
+                                <div class="col-md-4"><input type="text" class="form-control form-control-sm" value="{{ $row->warehouse_remark ?? '' }}" disabled></div>
+                                <div class="col-md-1"></div>
+                            </div>
+                        @empty
+                            <div class="text-muted small py-1">— ไม่มีข้อมูลการเข้าคลัง —</div>
+                        @endforelse
+                    @else
+                        @forelse($warehouse_rows as $row)
+                            <div class="row g-2 align-items-center mb-2 warehouse-row">
+                                <div class="col-md-4"><input type="text" name="warehouse_datetime[]" class="form-control form-control-sm flatpickr-datetime" autocomplete="off" placeholder="วว/ดด/ปปปป ชช:นน" value="{{ $row->warehouse_datetime ? \Carbon\Carbon::parse($row->warehouse_datetime)->format('Y-m-d H:i') : '' }}"></div>
+                                <div class="col-md-3"><input type="text" name="weight_warehouse[]" inputmode="decimal" class="form-control form-control-sm js-number-format" placeholder="0.00" value="{{ $row->weight_warehouse !== null ? number_format((float) $row->weight_warehouse, 2) : '' }}"></div>
+                                <div class="col-md-4"><input type="text" name="warehouse_remark[]" class="form-control form-control-sm" placeholder="หมายเหตุการเข้าคลัง" value="{{ $row->warehouse_remark ?? '' }}"></div>
+                                <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger btn_remove_warehouse" title="ลบ"><i class="ti ti-trash"></i></button></div>
+                            </div>
+                        @empty
+                            <div class="row g-2 align-items-center mb-2 warehouse-row">
+                                <div class="col-md-4"><input type="text" name="warehouse_datetime[]" class="form-control form-control-sm flatpickr-datetime" autocomplete="off" placeholder="วว/ดด/ปปปป ชช:นน"></div>
+                                <div class="col-md-3"><input type="text" name="weight_warehouse[]" inputmode="decimal" class="form-control form-control-sm js-number-format" placeholder="0.00"></div>
+                                <div class="col-md-4"><input type="text" name="warehouse_remark[]" class="form-control form-control-sm" placeholder="หมายเหตุการเข้าคลัง"></div>
+                                <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger btn_remove_warehouse" title="ลบ"><i class="ti ti-trash"></i></button></div>
                             </div>
                         @endforelse
                     @endif
@@ -1043,9 +1106,11 @@ window.wpBindHolidayWarn = function (el, label) {
 
                 var statusOpts = '<option value="">เลือกสถานะ</option>';
                 (res.statuses || []).forEach(function (s) {
-                    statusOpts += '<option value="' + esc(s) + '">' + esc(s) + '</option>';
+                    // s = { name, is_warehouse } (29/10/2569)
+                    statusOpts += '<option value="' + esc(s.name) + '" data-warehouse="' + (s.is_warehouse === 'Y' ? 'Y' : 'N') + '">' + esc(s.name) + '</option>';
                 });
                 $status.html(statusOpts).val('');
+                syncWarehouseCard(); // สถานะถูกล้าง → การ์ดเข้าคลังกลับเป็นอ่านอย่างเดียว/ซ่อน
 
                 // พนักงานผู้รับผิดชอบของแผนกใหม่ — ล้างค่าที่เลือกไว้ (เป็นของแผนกเก่า)
                 var empOpts = '<option value="">เลือกพนักงาน</option>';
@@ -1134,6 +1199,55 @@ window.wpBindHolidayWarn = function (el, label) {
         }
         recalcWeightProducedFromPacking(); // ผลรวมลดตามหลังลบ/ล้างแถว
     });
+
+    // ── การ์ด "การเข้าคลัง": เพิ่ม/ลบแถว (บันทึกลง tb_planning_warehouse, 29/10/2569) ──
+    function warehouseRowHtml() {
+        return '<div class="row g-2 align-items-center mb-2 warehouse-row">'
+            + '<div class="col-md-4"><input type="text" name="warehouse_datetime[]" class="form-control form-control-sm flatpickr-datetime" autocomplete="off" placeholder="วว/ดด/ปปปป ชช:นน"></div>'
+            + '<div class="col-md-3"><input type="text" name="weight_warehouse[]" inputmode="decimal" class="form-control form-control-sm js-number-format" placeholder="0.00"></div>'
+            + '<div class="col-md-4"><input type="text" name="warehouse_remark[]" class="form-control form-control-sm" placeholder="หมายเหตุการเข้าคลัง"></div>'
+            + '<div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger btn_remove_warehouse" title="ลบ"><i class="ti ti-trash"></i></button></div>'
+            + '</div>';
+    }
+    $('#btn_add_warehouse').on('click', function () {
+        var $row = $(warehouseRowHtml()).appendTo('#warehouse_rows');
+        initPackingDateFields($row); // ผูก flatpickr แบบมีเวลาให้แถวใหม่ (ตัวช่วยเดียวกับการบรรจุ)
+    });
+    // ลบแถว; ถ้าเหลือแถวเดียวให้ล้างค่าแทนการลบ (คงไว้อย่างน้อย 1 แถว)
+    $('#warehouse_rows').on('click', '.btn_remove_warehouse', function () {
+        var $rows = $('#warehouse_rows .warehouse-row');
+        if ($rows.length <= 1) {
+            $(this).closest('.warehouse-row').find('input').each(function () {
+                if (this._flatpickr) this._flatpickr.clear();
+                else this.value = '';
+            });
+        } else {
+            $(this).closest('.warehouse-row').remove();
+        }
+    });
+
+    // ── การ์ดการเข้าคลังผูกกับสถานะ is_warehouse (29/10/2569) ──
+    // สถานะที่เลือกเป็นสถานะเข้าคลัง → แสดง + แก้ไขได้
+    // ไม่ใช่ → ปิดช่อง (disabled = ไม่ถูกส่ง) + ซ่อนปุ่ม · การ์ดแสดงเสมอ (เดิมซ่อนทั้งการ์ดเมื่อไม่มีแถว
+    // ผู้ใช้เข้าใจว่าการ์ดหายไป — เปลี่ยน 29/10/2569)
+    // งานที่จบแล้ว (data-locked) blade render เป็นอ่านอย่างเดียวอยู่แล้ว → ไม่ต้องทำอะไร
+    function syncWarehouseCard() {
+        var $card = $('#warehouse_card');
+        if (!$card.length) return;
+        var isWarehouse = $('#planning_item_status option:selected').attr('data-warehouse') === 'Y';
+        if ($card.data('locked') == 1) return;
+
+        $card.find('#warehouse_rows input').each(function () {
+            this.disabled = !isWarehouse;
+            if (this._flatpickr && this._flatpickr.altInput) this._flatpickr.altInput.disabled = !isWarehouse;
+        });
+        $('#btn_add_warehouse').toggleClass('d-none', !isWarehouse);
+        $card.find('.btn_remove_warehouse').toggleClass('d-none', !isWarehouse);
+        $('#warehouse_status_hint').toggleClass('d-none', isWarehouse);
+    }
+    $('#planning_item_status').on('change', syncWarehouseCard);
+    $('#btn_add_warehouse').on('click', syncWarehouseCard); // แถวใหม่ให้สถานะตรงกับการ์ด
+    syncWarehouseCard();
 
     // ── auto-รวมน้ำหนักบรรจุทุกแถว → เติมช่อง "น้ำหนักที่ผลิตได้ (Weight Produced)" ──
     // weight_produced = ผลรวม weight_packing[] ทุกแถว (อัปเดตสดขณะพิมพ์/เพิ่ม/ลบแถว)

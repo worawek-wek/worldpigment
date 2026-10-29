@@ -29,7 +29,7 @@
     <select id="status_select" class="form-select">
         <option value="">-- เลือกสถานะ --</option>
         @forelse($statuses as $st)
-            <option value="{{ $st->name }}" data-packing="{{ ($st->is_packing ?? 'N') === 'Y' ? 'Y' : 'N' }}" @selected($job->planning_status === $st->name)>{{ $st->name }}</option>
+            <option value="{{ $st->name }}" data-packing="{{ ($st->is_packing ?? 'N') === 'Y' ? 'Y' : 'N' }}" data-warehouse="{{ ($st->is_warehouse ?? 'N') === 'Y' ? 'Y' : 'N' }}" @selected($job->planning_status === $st->name)>{{ $st->name }}</option>
         @empty
             <option value="" disabled>ไม่มีสถานะของแผนกนี้</option>
         @endforelse
@@ -45,6 +45,10 @@
         #worker_packing_card .wpk-head { font-size: .8rem; color: #5d596c; font-weight: 600; }
         #worker_packing_card .worker-packing-row { margin-left: 0; margin-right: 0; }
         #worker_packing_card .worker-packing-row.wpk-new { background: #fff; }
+        #worker_warehouse_card .flatpickr-wrapper { display: block; width: 100%; }
+        #worker_warehouse_card .wpk-head { font-size: .8rem; color: #5d596c; font-weight: 600; }
+        #worker_warehouse_card .worker-warehouse-row { margin-left: 0; margin-right: 0; }
+        #worker_warehouse_card .worker-warehouse-row.wwh-new { background: #fff; }
     </style>
     <div id="worker_packing_card" class="border border-success rounded p-3 mt-3 d-none" style="border-style:dashed !important; background:#f2fbe9;">
         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -73,6 +77,34 @@
     </div>
     <template id="worker_packing_row_tpl">
         @include('worker.planning.partials.packing-row', ['row' => null])
+    </template>
+
+    {{-- การ์ดการเข้าคลัง (29/10/2569) — แสดงเมื่อเลือกสถานะที่ is_warehouse='Y' · บันทึกลง tb_planning_warehouse (เพิ่มได้อย่างเดียว) --}}
+    <div id="worker_warehouse_card" class="border border-warning rounded p-3 mt-3 d-none" style="border-style:dashed !important; background:#fff6e5;">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-warning fw-semibold"><i class="ti ti-building-warehouse me-1"></i>การเข้าคลัง</span>
+            <button type="button" id="btn_worker_add_warehouse" class="btn btn-sm btn-primary">
+                <i class="ti ti-plus me-1"></i>เพิ่ม
+            </button>
+        </div>
+        <div class="row gx-2 d-none d-md-flex border-bottom pb-1 wpk-head" style="margin-left:0;margin-right:0;">
+            <div class="col-md-4">วันเวลาที่เข้าคลัง</div>
+            <div class="col-md-3">น้ำหนักเข้าคลัง</div>
+            <div class="col-md-4">หมายเหตุ</div>
+            <div class="col-md-1 text-center">ลบ</div>
+        </div>
+        <div id="worker_warehouse_rows">
+            @foreach($warehouse_rows as $row)
+                @include('worker.planning.partials.warehouse-row', ['row' => $row])
+            @endforeach
+            @include('worker.planning.partials.warehouse-row', ['row' => null])
+        </div>
+        <div class="small text-muted mt-2">
+            <i class="ti ti-lock me-1"></i>แถวที่บันทึกแล้วอ่านอย่างเดียว (แก้ไข/ลบไม่ได้)
+        </div>
+    </div>
+    <template id="worker_warehouse_row_tpl">
+        @include('worker.planning.partials.warehouse-row', ['row' => null])
     </template>
 </div>
 <div class="modal-footer">

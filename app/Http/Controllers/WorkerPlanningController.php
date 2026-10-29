@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Models\Planning;
 use App\Models\PlanningPacking;
+use App\Models\PlanningWarehouse;
 use App\Models\PlanningStatus;
 use App\Services\AccessControl;
 use Illuminate\Http\Request;
@@ -97,7 +98,7 @@ class WorkerPlanningController extends Controller
             ->where('is_active', 'Y')
             ->orderBy('sort', 'asc')
             ->orderBy('id', 'asc')
-            ->get(['id', 'name', 'is_packing']);
+            ->get(['id', 'name', 'is_packing', 'is_warehouse']);
     }
 
     public function index()
@@ -220,6 +221,8 @@ class WorkerPlanningController extends Controller
             'statuses'     => $this->statusesForJob($job),
             // แถวบรรจุเดิมของงาน — แสดงในการ์ดบรรจุเมื่อเลือกสถานะที่ is_packing='Y' (22/10/2569)
             'packing_rows' => $job->packings,
+            // แถวเข้าคลังเดิมของงาน — แสดงเมื่อเลือกสถานะที่ is_warehouse='Y' (29/10/2569)
+            'warehouse_rows' => $job->warehouses,
         ]);
     }
 
@@ -237,9 +240,18 @@ class WorkerPlanningController extends Controller
             'weight_packing.*'   => 'nullable|string|max:255',
             'pack_remark'        => 'nullable|array',
             'pack_remark.*'      => 'nullable|string|max:1000',
+            // การเข้าคลัง (ส่งมาเฉพาะเมื่อเลือกสถานะที่ is_warehouse='Y', 29/10/2569)
+            'warehouse_datetime'   => 'nullable|array',
+            'warehouse_datetime.*' => 'nullable|date_format:Y-m-d H:i',
+            'weight_warehouse'     => 'nullable|array',
+            'weight_warehouse.*'   => 'nullable|string|max:255',
+            'warehouse_remark'     => 'nullable|array',
+            'warehouse_remark.*'   => 'nullable|string|max:1000',
         ], [
             'packing_datetime.*.date_format' => 'รูปแบบวันเวลาที่บรรจุเสร็จไม่ถูกต้อง',
             'pack_remark.*.max'              => 'หมายเหตุการบรรจุยาวเกินไป',
+            'warehouse_datetime.*.date_format' => 'รูปแบบวันเวลาที่เข้าคลังไม่ถูกต้อง',
+            'warehouse_remark.*.max'           => 'หมายเหตุการเข้าคลังยาวเกินไป',
         ]);
 
         $job   = $this->accessibleJobOrFail($request->get('id'));
@@ -269,7 +281,22 @@ class WorkerPlanningController extends Controller
         // ยึดค่า is_packing จาก DB ไม่เชื่อฝั่งจอ · สถานะอื่น = ไม่แตะแถวบรรจุเลย
         $savePacking = ($statusRow->is_packing ?? 'N') === 'Y' && $request->has('packing_datetime');
 
+        // สถานะที่เปิดสถานะเข้าคลัง (is_warehouse='Y') → บันทึกการเข้าคลังด้วย (29/10/2569) — กติกาเดียวกับการบรรจุ
+        $saveWarehouse = ($statusRow->is_warehouse ?? 'N') === 'Y' && $request->has('warehouse_datetime');
+
         $old = $job->planning_status;
+
+        if ($saveWarehouse) {
+            // เพิ่มได้อย่างเดียว — แถวเดิมไม่ถูกแก้ไข/ลบ · ไม่รวมน้ำหนักไปช่องไหน
+            DB::transaction(function () use ($job, $request) {
+                PlanningWarehouse::appendRows(
+                    $job->id,
+                    (array) $request->input('warehouse_datetime', []),
+                    (array) $request->input('weight_warehouse', []),
+                    (array) $request->input('warehouse_remark', [])
+                );
+            });
+        }
 
         if ($savePacking) {
             DB::transaction(function () use ($job, $request) {

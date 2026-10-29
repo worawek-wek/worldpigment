@@ -61,6 +61,7 @@
                                         <th class="col-4">ชื่อสถานะ</th>
                                         <th class="col-1">ลำดับ</th>
                                         <th class="col-1">สถานะบรรจุ</th>
+                                        <th class="col-1">สถานะเข้าคลัง</th>
                                         <th class="col-2">สถานะ</th>
                                         <th class="col-1">จัดการ</th>
                                     </tr>
@@ -114,6 +115,8 @@
                 { 'className': "text-center", data: 'sort', name: 'tb_planning_status.sort', orderable: true },
                 // สถานะบรรจุ (is_packing, 22/10/2569)
                 { 'className': "text-center", data: 'is_packing_label', name: 'tb_planning_status.is_packing', orderable: true, searchable: false },
+                // สถานะเข้าคลัง (is_warehouse, 29/10/2569)
+                { 'className': "text-center", data: 'is_warehouse_label', name: 'tb_planning_status.is_warehouse', orderable: true, searchable: false },
                 // สถานะ: sort ตามคอลัมน์จริง is_active (แม้จะแสดงเป็น badge)
                 { 'className': "text-center", data: 'is_active_label', name: 'tb_planning_status.is_active', orderable: true, searchable: false },
                 { 'className': "text-center", data: 'btnedit', name: 'btnedit', orderable: false, searchable: false },

@@ -62,6 +62,12 @@ class Planning extends Model
         return $this->hasMany(PlanningPacking::class, 'planning_id')->orderBy('sort');
     }
 
+    // การเข้าคลัง (หลายแถวต่อ 1 planning item) — เก็บใน tb_planning_warehouse (29/10/2569)
+    public function warehouses()
+    {
+        return $this->hasMany(PlanningWarehouse::class, 'planning_id')->orderBy('sort');
+    }
+
     // สถานะ QC — คอลัมน์ qc_status เก็บเป็น id อ้างอิง master tb_qc_status (09/09/2569)
     public function qcStatus()
     {

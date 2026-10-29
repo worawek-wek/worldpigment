@@ -44,6 +44,16 @@
             </div>
         </div>
 
+        {{-- เปิดสถานะเข้าคลัง (is_warehouse) — ไม่ติ๊ก = ไม่ส่งค่า server บันทึกเป็น N (29/10/2569) --}}
+        <div class="mb-2">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="ps_is_warehouse"
+                       name="is_warehouse" value="Y"
+                       {{ ($planning_status?->is_warehouse ?? 'N') === 'Y' ? 'checked' : '' }}>
+                <label class="form-check-label" for="ps_is_warehouse">เปิดสถานะเข้าคลัง</label>
+            </div>
+        </div>
+
         <div class="mb-2">
             <label class="form-label">สถานะการใช้งาน</label>
             <select name="is_active" class="form-select">
