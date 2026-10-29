@@ -22,6 +22,9 @@ class ColorMatchingController extends Controller
         'ZnstEBS', // คำนวณ Znst+EBS ร่วมในชิ้นงาน (20/10/2569)
     ];
 
+    // ─── 4 ช่องที่ต่างกันในแต่ละใบ เมื่อสร้างใบส่ง ต.ย. หลายใบพร้อมกัน (ตาราง "รายการตัวอย่าง", 29/10/2569) ───
+    private const SD_ITEM_FIELDS = ['TestDesc', 'ResinMatch', 'PHR', 'lotno'];
+
     // ─── Field ที่เป็นวันที่ — flatpickr ส่งมาเป็น d/m/Y ต้อง parse ก่อน save ───
     private const DATE_FIELDS = [
         'TestDate', 'Respdate', 'DsendT', 'TNDate',
@@ -319,14 +322,62 @@ class ColorMatchingController extends Controller
             $this->ensureEmployee($request->TNname);
             $this->ensureEmployee($request->ColorMatcher);
 
-            Testmain::create($payload);
+            // ใบส่ง ต.ย. หลายแถว (29/10/2569) — 1 แถวในตาราง "รายการตัวอย่าง" = 1 ใบ
+            // ข้อมูลอื่นเหมือนกันทุกใบ ต่างกันแค่ 4 ช่องใน SD_ITEM_FIELDS · ไม่มี sd_items = สร้างใบเดียวตามเดิม
+            $items = $this->sdItems($request);
+            if (empty($items)) {
+                Testmain::create($payload);
+                $created = 1;
+            } else {
+                foreach ($items as $item) {
+                    $row = $payload;
+                    foreach (self::SD_ITEM_FIELDS as $field) {
+                        // ช่องว่างในแถวนั้น = ไม่ใส่ค่า (ไม่ยืมค่าจากแถวแรกที่อยู่ใน $payload)
+                        if ($item[$field] === '') {
+                            unset($row[$field]);
+                        } else {
+                            $row[$field] = $item[$field];
+                        }
+                    }
+                    Testmain::create($row);
+                }
+                $created = count($items);
+            }
 
             DB::commit();
-            return response()->json(['ok' => true]);
+            return response()->json(['ok' => true, 'created' => $created]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * อ่าน sd_items (JSON จากตาราง "รายการตัวอย่าง" ของฟอร์ม SD) → array ของแถวที่กรอกอย่างน้อย 1 ช่อง
+     * ความยาวตัดตามขนาดคอลัมน์ testmain (TestDesc 60 · ResinMatch 30 · lotno 20) · PHR ต้องเป็นตัวเลข
+     */
+    private function sdItems(Request $request): array
+    {
+        $raw = json_decode((string) $request->input('sd_items', ''), true);
+        if (!is_array($raw)) return [];
+
+        $maxLen = ['TestDesc' => 60, 'ResinMatch' => 30, 'lotno' => 20];
+        $items  = [];
+        foreach ($raw as $r) {
+            if (!is_array($r)) continue;
+            $item = [];
+            foreach (self::SD_ITEM_FIELDS as $field) {
+                $v = trim((string) ($r[$field] ?? ''));
+                if ($field === 'PHR') {
+                    $v = is_numeric($v) ? $v : '';
+                } elseif (isset($maxLen[$field])) {
+                    $v = mb_substr($v, 0, $maxLen[$field]);
+                }
+                $item[$field] = $v;
+            }
+            if (implode('', $item) !== '') $items[] = $item;
+        }
+        return $items;
     }
 
     /**

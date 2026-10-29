@@ -792,7 +792,70 @@
             $('#form_sample_delivery [name="SendNo"]').val('');
             // โหมดสร้างใหม่ → ยังไม่มี record ให้ลบ
             $('#btn_delete_sd').addClass('d-none').removeData('id').removeData('label');
+            sdItemsReset();
+            sdItemsSetSingle(false);
         }
+
+        // ── ตาราง "รายการตัวอย่าง" ในฟอร์ม SD (29/10/2569) — 1 แถว = ใบส่ง ต.ย. 1 ใบ ──
+        // แถวแรกใช้ name เดิม (TestDesc/ResinMatch/PHR/lotno) · แถวที่เพิ่มอ้างช่องด้วย data-f
+        const SD_ITEM_FIELDS = ['TestDesc', 'ResinMatch', 'PHR', 'lotno'];
+
+        function sdItemsRenumber() {
+            $('#sd_items_body tr.sd-item').each(function (i) { $(this).find('.sd-item-no').text(i + 1); });
+        }
+
+        // อ่านค่าทุกแถว (ตามลำดับบนจอ)
+        function sdItemsValues() {
+            return $('#sd_items_body tr.sd-item').map(function () {
+                const $tr = $(this), v = {};
+                SD_ITEM_FIELDS.forEach(function (f) { v[f] = String($tr.find('[data-f="' + f + '"]').val() ?? '').trim(); });
+                return v;
+            }).get();
+        }
+
+        // เหลือแถวแรกแถวเดียว (ค่าของแถวแรกไม่แตะ)
+        function sdItemsReset() {
+            $('#sd_items_body tr.sd-item').not('.sd-item-first').remove();
+            sdItemsRenumber();
+        }
+
+        // single = โหมดแก้ไข (แก้ 1 ใบ) → ซ่อนปุ่มเพิ่ม/ลบแถว
+        function sdItemsSetSingle(single) {
+            $('#sd_items_add, #sd_items_table .sd-item-del-col, .sd-items-hint').toggleClass('d-none', !!single);
+        }
+
+        function sdItemsAdd() {
+            const $tr = $($('#sd_item_tpl').html());
+            $('#sd_items_body').append($tr);
+            sdItemsRenumber();
+            $tr.find('[data-f="TestDesc"]').trigger('focus');
+        }
+
+        // ลบแถว — เลื่อนค่าแถวถัดไปขึ้นมาแทน แล้วตัดแถวสุดท้ายทิ้ง (แถวแรกถือ name จึงต้องอยู่เสมอ)
+        // เหลือแถวเดียว = ล้างค่าแทนการลบ
+        function sdItemsRemove(index) {
+            const vals = sdItemsValues();
+            vals.splice(index, 1);
+            const $rows = $('#sd_items_body tr.sd-item');
+            $rows.each(function (i) {
+                const v = vals[i] || {};
+                SD_ITEM_FIELDS.forEach(function (f) { $(this).find('[data-f="' + f + '"]').val(v[f] ?? ''); }, this);
+            });
+            if ($rows.length > 1) $rows.last().remove();
+            sdItemsRenumber();
+        }
+
+        // แถวที่จะบันทึก — ตัดแถวที่ว่างทั้ง 4 ช่องทิ้ง
+        function sdItemsCollect() {
+            return sdItemsValues().filter(function (v) {
+                return SD_ITEM_FIELDS.some(function (f) { return v[f] !== ''; });
+            });
+        }
+
+        $('#sd_items_add').on('click', sdItemsAdd);
+        $('#sd_items_body').on('click', '.sd-item-del', function () {
+            sdItemsRemove($('#sd_items_body tr.sd-item').index($(this).closest('tr')));
+        });
 
         // ── พิมพ์ "เลขที่ใบนำส่งเทียบสี (อ้างอิง)" ในฟอร์ม SD ──
         // → ดึง record CM ตาม SendNo มาเติมช่องที่ตรงกัน (ลูกค้า/สี)
@@ -876,6 +939,9 @@
                 url: "{{$page_url}}/" + encodeURIComponent(id),
                 success: function(row) {
                     fillForm('#form_sample_delivery', row);
+                    // แก้ไข = 1 ใบ → ตารางรายการตัวอย่างเหลือแถวเดียว ไม่มีปุ่มเพิ่ม/ลบแถว
+                    sdItemsReset();
+                    sdItemsSetSingle(true);
                     $('#form_sample_delivery [name="_mode"]').val('edit');
                     $('#form_sample_delivery [name="_pk"]').val(row.id);
                     $('#form_sample_delivery [name="SendNo"]').val(row.SendNo ?? '');
@@ -1308,10 +1374,14 @@
 
             // มี id (_pk) → แก้ไข; ไม่มี → สร้างใหม่
             const isUpdate = !!pk;
+            // สร้างใหม่: 1 แถวในตารางรายการตัวอย่าง = 1 ใบ (ไม่มีแถวที่กรอก = สร้าง 1 ใบตามเดิม)
+            const sdItems = isUpdate ? [] : sdItemsCollect();
 
             Swal.fire({
                 title: 'ยืนยันการดำเนินการ?',
-                text: 'บันทึกใบส่ง ต.ย. ให้ลูกค้า?',
+                text: sdItems.length > 1
+                    ? 'สร้างใบส่ง ต.ย. ให้ลูกค้า ' + sdItems.length + ' ใบ?'
+                    : 'บันทึกใบส่ง ต.ย. ให้ลูกค้า?',
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonText: 'ตกลง',
@@ -1328,6 +1398,7 @@
                 stripCommaFields(this);          // ถอดคอมมาออกจากช่อง js-comma ก่อนส่ง (เช่น น้ำหนัก Wage)
                 const fd = new FormData(this);
                 fd.append('_token', CSRF);
+                if (sdItems.length) fd.append('sd_items', JSON.stringify(sdItems));
 
                 const url = isUpdate
                     ? '{{$page_url}}/update/' + encodeURIComponent(pk)
@@ -1338,7 +1409,7 @@
                     contentType: false, processData: false,
                     success: function(resp) {
                         if (resp && resp.ok) {
-                            Swal.fire('บันทึกเรียบร้อย', '', 'success');
+                            Swal.fire(resp.created > 1 ? 'สร้างใบส่ง ต.ย. ' + resp.created + ' ใบเรียบร้อย' : 'บันทึกเรียบร้อย', '', 'success');
                             $('#sampleDeliveryModal').modal('hide');
                             loadData(page);
                         } else {
