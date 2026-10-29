@@ -343,18 +343,19 @@
                 </div>
             </div>
             <div class="d-flex justify-content-center align-items-center my-3">
-                {{-- ประเภทเอกสาร (อยู่ตรงกลาง) — กลุ่ม checkbox เลือกได้หลายอัน (ติ๊ก=แสดง) --}}
+                {{-- ประเภทเอกสาร (อยู่ตรงกลาง) — กลุ่ม checkbox เลือกได้หลายอัน (ติ๊ก=แสดง)
+                     ค่าเริ่มต้น (data-default): ติ๊กใบนำส่งเทียบสี · ไม่ติ๊กใบส่ง ต.ย. (29/10/2569 ตามที่ผู้ใช้สั่ง) --}}
                 <div class="doc-filter d-flex align-items-center flex-wrap justify-content-center gap-3 py-2">
                     <div class="form-check mb-0">
                         <input class="form-check-input p_search" type="checkbox"
-                            name="show_cm" value="1" id="filter_show_cm" checked onchange="loadData(page)">
+                            name="show_cm" value="1" id="filter_show_cm" data-default="1" checked onchange="loadData(page)">
                         <label class="form-check-label fw-medium d-flex align-items-center" for="filter_show_cm">
                             <i class="ti ti-file-text text-primary me-1"></i>ใบนำส่งเทียบสี
                         </label>
                     </div>
                     <div class="form-check mb-0">
                         <input class="form-check-input p_search" type="checkbox"
-                            name="show_sd" value="1" id="filter_show_sd" checked onchange="loadData(page)">
+                            name="show_sd" value="1" id="filter_show_sd" data-default="0" onchange="loadData(page)">
                         <label class="form-check-label fw-medium d-flex align-items-center" for="filter_show_sd">
                             <i class="ti ti-package text-info me-1"></i>ใบส่ง ต.ย.
                         </label>
@@ -537,6 +538,15 @@
             return data;
         }
 
+        // ประเภทเอกสาร (checkbox) ต่างจากค่าเริ่มต้น data-default หรือไม่
+        function docFilterChanged(){
+            var changed = false;
+            $('.p_search[type="checkbox"]').each(function(){
+                if ($(this).is(':checked') !== (String($(this).data('default')) === '1')) changed = true;
+            });
+            return changed;
+        }
+
         // อัปเดตสีปุ่ม "ล้างตัวกรอง" ตามว่ามี filter ใช้งานอยู่กี่ตัว (ไม่นับ limit)
         function updateFilterButtonState(){
             var count = 0;
@@ -545,9 +555,8 @@
                 var v = $(this).val();
                 if (v !== '' && v !== null) count++;
             });
-            // ประเภทเอกสาร: นับเป็น filter เมื่อ "ไม่ใช่ติ๊กครบทั้งคู่" (default = ติ๊กครบ = แสดงทั้งหมด)
-            var $cb = $('.p_search[type="checkbox"]');
-            if ($cb.length && $cb.filter(':checked').length !== $cb.length) count++;
+            // ประเภทเอกสาร: นับเป็น filter เมื่อสถานะต่างจากค่าเริ่มต้น (data-default — 29/10/2569)
+            if (docFilterChanged()) count++;
             var $btn = $('#btnResetFilters');
             if (count > 0) {
                 $btn.removeClass('btn-label-secondary').addClass('btn-danger');
@@ -579,9 +588,9 @@
                     + '<span class="text-dark fw-medium">' + escHtml(label) + ':</span> '
                     + escHtml(val) + '</span>');
             });
-            // ประเภทเอกสาร: บอกเฉพาะเมื่อ "ไม่ได้ติ๊กครบ" (ติ๊กครบ = แสดงทั้งหมด = ไม่ได้กรอง)
+            // ประเภทเอกสาร: บอกเฉพาะเมื่อต่างจากค่าเริ่มต้น (ติ๊กใบนำส่งเทียบสี · ไม่ติ๊กใบส่ง ต.ย.)
             var $cb = $('.p_search[type="checkbox"]');
-            if ($cb.length && $cb.filter(':checked').length !== $cb.length) {
+            if (docFilterChanged()) {
                 var docs = $cb.filter(':checked').map(function(){
                     return $('label[for="' + this.id + '"]').text().trim();
                 }).get();
@@ -694,9 +703,9 @@
                     $input.val('').trigger('change.select2');
                     return;
                 }
-                // ประเภทเอกสาร: ล้างตัวกรอง = ติ๊กกลับทั้งหมด (default แสดงทั้งหมด)
+                // ประเภทเอกสาร: ล้างตัวกรอง = กลับเป็นค่าเริ่มต้น (data-default — 29/10/2569)
                 if ($input.is(':checkbox')) {
-                    $input.prop('checked', true);
+                    $input.prop('checked', String($input.data('default')) === '1');
                     return;
                 }
                 $input.val('');
@@ -1278,6 +1287,15 @@
 
         // ชั้น 1 — เปิดจากปุ่มในตาราง
         function viewDetail(id)  { loadDetailInto(id, '#detailView',  '#detailModal');  }
+
+        // ปุ่มดินสอในตาราง "ใบส่ง ต.ย. ให้ลูกค้า" ของหน้า View ใบนำส่งเทียบสี (29/10/2569)
+        // → เปิดฟอร์มแก้ไขใบส่ง ต.ย. ซ้อนบนหน้า View · บันทึกแล้วโหลดหน้า View ใหม่ (ไม่ให้ค่าในตารางค้าง)
+        let sdReturnDetail = null;   // id ของใบนำส่งเทียบสีที่ต้องโหลดหน้า View ใหม่หลังบันทึก
+        function editSdFromDetail(sdId, cmId) {
+            sdReturnDetail = cmId;
+            viewSampleDelivery(sdId);
+        }
+        $('#sampleDeliveryModal').on('hidden.bs.modal', function () { sdReturnDetail = null; });
         // ชั้น 2 — เปิดจากปุ่ม "ดู" ของใบส่ง ต.ย. ในรายละเอียด CM (ซ้อนทับ ชั้น 1 ยังอยู่)
         function viewDetail2(id) { loadDetailInto(id, '#detailView2', '#detailModal2'); }
 
@@ -1478,7 +1496,10 @@
                         if (resp && resp.ok) {
                             Swal.fire(resp.created > 1 ? 'สร้างใบส่ง ต.ย. ' + resp.created + ' ใบเรียบร้อย'
                                 : (resp.updated > 1 ? 'แก้ไขใบส่ง ต.ย. ' + resp.updated + ' ใบเรียบร้อย' : 'บันทึกเรียบร้อย'), '', 'success');
+                            // แก้จากหน้า View ใบนำส่งเทียบสี → โหลดหน้า View ใหม่ (อ่านค่าก่อน hide ล้าง sdReturnDetail)
+                            const backTo = sdReturnDetail;
                             $('#sampleDeliveryModal').modal('hide');
+                            if (backTo && $('#detailModal').is(':visible')) loadDetailInto(backTo, '#detailView', '#detailModal');
                             loadData(page);
                         } else {
                             Swal.fire('เกิดข้อผิดพลาด', resp.error ?? '', 'error');

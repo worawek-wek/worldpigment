@@ -194,6 +194,8 @@
                                         <th>Resin (Match)</th>
                                         <th class="text-end">PHR</th>
                                         <th>สถานะ</th>
+                                        {{-- ปุ่มดินสอ → ฟอร์มแก้ไขใบส่ง ต.ย. (29/10/2569 ตามที่ผู้ใช้สั่ง) --}}
+                                        <th class="text-center" style="width:70px;">แก้ไข</th>
                                         {{-- คอลัมน์ "ดู" ปิดไว้ (28/10/2569 ตามที่ผู้ใช้สั่ง) — เปิดคืน: เอา @if(false) ออกทั้งหัวและแถว --}}
                                         @if (false)
                                         <th class="text-center" style="width:70px;">ดู</th>
@@ -253,6 +255,14 @@
                                                 @else
                                                     <span class="badge bg-label-success">ปกติ</span>
                                                 @endif
+                                            </td>
+                                            {{-- stopPropagation: ไม่ให้คลิกปุ่มไปเปิด popup ของแถวด้วย --}}
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-sm btn-icon btn-label-primary"
+                                                    title="แก้ไขใบส่ง ต.ย."
+                                                    onclick="event.stopPropagation(); editSdFromDetail('{{ $sd->id }}', '{{ $row->id }}');">
+                                                    <i class="ti ti-pencil"></i>
+                                                </button>
                                             </td>
                                             @if (false)
                                             <td class="text-center">
