@@ -114,25 +114,67 @@
                                 </div>
                             </div>
 
-                            {{-- ─── กลุ่ม: ข้อมูลสี (เหมือนฟอร์ม CM — ดึงจากใบนำส่งเทียบสีตอนป้อน SendNo แต่แก้ไขได้) ─── --}}
+                            {{-- ─── กลุ่ม: รายการตัวอย่าง — เพิ่มได้หลายแถว 1 แถว = ใบส่ง ต.ย. 1 ใบ (29/10/2569 ตามที่ผู้ใช้สั่ง) ───
+                                 รวม 4 ช่อง รายละเอียด / Resin (Match) / PHR / Lot No. (เดิมอยู่คนละกลุ่ม) ไว้ในตารางเดียว
+                                 · แถวแรก (.sd-item-first) ใช้ name เดิม → fillForm / ดึงจากใบอ้างอิง / แก้ไข / คัดลอก ทำงานเหมือนเดิม
+                                 · แถวที่เพิ่ม (#sd_item_tpl) ไม่มี name — ตอนสร้างใหม่ JS รวบทุกแถวส่งเป็น sd_items (JSON)
+                                 · โหมดแก้ไข = แก้ 1 ใบ จึงซ่อนปุ่มเพิ่ม/ลบแถว (#sd_items_add / .sd-item-del) --}}
                             <div class="mb-2 pb-2 border-bottom">
                                 <div class="d-flex align-items-center mb-2 ps-2"
                                     style="border-left: 3px solid #6c5ce7;">
-                                    <i class="ti ti-palette me-2" style="color: #4b3fb8;"></i>
+                                    <i class="ti ti-list-details me-2" style="color: #4b3fb8;"></i>
                                     <span class="fw-semibold" style="font-size: 0.95rem; color: #4b3fb8;">
-                                        ข้อมูลสี
+                                        รายการตัวอย่าง
                                     </span>
+                                    <span class="text-muted small ms-2 sd-items-hint">(1 แถว = ใบส่ง ต.ย. 1 ใบ — ข้อมูลช่องอื่นเหมือนกันทุกใบ)</span>
+                                    <button type="button" id="sd_items_add" class="btn btn-sm btn-label-primary ms-auto">
+                                        <i class="ti ti-plus me-1"></i> เพิ่มแถว
+                                    </button>
                                 </div>
 
-                                <div class="row gx-3 gy-2 of-form" style="--of-lw: 150px;">
-                                    {{-- รายละเอียด (ช่องเดียวในกลุ่มข้อมูลสี) — label ซ้าย ช่องกรอกขวา (07/10/2569) --}}
-                                    <div class="col-md-8 of-row">
-                                        <label class="form-label small">รายละเอียด <span class="text-muted fw-normal">(รายละเอียดผลิตภัณฑ์)</span></label>
-                                        <div class="of-ctl">
-                                            <input type="text" name="TestDesc" class="form-control">
-                                        </div>
-                                    </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered align-middle mb-0" id="sd_items_table">
+                                        <thead class="table-light">
+                                            <tr class="small">
+                                                <th class="text-center" style="width:40px;">#</th>
+                                                <th>รายละเอียด <span class="text-muted fw-normal">(รายละเอียดผลิตภัณฑ์)</span></th>
+                                                <th style="width:22%;">Resin (Match) <span class="text-muted fw-normal">(เช่น PVC, ABS, PE)</span></th>
+                                                <th style="width:12%;">PHR <span class="text-muted fw-normal">(0.0000)</span></th>
+                                                <th style="width:20%;">Lot No. <span class="text-muted fw-normal">(เช่น 690112-1-2/01)</span></th>
+                                                <th class="text-center sd-item-del-col" style="width:48px;"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="sd_items_body">
+                                            <tr class="sd-item sd-item-first">
+                                                <td class="text-center sd-item-no">1</td>
+                                                <td><input type="text" name="TestDesc" data-f="TestDesc" maxlength="60" class="form-control form-control-sm"></td>
+                                                <td><input type="text" name="ResinMatch" data-f="ResinMatch" maxlength="30" class="form-control form-control-sm"></td>
+                                                <td><input type="number" step="0.0001" name="PHR" data-f="PHR" class="form-control form-control-sm text-end"></td>
+                                                <td><input type="text" name="lotno" data-f="lotno" maxlength="20" class="form-control form-control-sm"></td>
+                                                <td class="text-center sd-item-del-col">
+                                                    <button type="button" class="btn btn-sm btn-icon btn-label-danger sd-item-del" title="ลบแถว">
+                                                        <i class="ti ti-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
+                                {{-- แม่แบบแถวที่เพิ่ม — ไม่มี name (ไม่ถูกส่งตรง ๆ) --}}
+                                <template id="sd_item_tpl">
+                                    <tr class="sd-item">
+                                        <td class="text-center sd-item-no"></td>
+                                        <td><input type="text" data-f="TestDesc" maxlength="60" class="form-control form-control-sm"></td>
+                                        <td><input type="text" data-f="ResinMatch" maxlength="30" class="form-control form-control-sm"></td>
+                                        <td><input type="number" step="0.0001" data-f="PHR" class="form-control form-control-sm text-end"></td>
+                                        <td><input type="text" data-f="lotno" maxlength="20" class="form-control form-control-sm"></td>
+                                        <td class="text-center sd-item-del-col">
+                                            <button type="button" class="btn btn-sm btn-icon btn-label-danger sd-item-del" title="ลบแถว">
+                                                <i class="ti ti-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
                             </div>
 
                             {{-- ─── กลุ่ม: รายละเอียดผลิตภัณฑ์ (ย้ายจากฟอร์ม CM) ─── --}}
@@ -149,17 +191,7 @@
                                 {{-- align-items-end: label ยาวไม่เท่ากันในแถว → ช่องกรอกชิดล่างเรียงตรงกัน --}}
                                 {{-- of-form: ใช้กับแถว 2 และ 3 (label ซ้าย ช่องกรอกขวา) — แถว 1 ไม่มี of-row จึงยังเป็น label อยู่บน --}}
                                 <div class="row gx-3 gy-2 align-items-end of-form" style="--of-lw: 150px;">
-                                    {{-- แถว 1: Resin + PHR + น้ำหนัก + Standard --}}
-                                    {{-- col-md-6 → 5: ยืม 1 ส่วนให้ PHR/น้ำหนัก กว้างเท่ากัน (16/10/2569) --}}
-                                    <div class="col-md-5">
-                                        <label class="form-label small mb-1">Resin (Match) <span class="text-muted fw-normal">(เช่น PVC, ABS, PE)</span></label>
-                                        <input type="text" name="ResinMatch" class="form-control">
-                                    </div>
-                                    {{-- PHR กับ น้ำหนัก กว้างเท่ากัน col-md-2 ทั้งคู่ (16/10/2569 ตามที่ผู้ใช้สั่ง — เดิม PHR 1 / น้ำหนัก 2) --}}
-                                    <div class="col-md-2">
-                                        <label class="form-label small mb-1">PHR <span class="text-muted fw-normal">(0.0000)</span></label>
-                                        <input type="number" step="0.0001" name="PHR" class="form-control text-end">
-                                    </div>
+                                    {{-- แถว 1: น้ำหนัก + Standard — Resin (Match) / PHR ย้ายไปตาราง "รายการตัวอย่าง" (29/10/2569) --}}
                                     <div class="col-md-2">
                                         <label class="form-label small mb-1">น้ำหนัก (กรัม) <span class="text-muted fw-normal"><br>(เช่น 100)</span></label>
                                         {{-- จำนวนเต็ม (กรัม) — คอมมาอัตโนมัติ, ถอดคอมมาก่อน submit --}}
@@ -174,17 +206,11 @@
                                     </div>
                                     <div class="w-100"></div>
 
-                                    {{-- แถว 2: เลขที่ใบรายงานผล + Lot No. — label ซ้าย ช่องกรอกขวา (07/10/2569) --}}
+                                    {{-- แถว 2: เลขที่ใบรายงานผล — label ซ้าย ช่องกรอกขวา (07/10/2569) · Lot No. ย้ายไปตาราง "รายการตัวอย่าง" (29/10/2569) --}}
                                     <div class="col-md-5 of-row">
                                         <label class="form-label small">เลขที่ใบรายงานผล <span class="text-muted fw-normal">(เช่น 26/0001/2/4)</span></label>
                                         <div class="of-ctl">
                                             <input type="text" name="rptno" class="form-control">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-5 of-row">
-                                        <label class="form-label small">Lot No. <span class="text-muted fw-normal">(เช่น 690112-1-2/01)</span></label>
-                                        <div class="of-ctl">
-                                            <input type="text" name="lotno" class="form-control">
                                         </div>
                                     </div>
                                     <div class="w-100"></div>
@@ -260,10 +286,13 @@
                 <div class="modal-footer justify-content-between flex-wrap gap-2">
                     <div class="d-flex gap-2 flex-wrap">
                         {{-- ลบใบส่ง ต.ย. — แสดงเฉพาะโหมดแก้ไข (JS ถอด d-none ให้ตอนเปิดจากปุ่มแก้ไข) --}}
+                        {{-- ปิดไว้ 28/10/2569 ตามที่ผู้ใช้สั่ง "เอาปุ่มลบออกให้หมด" — เปิดคืน: ถอด @if(false) / @endif --}}
+                        @if (false)
                         <button type="button" id="btn_delete_sd" class="btn btn-label-danger d-none">
                             <i class="ti ti-trash me-1"></i>
                             ลบใบส่ง ต.ย.
                         </button>
+                        @endif
                     </div>
                     <div class="d-flex gap-2">
                         <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">

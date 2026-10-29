@@ -303,10 +303,13 @@
                 <div class="modal-footer justify-content-between flex-wrap gap-2">
                     <div class="d-flex gap-2 flex-wrap">
                         {{-- ลบใบนำส่งเทียบสี — แสดงเฉพาะโหมดแก้ไข (JS ถอด d-none ให้ตอนเปิดจากปุ่มแก้ไข) --}}
+                        {{-- ปิดไว้ 28/10/2569 ตามที่ผู้ใช้สั่ง "เอาปุ่มลบออกให้หมด" — เปิดคืน: ถอด @if(false) / @endif --}}
+                        @if (false)
                         <button type="button" id="btn_delete_cm" class="btn btn-label-danger d-none">
                             <i class="ti ti-trash me-1"></i>
                             ลบใบนำส่งเทียบสี
                         </button>
+                        @endif
                     </div>
                     <div class="d-flex gap-2">
                         <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">
