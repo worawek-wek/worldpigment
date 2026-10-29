@@ -233,7 +233,26 @@ class ColorMatchingController extends Controller
             return response()->json(['error' => 'not_found'], 404);
         }
 
-        return response()->json($row);
+        // ใบส่ง ต.ย. อื่นของใบเทียบสีเดียวกัน — ฟอร์มใช้ถามว่าจะแก้ใบเดียวหรือทุกใบ (29/10/2569)
+        return response()->json($row->toArray() + [
+            'sd_siblings' => $this->sdSiblingsQuery($row)->count(),
+        ]);
+    }
+
+    /**
+     * ใบส่ง ต.ย. อื่น (ไม่รวมตัวเอง) ที่อ้างอิงใบเทียบสีเดียวกัน = SendNo เดียวกัน + มี Testno
+     * ใบที่ไม่ใช่ SD หรือไม่มี SendNo → ไม่มีพี่น้อง
+     */
+    private function sdSiblingsQuery(Testmain $row)
+    {
+        $sendNo = trim((string) $row->SendNo);
+        $isSd   = trim((string) $row->Testno) !== '';
+
+        return Testmain::query()
+            ->when(!$isSd || $sendNo === '', fn ($q) => $q->whereRaw('1 = 0'))
+            ->where('SendNo', $sendNo)
+            ->whereNotNull('Testno')->where('Testno', '!=', '')
+            ->where('id', '!=', $row->id);
     }
 
     /**
@@ -472,10 +491,21 @@ class ColorMatchingController extends Controller
             $this->ensureEmployee($request->TNname);
             $this->ensureEmployee($request->ColorMatcher);
 
+            // หาใบพี่น้องจาก SendNo "เดิม" ก่อนบันทึก (เผื่อผู้ใช้แก้ SendNo ในฟอร์ม)
+            $applyAll = $request->boolean('apply_all');
+            $siblings = $applyAll ? $this->sdSiblingsQuery($row)->get() : collect();
+
             $row->fill($payload)->save();
 
+            // แก้ทุกใบของใบเทียบสีนี้ (29/10/2569) — ใช้ค่าชุดเดียวกัน ยกเว้น 4 ช่องที่เป็นของแต่ละใบ
+            // (SD_ITEM_FIELDS: รายละเอียด / Resin / PHR / Lot No.) ⇒ ไม่ทับกัน
+            $shared = collect($payload)->except(self::SD_ITEM_FIELDS)->all();
+            foreach ($siblings as $sib) {
+                $sib->fill($shared)->save();
+            }
+
             DB::commit();
-            return response()->json(['ok' => true]);
+            return response()->json(['ok' => true, 'updated' => 1 + $siblings->count()]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['error' => $e->getMessage()], 500);

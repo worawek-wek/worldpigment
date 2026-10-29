@@ -792,6 +792,7 @@
             $('#form_sample_delivery [name="SendNo"]').val('');
             // โหมดสร้างใหม่ → ยังไม่มี record ให้ลบ
             $('#btn_delete_sd').addClass('d-none').removeData('id').removeData('label');
+            $('#form_sample_delivery').data('sdSiblings', 0);
             sdItemsReset();
             sdItemsSetSingle(false);
         }
@@ -980,6 +981,8 @@
                     // แก้ไข = 1 ใบ → ตารางรายการตัวอย่างเหลือแถวเดียว ไม่มีปุ่มเพิ่ม/ลบแถว
                     sdItemsReset();
                     sdItemsSetSingle(true);
+                    // จำนวนใบส่ง ต.ย. อื่นของใบเทียบสีเดียวกัน — ใช้ถามตอนบันทึกว่าจะแก้ใบเดียวหรือทุกใบ
+                    $('#form_sample_delivery').data('sdSiblings', parseInt(row.sd_siblings, 10) || 0);
                     $('#form_sample_delivery [name="_mode"]').val('edit');
                     $('#form_sample_delivery [name="_pk"]').val(row.id);
                     $('#form_sample_delivery [name="SendNo"]').val(row.SendNo ?? '');
@@ -1423,7 +1426,23 @@
                 return;
             }
 
-            Swal.fire({
+            // แก้ไข + ใบเทียบสีนี้มีใบส่ง ต.ย. ใบอื่นด้วย → ให้เลือกแก้ใบเดียว หรือทุกใบ (29/10/2569)
+            // ทุกใบ = ช่องอื่นตามใบนี้ แต่ รายละเอียด / Resin / PHR / Lot No. ของใครของมัน (server ไม่ทับ)
+            const siblings = isUpdate ? ($(this).data('sdSiblings') || 0) : 0;
+            const askScope = siblings > 0;
+
+            Swal.fire(askScope ? {
+                title: 'แก้ไขใบส่ง ต.ย.',
+                html: 'ใบเทียบสีนี้มีใบส่ง ต.ย. อีก <b>' + siblings + '</b> ใบ<br>ต้องการบันทึกการแก้ไขกับใบไหน?'
+                    + '<div class="small text-muted mt-2">เลือก "ทุกใบ" — รายละเอียด / Resin (Match) / PHR / Lot No. ของแต่ละใบไม่ถูกเปลี่ยน</div>',
+                icon: 'question',
+                showCancelButton: true,
+                showDenyButton: true,
+                confirmButtonText: 'เฉพาะใบนี้',
+                denyButtonText: 'ทุกใบ (' + (siblings + 1) + ' ใบ)',
+                cancelButtonText: 'ยกเลิก',
+                denyButtonColor: '#6c5ce7',
+            } : {
                 title: 'ยืนยันการดำเนินการ?',
                 text: sdItems.length > 1
                     ? 'สร้างใบส่ง ต.ย. ให้ลูกค้า ' + sdItems.length + ' ใบ?'
@@ -1433,7 +1452,8 @@
                 confirmButtonText: 'ตกลง',
                 cancelButtonText: 'ยกเลิก'
             }).then((result) => {
-                if (!result.isConfirmed) return;
+                if (!result.isConfirmed && !result.isDenied) return;
+                const applyAll = askScope && result.isDenied;
 
                 // ⚠ TODO(ชั่วคราว): SD create ที่ยังไม่กรอก SendNo อ้างอิง — gen เลขชั่วคราวให้ insert ผ่านก่อน
                 // SendNo เป็น varchar(12) → ('SD' + 10 หลักท้ายของ timestamp = 12 ตัว)
@@ -1445,6 +1465,7 @@
                 const fd = new FormData(this);
                 fd.append('_token', CSRF);
                 if (sdItems.length) fd.append('sd_items', JSON.stringify(sdItems));
+                if (applyAll) fd.append('apply_all', '1');
 
                 const url = isUpdate
                     ? '{{$page_url}}/update/' + encodeURIComponent(pk)
@@ -1455,7 +1476,8 @@
                     contentType: false, processData: false,
                     success: function(resp) {
                         if (resp && resp.ok) {
-                            Swal.fire(resp.created > 1 ? 'สร้างใบส่ง ต.ย. ' + resp.created + ' ใบเรียบร้อย' : 'บันทึกเรียบร้อย', '', 'success');
+                            Swal.fire(resp.created > 1 ? 'สร้างใบส่ง ต.ย. ' + resp.created + ' ใบเรียบร้อย'
+                                : (resp.updated > 1 ? 'แก้ไขใบส่ง ต.ย. ' + resp.updated + ' ใบเรียบร้อย' : 'บันทึกเรียบร้อย'), '', 'success');
                             $('#sampleDeliveryModal').modal('hide');
                             loadData(page);
                         } else {
