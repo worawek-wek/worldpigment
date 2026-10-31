@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\CreditTerm;
 use App\Models\Customer;
+use App\Models\Emp;
+use App\Services\AccessControl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -197,6 +199,10 @@ class CustomerController extends Controller
             'credit_terms' => CreditTerm::activeList(),
             'sales'     => $this->saleOptions(),
             'sale_name' => $customer ? $this->saleName($customer->sale) : null,
+            // ลูกค้าที่บันทึกแล้ว แก้ได้เฉพาะ MK Admin (30/10/2569)
+            'can_edit'  => $customer === null || self::canEditSaved(),
+            // ผู้ติดต่อ + สถานที่ส่ง แก้ได้ทุก Admin (31/10/2569)
+            'can_edit_sub' => $customer === null || self::canEditSubData(),
         ])->render();
 
         return response()->json([
@@ -254,6 +260,12 @@ class CustomerController extends Controller
             'dvpoints.*' => ['nullable', 'string', 'max:20'],
         ];
 
+        // Admin ที่ไม่ใช่ MK Admin บันทึกได้เฉพาะผู้ติดต่อ + สถานที่ส่ง (31/10/2569) — ช่องอื่นถูกล็อกจึงไม่ส่งชื่อมา
+        $subOnly = $mode === 'update' && !self::canEditSaved() && self::canEditSubData();
+        if ($subOnly) {
+            unset($rules['name']);
+        }
+
         $messages = [
             'code.required'    => 'กรุณากรอกรหัสลูกค้า',
             'code.max'         => 'รหัสลูกค้ายาวได้ไม่เกิน 6 ตัวอักษร',
@@ -287,6 +299,26 @@ class CustomerController extends Controller
                 'status'  => 404,
                 'message' => 'ไม่พบข้อมูลลูกค้ารหัส ' . $code,
             ], 404);
+        }
+
+        // ลูกค้าที่บันทึกแล้ว เปลี่ยนข้อมูลได้เฉพาะ MK Admin (30/10/2569 ตามที่ผู้ใช้สั่ง)
+        if ($existing && !self::canEditSaved() && !$subOnly) {
+            return response()->json([
+                'status'  => 403,
+                'message' => 'ข้อมูลลูกค้าที่บันทึกแล้ว แก้ไขได้เฉพาะ MK Admin เท่านั้น',
+            ], 403);
+        }
+
+        // ไม่แตะตาราง customer / engname — ค่าที่ส่งมาในช่องอื่นถูกทิ้งทั้งหมด
+        if ($subOnly) {
+            $this->syncContacts($code, (array) $request->input('contacts', []));
+            $this->syncDeliveryPoints($code, (array) $request->input('dvpoints', []));
+
+            return response()->json([
+                'status'  => 200,
+                'code'    => $code,
+                'message' => 'บันทึกผู้ติดต่อและสถานที่ส่งเรียบร้อย',
+            ]);
         }
 
         // ─── เครดิต (26/10/2569) ───
@@ -355,6 +387,12 @@ class CustomerController extends Controller
      */
     public function destroy(Request $request)
     {
+        // ห้ามลบข้อมูลลูกค้าที่บันทึกแล้ว (30/10/2569 ตามที่ผู้ใช้สั่ง) — โค้ดลบเดิมด้านล่างเก็บไว้ ไม่ถูกเรียก
+        return response()->json([
+            'status'  => 403,
+            'message' => 'ไม่อนุญาตให้ลบข้อมูลลูกค้าที่บันทึกแล้ว',
+        ], 403);
+
         $code = trim((string) $request->input('code'));
 
         $customer = $code === '' ? null : Customer::find($code);
@@ -389,6 +427,35 @@ class CustomerController extends Controller
     // ─────────────────────────────────────────────────────────────
     //  ตัวช่วย
     // ─────────────────────────────────────────────────────────────
+
+    /**
+     * MK Admin = พนักงาน (guard emp) แผนก MK ที่มี role "Admin" — แก้ข้อมูลลูกค้าที่บันทึกแล้วได้ (30/10/2569)
+     * admin ตาราง users ไม่มีแผนก จึงไม่นับ
+     */
+    public static function canEditSaved(): bool
+    {
+        $account = AccessControl::currentAccount();
+
+        return $account instanceof Emp
+            && strtoupper(trim((string) $account->dept)) === 'MK'
+            && $account->role
+            && $account->role->name === 'Admin';
+    }
+
+    /**
+     * แก้ผู้ติดต่อ + สถานที่ส่ง ของลูกค้าที่บันทึกแล้วได้ (31/10/2569)
+     * = admin ตาราง users ทุกบัญชี + พนักงาน role "Admin" ทุกแผนก
+     */
+    public static function canEditSubData(): bool
+    {
+        if (AccessControl::isAdmin()) {
+            return true;
+        }
+
+        $account = AccessControl::currentAccount();
+
+        return $account instanceof Emp && $account->role && $account->role->name === 'Admin';
+    }
 
     /** trim แล้วคืน null ถ้าว่าง (ตาราง legacy เก็บทั้ง '' และ NULL ปนกัน) */
     private function nn($value): ?string

@@ -363,6 +363,19 @@
                 return;
             }
             $('#customerFormBody').html(res.data);
+            // ลูกค้าที่บันทึกแล้ว + ไม่ใช่ MK Admin = ล็อกช่อง (30/10/2569) — ล็อกก่อน enhanceSelects
+            // main = Admin อื่น แก้ได้เฉพาะผู้ติดต่อ + สถานที่ส่ง (31/10/2569) · all = ดูอย่างเดียว
+            var $cf = $('#customer_form'), cfLock = $cf.data('readonly');
+            if (cfLock === 'all') {
+                $cf.find('input, select, textarea').prop('disabled', true);
+                $cf.find('#btn_add_contact, #btn_add_dv, .cf-del-contact, .cf-del-dv').addClass('d-none');
+            } else if (cfLock === 'main') {
+                // คง hidden (token/mode) และรหัสลูกค้าให้ถูกส่งไปตอนบันทึก — รหัสใช้ readonly แทน disabled
+                $cf.find('input, select, textarea')
+                    .not('input[type="hidden"], [name="code"], .cf-sec-contact *, .cf-sec-dv *')
+                    .prop('disabled', true);
+                $cf.find('[name="code"]').prop('readonly', true);
+            }
             enhanceSelects('#customerFormBody');   // ฟอร์มเพิ่งถูกใส่เข้า DOM → ยกระดับ select ในฟอร์ม
             $('#customerModalTitle').html(code
                 ? '<i class="ti ti-address-book me-1"></i>ข้อมูลลูกค้า ' + escHtml(code)

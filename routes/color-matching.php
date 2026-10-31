@@ -19,6 +19,21 @@ Route::prefix('color-matching')->group(function () {
     // ─── ตรวจ Lot No. ซ้ำ (ฟอร์มใบส่ง ต.ย., 29/10/2569) — query string เพราะ Lot มี "/" ───
     Route::get('/check-lot',           [ColorMatchingController::class, 'checkLot'])->name('color_matching.check_lot');
 
+    // ─── รายงาน PDF "ใบส่งตัวอย่างเทียบสี" ตามรหัสลูกค้า + ช่วงวันที่ (29/10/2569) ───
+    Route::get('/sample-report-pdf',   [ColorMatchingController::class, 'sampleReportPdf'])->name('color_matching.sample_report_pdf');
+    // รายงานการเบิกตัวอย่าง (ตามรหัสลูกค้า) — ช่องกรอกชุดเดียวกัน (29/10/2569)
+    Route::get('/sample-withdraw-pdf', [ColorMatchingController::class, 'sampleWithdrawPdf'])->name('color_matching.sample_withdraw_pdf');
+    // รายงานการเบิกตัวอย่าง (ตามพนักงานขาย) — รหัส Sale + ช่วงวันที่ (29/10/2569)
+    Route::get('/sale-withdraw-pdf',   [ColorMatchingController::class, 'saleWithdrawPdf'])->name('color_matching.sale_withdraw_pdf');
+    // บันทึกใบนำส่งตัวอย่างเทียบสี — ช่วงวันที่ส่งเทียบสี (29/10/2569)
+    Route::get('/send-record-pdf',     [ColorMatchingController::class, 'sendRecordPdf'])->name('color_matching.send_record_pdf');
+    // เทียบสีค้างสะสม จนถึงวันที่ (29/10/2569)
+    Route::get('/pending-pdf',         [ColorMatchingController::class, 'pendingPdf'])->name('color_matching.pending_pdf');
+    // รายงานเทียบสี ส่งตัวอย่าง ระหว่างวันที่ (เรียงตามรหัสเซลล์, ลูกค้า) (29/10/2569)
+    Route::get('/match-report-pdf',    [ColorMatchingController::class, 'matchReportPdf'])->name('color_matching.match_report_pdf');
+    // บันทึกติดตามผลการเทียบสี แผนก MK ตามช่วงวันที่เบิกตัวอย่าง (30/10/2569)
+    Route::get('/follow-up-pdf',       [ColorMatchingController::class, 'followUpPdf'])->name('color_matching.follow_up_pdf');
+
     // ─── รายละเอียด (อ่านอย่างเดียว) — อ้างอิงด้วย id ───
     Route::get('/detail/{id}',         [ColorMatchingController::class, 'detail'])->whereNumber('id')->name('color_matching.detail');
 

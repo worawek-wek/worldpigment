@@ -229,6 +229,12 @@
                             <i class="ti ti-package me-1"></i>
                             สร้างใบส่ง ต.ย. ให้ลูกค้า
                         </button>
+
+                        {{-- ปุ่มรายงานปุ่มเดียว (29/10/2569 ตามที่ผู้ใช้สั่ง): กด → เลือกรายงาน → กรอกเงื่อนไข → ออกรายงาน (#reportModal) --}}
+                        <button class="btn btn-label-secondary border" onclick="reportOpen()">
+                            <i class="ti ti-printer me-1"></i>
+                            รายงาน
+                        </button>
                     </div>
 
                 </div>
@@ -448,6 +454,118 @@
     @include('color-matching.modal-sd')
     @include('color-matching.modal-result')
     @include('color-matching.modal-detail')
+
+    {{-- ═══ หน้าต่าง "รายงาน" (29/10/2569) — รวม 6 รายงาน PDF ไว้ที่เดียว: เลือกรายงาน → กรอกเงื่อนไข → ออกรายงาน ═══ --}}
+    {{-- ผังตาม mockup ที่ผู้ใช้ส่งมา (29/10/2569): หัวมีไอคอนในกล่องสีอ่อน + เส้นคั่นหัว/ท้าย · ช่องวันที่มีไอคอนปฏิทินชิดขวา --}}
+    <style>
+        .sr-modal .modal-content { border-radius: 14px; }
+        .sr-modal .modal-header { padding: 1.25rem 1.75rem; border-bottom: 1px solid #e9ecef; }
+        .sr-modal .sr-icon { width: 44px; height: 44px; border-radius: 10px; background: #eceafd; color: #5a50e6;
+                                      display: inline-flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0; }
+        .sr-modal .modal-title { font-size: 1.3rem; font-weight: 700; color: #2b2c40; }
+        .sr-modal .modal-body { padding: 1.75rem 1.75rem 1.25rem; }
+        .sr-modal .of-row .form-label { font-size: .95rem; }
+        .sr-modal .form-control { height: 46px; }
+        .sr-modal .sr-date { position: relative; }
+        .sr-modal .sr-date .form-control { padding-right: 2.75rem; }
+        .sr-modal .sr-date .flatpickr-wrapper { display: block; width: 100%; }
+        .sr-modal .sr-date .ti { position: absolute; right: .9rem; top: 50%; transform: translateY(-50%);
+                                          color: #a1a5b7; font-size: 1.2rem; pointer-events: none; }
+        .sr-modal .modal-footer { padding: 1rem 1.75rem; border-top: 1px solid #e9ecef; }
+        .sr-modal .modal-footer .btn { min-width: 110px; height: 42px; }
+        .sr-modal .modal-footer .btn-primary, .sr-modal .modal-footer .btn-outline-primary { min-width: 160px; }
+        .sr-modal .sr-step { font-weight: 600; color: #2b2c40; display: flex; align-items: center; gap: .5rem; }
+        .sr-modal .sr-step-no { width: 24px; height: 24px; border-radius: 50%; background: #5a50e6; color: #fff;
+                                display: inline-flex; align-items: center; justify-content: center; font-size: .8rem; }
+        .sr-modal .sr-option { display: flex; align-items: center; gap: .6rem; width: 100%; height: 100%; margin: 0;
+                               padding: .7rem .9rem; border: 1px solid #dbdade; border-radius: 10px; cursor: pointer; }
+        .sr-modal .sr-option .ti { color: #a1a5b7; font-size: 1.2rem; }
+        .sr-modal .sr-option:hover { border-color: #5a50e6; }
+        .sr-modal .btn-check:checked + .sr-option { border-color: #5a50e6; background: #eceafd; color: #5a50e6; font-weight: 600; }
+        .sr-modal .btn-check:checked + .sr-option .ti { color: #5a50e6; }
+    </style>
+    <div class="modal fade sr-modal" id="reportModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="sr-icon"><i class="ti ti-printer"></i></span>
+                        <h5 class="modal-title mb-0">รายงาน</h5>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    {{-- ขั้นที่ 1: เลือกรายงาน — value ต้องตรงกับ key ใน RP_REPORTS (JS) --}}
+                    <div class="sr-step mb-2"><span class="sr-step-no">1</span>เลือกรายงาน</div>
+                    <div class="row g-2 mb-4">
+                        @foreach ([
+                            'sample'   => 'ใบส่งตัวอย่างเทียบสี (ตามรหัสลูกค้า)',
+                            'withdraw' => 'รายงานการเบิกตัวอย่าง (ตามรหัสลูกค้า)',
+                            'sale'     => 'รายงานการเบิกตัวอย่าง (ตามพนักงานขาย)',
+                            'send'     => 'บันทึกใบนำส่งตัวอย่างเทียบสี',
+                            'pending'  => 'รายงานเทียบสีค้างสะสม',
+                            'match'    => 'รายงานเทียบสี',
+                            'followup' => 'บันทึกติดตามผลการเทียบสี',
+                        ] as $key => $label)
+                            <div class="col-md-6">
+                                <input type="radio" class="btn-check" name="rp_type" id="rp_type_{{ $key }}" value="{{ $key }}">
+                                <label class="sr-option" for="rp_type_{{ $key }}">
+                                    <i class="ti ti-file-text"></i><span>{{ $label }}</span>
+                                </label>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    {{-- ขั้นที่ 2: เงื่อนไข — แต่ละช่องมี data-rp-field แสดง/ซ่อนตามรายงานที่เลือก --}}
+                    <div class="sr-step mb-2 mt-5"><span class="sr-step-no">2</span>กรอกเงื่อนไข</div>
+                    <div class="text-muted small" id="rp_hint">กรุณาเลือกรายงานก่อน</div>
+                    <div class="of-form d-none" id="rp_fields" style="--of-lw: 130px;">
+                        <div class="row gx-3 gy-3">
+                            <div class="col-md-6 of-row" data-rp-field="custno">
+                                <label class="form-label" for="sr_custno">รหัสลูกค้า <span class="text-danger">*</span></label>
+                                <div class="of-ctl">
+                                    <input type="text" id="sr_custno" class="form-control" maxlength="6" autocomplete="off">
+                                    <div class="form-text" id="sr_custname"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 of-row" data-rp-field="sale">
+                                <label class="form-label" for="sl_sale">รหัสพนักงานขาย <span class="text-danger">*</span></label>
+                                <div class="of-ctl">
+                                    <input type="text" id="sl_sale" class="form-control" list="sl_sale_list" maxlength="10" autocomplete="off">
+                                    <datalist id="sl_sale_list">
+                                        @foreach ($sale_codes as $s)
+                                            <option value="{{ $s }}"></option>
+                                        @endforeach
+                                    </datalist>
+                                </div>
+                            </div>
+                            <div class="w-100 mt-0"></div>{{-- ตัดแถว: วันที่อยู่แถวถัดไป --}}
+                            <div class="col-md-6 of-row" data-rp-field="from">
+                                <label class="form-label" for="rp_from" id="rp_from_label">จากวันที่</label>
+                                <div class="of-ctl sr-date">
+                                    <input type="text" id="rp_from" class="form-control" autocomplete="off">
+                                    <i class="ti ti-calendar"></i>
+                                </div>
+                            </div>
+                            <div class="col-md-6 of-row of-row-auto" data-rp-field="to">
+                                <label class="form-label" for="rp_to">ถึงวันที่</label>
+                                <div class="of-ctl sr-date">
+                                    <input type="text" id="rp_to" class="form-control" autocomplete="off">
+                                    <i class="ti ti-calendar"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ปิด</button>
+                    <button type="button" class="btn btn-primary" id="rp_print" onclick="reportPrint()" disabled>
+                        <i class="ti ti-printer me-2"></i>ออกรายงาน
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
 
     <!--edit  Modal -->
@@ -1525,6 +1643,104 @@
             if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
                 e.preventDefault();
             }
+        });
+
+        // ────────────────────────────────────────────────────────
+        //  รายงาน (29/10/2569 ตามที่ผู้ใช้สั่ง) — ปุ่มเดียว: เลือกรายงาน → กรอกเงื่อนไข → ออกรายงาน
+        //  fields = ช่องที่ใช้ (data-rp-field) · required = ช่องบังคับกรอก · from = ค่าเริ่มต้นของ "จากวันที่"
+        //  (year = ต้นปี · month = ต้นเดือน) · "ถึงวันที่" เริ่มต้น = วันนี้ · endpoint/param เดิมทั้งหมด
+        // ────────────────────────────────────────────────────────
+        var RP_REPORTS = {
+            sample:   { url: 'sample-report-pdf',   fields: ['custno', 'from', 'to'], required: 'custno', from: 'year' },
+            withdraw: { url: 'sample-withdraw-pdf', fields: ['custno', 'from', 'to'], required: 'custno', from: 'year' },
+            sale:     { url: 'sale-withdraw-pdf',   fields: ['sale', 'from', 'to'],   required: 'sale',   from: 'year' },
+            send:     { url: 'send-record-pdf',     fields: ['from', 'to'], from: 'month' },
+            pending:  { url: 'pending-pdf',         fields: ['to'] },
+            match:    { url: 'match-report-pdf',    fields: ['from', 'to'], from: 'year', fromLabel: 'ตั้งแต่วันที่' },
+            // ช่วงวันที่เบิกตัวอย่าง · ค่าเริ่มต้น = เดือนก่อนหน้าทั้งเดือน (กระดาษเดิม "เรียกข้อมูลย้อนหลัง 1 เดือน") (30/10/2569)
+            followup: { url: 'follow-up-pdf',       fields: ['from', 'to'], from: 'prev_month', fromLabel: 'จากวันที่เบิก' },
+        };
+        var rpFpFrom = null, rpFpTo = null, srCustTimer = null;
+
+        function reportOpen(){
+            if (!rpFpFrom) {
+                var opt = { dateFormat: 'd/m/Y', allowInput: true, disableMobile: true, static: true };
+                rpFpFrom = flatpickr('#rp_from', opt);
+                rpFpTo   = flatpickr('#rp_to', opt);
+            }
+            $('#reportModal').modal('show');
+        }
+
+        function reportSelected(){
+            return RP_REPORTS[$('input[name="rp_type"]:checked').val()] || null;
+        }
+
+        // เลือกรายงาน → แสดงเฉพาะช่องที่ใช้ + ตั้งวันที่เริ่มต้นของรายงานนั้น
+        $(document).on('change', 'input[name="rp_type"]', function(){
+            var r = reportSelected();
+            if (!r) return;
+            $('#rp_hint').addClass('d-none');
+            $('#rp_fields').removeClass('d-none');
+            $('#rp_print').prop('disabled', false);
+            $('[data-rp-field]').each(function(){
+                $(this).toggleClass('d-none', r.fields.indexOf($(this).data('rp-field')) === -1);
+            });
+            $('#rp_from_label').text(r.fromLabel || 'จากวันที่');
+
+            var now = new Date();
+            if (r.from === 'month') rpFpFrom.setDate(new Date(now.getFullYear(), now.getMonth(), 1));
+            else if (r.from === 'year') rpFpFrom.setDate(new Date(now.getFullYear(), 0, 1));
+            if (r.from === 'prev_month') {
+                rpFpFrom.setDate(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+                rpFpTo.setDate(new Date(now.getFullYear(), now.getMonth(), 0));     // วันสุดท้ายของเดือนก่อน
+            } else {
+                rpFpTo.setDate(now);
+            }
+
+            if (r.required === 'custno') $('#sr_custno').trigger('focus').select();
+            else if (r.required === 'sale') $('#sl_sale').trigger('focus').select();
+        });
+
+        function reportPrint(){
+            var r = reportSelected();
+            if (!r) {
+                Swal.fire({ icon: 'warning', title: 'กรุณาเลือกรายงาน', target: '#reportModal', heightAuto: false });
+                return;
+            }
+            var q = {};
+            if (r.fields.indexOf('custno') !== -1) q.custno = $.trim($('#sr_custno').val());
+            if (r.fields.indexOf('sale') !== -1)   q.sale   = $.trim($('#sl_sale').val());
+            if (r.fields.indexOf('from') !== -1)   q.date_from = $('#rp_from').val();
+            if (r.fields.indexOf('to') !== -1)     q.date_to   = $('#rp_to').val();
+
+            if (r.required === 'custno' && !q.custno) {
+                Swal.fire({ icon: 'warning', title: 'กรุณากรอกรหัสลูกค้า', target: '#reportModal', heightAuto: false });
+                return;
+            }
+            if (r.required === 'sale' && !q.sale) {
+                Swal.fire({ icon: 'warning', title: 'กรุณากรอกรหัสพนักงานขาย', target: '#reportModal', heightAuto: false });
+                return;
+            }
+            window.open('{{ url('color-matching') }}/' + r.url + '?' + $.param(q), '_blank');
+        }
+
+        // Enter ในช่องรหัส = ออกรายงาน
+        $(document).on('keydown', '#sr_custno, #sl_sale', function(e){
+            if (e.key === 'Enter') { e.preventDefault(); reportPrint(); }
+        });
+        // แสดงชื่อลูกค้าใต้ช่องรหัส (endpoint customer/{code} ตัวเดิมของหน้านี้)
+        $(document).on('input', '#sr_custno', function(){
+            var code = $.trim(this.value);
+            clearTimeout(srCustTimer);
+            $('#sr_custname').text('').removeClass('text-danger');
+            if (!code) return;
+            srCustTimer = setTimeout(function(){
+                $.get('{{ url('color-matching/customer') }}/' + encodeURIComponent(code), function(res){
+                    if ($.trim($('#sr_custno').val()) !== code) return;
+                    if (res && res.found) $('#sr_custname').text(res.name || '');
+                    else $('#sr_custname').text('ไม่พบรหัสลูกค้านี้').addClass('text-danger');
+                });
+            }, 350);
         });
 </script>
 </body>

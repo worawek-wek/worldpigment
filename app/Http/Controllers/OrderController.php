@@ -727,6 +727,7 @@ class OrderController extends Controller
                 ->orderByDesc('DATE')
                 ->first(['Label', 'PackRem', 'st_code']);
         }
+        $inPrice = (bool) $up;   // มีราคาของลูกค้ารายนี้ใน "กำหนดราคา"
         if (!$up) {
             $up = DB::table('uprice')
                 ->where('ITEMNO', $itemno)
@@ -764,8 +765,28 @@ class OrderController extends Controller
             ->where('morder.Mdate', '<', $refDate->format('Y-m-d H:i:s'))
             ->max('morder.Mdate');
 
+        /* เตือนรหัสสินค้าที่ไม่มีใน "กำหนดราคา" (uprice) — 31/10/2569 ตามที่ผู้ใช้สั่ง
+             no_price = มีราคาของลูกค้ารายอื่น แต่ไม่มีของลูกค้ารายนี้
+             new      = มีราคาทุน / เคยอยู่ในใบสั่งอื่น แต่ยังไม่เคยตั้งราคาเลย
+             unknown  = ไม่พบที่ไหนเลย — คีย์ผิด หรือเบอร์ใหม่ที่ยังไม่เข้าระบบ
+           ยังไม่ระบุลูกค้า = ดูแค่ว่ามีในกำหนดราคาของลูกค้าใดไหม */
+        $priceWarn = null;
+        if (!$inPrice && !($custno === '' && $up)) {
+            if ($up) {
+                $priceWarn = 'no_price';
+            } else {
+                $known = DB::table('access_pdprice')->where('PdCode', $itemno)->exists()
+                    || DB::table('suborder')
+                        ->where('Itemno', $itemno)
+                        ->when($orderno !== '', fn ($q) => $q->where('Orderno', '<>', $orderno))
+                        ->exists();
+                $priceWarn = $known ? 'new' : 'unknown';
+            }
+        }
+
         return response()->json([
             'found'           => (bool) ($prodname || $lastDate),
+            'price_warn'      => $priceWarn,
             'itemno'          => $itemno,
             'prodname'        => $prodname,
             'remark'          => $remark !== '' ? $remark : null,

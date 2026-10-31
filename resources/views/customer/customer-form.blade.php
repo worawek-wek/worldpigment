@@ -26,8 +26,22 @@
         || trim((string) $v('blackdate')) !== '';
 @endphp
 
-<form id="customer_form" class="of-form" autocomplete="off">
+<form id="customer_form" class="of-form" autocomplete="off"
+    @if(!$can_edit) data-readonly="{{ $can_edit_sub ? 'main' : 'all' }}" @endif>
     @csrf
+
+    @if(!$can_edit)
+        {{-- ลูกค้าที่บันทึกแล้ว แก้ได้เฉพาะ MK Admin (30/10/2569) · ผู้ติดต่อ + สถานที่ส่ง แก้ได้ทุก Admin (31/10/2569)
+             — ช่องถูกล็อกด้วย JS ตอนโหลดฟอร์ม --}}
+        <div class="alert alert-secondary py-2 mb-3">
+            <i class="ti ti-lock me-1"></i>
+            @if($can_edit_sub)
+                แก้ได้เฉพาะผู้ติดต่อและสถานที่ส่ง — ข้อมูลส่วนอื่นแก้ไขได้เฉพาะ MK Admin
+            @else
+                ดูได้อย่างเดียว — ข้อมูลลูกค้าที่บันทึกแล้ว แก้ไขได้เฉพาะ MK Admin
+            @endif
+        </div>
+    @endif
     <input type="hidden" name="mode" value="{{ $isNew ? 'insert' : 'update' }}">
 
     @if ($isBlack)
@@ -380,8 +394,10 @@
 
     <div class="d-flex justify-content-end gap-2">
         <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+        @if($can_edit_sub)
         <button type="button" class="btn btn-primary" id="btn_customer_save">
             <i class="ti ti-device-floppy me-1"></i>บันทึก
         </button>
+        @endif
     </div>
 </form>

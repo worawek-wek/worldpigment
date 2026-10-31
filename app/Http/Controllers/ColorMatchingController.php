@@ -45,6 +45,13 @@ class ColorMatchingController extends Controller
             // ChemSafety เก็บได้หลายค่าในคอลัมน์เดียว → แตกออกเป็นตัวเลือกรายตัว (29/08/2569)
             'ChemSafety' => $this->distinctMultiOptions('ChemSafety'),
         ];
+        // รหัสพนักงานขายที่เคยมีใน testmain — ตัวเลือกของรายงานการเบิกตัวอย่าง (ตามพนักงานขาย) (29/10/2569)
+        $data['sale_codes'] = DB::table('testmain')
+            ->whereRaw("TRIM(sale) <> ''")
+            ->distinct()
+            ->pluck(DB::raw('TRIM(sale) as sale'))
+            ->sort(fn ($a, $b) => strnatcasecmp($a, $b))
+            ->values();
         return view('color-matching.index', $data);
     }
 
@@ -710,5 +717,390 @@ class ColorMatchingController extends Controller
                 $query->whereDate('DsendT', '<=', $d);
             }
         }
+    }
+
+    /**
+     * รายงาน "ใบส่งตัวอย่างเทียบสี" ตามรหัสลูกค้า + ช่วงวันที่ (29/10/2569) — ผังตามกระดาษระบบเดิม
+     * ปุ่มบนหัวหน้า /color-matching → #sampleReportModal → PDF A4 แนวนอน
+     *
+     * แถว = ใบส่ง ต.ย. (มี Testno) + ใบนำส่งเทียบสีที่ยังไม่มีใบส่ง ต.ย. (CM ที่ไม่มีแถว SD ที่ SendNo เดียวกัน)
+     * ช่วงวันที่เทียบกับ TestDate (วันที่ใบส่ง ต.ย.) — CM ที่ยังไม่มี TestDate ใช้ DsendT แทน
+     * จำนวน (กรัม) = Wage วางลงคอลัมน์ตาม TestType (1 CP · 2 สีผง · 3 สีเม็ด · 4 Pigment)
+     */
+    public function sampleReportPdf(Request $request)
+    {
+        [$custno, $from, $to] = $this->customerReportParams($request);
+
+        $rows = DB::table('testmain as t')
+            ->where('t.custno', $custno)
+            ->where(function ($q) {
+                $q->where(function ($w) {                        // ใบส่ง ต.ย.
+                    $w->whereNotNull('t.Testno')->where('t.Testno', '!=', '');
+                })->orWhere(function ($w) {                      // CM ที่ยังไม่มีใบส่ง ต.ย.
+                    $w->where(function ($c) {
+                        $c->whereNull('t.Testno')->orWhere('t.Testno', '');
+                    })->whereNotExists(function ($e) {
+                        $e->from('testmain as sd')
+                          ->whereColumn('sd.SendNo', 't.SendNo')
+                          ->whereNotNull('sd.Testno')->where('sd.Testno', '!=', '');
+                    });
+                });
+            })
+            ->whereRaw('DATE(COALESCE(t.TestDate, t.DsendT)) BETWEEN ? AND ?', [$from, $to])
+            ->orderBy('t.SendNo')
+            ->orderBy('t.Testno')
+            ->orderBy('t.id')
+            ->get([
+                't.SendNo', 't.TNDate', 't.Testno', 't.TestDesc', 't.ResinMatch', 't.PHR', 't.lotno',
+                't.STD', 't.Wage', 't.TestType', 't.CodeNo', 't.cancel',
+            ]);
+
+        $html = view('color-matching.sample-report-pdf', [
+            'rows'     => $rows,
+            'custno'   => $custno,
+            'customer' => DB::table('customer')->where('code', $custno)->first(['code', 'name', 'sale']),
+            'from'     => $from,
+            'to'       => $to,
+        ])->render();
+
+        return $this->customerReportPdfResponse($html, 'sample-report-' . $custno);
+    }
+
+    /**
+     * รายงาน "การเบิกตัวอย่าง (ตามรหัสลูกค้า)" + ช่วงวันที่ (29/10/2569) — ผังตามกระดาษระบบเดิม
+     * ช่องกรอกชุดเดียวกับ sampleReportPdf() (#sampleReportModal ปุ่มที่ 2)
+     *
+     * แถว = ใบส่ง ต.ย. (มี Testno = เลขที่ใบเบิก) ที่ TestDate (วันที่เบิก) อยู่ในช่วง · เรียงตามวันที่เบิก
+     * Sale ที่เบิก = testmain.sale · จำนวน (กรัม) = Wage ลงคอลัมน์ตาม TestType
+     */
+    public function sampleWithdrawPdf(Request $request)
+    {
+        [$custno, $from, $to] = $this->customerReportParams($request);
+
+        $rows = DB::table('testmain as t')
+            ->where('t.custno', $custno)
+            ->whereNotNull('t.Testno')->where('t.Testno', '!=', '')
+            ->whereRaw('DATE(t.TestDate) BETWEEN ? AND ?', [$from, $to])
+            ->orderBy('t.TestDate')
+            ->orderBy('t.Testno')
+            ->orderBy('t.id')
+            ->get([
+                't.TestDate', 't.Testno', 't.TestDesc', 't.ResinMatch', 't.PHR', 't.STD', 't.sale',
+                't.lotno', 't.Wage', 't.TestType', 't.CodeNo',
+            ]);
+
+        $html = view('color-matching.sample-withdraw-pdf', [
+            'rows'     => $rows,
+            'custno'   => $custno,
+            'customer' => DB::table('customer')->where('code', $custno)->first(['code', 'name', 'sale']),
+            'from'     => $from,
+            'to'       => $to,
+        ])->render();
+
+        return $this->customerReportPdfResponse($html, 'sample-withdraw-' . $custno);
+    }
+
+    /**
+     * เงื่อนไขของรายงานตามรหัสลูกค้า → [custno, from Y-m-d, to Y-m-d] · ไม่กรอกวันที่ = ต้นปี → วันนี้
+     */
+    private function customerReportParams(Request $request): array
+    {
+        $custno = trim((string) $request->query('custno', ''));
+        if ($custno === '') {
+            abort(422, 'กรุณาระบุรหัสลูกค้า');
+        }
+
+        return array_merge([$custno], $this->reportDateRange($request));
+    }
+
+    /**
+     * ช่วงวันที่ของรายงาน (date_from / date_to แบบ d/m/Y) → [from Y-m-d, to Y-m-d] · ไม่กรอก = ต้นปี → วันนี้
+     */
+    private function reportDateRange(Request $request): array
+    {
+        $from = $this->parseDate($request->query('date_from')) ?? now()->startOfYear()->format('Y-m-d');
+        $to   = $this->parseDate($request->query('date_to')) ?? now()->format('Y-m-d');
+        if ($from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+
+        return [$from, $to];
+    }
+
+    /**
+     * รายงาน "การเบิกตัวอย่าง (ตามพนักงานขาย)" + ช่วงวันที่ (29/10/2569) — ผังตามกระดาษระบบเดิม
+     * ปุ่มบนหัวหน้า /color-matching → #saleReportModal → PDF A4 แนวตั้ง
+     *
+     * แถว = ใบส่ง ต.ย. (มี Testno) ที่ testmain.sale = รหัสที่กรอก และ TestDate (วันที่เบิก) อยู่ในช่วง
+     * จัดกลุ่มตามลูกค้า (เรียงรหัส) → ในกลุ่มเรียงวันที่เบิก · จำนวน (กรัม) = Wage ลงคอลัมน์ CP/สีผง/สีเม็ด ตาม TestType
+     */
+    public function saleWithdrawPdf(Request $request)
+    {
+        $sale = trim((string) $request->query('sale', ''));
+        if ($sale === '') {
+            abort(422, 'กรุณาระบุรหัสพนักงานขาย');
+        }
+        [$from, $to] = $this->reportDateRange($request);
+
+        $rows = DB::table('testmain as t')
+            ->leftJoin('customer as c', 'c.code', '=', 't.custno')
+            ->whereRaw('TRIM(t.sale) = ?', [$sale])
+            ->whereNotNull('t.Testno')->where('t.Testno', '!=', '')
+            ->whereRaw('DATE(t.TestDate) BETWEEN ? AND ?', [$from, $to])
+            ->orderBy('t.custno')
+            ->orderBy('t.TestDate')
+            ->orderBy('t.id')
+            ->get([
+                't.custno', 't.custname', 'c.name as cust_name',
+                't.Testno', 't.TestDate', 't.TestDesc', 't.ResinMatch', 't.PHR', 't.lotno',
+                't.Wage', 't.TestType', 't.CodeNo',
+            ]);
+
+        // ลำดับมาจาก SQL แล้ว — groupBy คงลำดับเดิม
+        $groups = $rows->groupBy(fn ($r) => trim((string) $r->custno))
+            ->map(fn ($items, $custno) => [
+                'custno' => (string) $custno,
+                'name'   => trim((string) ($items->first()->cust_name ?: $items->first()->custname)),
+                'items'  => $items->values(),
+            ])
+            ->values();
+
+        $html = view('color-matching.sale-withdraw-pdf', [
+            'groups' => $groups,
+            'sale'   => $sale,
+            'from'   => $from,
+            'to'     => $to,
+        ])->render();
+
+        return $this->customerReportPdfResponse($html, 'sale-withdraw-' . $sale, 'A4');
+    }
+
+    /**
+     * รายงาน "บันทึกใบนำส่งตัวอย่างเทียบสี" ตามช่วงวันที่ส่งเทียบสี (29/10/2569) — ผังตามกระดาษระบบเดิม
+     * ปุ่มบนหัวหน้า /color-matching → #sendReportModal → PDF A4 แนวนอน
+     *
+     * 1 แถว = 1 ใบนำส่ง (SendNo) ที่ DsendT อยู่ในช่วง
+     *   - มีแถว CM (ไม่มี Testno) → ใช้แถว CM · Lot / รหัสสินค้า / วันที่รับตัวอย่าง รวบจากใบส่ง ต.ย. ที่ SendNo เดียวกัน
+     *   - ไม่มีแถว CM (ข้อมูลเก่า — ใบส่ง ต.ย. เก็บทั้งชุดในแถวเดียว) → ใช้แถวใบส่ง ต.ย. นั้น
+     */
+    public function sendRecordPdf(Request $request)
+    {
+        [$from, $to] = $this->reportDateRange($request);
+
+        $records = $this->sendNoRecords($from, $to);
+
+        $html = view('color-matching.send-record-pdf', [
+            'rows' => $records,
+            'from' => $from,
+            'to'   => $to,
+        ])->render();
+
+        return $this->customerReportPdfResponse($html, 'send-record');
+    }
+
+    /**
+     * รายงาน "เทียบสี ส่งตัวอย่าง ระหว่างวันที่ … ถึงวันที่ …" (29/10/2569) — ผังตามกระดาษระบบเดิม
+     * ปุ่มบนหัวหน้า /color-matching → #matchReportModal → PDF A4 แนวนอน
+     * ข้อมูลชุดเดียวกับ sendRecordPdf() (1 แถว = 1 SendNo ที่ DsendT อยู่ในช่วง) แต่เรียงตาม รหัสเซลล์ → ลูกค้า → วันที่ส่ง
+     */
+    public function matchReportPdf(Request $request)
+    {
+        [$from, $to] = $this->reportDateRange($request);
+
+        $records = $this->sendNoRecords($from, $to)
+            ->sort(function ($a, $b) {
+                return strnatcasecmp(trim((string) $a->sale), trim((string) $b->sale))
+                    ?: strcmp(trim((string) $a->custno), trim((string) $b->custno))
+                    ?: strcmp((string) $a->DsendT, (string) $b->DsendT)
+                    ?: strcmp((string) $a->SendNo, (string) $b->SendNo);
+            })
+            ->values();
+
+        $html = view('color-matching.match-report-pdf', [
+            'rows' => $records,
+            'from' => $from,
+            'to'   => $to,
+        ])->render();
+
+        return $this->customerReportPdfResponse($html, 'color-matching-report', 'A4-L', 22);
+    }
+
+    /**
+     * ใบนำส่งเทียบสีในช่วง DsendT → 1 record ต่อ 1 SendNo (เรียง DsendT → SendNo) — ใช้ร่วม sendRecordPdf() / matchReportPdf()
+     *   - มีแถว CM (ไม่มี Testno) → ใช้แถว CM · Lot / รหัสสินค้า (คั่น ", ") / วันที่รับตัวอย่าง / วันที่เบิก (เก่าสุด)
+     *     รวบจากใบส่ง ต.ย. ที่ SendNo เดียวกัน
+     *   - ไม่มีแถว CM (ข้อมูลเก่า — ใบส่ง ต.ย. เก็บทั้งชุดในแถวเดียว) → ใช้แถวใบส่ง ต.ย. นั้น
+     */
+    private function sendNoRecords(string $from, string $to)
+    {
+        $rows = DB::table('testmain as t')
+            ->leftJoin('customer as c', 'c.code', '=', 't.custno')
+            ->whereRaw('DATE(t.DsendT) BETWEEN ? AND ?', [$from, $to])
+            ->orderBy('t.DsendT')
+            ->orderBy('t.SendNo')
+            ->orderBy('t.id')
+            ->get([
+                't.id', 't.SendNo', 't.Testno', 't.DsendT', 't.sale', 't.custno', 't.custname', 'c.name as cust_name',
+                't.color', 't.TestDesc', 't.STD', 't.Type_Work', 't.Model', 't.pop', 't.TNDate', 't.TNname',
+                't.SampleDate', 't.TestDate', 't.CodeNo', 't.lotno', 't.ResinMatch', 't.Mems',
+            ]);
+
+        $isCm = fn ($r) => trim((string) $r->Testno) === '';
+        $join = fn ($c, $field) => $c->pluck($field)->map(fn ($v) => trim((string) $v))->filter()->unique()->implode(', ');
+
+        return $rows->groupBy(fn ($r) => (string) $r->SendNo)
+            ->map(function ($items) use ($isCm, $join) {
+                $cm = $items->first($isCm);
+                if (!$cm) {
+                    return $items->first();                    // ข้อมูลเก่า — แถวเดียวมีครบ
+                }
+                $sd = $items->reject($isCm);
+                $rec = clone $cm;
+                $rec->lotno      = $join($sd, 'lotno') ?: $cm->lotno;
+                $rec->CodeNo     = $join($sd, 'CodeNo') ?: $cm->CodeNo;
+                $rec->SampleDate = $sd->pluck('SampleDate')->filter()->min() ?: $cm->SampleDate;
+                $rec->TestDate   = $sd->pluck('TestDate')->filter()->min();   // CM ไม่มีวันที่เบิกของตัวเอง
+                return $rec;
+            })
+            ->values();
+    }
+
+    /**
+     * รายงาน "เทียบสีค้างสะสม จนถึง ส่งตัวอย่างวันที่ …" (29/10/2569) — ผังตามกระดาษระบบเดิม
+     * ปุ่มบนหัวหน้า /color-matching → #pendingReportModal (ถึงวันที่ อย่างเดียว) → PDF A4 แนวนอน
+     *
+     * ค้าง = ใบนำส่งเทียบสี (CM — ไม่มี Testno) ที่ DsendT ≤ วันที่ที่กรอก · ยังไม่มีใบส่ง ต.ย. ที่ SendNo เดียวกัน
+     *        · ไม่ถูกยกเลิก (cancel = 0 / NULL) · เรียงตามเลขที่ใบนำส่ง
+     */
+    public function pendingPdf(Request $request)
+    {
+        $to = $this->parseDate($request->query('date_to')) ?? now()->format('Y-m-d');
+
+        $rows = DB::table('testmain as t')
+            ->leftJoin('customer as c', 'c.code', '=', 't.custno')
+            ->where(function ($c) {
+                $c->whereNull('t.Testno')->orWhere('t.Testno', '');
+            })
+            ->where(function ($c) {
+                $c->whereNull('t.cancel')->orWhere('t.cancel', 0);
+            })
+            ->whereNotExists(function ($e) {
+                $e->from('testmain as sd')
+                  ->whereColumn('sd.SendNo', 't.SendNo')
+                  ->whereNotNull('sd.Testno')->where('sd.Testno', '!=', '');
+            })
+            ->whereRaw('DATE(t.DsendT) <= ?', [$to])
+            ->orderBy('t.SendNo')
+            ->orderBy('t.id')
+            ->get([
+                't.SendNo', 't.sale', 't.custno', 't.custname', 'c.name as cust_name', 't.DsendT',
+                't.color', 't.STD', 't.Type_Work', 't.Model', 't.Mems', 't.TNDate',
+            ]);
+
+        $html = view('color-matching.pending-pdf', [
+            'rows' => $rows,
+            'to'   => $to,
+        ])->render();
+
+        return $this->customerReportPdfResponse($html, 'color-matching-pending', 'A4-L', 20);
+    }
+
+    /**
+     * รายงาน "บันทึกติดตามผลการเทียบสี แผนก MK" ตามช่วงวันที่เบิกตัวอย่าง (30/10/2569) — ผังตามกระดาษระบบเดิม MK01-LB03.00
+     * ปุ่ม "รายงาน" บนหัวหน้า /color-matching → เลือก "บันทึกติดตามผลการเทียบสี" → PDF A4 แนวนอน
+     *
+     * แถว = ใบส่ง ต.ย. (มี Testno) ที่ TestDate (วันที่เบิก) อยู่ในช่วง · ทุกเซลส์
+     * จัดกลุ่ม เซลส์ (TRIM(sale) เรียงแบบตัวเลข, ว่างไว้ท้ายสุด) → ลูกค้า → วันที่เบิก · 1 เซลส์ = ขึ้นหน้าใหม่
+     * ประเภทงาน / นำไปทำชิ้นงาน = Type_Work / Model ของใบส่ง ต.ย. — ว่าง = ใช้ของใบนำส่ง (CM) ที่ SendNo เดียวกัน
+     */
+    public function followUpPdf(Request $request)
+    {
+        [$from, $to] = $this->reportDateRange($request);
+
+        $rows = DB::table('testmain as t')
+            ->leftJoin('customer as c', 'c.code', '=', 't.custno')
+            ->whereNotNull('t.Testno')->where('t.Testno', '!=', '')
+            ->whereRaw('DATE(t.TestDate) BETWEEN ? AND ?', [$from, $to])
+            ->orderBy('t.custno')
+            ->orderBy('t.TestDate')
+            ->orderBy('t.id')
+            ->get([
+                't.sale', 't.custno', 't.custname', 'c.name as cust_name',
+                't.TestDate', 't.Testno', 't.TestDesc', 't.ResinMatch', 't.PHR', 't.SendNo', 't.lotno',
+                't.Wage', 't.Type_Work', 't.Model', 't.CodeNo', 't.TyResp', 't.Resp',
+            ]);
+
+        // ประเภทงาน / ชิ้นงาน จากใบนำส่ง (CM) — ใบส่ง ต.ย. ที่สร้างจากระบบใหม่มักไม่ได้กรอก 2 ช่องนี้
+        $sendNos = $rows->pluck('SendNo')->map(fn ($v) => trim((string) $v))->filter()->unique()->values();
+        $cm = $sendNos->isEmpty() ? collect() : DB::table('testmain')
+            ->whereIn('SendNo', $sendNos)
+            ->where(fn ($q) => $q->whereNull('Testno')->orWhere('Testno', ''))
+            ->get(['SendNo', 'Type_Work', 'Model'])
+            ->keyBy(fn ($r) => trim((string) $r->SendNo));
+        foreach ($rows as $r) {
+            $src = $cm->get(trim((string) $r->SendNo));
+            if ($src) {
+                if (trim((string) $r->Type_Work) === '') $r->Type_Work = $src->Type_Work;
+                if (trim((string) $r->Model) === '')     $r->Model     = $src->Model;
+            }
+        }
+
+        $saleKey = fn ($r) => trim((string) $r->sale);
+        $sections = $rows->groupBy($saleKey)
+            ->sortKeysUsing(function ($a, $b) {
+                if ($a === '' || $b === '') return ($a === '') <=> ($b === '');   // ไม่ระบุเซลส์ไว้ท้ายสุด
+                return strnatcasecmp($a, $b);
+            })
+            ->map(fn ($items, $sale) => (object) [
+                'sale'      => (string) $sale,
+                'count'     => $items->count(),
+                'new_codes' => $items->filter(fn ($r) => trim((string) $r->CodeNo) !== '')->count(),
+                // ลำดับลูกค้า/วันที่มาจาก SQL แล้ว — groupBy คงลำดับเดิม
+                'customers' => $items->groupBy(fn ($r) => trim((string) $r->custno))
+                    ->map(fn ($list) => (object) [
+                        'name'  => trim((string) ($list->first()->cust_name ?: $list->first()->custname)),
+                        'items' => $list->values(),
+                    ])->values(),
+            ])
+            ->values();
+
+        $html = view('color-matching.follow-up-pdf', [
+            'sections' => $sections,
+            'total'    => $rows->count(),
+            'newCodes' => $sections->sum('new_codes'),
+            'reasons'  => collect(config('color_matching.test_result_options', []))
+                ->filter(fn ($o) => ($o['group'] ?? '') === 'reject'),
+            'from'     => $from,
+            'to'       => $to,
+        ])->render();
+
+        ini_set('pcre.backtrack_limit', '10000000');   // ช่วงยาว ๆ HTML เกิน limit ของ mPDF ได้
+
+        return $this->customerReportPdfResponse($html, 'color-matching-follow-up', 'A4-L', 22, 16);
+    }
+
+    /**
+     * mPDF สำหรับรายงานตัวอย่าง (ค่าเริ่มต้น A4 แนวนอน) — หัวรายงานอยู่ใน htmlpageheader ของ blade
+     */
+    private function customerReportPdfResponse(string $html, string $name, string $format = 'A4-L', int $marginTop = 30, int $marginBottom = 10)
+    {
+        $mpdf = new \Mpdf\Mpdf([
+            'mode'          => 'utf-8',
+            'format'        => $format,
+            'margin_left'   => 10,
+            'margin_right'  => 10,
+            'margin_top'    => $marginTop,   // เผื่อที่ให้หัวรายงาน (htmlpageheader ใน blade)
+            'margin_bottom' => $marginBottom,   // รายงานที่มี htmlpagefooter ส่งค่ามากขึ้น
+            'margin_header' => 8,
+        ]);
+        $mpdf->autoScriptToLang = true;
+        $mpdf->autoLangToFont   = true;
+        $mpdf->SetFont('sarabun');
+        $mpdf->WriteHTML($html);
+
+        return response($mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . preg_replace('/[^A-Za-z0-9_-]/', '', $name) . '-' . now()->format('Ymd') . '.pdf"',
+        ]);
     }
 }

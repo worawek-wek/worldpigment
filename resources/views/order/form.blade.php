@@ -376,6 +376,9 @@
             <span class="fw-normal ms-2" id="o_match_detail"></span>
         </div>
 
+        {{-- เตือนรหัสสินค้าที่ไม่มีในกำหนดราคา (31/10/2569) — เนื้อหาเติมจาก renderItemWarn() --}}
+        <div class="of-matchwarn d-none" id="o_item_warn"></div>
+
         <div class="table-responsive">
             <table class="table table-bordered table-sm align-middle mb-0" id="orderItemsTable">
                 <thead class="text-center">

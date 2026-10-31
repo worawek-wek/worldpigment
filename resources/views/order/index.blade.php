@@ -500,32 +500,16 @@
                             อนุมัติใบสั่งซื้อ
                             <span class="badge bg-danger ms-1 d-none" id="oaQueueBadge">0</span>
                         </button>
-                        {{-- พิมพ์ PDF ใบสั่งซื้อที่อนุมัติ เรียงตามเลขที่ใบสั่ง (06/10/2569) — 07/10/2569: เปิดหน้าต่างเลือก
-                             แผนก / วันที่ / ช่วงเวลา / S-P ก่อน (#prodReportModal ตามฟอร์ม Access เดิม)
-                             → OrderApprovalController::approvedTodayPdf() --}}
                         {{-- การเปลี่ยนแปลงคำสั่งซื้อ — เลื่อนกำหนดส่ง / แยกส่ง / เปลี่ยนน้ำหนัก (20/10/2569) → #orderChangeModal --}}
                         <button class="btn btn-label-warning border" onclick="orderChangeOpen()">
                             <i class="ti ti-calendar-time me-1"></i>
                             เปลี่ยนแปลงคำสั่งซื้อ
                         </button>
-                        <button class="btn btn-label-secondary border" onclick="prodReportOpen()">
+                        {{-- ปุ่มรายงานปุ่มเดียว (29/10/2569 ตามที่ผู้ใช้สั่ง): กด → เลือกรายงาน → กรอกเงื่อนไข → ออกรายงาน (#orderReportModal)
+                             รวม: รายงานที่ต้องผลิต · คำสั่งซื้อรายวัน · Order ค้างส่งลูกค้า · ประมาณการยอดขาย --}}
+                        <button class="btn btn-label-secondary border" onclick="orderReportOpen()">
                             <i class="ti ti-printer me-1"></i>
-                            พิมพ์รายงานที่ต้องผลิต
-                        </button>
-                        {{-- รายงานคำสั่งซื้อรายวัน (20/10/2569) — เลือกแผนก + ช่วงวันที่ → OrderDailyReportController::pdf() --}}
-                        <button class="btn btn-label-secondary border" onclick="dailyReportOpen()">
-                            <i class="ti ti-calendar-event me-1"></i>
-                            รายงานคำสั่งซื้อรายวัน
-                        </button>
-                        {{-- Order ค้างส่งลูกค้า ตามรหัสผู้ขาย (26/10/2569) → #outstandingModal → OrderOutstandingController::pdf() --}}
-                        <button class="btn btn-label-secondary border" onclick="outstandingOpen()">
-                            <i class="ti ti-truck-delivery me-1"></i>
-                            Order ค้างส่งลูกค้า
-                        </button>
-                        {{-- ประมาณการยอดขาย ตามรหัสพนักงานขาย (15/10/2569 — ฟอร์ม Access "SaleOrder") → #salesForecastModal --}}
-                        <button class="btn btn-label-secondary border" onclick="salesForecastOpen()">
-                            <i class="ti ti-report-money me-1"></i>
-                            ประมาณการยอดขาย
+                            รายงาน
                         </button>
                         <button class="btn btn-label-primary border" style="color: #1f158e;" onclick="approvalOpen()">
                             <i class="ti ti-discount-check me-1"></i>
@@ -771,117 +755,196 @@
     @include('order.cp-price-check')
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<!-- Modal: อนุมัติใบสั่งซื้อ (morderAPPV) — ผังตามฟอร์ม Access เดิม -->
-<!-- ═══════════════════════════════════════════════════════════════ -->
-{{-- ═══ หน้าต่างเลือกเงื่อนไขก่อนพิมพ์ "รายงานผลิตภัณฑ์ที่ต้องผลิต" (07/10/2569 — ตามฟอร์ม Access เดิม) ═══
-     กด "ออกรายงาน" → เปิด PDF แท็บใหม่ (OrderApprovalController::approvedTodayPdf) · ไม่รวมใบ HE --}}
-<div class="modal fade" id="prodReportModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+{{-- ═══ หน้าต่าง "รายงาน" (29/10/2569 ตามที่ผู้ใช้สั่ง) — รวมรายงาน PDF ของหน้า Order ไว้ที่เดียว ═══
+     1. เลือกรายงาน (radio ord_rp_type — value ต้องตรงกับ key ใน ORD_REPORTS ฝั่ง JS)
+     2. กรอกเงื่อนไข (กลุ่มช่อง data-ord-section แสดงตามรายงานที่เลือก — id ช่องกรอกเดิมทั้งหมด)
+     3. ออกรายงาน → เปิด PDF แท็บใหม่ (endpoint เดิม) --}}
+<style>
+    #orderReportModal .orp-step { font-weight: 600; display: flex; align-items: center; gap: .5rem; }
+    #orderReportModal .orp-step-no { width: 24px; height: 24px; border-radius: 50%; background: #5a50e6; color: #fff;
+                                     display: inline-flex; align-items: center; justify-content: center; font-size: .8rem; }
+    #orderReportModal .orp-group { font-size: .8rem; color: #a1a5b7; font-weight: 600; margin: .25rem 0 -.1rem; }
+    #orderReportModal .orp-option { display: flex; align-items: center; gap: .6rem; width: 100%; height: 100%; margin: 0;
+                                    padding: .6rem .85rem; border: 1px solid #dbdade; border-radius: 10px; cursor: pointer; }
+    #orderReportModal .orp-option .ti { color: #a1a5b7; font-size: 1.15rem; }
+    #orderReportModal .orp-option:hover { border-color: #5a50e6; }
+    #orderReportModal .btn-check:checked + .orp-option { border-color: #5a50e6; background: #eceafd; color: #5a50e6; font-weight: 600; }
+    #orderReportModal .btn-check:checked + .orp-option .ti { color: #5a50e6; }
+</style>
+<div class="modal fade" id="orderReportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="ti ti-printer me-2"></i>รายงานผลิตภัณฑ์ที่ต้องผลิต</h5>
+                <h5 class="modal-title"><i class="ti ti-printer me-2"></i>รายงาน</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body of-form" style="--of-lw: 100px;">
-                <div class="of-row mb-2">
-                    <label class="form-label" for="pr_dept">แผนกที่ผลิต</label>
-                    <div class="of-ctl">
-                        <select id="pr_dept" class="form-select no-enhance">
-                            @foreach ($companies as $c)
-                                <option value="{{ $c }}">{{ $c }}</option>
-                            @endforeach
-                            {{-- ทุกแผนก = ไม่กรองแผนก รายงานแยกหน้าตามแผนก — ใบที่ไม่ได้ระบุ "ผลิตที่" จะออกในหน้า "ไม่ระบุ"
-                                 (07/10/2569: ใบที่ Company ว่างไม่ตรงกับแผนกไหนเลย เลือกแผนกแล้วจึงไม่ออก) --}}
-                            <option value="">ทุกแผนก (รวมใบที่ไม่ระบุแผนก)</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="of-row mb-2">
-                    <label class="form-label" for="pr_date">วันที่</label>
-                    <div class="of-ctl">
-                        <input type="text" id="pr_date" class="form-control" autocomplete="off">
-                    </div>
-                </div>
-                <div class="of-row mb-2">
-                    <label class="form-label" for="pr_time_from">ระหว่างเวลา</label>
-                    <div class="of-ctl">
-                        <div class="d-flex align-items-center gap-2">
-                            <input type="text" id="pr_time_from" class="form-control" autocomplete="off">
-                            <span class="fw-semibold">ถึง</span>
-                            <input type="text" id="pr_time_to" class="form-control" autocomplete="off">
-                        </div>
-                    </div>
-                </div>
-                <div class="of-row">
-                    <label class="form-label">ชนิด</label>
-                    <div class="of-ctl">
-                        <div class="d-flex gap-4 pt-2">
-                            <div class="form-check mb-0">
-                                <input class="form-check-input" type="radio" name="pr_type" id="pr_type_p" value="P" checked>
-                                <label class="form-check-label" for="pr_type_p">P (ผลิต)</label>
+            <div class="modal-body">
+                <div class="orp-step mb-2"><span class="orp-step-no">1</span>เลือกรายงาน</div>
+                @php
+                    // [key, ป้าย, ไอคอน, wip] จัดกลุ่มตามปุ่มเดิม
+                    $ord_report_groups = [
+                        'การผลิต / คำสั่งซื้อ' => [
+                            ['prod',  'รายงานผลิตภัณฑ์ที่ต้องผลิต', 'ti-printer', false],
+                            ['daily', 'รายงานคำสั่งซื้อรายวัน',     'ti-calendar-event', false],
+                        ],
+                        'Order ค้างส่งลูกค้า' => [
+                            ['os_sale',   'Order ค้างส่งลูกค้า (ตามรหัสผู้ขาย)',      'ti-truck-delivery', false],
+                            ['os_done',   'Order ค้างส่งลูกค้า (เฉพาะผลิตเสร็จ)',     'ti-truck-delivery', false],
+                            ['os_undone', 'Order ค้างส่งลูกค้า (เฉพาะผลิตไม่เสร็จ)',  'ti-truck-delivery', false],
+                        ],
+                        'ประมาณการยอดขาย ตามรหัสพนักงานขาย' => [
+                            ['sf_order',     'ยอดรับ Order',                                'ti-report-money', false],
+                            ['sf_delivered', 'ยอดขาย ที่จัดส่งลูกค้า เฉพาะราคาผ่านช่อง 2', 'ti-report-money', false],
+                            ['sf_due',       'กำหนดส่ง (แรก)',                              'ti-report-money', true],
+                            ['sf_latest',    'เลื่อนล่าสุด',                                'ti-report-money', true],
+                        ],
+                    ];
+                @endphp
+                <div class="row g-2 mb-4">
+                    @foreach ($ord_report_groups as $group => $items)
+                        <div class="col-12 orp-group">{{ $group }}</div>
+                        @foreach ($items as [$key, $label, $icon, $wip])
+                            <div class="col-md-6">
+                                <input type="radio" class="btn-check" name="ord_rp_type" id="ord_rp_{{ $key }}" value="{{ $key }}">
+                                <label class="orp-option {{ $wip ? 'wip' : '' }}" for="ord_rp_{{ $key }}">
+                                    <i class="ti {{ $icon }}"></i><span>{{ $label }}</span>
+                                </label>
                             </div>
-                            <div class="form-check mb-0">
-                                <input class="form-check-input" type="radio" name="pr_type" id="pr_type_s" value="S">
-                                <label class="form-check-label" for="pr_type_s">S (สต๊อก)</label>
-                            </div>
-                            {{-- RP (20/10/2569 ผู้ใช้สั่ง) — เฉพาะใบที่ติ๊ก RP / Spec / Cer / MSDS อย่างน้อย 1 · น้ำหนัก = S + P --}}
-                            <div class="form-check mb-0" title="เฉพาะใบที่ติ๊ก RP / Spec / Cer / MSDS อย่างน้อย 1 ช่อง">
-                                <input class="form-check-input" type="radio" name="pr_type" id="pr_type_rp" value="RP">
-                                <label class="form-check-label" for="pr_type_rp">RP</label>
-                            </div>
-                        </div>
-                    </div>
+                        @endforeach
+                    @endforeach
                 </div>
-            </div>
-            <div class="modal-footer justify-content-between">
-                <span class="badge bg-label-danger">ไม่รวม HE</span>
-                <div>
-                    <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ปิด</button>
-                    <button type="button" class="btn btn-primary" onclick="prodReportPrint()">
-                        <i class="ti ti-printer me-1"></i>ออกรายงาน
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
-{{-- ═══ หน้าต่าง "รายงานคำสั่งซื้อรายวัน" (20/10/2569) — เลือกแผนก + ช่วงวันที่ → PDF A4 แนวนอน ═══ --}}
-<div class="modal fade" id="dailyReportModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="ti ti-calendar-event me-2"></i>รายงานคำสั่งซื้อรายวัน</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body of-form" style="--of-lw: 100px;">
-                <div class="of-row mb-2">
-                    <label class="form-label" for="dr_dept">แผนกผลิต</label>
-                    <div class="of-ctl">
-                        <select id="dr_dept" class="form-select no-enhance">
-                            @foreach ($companies as $c)
-                                <option value="{{ $c }}">{{ $c }}</option>
-                            @endforeach
-                            {{-- ทุกแผนก = ไม่กรองแผนก (รวมใบที่ไม่ได้ระบุ "ผลิตที่") — 20/10/2569 ผู้ใช้สั่ง --}}
-                            <option value="">ทุกแผนก</option>
-                        </select>
+                <div class="orp-step mb-2"><span class="orp-step-no">2</span>กรอกเงื่อนไข</div>
+                <div class="text-muted small" id="ord_rp_hint">กรุณาเลือกรายงานก่อน</div>
+
+                {{-- รายงานผลิตภัณฑ์ที่ต้องผลิต (07/10/2569 — ตามฟอร์ม Access เดิม) → OrderApprovalController::approvedTodayPdf · ไม่รวมใบ HE --}}
+                <div class="of-form d-none" data-ord-section="prod" style="--of-lw: 100px;">
+                    <div class="of-row mb-2">
+                        <label class="form-label" for="pr_dept">แผนกที่ผลิต</label>
+                        <div class="of-ctl">
+                            <select id="pr_dept" class="form-select no-enhance">
+                                @foreach ($companies as $c)
+                                    <option value="{{ $c }}">{{ $c }}</option>
+                                @endforeach
+                                {{-- ทุกแผนก = ไม่กรองแผนก รายงานแยกหน้าตามแผนก — ใบที่ไม่ได้ระบุ "ผลิตที่" จะออกในหน้า "ไม่ระบุ"
+                                     (07/10/2569: ใบที่ Company ว่างไม่ตรงกับแผนกไหนเลย เลือกแผนกแล้วจึงไม่ออก) --}}
+                                <option value="">ทุกแผนก (รวมใบที่ไม่ระบุแผนก)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="of-row mb-2">
+                        <label class="form-label" for="pr_date">วันที่</label>
+                        <div class="of-ctl">
+                            <input type="text" id="pr_date" class="form-control" autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="of-row mb-2">
+                        <label class="form-label" for="pr_time_from">ระหว่างเวลา</label>
+                        <div class="of-ctl">
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="text" id="pr_time_from" class="form-control" autocomplete="off">
+                                <span class="fw-semibold">ถึง</span>
+                                <input type="text" id="pr_time_to" class="form-control" autocomplete="off">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="of-row">
+                        <label class="form-label">ชนิด</label>
+                        <div class="of-ctl">
+                            <div class="d-flex gap-4 pt-2">
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="radio" name="pr_type" id="pr_type_p" value="P" checked>
+                                    <label class="form-check-label" for="pr_type_p">P (ผลิต)</label>
+                                </div>
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="radio" name="pr_type" id="pr_type_s" value="S">
+                                    <label class="form-check-label" for="pr_type_s">S (สต๊อก)</label>
+                                </div>
+                                {{-- RP (20/10/2569 ผู้ใช้สั่ง) — เฉพาะใบที่ติ๊ก RP / Spec / Cer / MSDS อย่างน้อย 1 · น้ำหนัก = S + P --}}
+                                <div class="form-check mb-0" title="เฉพาะใบที่ติ๊ก RP / Spec / Cer / MSDS อย่างน้อย 1 ช่อง">
+                                    <input class="form-check-input" type="radio" name="pr_type" id="pr_type_rp" value="RP">
+                                    <label class="form-check-label" for="pr_type_rp">RP</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <span class="badge bg-label-danger mt-3">ไม่รวม HE</span>
+                </div>
+
+                {{-- รายงานคำสั่งซื้อรายวัน (20/10/2569) — แผนก + ช่วงวันที่ → OrderDailyReportController::pdf() --}}
+                <div class="of-form d-none" data-ord-section="daily" style="--of-lw: 100px;">
+                    <div class="of-row mb-2">
+                        <label class="form-label" for="dr_dept">แผนกผลิต</label>
+                        <div class="of-ctl">
+                            <select id="dr_dept" class="form-select no-enhance">
+                                @foreach ($companies as $c)
+                                    <option value="{{ $c }}">{{ $c }}</option>
+                                @endforeach
+                                {{-- ทุกแผนก = ไม่กรองแผนก (รวมใบที่ไม่ได้ระบุ "ผลิตที่") — 20/10/2569 ผู้ใช้สั่ง --}}
+                                <option value="">ทุกแผนก</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="of-row">
+                        <label class="form-label" for="dr_from">วันที่</label>
+                        <div class="of-ctl">
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="text" id="dr_from" class="form-control" autocomplete="off">
+                                <span class="fw-semibold">ถึง</span>
+                                <input type="text" id="dr_to" class="form-control" autocomplete="off">
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="of-row">
-                    <label class="form-label" for="dr_from">วันที่</label>
-                    <div class="of-ctl">
-                        <div class="d-flex align-items-center gap-2">
-                            <input type="text" id="dr_from" class="form-control" autocomplete="off">
-                            <span class="fw-semibold">ถึง</span>
-                            <input type="text" id="dr_to" class="form-control" autocomplete="off">
+
+                {{-- Order ค้างส่งลูกค้า ตามรหัสผู้ขาย (26/10/2569) → OrderOutstandingController::pdf() --}}
+                <div class="of-form d-none" data-ord-section="os" style="--of-lw: 100px;">
+                    <div class="of-row">
+                        <label class="form-label" for="os_sale">รหัสผู้ขาย *</label>
+                        <div class="of-ctl">
+                            <input type="text" id="os_sale" class="form-control" list="os_sale_list" maxlength="10" autocomplete="off">
+                            <datalist id="os_sale_list">
+                                @foreach ($sale_codes as $s)
+                                    <option value="{{ $s }}"></option>
+                                @endforeach
+                            </datalist>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Order ค้างส่งลูกค้า เฉพาะผลิตเสร็จ / ไม่เสร็จ — ผู้ขายทุกคน ไม่มีเงื่อนไขให้กรอก --}}
+                <div class="text-muted small d-none" data-ord-section="none">รายงานนี้แสดงผู้ขายทุกคน ไม่ต้องกรอกเงื่อนไข</div>
+
+                {{-- ประมาณการยอดขาย ตามรหัสพนักงานขาย (15/10/2569 — ฟอร์ม Access "SaleOrder") → SalesForecastController --}}
+                <div class="of-form d-none" data-ord-section="sf" style="--of-lw: 130px;">
+                    <div class="row gx-3 gy-2">
+                        <div class="col-md-6 of-row">
+                            <label class="form-label" for="sf_sale">รหัสพนักงานขาย</label>
+                            <div class="of-ctl">
+                                <select id="sf_sale" class="form-select no-enhance">
+                                    <option value="">รวม</option>
+                                    @foreach ($sale_codes as $s)
+                                        <option value="{{ $s }}">{{ $s }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row gx-3 gy-2 mt-0">
+                        <div class="col-md-6 of-row">
+                            <label class="form-label" for="sf_from">ช่วง วันที่-เวลา</label>
+                            <div class="of-ctl"><input type="text" id="sf_from" class="form-control" autocomplete="off"></div>
+                        </div>
+                        <div class="col-md-6 of-row of-row-auto">
+                            <label class="form-label" for="sf_to">ถึง วันที่-เวลา</label>
+                            <div class="of-ctl"><input type="text" id="sf_to" class="form-control" autocomplete="off"></div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ปิด</button>
-                <button type="button" class="btn btn-primary" onclick="dailyReportPrint()">
+                <button type="button" class="btn btn-primary" id="ord_rp_print" onclick="orderReportPrint()" disabled>
                     <i class="ti ti-printer me-1"></i>ออกรายงาน
                 </button>
             </div>
@@ -889,104 +952,9 @@
     </div>
 </div>
 
-{{-- ═══ หน้าต่าง "Order ค้างส่งลูกค้า" (26/10/2569) — กรอกรหัสผู้ขาย (morder.supno) → PDF A4 แนวนอน ═══ --}}
-<div class="modal fade" id="outstandingModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="ti ti-truck-delivery me-2"></i>Order ค้างส่งลูกค้า</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body of-form" style="--of-lw: 100px;">
-                <div class="of-row">
-                    <label class="form-label" for="os_sale">รหัสผู้ขาย *</label>
-                    <div class="of-ctl">
-                        <input type="text" id="os_sale" class="form-control" list="os_sale_list" maxlength="10" autocomplete="off">
-                        <datalist id="os_sale_list">
-                            @foreach ($sale_codes as $s)
-                                <option value="{{ $s }}"></option>
-                            @endforeach
-                        </datalist>
-                    </div>
-                </div>
-                <button type="button" class="btn btn-primary w-100 mt-2" onclick="outstandingPrint('sale')">
-                    <i class="ti ti-printer me-1"></i>Order ค้างส่งลูกค้า (ตามรหัสผู้ขาย)
-                </button>
-
-                {{-- 2 ชนิดนี้แสดงผู้ขายทุกคน ไม่ต้องกรอกรหัสผู้ขาย (26/10/2569) --}}
-                <hr class="my-3">
-                <div class="small text-muted mb-2">ผู้ขายทุกคน (ไม่ต้องกรอกรหัสผู้ขาย)</div>
-                <div class="d-grid gap-2">
-                    <button type="button" class="btn btn-outline-success" onclick="outstandingPrint('done')">
-                        <i class="ti ti-printer me-1"></i>Order ค้างส่งลูกค้า (เฉพาะผลิตเสร็จ)
-                    </button>
-                    <button type="button" class="btn btn-outline-warning" onclick="outstandingPrint('undone')">
-                        <i class="ti ti-printer me-1"></i>Order ค้างส่งลูกค้า (เฉพาะผลิตไม่เสร็จ)
-                    </button>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ปิด</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-{{-- ═══ หน้าต่าง "ประมาณการยอดขาย ตามรหัสพนักงานขาย" (15/10/2569 — ฟอร์ม Access "SaleOrder") ═══
-     ใช้ได้แล้วเฉพาะปุ่ม "ยอดรับ Order" → SalesForecastController::orderPdf()
-     อีก 3 ปุ่มยังไม่รู้เงื่อนไข (class wip) --}}
-<div class="modal fade" id="salesForecastModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="ti ti-report-money me-2"></i>ประมาณการยอดขาย ตามรหัสพนักงานขาย</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body of-form" style="--of-lw: 130px;">
-                <div class="row gx-3 gy-2">
-                    <div class="col-md-6 of-row">
-                        <label class="form-label" for="sf_sale">รหัสพนักงานขาย</label>
-                        <div class="of-ctl">
-                            <select id="sf_sale" class="form-select no-enhance">
-                                <option value="">รวม</option>
-                                @foreach ($sale_codes as $s)
-                                    <option value="{{ $s }}">{{ $s }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="row gx-3 gy-2 mt-0">
-                    <div class="col-md-6 of-row">
-                        <label class="form-label" for="sf_from">ช่วง วันที่-เวลา</label>
-                        <div class="of-ctl"><input type="text" id="sf_from" class="form-control" autocomplete="off"></div>
-                    </div>
-                    <div class="col-md-6 of-row of-row-auto">
-                        <label class="form-label" for="sf_to">ถึง วันที่-เวลา</label>
-                        <div class="of-ctl"><input type="text" id="sf_to" class="form-control" autocomplete="off"></div>
-                    </div>
-                </div>
-                <div class="row g-2 mt-3">
-                    <div class="col-md-4">
-                        <button type="button" class="btn btn-outline-primary w-100" onclick="salesForecastPrint('order')">ยอดรับ Order</button>
-                    </div>
-                    <div class="col-md-4">
-                        <button type="button" class="btn btn-outline-danger w-100 wip" onclick="salesForecastPrint('due')">กำหนดส่ง (แรก)</button>
-                    </div>
-                    <div class="col-md-4">
-                        <button type="button" class="btn btn-outline-primary w-100 wip" onclick="salesForecastPrint('latest')">เลื่อนล่าสุด</button>
-                    </div>
-                    <div class="col-12">
-                        <button type="button" class="btn btn-outline-secondary w-100" onclick="salesForecastPrint('delivered')">ยอดขาย ที่จัดส่งลูกค้า เฉพาะราคาผ่านช่อง 2</button>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ปิด</button>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- Modal: อนุมัติใบสั่งซื้อ (morderAPPV) — ผังตามฟอร์ม Access เดิม -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
 
 <div class="modal modalHeadDecor fade" id="orderApprovalModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
@@ -1782,6 +1750,7 @@
         renumberOrderItems();
         recalcOrderTotals(false);        // โหลดใบเดิม → คงค่า netqty ที่บันทึกไว้ ไม่คำนวณทับ
         oiAutoGrowAll();                 // ค่าที่โหลดมาจากใบเดิมต้องขยายช่องให้พอดีด้วย
+        renderItemWarn();                // แถวถูกสร้างใหม่ — ล้างคำเตือนกำหนดราคาที่ค้างจากใบก่อน
     }
 
     function addOrderItem(){
@@ -1809,8 +1778,17 @@
             if (!el && ($(this).val() || '').trim()) el = this;
         });
 
+        renderItemWarn();   // แถวที่เพิ่งถูกลบ/ล้างรหัส ต้องหายจากแถบเตือนกำหนดราคาด้วย
+
         // ยังมีรหัสเหลืออยู่ → ดึงข้อมูลของรหัสนั้นมาแสดงแทน (จัดการแถบเตือน + ราคาให้ในตัว)
-        if (el){ applyItemLookup(el); return; }
+        if (el){
+            applyItemLookup(el);
+            // แถวอื่นเช็คกำหนดราคาใหม่ด้วย เพราะผลขึ้นกับลูกค้าที่เลือก
+            $('#orderItems [data-f="Itemno"]').each(function(){
+                if (this !== el && ($(this).val() || '').trim()) checkItemWarn(this);
+            });
+            return;
+        }
 
         // ไม่เหลือรหัสสินค้าเลยทั้งใบ → ซ่อนแถบเตือน + ล้างกล่องราคา
         showMatchWarning(null);
@@ -1926,8 +1904,48 @@
             }
 
             showMatchWarning(res);
+            setItemWarn(el, res);
             syncItemnoToPrice();
         }).fail(syncItemnoToPrice);
+    }
+
+    /* เตือนรหัสสินค้าที่ไม่มีในกำหนดราคา — 31/10/2569 ตามที่ผู้ใช้สั่ง
+       จำผลไว้ที่ช่องของแต่ละแถว แล้ววาดรวมทุกแถว (แถวล่างที่ถูกต้องจะได้ไม่ลบคำเตือนของแถวบน)
+       เป็นแถบเตือน ไม่ใช่ Swal เพราะเช็คระหว่างพิมพ์ และไม่บล็อกการบันทึก */
+    var ITEM_WARN_TEXT = {
+        no_price: 'ยังไม่มีในกำหนดราคาของลูกค้ารายนี้',
+        'new':    'เบอร์ใหม่ ยังไม่มีในกำหนดราคา',
+        unknown:  'ไม่พบรหัสนี้ในระบบ — อาจคีย์รหัสผิด หรือเป็นเบอร์ใหม่ที่ยังไม่มีในกำหนดราคา'
+    };
+
+    function setItemWarn(el, res){
+        el._itemWarn = res && ITEM_WARN_TEXT[res.price_warn]
+            ? 'เบอร์ ' + res.itemno + ' — ' + ITEM_WARN_TEXT[res.price_warn] : '';
+        renderItemWarn();
+    }
+
+    function renderItemWarn(){
+        var lines = [];
+        $('#orderItems [data-f="Itemno"]').each(function(){
+            if (($(this).val() || '').trim() && this._itemWarn && lines.indexOf(this._itemWarn) === -1){
+                lines.push(this._itemWarn);
+            }
+        });
+        var $box = $('#o_item_warn').empty().toggleClass('d-none', !lines.length);
+        $.each(lines, function(_, t){ $box.append($('<div>').text(t)); });
+    }
+
+    // เช็คเฉพาะกำหนดราคา ไม่แตะชื่อสินค้า/หมายเหตุ/แถบ Match ของแถวนั้น
+    function checkItemWarn(el){
+        var itemno = ($(el).val() || '').trim();
+        $.getJSON("{{ $page_url }}/item-lookup", {
+            itemno: itemno,
+            custno: ($('#o_Custno').val() || '').trim(),
+            orderno: ($('#o_Orderno').val() || '').trim(),
+            mdate:   $('#o_Mdate').val() || ''
+        }, function(res){
+            if (($(el).val() || '').trim() === itemno) setItemWarn(el, res);
+        });
     }
 
     // แถบแดง "สีที่สั่งซื้อล่าสุดเกิน 3 ปี จะต้อง Match ใหม่"
@@ -3472,12 +3490,50 @@
         });
     }
 
-    // พิมพ์ — รายการที่อนุมัติราคาแล้วใน 3 วันล่าสุด ตามผังกระดาษเดิม (12/09/2569)
-    // เดิมเป็น window.print() เพราะยังไม่มีแบบฟอร์มให้อ้างอิง
     // ────────────────────────────────────────────────────────
-    //  รายงานผลิตภัณฑ์ที่ต้องผลิต (07/10/2569) — หน้าต่างเลือกเงื่อนไขก่อนพิมพ์
-    //  ค่าเริ่มต้น: วันนี้ · 08:00–18:00 · P  (ช่องเวลาใช้ flatpickr 24 ชม. ตามข้อตกลงของระบบ)
+    //  รายงาน (29/10/2569 ตามที่ผู้ใช้สั่ง) — ปุ่มเดียว: เลือกรายงาน → กรอกเงื่อนไข → ออกรายงาน
+    //  section = กลุ่มช่องกรอก (data-ord-section) · reset = ตั้งค่าเริ่มต้นตอนเลือกรายงาน · print = ออกรายงาน
     // ────────────────────────────────────────────────────────
+    var ORD_REPORTS = {
+        prod:         { section: 'prod',  reset: prodReportReset,      print: prodReportPrint },
+        daily:        { section: 'daily', reset: dailyReportReset,     print: dailyReportPrint },
+        os_sale:      { section: 'os',    print: function(){ outstandingPrint('sale'); }, focus: '#os_sale' },
+        os_done:      { section: 'none',  print: function(){ outstandingPrint('done'); } },
+        os_undone:    { section: 'none',  print: function(){ outstandingPrint('undone'); } },
+        sf_order:     { section: 'sf',    reset: salesForecastReset,   print: function(){ salesForecastPrint('order'); } },
+        sf_delivered: { section: 'sf',    reset: salesForecastReset,   print: function(){ salesForecastPrint('delivered'); } },
+        sf_due:       { section: 'sf',    reset: salesForecastReset,   print: function(){ salesForecastPrint('due'); } },
+        sf_latest:    { section: 'sf',    reset: salesForecastReset,   print: function(){ salesForecastPrint('latest'); } },
+    };
+    var ORD_REPORT_TARGET = '#orderReportModal';
+
+    function orderReportOpen(){
+        $(ORD_REPORT_TARGET).modal('show');
+    }
+    function orderReportSelected(){
+        return ORD_REPORTS[$('input[name="ord_rp_type"]:checked').val()] || null;
+    }
+    $(document).on('change', 'input[name="ord_rp_type"]', function(){
+        var r = orderReportSelected();
+        if (!r) return;
+        $('#ord_rp_hint').addClass('d-none');
+        $('[data-ord-section]').addClass('d-none');
+        $('[data-ord-section="' + r.section + '"]').removeClass('d-none');
+        $('#ord_rp_print').prop('disabled', false);
+        if (r.reset) r.reset();
+        if (r.focus) $(r.focus).trigger('focus').select();
+    });
+    function orderReportPrint(){
+        var r = orderReportSelected();
+        if (!r) {
+            Swal.fire({ icon: 'warning', title: 'กรุณาเลือกรายงาน', target: ORD_REPORT_TARGET, heightAuto: false });
+            return;
+        }
+        r.print();
+    }
+
+    //  รายงานผลิตภัณฑ์ที่ต้องผลิต (07/10/2569) — ค่าเริ่มต้น: วันนี้ · 08:00–18:00 · P
+    //  (ช่องเวลาใช้ flatpickr 24 ชม. ตามข้อตกลงของระบบ)
     var prFp = null;
     function prodReportInit(){
         if (prFp) return;
@@ -3492,13 +3548,12 @@
             to:   flatpickr('#pr_time_to', timeOpt)
         };
     }
-    function prodReportOpen(){
+    function prodReportReset(){
         prodReportInit();
         prFp.date.setDate(new Date(), false);
         prFp.from.setDate('08:00', false);
         prFp.to.setDate('18:00', false);
         $('#pr_type_p').prop('checked', true);
-        $('#prodReportModal').modal('show');
     }
     function prodReportPrint(){
         var q = {
@@ -3508,74 +3563,59 @@
             time_to:   $('#pr_time_to').val() || '',
             type:      $('input[name="pr_type"]:checked').val() || 'P'
         };
-        if (!q.date) { Swal.fire({ icon: 'warning', title: 'กรุณาเลือกวันที่' }); return; }
+        if (!q.date) { Swal.fire({ icon: 'warning', title: 'กรุณาเลือกวันที่', target: ORD_REPORT_TARGET, heightAuto: false }); return; }
         if (q.time_from && q.time_to && q.time_from > q.time_to) {
-            Swal.fire({ icon: 'warning', title: 'ช่วงเวลาไม่ถูกต้อง', text: 'เวลาเริ่มต้องไม่มากกว่าเวลาสิ้นสุด' });
+            Swal.fire({ icon: 'warning', title: 'ช่วงเวลาไม่ถูกต้อง', text: 'เวลาเริ่มต้องไม่มากกว่าเวลาสิ้นสุด', target: ORD_REPORT_TARGET, heightAuto: false });
             return;
         }
         window.open('{{ url('order/order-approval/approved-today-pdf') }}?' + $.param(q), '_blank');
     }
 
-    // ────────────────────────────────────────────────────────
     //  รายงานคำสั่งซื้อรายวัน (20/10/2569) — ค่าเริ่มต้น: วันนี้ ถึง วันนี้
-    // ────────────────────────────────────────────────────────
     var drFp = null;
-    function dailyReportOpen(){
+    function dailyReportReset(){
         if (!drFp) {
             var opt = { dateFormat: 'd/m/Y', allowInput: true, static: true, disableMobile: true };
             drFp = { from: flatpickr('#dr_from', opt), to: flatpickr('#dr_to', opt) };
         }
         drFp.from.setDate(new Date(), false);
         drFp.to.setDate(new Date(), false);
-        $('#dailyReportModal').modal('show');
     }
     function dailyReportPrint(){
         var from = drFp.from.selectedDates[0], to = drFp.to.selectedDates[0];
         if (!from || !to) {
-            Swal.fire({ icon: 'warning', title: 'กรุณาเลือกวันที่', target: '#dailyReportModal', heightAuto: false });
+            Swal.fire({ icon: 'warning', title: 'กรุณาเลือกวันที่', target: ORD_REPORT_TARGET, heightAuto: false });
             return;
         }
         if (from > to) {
-            Swal.fire({ icon: 'warning', title: 'ช่วงวันที่ไม่ถูกต้อง', text: 'วันที่เริ่มต้องไม่มากกว่าวันที่สิ้นสุด', target: '#dailyReportModal', heightAuto: false });
+            Swal.fire({ icon: 'warning', title: 'ช่วงวันที่ไม่ถูกต้อง', text: 'วันที่เริ่มต้องไม่มากกว่าวันที่สิ้นสุด', target: ORD_REPORT_TARGET, heightAuto: false });
             return;
         }
         var q = { dept: $('#dr_dept').val() || '', date_from: $('#dr_from').val(), date_to: $('#dr_to').val() };
         window.open('{{ url('order/daily-report-pdf') }}?' + $.param(q), '_blank');
     }
 
-    // ────────────────────────────────────────────────────────
-    //  Order ค้างส่งลูกค้า (26/10/2569) — กรอกรหัสผู้ขายแล้วเปิด PDF
-    // ────────────────────────────────────────────────────────
-    function outstandingOpen(){
-        $('#outstandingModal').modal('show');
-    }
-    // type: sale = ตามรหัสผู้ขาย · done / undone = ผู้ขายทุกคน เฉพาะผลิตเสร็จ / ไม่เสร็จ (26/10/2569)
+    //  Order ค้างส่งลูกค้า (26/10/2569)
+    //  type: sale = ตามรหัสผู้ขาย · done / undone = ผู้ขายทุกคน เฉพาะผลิตเสร็จ / ไม่เสร็จ
     function outstandingPrint(type){
         type = type || 'sale';
         var q = { type: type };
         if (type === 'sale') {
             var sale = $.trim($('#os_sale').val());
             if (!sale) {
-                Swal.fire({ icon: 'warning', title: 'กรุณากรอกรหัสผู้ขาย', target: '#outstandingModal', heightAuto: false });
+                Swal.fire({ icon: 'warning', title: 'กรุณากรอกรหัสผู้ขาย', target: ORD_REPORT_TARGET, heightAuto: false });
                 return;
             }
             q.sale = sale;
         }
         window.open('{{ url('order/outstanding-pdf') }}?' + $.param(q), '_blank');
     }
-    $(document).on('shown.bs.modal', '#outstandingModal', function(){ $('#os_sale').trigger('focus').select(); });
     $(document).on('keydown', '#os_sale', function(e){ if (e.key === 'Enter') { e.preventDefault(); outstandingPrint('sale'); } });
 
-    function approvalPrint(){
-        window.open(APPROVAL_URL + '/approved-pdf', '_blank');
-    }
-
-    // ────────────────────────────────────────────────────────
     //  ประมาณการยอดขาย ตามรหัสพนักงานขาย (15/10/2569) — ฟอร์ม Access "SaleOrder"
     //  ค่าเริ่มต้น: ต้นเดือน 00:00 → สิ้นเดือน 23:59 · รหัสพนักงานขาย = รวม
-    // ────────────────────────────────────────────────────────
     var sfFp = null;
-    function salesForecastOpen(){
+    function salesForecastReset(){
         if (!sfFp) {
             var opt = {
                 enableTime: true, time_24hr: true, dateFormat: 'd/m/Y H:i',
@@ -3583,11 +3623,12 @@
             };
             sfFp = { from: flatpickr('#sf_from', opt), to: flatpickr('#sf_to', opt) };
         }
+        // สลับระหว่างรายงานกลุ่มเดียวกัน = คงค่าที่กรอกไว้
+        if (sfFp.from.selectedDates.length) return;
         var now = new Date();
         sfFp.from.setDate(new Date(now.getFullYear(), now.getMonth(), 1, 0, 0), false);
         sfFp.to.setDate(new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59), false);
         $('#sf_sale').val('');
-        $('#salesForecastModal').modal('show');
     }
     function salesForecastPrint(kind){
         // ปุ่มที่ทำแล้ว → endpoint PDF (delivered = ยอดขายที่ส่งลูกค้า เฉพาะราคาผ่านช่อง 2, 27/10/2569)
@@ -3596,20 +3637,26 @@
             delivered: '{{ url('order/sales-forecast/delivered-pdf') }}',
         };
         if (!urls[kind]) {
-            Swal.fire({ icon: 'info', title: 'ยังไม่เปิดใช้งาน', text: 'รายงานนี้ยังไม่ได้ทำ', target: '#salesForecastModal', heightAuto: false });
+            Swal.fire({ icon: 'info', title: 'ยังไม่เปิดใช้งาน', text: 'รายงานนี้ยังไม่ได้ทำ', target: ORD_REPORT_TARGET, heightAuto: false });
             return;
         }
         var from = sfFp.from.selectedDates[0], to = sfFp.to.selectedDates[0];
         if (!from || !to) {
-            Swal.fire({ icon: 'warning', title: 'กรุณาเลือกช่วงวันที่-เวลา', target: '#salesForecastModal', heightAuto: false });
+            Swal.fire({ icon: 'warning', title: 'กรุณาเลือกช่วงวันที่-เวลา', target: ORD_REPORT_TARGET, heightAuto: false });
             return;
         }
         if (from > to) {
-            Swal.fire({ icon: 'warning', title: 'ช่วงวันที่ไม่ถูกต้อง', text: 'วันที่เริ่มต้องไม่มากกว่าวันที่สิ้นสุด', target: '#salesForecastModal', heightAuto: false });
+            Swal.fire({ icon: 'warning', title: 'ช่วงวันที่ไม่ถูกต้อง', text: 'วันที่เริ่มต้องไม่มากกว่าวันที่สิ้นสุด', target: ORD_REPORT_TARGET, heightAuto: false });
             return;
         }
         var q = { sale: $('#sf_sale').val() || '', from: $('#sf_from').val(), to: $('#sf_to').val() };
         window.open(urls[kind] + '?' + $.param(q), '_blank');
+    }
+
+    // พิมพ์ — รายการที่อนุมัติราคาแล้วใน 3 วันล่าสุด ตามผังกระดาษเดิม (12/09/2569)
+    // เดิมเป็น window.print() เพราะยังไม่มีแบบฟอร์มให้อ้างอิง
+    function approvalPrint(){
+        window.open(APPROVAL_URL + '/approved-pdf', '_blank');
     }
 
     // ────────────────────────────────────────────────────────
