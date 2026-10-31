@@ -26,6 +26,7 @@
         table.list tr.has-mems td { border-bottom: none; }
         table.list tr.mems td { border-top: none; padding-top: 0; }
         .ctr { text-align: center; }
+        table.list td.num { text-align: right; }
         .nowrap { white-space: nowrap; }
     </style>
 </head>
@@ -52,22 +53,24 @@
     <thead>
         <tr>
             <th colspan="9" class="grp">ส่งตัวอย่างจากลูกค้า ให้แผนกเทคนิค</th>
-            <th colspan="4" class="grp">รับตัวอย่างผลิตภัณฑ์ จากแผนกเทคนิค</th>
+            <th colspan="6" class="grp">รับตัวอย่างผลิตภัณฑ์ จากแผนกเทคนิค</th>
         </tr>
         <tr>
             <th style="width: 4.5%;">วันที่ส่ง<br>เทียบสี</th>
             <th style="width: 4.5%;">เลขที่<br>ใบนำส่ง</th>
-            <th style="width: 14%;">ตามคำสั่ง<br>ลูกค้าเพื่อ</th>
-            <th style="width: 13%;">สี / วัตถุดิบ</th>
-            <th style="width: 9%;">ลักษณะตัวอย่าง</th>
+            <th style="width: 11%;">ตามคำสั่ง<br>ลูกค้าเพื่อ</th>
+            <th style="width: 10%;">สี / วัตถุดิบ</th>
+            <th style="width: 7%;">ลักษณะตัวอย่าง</th>
             <th style="width: 5%;">ประเภท<br>งาน</th>
-            <th style="width: 7%;">นำไปทำ<br>ชิ้นงาน</th>
-            <th style="width: 10%;">หมายเหตุ<br>กำหนดเทียบสีเสร็จ</th>
-            <th style="width: 6%;">ผู้รับเอกสาร<br>(เทคนิค)</th>
+            <th style="width: 6%;">นำไปทำ<br>ชิ้นงาน</th>
+            <th style="width: 9%;">หมายเหตุ<br>กำหนดเทียบสีเสร็จ</th>
+            <th style="width: 5%;">ผู้รับเอกสาร<br>(เทคนิค)</th>
             <th style="width: 6%;">วันที่รับ<br>ตัวอย่าง<br>ผลิตภัณฑ์</th>
-            <th style="width: 7%;">รหัสสินค้า</th>
-            <th style="width: 6%;">LOT NO.</th>
-            <th style="width: 8%;">เบอร์เทียบ /<br>การใช้วัตถุดิบ</th>
+            <th style="width: 6%;">รหัสสินค้า</th>
+            <th style="width: 5%;">LOT NO.</th>
+            <th style="width: 7%;">เบอร์เทียบ /<br>การใช้วัตถุดิบ</th>
+            <th style="width: 6%;">น้ำหนัก<br>ตัวอย่าง<br>(กรัม)</th>
+            <th style="width: 8%;">เลขที่ใบ<br>รายงานผล</th>
         </tr>
     </thead>
     <tbody>
@@ -90,16 +93,18 @@
                 <td>{{ $r->CodeNo }}</td>
                 <td>{{ $r->lotno }}</td>
                 <td>{{ $r->TestDesc }}<br>{{ $r->ResinMatch }}</td>
+                <td class="num">{{ $r->Wage !== null && $r->Wage !== '' ? number_format((float) $r->Wage) : '' }}</td>
+                <td>{{ $r->rptno }}</td>
             </tr>
             @if ($mems !== '')
                 <tr class="mems">
                     <td colspan="2"></td>
-                    <td colspan="11">{{ $mems }}</td>
+                    <td colspan="13">{{ $mems }}</td>
                 </tr>
             @endif
         @empty
             <tr>
-                <td colspan="13" class="ctr" style="padding: 16px;">ไม่พบใบนำส่งตัวอย่างเทียบสีในช่วงวันที่ที่เลือก</td>
+                <td colspan="15" class="ctr" style="padding: 16px;">ไม่พบใบนำส่งตัวอย่างเทียบสีในช่วงวันที่ที่เลือก</td>
             </tr>
         @endforelse
     </tbody>

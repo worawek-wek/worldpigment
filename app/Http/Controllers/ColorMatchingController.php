@@ -927,8 +927,8 @@ class ColorMatchingController extends Controller
 
     /**
      * ใบนำส่งเทียบสีในช่วง DsendT → 1 record ต่อ 1 SendNo (เรียง DsendT → SendNo) — ใช้ร่วม sendRecordPdf() / matchReportPdf()
-     *   - มีแถว CM (ไม่มี Testno) → ใช้แถว CM · Lot / รหัสสินค้า (คั่น ", ") / วันที่รับตัวอย่าง / วันที่เบิก (เก่าสุด)
-     *     รวบจากใบส่ง ต.ย. ที่ SendNo เดียวกัน
+     *   - มีแถว CM (ไม่มี Testno) → ใช้แถว CM · Lot / รหัสสินค้า / เลขที่ใบรายงานผล (คั่น ", ") / วันที่รับตัวอย่าง /
+     *     วันที่เบิก (เก่าสุด) / น้ำหนักตัวอย่าง (ผลรวม) รวบจากใบส่ง ต.ย. ที่ SendNo เดียวกัน
      *   - ไม่มีแถว CM (ข้อมูลเก่า — ใบส่ง ต.ย. เก็บทั้งชุดในแถวเดียว) → ใช้แถวใบส่ง ต.ย. นั้น
      */
     private function sendNoRecords(string $from, string $to)
@@ -942,7 +942,7 @@ class ColorMatchingController extends Controller
             ->get([
                 't.id', 't.SendNo', 't.Testno', 't.DsendT', 't.sale', 't.custno', 't.custname', 'c.name as cust_name',
                 't.color', 't.TestDesc', 't.STD', 't.Type_Work', 't.Model', 't.pop', 't.TNDate', 't.TNname',
-                't.SampleDate', 't.TestDate', 't.CodeNo', 't.lotno', 't.ResinMatch', 't.Mems',
+                't.SampleDate', 't.TestDate', 't.CodeNo', 't.lotno', 't.ResinMatch', 't.Mems', 't.Wage', 't.rptno',
             ]);
 
         $isCm = fn ($r) => trim((string) $r->Testno) === '';
@@ -960,6 +960,9 @@ class ColorMatchingController extends Controller
                 $rec->CodeNo     = $join($sd, 'CodeNo') ?: $cm->CodeNo;
                 $rec->SampleDate = $sd->pluck('SampleDate')->filter()->min() ?: $cm->SampleDate;
                 $rec->TestDate   = $sd->pluck('TestDate')->filter()->min();   // CM ไม่มีวันที่เบิกของตัวเอง
+                $rec->rptno      = $join($sd, 'rptno') ?: $cm->rptno;
+                $wages           = $sd->pluck('Wage')->reject(fn ($v) => $v === null || $v === '');
+                $rec->Wage       = $wages->isNotEmpty() ? $wages->sum() : $cm->Wage;   // น้ำหนักรวมของใบส่ง ต.ย. ทุกใบ
                 return $rec;
             })
             ->values();
