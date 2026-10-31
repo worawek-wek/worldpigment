@@ -59,8 +59,8 @@
 <table class="list">
     <thead>
         <tr>
-            <th style="width: 7%;">เรียงตาม<br>วันที่เบิก</th>
-            <th style="width: 8%;">เลขที่ใบเบิก</th>
+            <th style="width: 5.5%;">เรียงตาม<br>วันที่เบิก</th>
+            <th style="width: 5.5%;">เลขที่<br>ใบเบิก</th>
             <th style="width: 17%;"></th>
             <th style="width: 10%;">ResinMatch</th>
             <th class="num" style="width: 5%;">PHR</th>
@@ -71,7 +71,7 @@
             <th class="num" style="width: 5%;">สีผง</th>
             <th class="num" style="width: 5%;">สีเม็ด</th>
             <th class="num" style="width: 5%;">Pigment</th>
-            <th style="width: 5%;">ตั้งเบอร์</th>
+            <th style="width: 9%;">ตั้งเบอร์</th>
         </tr>
     </thead>
     <tbody>
