@@ -14,10 +14,43 @@
     #orderChangeModal #ocItemsTable tr.oc-selected td { background: #eef4ff; }
     #orderChangeModal #ocItemsTable tr.oc-target td { background: #fff6e5; }
     #orderChangeModal .oc-panel { border: 1px solid #7367f0; border-radius: .5rem; background: #fbfaff; }
-    #orderChangeModal .oc-doc { border-left: 3px solid #d8d6de; padding: .35rem 0 .35rem .75rem; margin-bottom: .6rem; }
-    #orderChangeModal .oc-doc.oc-legacy { border-left-color: #c9c9c9; }
-    #orderChangeModal .oc-doc.oc-web { border-left-color: #7367f0; }
-    #orderChangeModal .oc-line { font-size: .875rem; }
+    #orderChangeModal .oc-postponed { font-size: .75rem; font-weight: 400; color: #c2570c; }
+
+    /* การ์ดประวัติ — ใช้ทั้งส่วนประวัติของใบ และหน้าต่างประวัติรายการ */
+    #orderChangeModal .oc-doc { display: flex; gap: 1rem; padding: .85rem 1rem; margin-bottom: .75rem; color: #2f2b3d;
+                                border: 1px solid #e6e4f5; border-radius: .75rem; background: #fbfbfe; }
+    #orderChangeModal .oc-doc-icon { flex: 0 0 44px; width: 44px; height: 44px; border-radius: 50%; font-size: 1.35rem;
+                                     display: flex; align-items: center; justify-content: center;
+                                     background: #eeecfd; color: #7367f0; }
+    #orderChangeModal .oc-doc.oc-legacy .oc-doc-icon { background: #f0f0f2; color: #8a8d93; }
+    #orderChangeModal .oc-doc-main { flex: 1 1 auto; min-width: 0; }
+    #orderChangeModal .oc-doc-head { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .75rem; margin-bottom: .4rem; }
+    #orderChangeModal .oc-doc-no { font-weight: 600; font-size: 1rem; }
+    #orderChangeModal .oc-doc-date { font-size: .8125rem; padding: .15rem .65rem; border-radius: 1rem; background: #f0eff8; }
+    #orderChangeModal .oc-doc-by { flex: 0 0 100%; font-size: .875rem; }
+    #orderChangeModal .oc-line { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .6rem; font-size: .875rem; }
+    #orderChangeModal .oc-line + .oc-line { margin-top: .35rem; }
+    #orderChangeModal .oc-line .badge { border-radius: 1rem; padding: .35rem .7rem; }
+    #orderChangeModal .oc-line-sep { width: 1px; height: 1rem; background: #b9b7c6; }
+    #orderChangeModal .oc-split { display: flex; flex-wrap: wrap; gap: .25rem 0; margin-top: .4rem; font-size: .875rem; }
+    #orderChangeModal .oc-split > div { padding-right: 1.5rem; }
+    #orderChangeModal .oc-split > div + div { padding-left: 1.5rem; border-left: 1px solid #b9b7c6; }
+    #orderChangeModal .oc-split-cap { font-size: .8125rem; color: #6f6b7d; }
+    #orderChangeModal .oc-split-part { margin-top: .4rem; padding-left: .6rem; border-left: 3px solid #7367f0; font-size: .875rem; }
+    #orderChangeModal .oc-doc-reason { margin-top: .4rem; font-size: .8125rem; color: #6f6b7d; }
+
+    /* หน้าต่างประวัติรายการ (Swal) */
+    #orderChangeModal .oc-hpop { padding: 0 0 1.25rem; border-radius: 1rem; overflow: hidden; }
+    /* Swal ใส่ inline style display:block ให้ title จึงต้อง !important */
+    #orderChangeModal .oc-hpop-title { display: flex !important; align-items: center; gap: 1rem; margin: 0; padding: 1rem 3.5rem 1rem 1.5rem;
+                                       text-align: left; font-size: 1.375rem; color: #2f2b3d;
+                                       background: linear-gradient(100deg, #f4f3fe 0%, #eeecfd 60%, #f8f7ff 100%); }
+    #orderChangeModal .oc-hpop-icon { flex: 0 0 48px; width: 48px; height: 48px; border-radius: 50%; font-size: 1.5rem;
+                                      display: flex; align-items: center; justify-content: center;
+                                      color: #fff; background: #7367f0; }
+    #orderChangeModal .oc-hpop-sep { width: 1px; height: 32px; background: #7367f0; opacity: .5; }
+    #orderChangeModal .oc-hpop-body { margin: 0; padding: 1rem 1.25rem 0; text-align: left; }
+    #orderChangeModal .oc-hpop-close { padding: .5rem 1.75rem; border-radius: .6rem; }
 </style>
 
 <div class="modal modalHeadDecor fade" id="orderChangeModal" tabindex="-1" aria-hidden="true">
@@ -202,7 +235,7 @@
     //   escHtml, commaFmt, numOf, loadData) ตอนถูกเรียกเท่านั้น ส่วนการผูก event รอ DOMContentLoaded
     var OC_DATA_URL = "{{ route('order.change.data') }}";
     var OC_SAVE_URL = "{{ route('order.change.save') }}";
-    var OC = { orderno: null, items: [], actions: {}, action: null, runnos: [] };
+    var OC = { orderno: null, items: [], history: [], actions: {}, action: null, runnos: [] };
 
     // เปิดฟอร์ม — ส่งเลขที่ใบมา = โหลดใบนั้นเลย
     function orderChangeOpen(orderno){
@@ -214,7 +247,7 @@
     }
 
     function ocReset(){
-        OC.orderno = null; OC.items = []; ocClosePanel();
+        OC.orderno = null; OC.items = []; OC.history = []; ocClosePanel();
         $('#orderChangeModal .oc-info input[readonly]').val('');
         $('#oc_flags').empty();
         $('#ocItems').html('<tr><td colspan="12" class="text-center text-muted py-4">กรอกเลขที่ใบสั่งแล้วกด Enter</td></tr>');
@@ -237,10 +270,11 @@
             if (!keepPanel) ocClosePanel();
             OC.orderno = res.order.Orderno;
             OC.items   = res.items || [];
+            OC.history = res.history || [];
             OC.actions = res.actions || {};
             ocFillHeader(res.order);
             ocRenderItems();
-            ocRenderHistory(res.history || []);
+            ocRenderHistory(OC.history);
         }).fail(function(){
             Swal.fire({icon: 'error', title: 'โหลดข้อมูลไม่สำเร็จ', target: '#orderChangeModal', heightAuto: false});
         });
@@ -274,6 +308,45 @@
         return null;
     }
 
+    // ประวัติเฉพาะรายการนี้ (รวมบรรทัดที่รายการนี้ถูกแยกออกมา) — คงรูปแบบใบเหมือน OC.history เรียงใหม่→เก่า
+    function ocItemDocs(runno){
+        runno = parseInt(runno, 10);
+        return OC.history.map(function(d){
+            var lines = d.lines.filter(function(l){
+                return parseInt(l.runno, 10) === runno || parseInt(l.split_runno, 10) === runno;
+            });
+            return lines.length ? $.extend({}, d, {lines: lines}) : null;
+        }).filter(Boolean);
+    }
+
+    // ข้อความใต้กำหนดส่ง เช่น "เลื่อน 3 ครั้ง · เดิม 01/09/26" (กำหนดเดิม = ค่าก่อนการเลื่อนครั้งแรก)
+    function ocPostponeText(docs, runno){
+        var lines = [];
+        docs.forEach(function(d){
+            d.lines.forEach(function(l){
+                if (l.action === 'postpone' && parseInt(l.runno, 10) === parseInt(runno, 10)) lines.push(l);
+            });
+        });
+        if (!lines.length) return '';
+        var first = fmtDate(lines[lines.length - 1].old_senddate);
+        return '<div class="oc-postponed">เลื่อน ' + lines.length + ' ครั้ง' + (first ? ' · เดิม ' + first : '') + '</div>';
+    }
+
+    function ocShowItemHistory(runno){
+        var r = ocItem(runno) || {};
+        Swal.fire({
+            title: '<span class="oc-hpop-icon"><i class="ti ti-file-time"></i></span><span class="oc-hpop-sep"></span>'
+                 + '<span>ประวัติรายการ #' + ocNo(runno) + ' ' + escHtml(r.Itemno || '') + '</span>',
+            html: ocHistoryHtml(ocItemDocs(runno)),
+            width: 860,
+            showCloseButton: true,
+            confirmButtonText: '<i class="ti ti-x me-1"></i>ปิด',
+            customClass: {popup: 'oc-hpop', title: 'oc-hpop-title', htmlContainer: 'oc-hpop-body', confirmButton: 'oc-hpop-close'},
+            target: '#orderChangeModal',
+            heightAuto: false
+        });
+    }
+
     function ocRenderItems(){
         var totS = 0, totP = 0;
         if (!OC.items.length){
@@ -286,7 +359,12 @@
                 var parent = r.parent_runno ? ocNo(r.parent_runno) : null;
                 var tree   = depth ? '<span class="oc-tree" style="margin-left:' + ((depth - 1) * 16) + 'px">└</span>' : '';
                 var from   = parent ? ' <span class="badge bg-label-info" title="แยกส่งมาจากรายการ #' + parent + '">จาก #' + parent + '</span>' : '';
-                var cnt    = r.change_count ? '<span class="badge bg-label-primary">' + r.change_count + ' ครั้ง</span>' : '<span class="text-muted">-</span>';
+                var docs   = ocItemDocs(r.Runno);
+                var nLines = docs.reduce(function(n, d){ return n + d.lines.length; }, 0);
+                var cnt    = nLines
+                    ? '<button type="button" class="btn btn-sm btn-label-primary py-0 px-2" onclick="ocShowItemHistory(' + r.Runno + ')" title="ดูประวัติของรายการนี้">'
+                      + '<i class="ti ti-history me-1"></i>' + nLines + ' ครั้ง</button>'
+                    : '<span class="text-muted">-</span>';
                 return '<tr data-runno="' + r.Runno + '">'
                     + '<td class="text-center"><input type="checkbox" class="form-check-input oc-check" value="' + r.Runno + '"></td>'
                     + '<td class="text-center text-muted">' + (i + 1) + '</td>'
@@ -295,7 +373,7 @@
                     + '<td class="text-end">' + fmtNum(r.Stock, 2) + '</td>'
                     + '<td class="text-end">' + fmtNum(r.Production, 2) + '</td>'
                     + '<td class="text-center">' + fmtDate(r.custwant) + '</td>'
-                    + '<td class="text-center fw-semibold">' + fmtDate(r.senddate) + '</td>'
+                    + '<td class="text-center fw-semibold">' + fmtDate(r.senddate) + ocPostponeText(docs, r.Runno) + '</td>'
                     + '<td class="text-center">' + fmtDate(r.EndP) + '</td>'
                     + '<td class="text-center">' + fmtDate(r.DVDate) + '</td>'
                     + '<td class="text-center">' + cnt + '</td>'
@@ -431,43 +509,55 @@
     // ── ประวัติ ──
     function ocQty(s, p){ return 'S ' + fmtNum(s, 2) + ' / P ' + fmtNum(p, 2); }
 
+    var OC_ACTION_ICONS = {postpone: 'ti-info-circle', split: 'ti-circle-check', weight: 'ti-scale'};
+
     function ocLineText(l){
         var no   = ocNo(l.runno);
-        var item = '<span class="text-muted">' + (no ? '#' + no + ' ' : '') + escHtml(l.Itemno || ('Runno ' + l.runno)) + '</span> ';
+        var sep  = '<span class="oc-line-sep"></span>';
+        var item = '<span>รายการ <b>' + (no ? '#' + no + ' ' : '') + escHtml(l.Itemno || ('Runno ' + l.runno)) + '</b></span>';
         var act  = OC.actions[l.action] || {label: l.action, badge: 'bg-label-secondary'};
-        var badge = '<span class="badge ' + act.badge + ' me-1">' + act.label + '</span>';
-        var body = '';
-        if (l.action === 'postpone'){
-            body = (fmtDate(l.old_senddate) || '-') + ' <i class="ti ti-arrow-right"></i> <b>' + (fmtDate(l.new_senddate) || '-') + '</b>';
-        } else if (l.action === 'split'){
+        var badge = '<span class="badge ' + act.badge + '"><i class="ti ' + (OC_ACTION_ICONS[l.action] || 'ti-point') + ' me-1"></i>' + act.label + '</span>';
+        var arrow = ' <i class="ti ti-arrow-right"></i> ';
+
+        if (l.action === 'split'){
             var sn = l.split_runno ? ocNo(l.split_runno) : null;
-            body = ocQty(l.old_stock, l.old_prod) + ' <i class="ti ti-arrow-right"></i> คงเดิม ' + ocQty(l.new_stock, l.new_prod)
-                 + ' (ส่ง ' + (fmtDate(l.old_senddate) || '-') + ') + แยก' + (sn ? ' #' + sn : '') + ' <b>' + ocQty(l.split_stock, l.split_prod)
-                 + '</b> ส่ง <b>' + (fmtDate(l.new_senddate) || '-') + '</b>';
-        } else {
-            body = ocQty(l.old_stock, l.old_prod) + ' <i class="ti ti-arrow-right"></i> <b>' + ocQty(l.new_stock, l.new_prod) + '</b>';
+            return '<div class="oc-line">' + badge + item + '</div>'
+                + '<div class="oc-split">'
+                +   '<div><div class="oc-split-cap">น้ำหนักเดิม</div>' + ocQty(l.old_stock, l.old_prod) + '</div>'
+                +   '<div><div class="oc-split-cap">รายการเดิมเหลือ</div>' + ocQty(l.new_stock, l.new_prod)
+                +     ' (กำหนดส่ง ' + (fmtDate(l.old_senddate) || '-') + ')</div>'
+                + '</div>'
+                + '<div class="oc-split-part">ส่วนที่แยก' + (sn ? ' (รายการ #' + sn + ')' : '') + ' <b>' + ocQty(l.split_stock, l.split_prod)
+                +   '</b> · กำหนดส่งส่วนที่แยก <b>' + (fmtDate(l.new_senddate) || '-') + '</b></div>';
         }
-        return '<div class="oc-line">' + badge + item + body + '</div>';
+
+        var body = l.action === 'postpone'
+            ? 'กำหนดส่งเดิม ' + (fmtDate(l.old_senddate) || '-') + arrow + 'กำหนดส่งใหม่ <b>' + (fmtDate(l.new_senddate) || '-') + '</b>'
+            : 'น้ำหนักเดิม ' + ocQty(l.old_stock, l.old_prod) + arrow + 'น้ำหนักใหม่ <b>' + ocQty(l.new_stock, l.new_prod) + '</b>';
+        return '<div class="oc-line">' + badge + sep + item + sep + '<span>' + body + '</span></div>';
     }
 
     function ocRenderHistory(docs){
-        if (!docs.length){
-            $('#ocHistory').html('<div class="text-muted small">ยังไม่มีการเปลี่ยนแปลง</div>');
-            return;
-        }
-        $('#ocHistory').html(docs.map(function(d){
+        $('#ocHistory').html(docs.length ? ocHistoryHtml(docs) : '<div class="text-muted small">ยังไม่มีการเปลี่ยนแปลง</div>');
+    }
+
+    function ocHistoryHtml(docs){
+        return docs.map(function(d){
             var legacy = d.source === 'legacy';
             return '<div class="oc-doc ' + (legacy ? 'oc-legacy' : 'oc-web') + '">'
-                + '<div class="small mb-1">'
-                +   '<b>' + escHtml(d.change_no) + '</b>'
-                +   ' · ' + (fmtDate(d.change_date, true) || '-')
-                +   (d.by ? ' · ' + escHtml(d.by) : '')
-                +   (legacy ? ' <span class="badge bg-label-secondary">ระบบเดิม</span>' : '')
+                + '<div class="oc-doc-icon"><i class="ti ti-calendar-event"></i></div>'
+                + '<div class="oc-doc-main">'
+                +   '<div class="oc-doc-head">'
+                +     '<span class="oc-doc-no">เลขที่ใบเปลี่ยนแปลง ' + escHtml(d.change_no) + '</span>'
+                +     '<span class="oc-doc-date"><i class="ti ti-calendar me-1"></i>วันที่ใบเปลี่ยนแปลง ' + (fmtDate(d.change_date, true) || '-') + '</span>'
+                +     (legacy ? '<span class="badge bg-label-secondary">ระบบเดิม</span>' : '')
+                +     (d.by ? '<span class="oc-doc-by">ผู้บันทึก ' + escHtml(d.by) + '</span>' : '')
+                +   '</div>'
+                +   d.lines.map(ocLineText).join('')
+                +   (d.reason ? '<div class="oc-doc-reason"><i class="ti ti-message me-1"></i>เหตุผล: ' + escHtml(d.reason) + '</div>' : '')
                 + '</div>'
-                + d.lines.map(ocLineText).join('')
-                + (d.reason ? '<div class="small text-muted mt-1"><i class="ti ti-message me-1"></i>' + escHtml(d.reason) + '</div>' : '')
                 + '</div>';
-        }).join(''));
+        }).join('');
     }
 
     document.addEventListener('DOMContentLoaded', function(){
