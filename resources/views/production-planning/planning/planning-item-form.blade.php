@@ -83,6 +83,16 @@
     <form id="planning_item_form">
         <input type="hidden" name="planning_id"        value="{{ $planning_item?->id ?? '' }}">
         <input type="hidden" name="planning_header_id" value="{{ $planning_header_id ?? '' }}">
+        {{-- ค่าตอนเปิดฟอร์ม — กันฟอร์มที่เปิดค้างเขียนทับข้อมูลที่ Worker/QC เพิ่งอัพเดท (02/11/2569)
+             original_*: server บันทึกเฉพาะช่องที่ต่างจากค่านี้ · *_loaded_ids: server ลบได้เฉพาะแถวที่ฟอร์มเคยโหลดมา --}}
+        @if($planning_item)
+            <input type="hidden" name="original_weight_produced" value="{{ $planning_item->weight_produced !== null ? number_format((float) $planning_item->weight_produced, 2) : '' }}">
+            <input type="hidden" name="original_qc_date" value="{{ $planning_item->qc_date ? substr($planning_item->qc_date, 0, 10) : '' }}">
+            <input type="hidden" name="original_qc_time" value="{{ $planning_item->qc_time ? substr($planning_item->qc_time, 0, 5) : '' }}">
+            <input type="hidden" name="original_qc_status" value="{{ $planning_item->qc_status }}">
+        @endif
+        <input type="hidden" name="packing_loaded_ids" value="{{ $packing_rows->pluck('id')->implode(',') }}">
+        <input type="hidden" name="warehouse_loaded_ids" value="{{ $warehouse_rows->pluck('id')->implode(',') }}">
 
         {{-- ── ข้อมูลหลัก ──
              ผังแบบ "label อยู่ซ้าย ต่อด้วยช่องกรอก" (โครงกลาง .of-form / .of-row / .of-ctl ใน layout/inc_header — 29/10/2569 ตามที่ผู้ใช้สั่ง)
@@ -282,7 +292,10 @@
             <div class="col-md-4 mb-2">
                 <label class="form-label">สถานะการวางแผน (Planning Status)</label>
                 @php $current_status = $planning_item?->planning_status ?? ''; @endphp
-                <select name="planning_status" id="planning_item_status" class="form-select">
+                {{-- แก้ไข item เดิม: แสดงอย่างเดียว อัพเดทผ่านปุ่มข้าง ๆ (ไม่ส่งไปกับปุ่มบันทึก กันทับสถานะที่ Worker เพิ่งอัพเดท, 02/11/2569)
+                     เพิ่ม item ใหม่: ยังไม่มีแถวให้อัพเดท จึงเลือกแล้วบันทึกพร้อมฟอร์มตามเดิม --}}
+                <div class="d-flex gap-2">
+                <select name="planning_status" id="planning_item_status" class="form-select" {{ $planning_item ? 'disabled' : '' }}>
                     <option value="">เลือกสถานะ</option>
                     @foreach($planning_statuses as $status)
                         {{-- data-warehouse: สถานะเข้าคลัง (is_warehouse) — ใช้เปิด/ปิดการ์ดการเข้าคลัง (29/10/2569) --}}
@@ -295,6 +308,12 @@
                         <option value="{{ $current_status }}" selected>{{ $current_status }}</option>
                     @endif
                 </select>
+                @if($planning_item)
+                    <button type="button" id="btn_update_item_status" class="btn btn-outline-primary text-nowrap">
+                        <i class="ti ti-refresh me-1"></i>อัพเดทสถานะ
+                    </button>
+                @endif
+                </div>
             </div>
         </div>
 
@@ -520,14 +539,14 @@
                         @forelse($packing_rows as $row)
                             <div class="row g-2 align-items-center mb-2 packing-row">
                                 {{-- flatpickr แบบมีเวลา: ช่องที่เห็นแสดง d/m/Y H:i แต่ค่าจริงส่ง Y-m-d H:i --}}
-                                <div class="col-md-4"><input type="text" name="packing_datetime[]" class="form-control form-control-sm flatpickr-datetime" autocomplete="off" placeholder="วว/ดด/ปปปป ชช:นน" value="{{ $row->packing_datetime ? \Carbon\Carbon::parse($row->packing_datetime)->format('Y-m-d H:i') : '' }}"></div>
+                                <div class="col-md-4"><input type="hidden" name="packing_id[]" value="{{ $row->id }}"><input type="text" name="packing_datetime[]" class="form-control form-control-sm flatpickr-datetime" autocomplete="off" placeholder="วว/ดด/ปปปป ชช:นน" value="{{ $row->packing_datetime ? \Carbon\Carbon::parse($row->packing_datetime)->format('Y-m-d H:i') : '' }}"></div>
                                 <div class="col-md-3"><input type="text" name="weight_packing[]" inputmode="decimal" class="form-control form-control-sm js-number-format" placeholder="0.00" value="{{ $row->weight_packing !== null ? number_format((float) $row->weight_packing, 2) : '' }}"></div>
                                 <div class="col-md-4"><input type="text" name="pack_remark[]" class="form-control form-control-sm" placeholder="หมายเหตุการบรรจุ" value="{{ $row->pack_remark ?? '' }}"></div>
                                 <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger btn_remove_packing" title="ลบ"><i class="ti ti-trash"></i></button></div>
                             </div>
                         @empty
                             <div class="row g-2 align-items-center mb-2 packing-row">
-                                <div class="col-md-4"><input type="text" name="packing_datetime[]" class="form-control form-control-sm flatpickr-datetime" autocomplete="off" placeholder="วว/ดด/ปปปป ชช:นน"></div>
+                                <div class="col-md-4"><input type="hidden" name="packing_id[]" value=""><input type="text" name="packing_datetime[]" class="form-control form-control-sm flatpickr-datetime" autocomplete="off" placeholder="วว/ดด/ปปปป ชช:นน"></div>
                                 <div class="col-md-3"><input type="text" name="weight_packing[]" inputmode="decimal" class="form-control form-control-sm js-number-format" placeholder="0.00"></div>
                                 <div class="col-md-4"><input type="text" name="pack_remark[]" class="form-control form-control-sm" placeholder="หมายเหตุการบรรจุ"></div>
                                 <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger btn_remove_packing" title="ลบ"><i class="ti ti-trash"></i></button></div>
@@ -582,14 +601,14 @@
                     @else
                         @forelse($warehouse_rows as $row)
                             <div class="row g-2 align-items-center mb-2 warehouse-row">
-                                <div class="col-md-4"><input type="text" name="warehouse_datetime[]" class="form-control form-control-sm flatpickr-datetime" autocomplete="off" placeholder="วว/ดด/ปปปป ชช:นน" value="{{ $row->warehouse_datetime ? \Carbon\Carbon::parse($row->warehouse_datetime)->format('Y-m-d H:i') : '' }}"></div>
+                                <div class="col-md-4"><input type="hidden" name="warehouse_id[]" value="{{ $row->id }}"><input type="text" name="warehouse_datetime[]" class="form-control form-control-sm flatpickr-datetime" autocomplete="off" placeholder="วว/ดด/ปปปป ชช:นน" value="{{ $row->warehouse_datetime ? \Carbon\Carbon::parse($row->warehouse_datetime)->format('Y-m-d H:i') : '' }}"></div>
                                 <div class="col-md-3"><input type="text" name="weight_warehouse[]" inputmode="decimal" class="form-control form-control-sm js-number-format" placeholder="0.00" value="{{ $row->weight_warehouse !== null ? number_format((float) $row->weight_warehouse, 2) : '' }}"></div>
                                 <div class="col-md-4"><input type="text" name="warehouse_remark[]" class="form-control form-control-sm" placeholder="หมายเหตุการเข้าคลัง" value="{{ $row->warehouse_remark ?? '' }}"></div>
                                 <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger btn_remove_warehouse" title="ลบ"><i class="ti ti-trash"></i></button></div>
                             </div>
                         @empty
                             <div class="row g-2 align-items-center mb-2 warehouse-row">
-                                <div class="col-md-4"><input type="text" name="warehouse_datetime[]" class="form-control form-control-sm flatpickr-datetime" autocomplete="off" placeholder="วว/ดด/ปปปป ชช:นน"></div>
+                                <div class="col-md-4"><input type="hidden" name="warehouse_id[]" value=""><input type="text" name="warehouse_datetime[]" class="form-control form-control-sm flatpickr-datetime" autocomplete="off" placeholder="วว/ดด/ปปปป ชช:นน"></div>
                                 <div class="col-md-3"><input type="text" name="weight_warehouse[]" inputmode="decimal" class="form-control form-control-sm js-number-format" placeholder="0.00"></div>
                                 <div class="col-md-4"><input type="text" name="warehouse_remark[]" class="form-control form-control-sm" placeholder="หมายเหตุการเข้าคลัง"></div>
                                 <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger btn_remove_warehouse" title="ลบ"><i class="ti ti-trash"></i></button></div>
@@ -1048,6 +1067,11 @@ window.wpBindHolidayWarn = function (el, label) {
     var URL_ENTRY_UPDATE = '{{ route('production.semipigment.entry.update') }}';
     var URL_ENTRY_DELETE = '{{ route('production.semipigment.entry.delete') }}';
     var URL_DEPT_OPTIONS = '{{ route('production.planning.dept-options') }}';
+    var URL_UPDATE_ITEM_STATUS = '{{ route('production.planning.update-item-status') }}';
+
+    // สถานะล่าสุดใน DB และแผนกเดิมของ item ที่เปิดอยู่ — ใช้กับปุ่ม "อัพเดทสถานะ" (02/11/2569)
+    var SAVED_STATUS  = @json($planning_item?->planning_status ?? '');
+    var SAVED_COMPANY = $('#planning_item_company').val() || '';
 
     // ── flatpickr (helper กลางนิยามไว้ก่อน IIFE) — scope เฉพาะฟอร์ม/modal เพื่อไม่ชนกับหน้า index ──
     var initDateFields = window.wpInitDateFields;
@@ -1150,6 +1174,8 @@ window.wpBindHolidayWarn = function (el, label) {
                     statusOpts += '<option value="' + esc(s.name) + '" data-warehouse="' + (s.is_warehouse === 'Y' ? 'Y' : 'N') + '">' + esc(s.name) + '</option>';
                 });
                 $status.html(statusOpts).val('');
+                // แก้ไข item เดิมแล้วเปลี่ยนกลับมาแผนกเดิม → แสดงสถานะที่บันทึกไว้ตามเดิม
+                if (PLANNING_ID && company === SAVED_COMPANY) showItemStatus(SAVED_STATUS);
                 syncWarehouseCard(); // สถานะถูกล้าง → การ์ดเข้าคลังกลับเป็นอ่านอย่างเดียว/ซ่อน
 
                 // พนักงานผู้รับผิดชอบของแผนกใหม่ — ล้างค่าที่เลือกไว้ (เป็นของแผนกเก่า)
@@ -1164,9 +1190,69 @@ window.wpBindHolidayWarn = function (el, label) {
             },
             complete: function () {
                 $machine.prop('disabled', false);
-                $status.prop('disabled', false);
+                // แก้ไข item เดิม: dropdown สถานะแสดงอย่างเดียวเสมอ · ย้ายแผนกแล้วต้องบันทึกก่อนถึงอัพเดทสถานะได้
+                $status.prop('disabled', !!PLANNING_ID);
+                $('#btn_update_item_status').prop('disabled', company !== SAVED_COMPANY);
                 $emp.prop('disabled', false);
             }
+        });
+    });
+
+    // ── ปุ่ม "อัพเดทสถานะ" — บันทึกสถานะทันที แยกจากปุ่มบันทึกของฟอร์ม (02/11/2569) ──
+    // แสดงสถานะใน dropdown ที่ล็อกไว้ — ค่าที่ไม่อยู่ในรายการของแผนกนี้ต้องเติม option ก่อน
+    function showItemStatus(name) {
+        var $status = $('#planning_item_status');
+        if (name && !$status.find('option').filter(function () { return this.value === name; }).length) {
+            $status.append($('<option>', { value: name, text: name }));
+        }
+        $status.val(name || '').trigger('change'); // change → syncWarehouseCard()
+    }
+
+    $('#btn_update_item_status').on('click', function () {
+        var options = new Map();
+        $('#planning_item_status option').each(function () {
+            options.set(this.value, this.value === '' ? '— ไม่ระบุสถานะ —' : this.value);
+        });
+
+        // target + heightAuto: กัน focus trap ของ Bootstrap modal ดึงโฟกัสออกจาก select ของ Swal
+        Swal.fire({
+            title: 'อัพเดทสถานะการวางแผน',
+            text: 'บันทึกสถานะทันที ไม่รวมข้อมูลอื่นในฟอร์ม',
+            input: 'select',
+            inputOptions: options,
+            inputValue: SAVED_STATUS,
+            showCancelButton: true,
+            confirmButtonText: 'อัพเดทสถานะ',
+            cancelButtonText: 'ยกเลิก',
+            target: document.getElementById('planningItemModal'),
+            heightAuto: false
+        }).then(function (result) {
+            if (!result.isConfirmed) return;
+
+            $.ajax({
+                type: 'POST', url: URL_UPDATE_ITEM_STATUS, dataType: 'json',
+                data: { _token: CSRF, planning_id: PLANNING_ID, status: result.value, current_status: SAVED_STATUS },
+                success: function (res) {
+                    if (res.status == 200) {
+                        SAVED_STATUS = res.planning_status || '';
+                        showItemStatus(SAVED_STATUS);
+                        $(document).trigger('planning-item-status-updated', [res.planning_header_id]);
+                        Swal.fire({ icon: 'success', title: 'สำเร็จ', text: res.message, timer: 1600, showConfirmButton: false,
+                            target: document.getElementById('planningItemModal'), heightAuto: false });
+                        return;
+                    }
+                    if (res.status_changed) { // มีคนเปลี่ยนสถานะไปแล้ว → แสดงค่าล่าสุดให้เห็นก่อน
+                        SAVED_STATUS = res.current_status || '';
+                        showItemStatus(SAVED_STATUS);
+                    }
+                    Swal.fire({ icon: 'warning', title: 'ยังไม่ได้อัพเดท', text: res.message,
+                        target: document.getElementById('planningItemModal'), heightAuto: false });
+                },
+                error: function () {
+                    Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: 'อัพเดทสถานะไม่สำเร็จ กรุณาลองใหม่',
+                        target: document.getElementById('planningItemModal'), heightAuto: false });
+                }
+            });
         });
     });
 
@@ -1215,7 +1301,7 @@ window.wpBindHolidayWarn = function (el, label) {
     }
     function packingRowHtml() {
         return '<div class="row g-2 align-items-center mb-2 packing-row">'
-            + '<div class="col-md-4"><input type="text" name="packing_datetime[]" class="form-control form-control-sm flatpickr-datetime" autocomplete="off" placeholder="วว/ดด/ปปปป ชช:นน"></div>'
+            + '<div class="col-md-4"><input type="hidden" name="packing_id[]" value=""><input type="text" name="packing_datetime[]" class="form-control form-control-sm flatpickr-datetime" autocomplete="off" placeholder="วว/ดด/ปปปป ชช:นน"></div>'
             + '<div class="col-md-3"><input type="text" name="weight_packing[]" inputmode="decimal" class="form-control form-control-sm js-number-format" placeholder="0.00"></div>'
             + '<div class="col-md-4"><input type="text" name="pack_remark[]" class="form-control form-control-sm" placeholder="หมายเหตุการบรรจุ"></div>'
             + '<div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger btn_remove_packing" title="ลบ"><i class="ti ti-trash"></i></button></div>'
@@ -1243,7 +1329,7 @@ window.wpBindHolidayWarn = function (el, label) {
     // ── การ์ด "การเข้าคลัง": เพิ่ม/ลบแถว (บันทึกลง tb_planning_warehouse, 29/10/2569) ──
     function warehouseRowHtml() {
         return '<div class="row g-2 align-items-center mb-2 warehouse-row">'
-            + '<div class="col-md-4"><input type="text" name="warehouse_datetime[]" class="form-control form-control-sm flatpickr-datetime" autocomplete="off" placeholder="วว/ดด/ปปปป ชช:นน"></div>'
+            + '<div class="col-md-4"><input type="hidden" name="warehouse_id[]" value=""><input type="text" name="warehouse_datetime[]" class="form-control form-control-sm flatpickr-datetime" autocomplete="off" placeholder="วว/ดด/ปปปป ชช:นน"></div>'
             + '<div class="col-md-3"><input type="text" name="weight_warehouse[]" inputmode="decimal" class="form-control form-control-sm js-number-format" placeholder="0.00"></div>'
             + '<div class="col-md-4"><input type="text" name="warehouse_remark[]" class="form-control form-control-sm" placeholder="หมายเหตุการเข้าคลัง"></div>'
             + '<div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger btn_remove_warehouse" title="ลบ"><i class="ti ti-trash"></i></button></div>'

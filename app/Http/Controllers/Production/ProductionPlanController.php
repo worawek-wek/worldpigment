@@ -731,6 +731,8 @@ class ProductionPlanController extends Controller
             'qc_time'            => 'nullable|string|max:10',
             'qc_status'          => 'nullable|integer|exists:tb_qc_status,id',
             // การบรรจุ (ตารางลูก tb_planning_packing) — array คู่ขนาน
+            'packing_id'         => 'nullable|array',
+            'packing_id.*'       => 'nullable|integer',
             'packing_datetime'   => 'nullable|array',
             'packing_datetime.*' => 'nullable|string|max:255',
             'weight_packing'     => 'nullable|array',
@@ -738,6 +740,8 @@ class ProductionPlanController extends Controller
             'pack_remark'        => 'nullable|array',
             'pack_remark.*'      => 'nullable|string|max:1000',
             // การเข้าคลัง (ตารางลูก tb_planning_warehouse, 29/10/2569) — array คู่ขนาน
+            'warehouse_id'         => 'nullable|array',
+            'warehouse_id.*'       => 'nullable|integer',
             'warehouse_datetime'   => 'nullable|array',
             'warehouse_datetime.*' => 'nullable|string|max:255',
             'weight_warehouse'     => 'nullable|array',
@@ -835,11 +839,26 @@ class ProductionPlanController extends Controller
         // ธงบอกว่ามีการปิดออเดอร์ให้อัตโนมัติในรอบนี้หรือไม่ (ใช้ประกอบข้อความตอบกลับ)
         $auto_closed_order = false;
         $weight_short = null; // ผลเช็คน้ำหนัก เมื่อจบงานครบแต่ไม่ปิดออเดอร์เพราะน้ำหนักไม่ถึง (26/10/2569)
+        $weight_touched = true; // เพิ่ม item ใหม่ = นับว่าแก้ · แก้ไข item เดิมคำนวณด้านล่าง
 
         DB::beginTransaction();
         try {
             // 1) บันทึก / อัปเดต planning หลัก
             if ($is_update) {
+                // ปุ่มบันทึกไม่แตะ planning_status — แก้สถานะผ่านปุ่ม "อัพเดทสถานะ" (updateItemStatus) เท่านั้น
+                // กันฟอร์มที่เปิดค้างไว้เขียนสถานะเก่าทับสถานะที่ Worker เพิ่งอัพเดท (02/11/2569)
+                // ยกเว้นการย้ายแผนกด้านล่างที่ยังล้างสถานะเป็น null เหมือนเดิม
+                unset($fields['planning_status']);
+
+                // ช่องที่ Worker/QC เขียนได้ด้วย: บันทึกเฉพาะช่องที่ผู้ใช้แก้จริงในฟอร์มนี้ (02/11/2569)
+                // ไม่ได้แก้ = คงค่าใน DB ไว้ ค่าเก่าในฟอร์มที่เปิดค้างจะไม่ทับสิ่งที่เพิ่งอัพเดท
+                $weight_touched = $this->fieldTouched($request, 'weight_produced');
+                foreach (['weight_produced', 'qc_date', 'qc_time', 'qc_status'] as $shared_field) {
+                    if (!$this->fieldTouched($request, $shared_field)) {
+                        unset($fields[$shared_field]);
+                    }
+                }
+
                 // ถ้าวันที่ส่งสินค้า (senddate) เปลี่ยนไปจากเดิม → เก็บค่าเดิมไว้ใน senddate_log (สะสมต่อท้าย คั่นด้วย comma)
                 // และบันทึก "เวลาที่เปลี่ยนล่าสุด" ทับลง senddate_changed_at (ค่าเดียว ใช้สำหรับค้นหา)
                 // เก็บเฉพาะตอนที่มีค่าเดิมอยู่แล้ว ($old_send) — ถ้าตอนแรกว่างแล้วเพิ่งใส่ค่าใหม่ จะไม่เก็บ
@@ -881,14 +900,18 @@ class ProductionPlanController extends Controller
             // 2.1) sync การบรรจุ (การ์ดสีเขียว) — ลบของเดิมแล้ว insert ใหม่จาก array ที่ส่งมา (tb_planning_packing)
             //      ข้ามเมื่อ item จบงานอยู่แล้ว (การบรรจุถูกล็อก) → ไม่แตะแถวบรรจุเดิม
             if (!$was_ended) {
-                $this->syncPackings($planning_id, $request);
+                $this->syncPackings($planning_id, $request, $weight_touched);
 
                 // 2.2) sync การเข้าคลัง (การ์ดสีส้ม, 29/10/2569) — กติกาเดียวกับการบรรจุ (ล็อกเมื่อจบงานแล้ว)
                 //      + ทำเฉพาะเมื่อสถานะที่บันทึกเป็น "สถานะเข้าคลัง" (is_warehouse='Y' ใน DB ไม่เชื่อฝั่งจอ)
                 //      สถานะอื่น = ไม่แตะแถวเข้าคลังเดิม
-                if ($this->isWarehouseStatus(Planning::find($planning_id))) {
-                    PlanningWarehouse::syncRows(
+                //      ต้องมีช่องเข้าคลังส่งมาด้วย (02/11/2569): สถานะใน DB อาจเพิ่งถูก Worker เปลี่ยนเป็นเข้าคลัง
+                //      ขณะที่ฟอร์มยังล็อกการ์ดอยู่ (ช่อง disabled ไม่ถูกส่ง) — ถ้าไม่เช็คแถวของ Worker จะถูกลบทิ้ง
+                if ($request->has('warehouse_id') && $this->isWarehouseStatus(Planning::find($planning_id))) {
+                    PlanningWarehouse::mergeRows(
                         $planning_id,
+                        (array) $request->input('warehouse_id', []),
+                        $this->loadedIds($request, 'warehouse_loaded_ids'),
                         (array) $request->input('warehouse_datetime', []),
                         (array) $request->input('weight_warehouse', []),
                         (array) $request->input('warehouse_remark', [])
@@ -941,6 +964,102 @@ class ProductionPlanController extends Controller
             'planning_header_id' => $fields['planning_header_id'],
             'end_order_auto_closed' => $auto_closed_order,
             'end_order_weight_short' => (bool) $weight_short,
+        ]);
+    }
+
+    /**
+     * อัพเดทสถานะการวางแผนของ item แยกจากปุ่มบันทึก (ปุ่ม "อัพเดทสถานะ" ในฟอร์ม, 02/11/2569)
+     * แตะเฉพาะ planning_status + เขียน tb_planning_status_log (ตารางเดียวกับ Worker portal)
+     * current_status = สถานะที่จอแสดงอยู่ ถ้าไม่ตรงกับ DB แปลว่ามีคนเปลี่ยนไปแล้ว → ไม่บันทึก ให้จอแสดงค่าล่าสุดก่อน
+     */
+    public function updateItemStatus(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'planning_id'    => 'required|integer|exists:tb_planning,id',
+            'status'         => 'nullable|string|max:255',
+            'current_status' => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status'  => 422,
+                'message' => $validator->errors()->first(),
+            ]);
+        }
+
+        $planning = Planning::find($request->planning_id);
+        $header   = PlanningHeader::find($planning->planning_header_id);
+
+        if (($header->end_order ?? 'N') === 'Y') {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'ออเดอร์นี้ถูกปิดแล้ว (End Order) ไม่สามารถอัพเดทสถานะได้',
+            ]);
+        }
+
+        $old = trim((string) $planning->planning_status);
+        $new = trim((string) $request->input('status'));
+
+        if ($old !== trim((string) $request->input('current_status'))) {
+            return response()->json([
+                'status'         => 422,
+                'message'        => 'สถานะของงานนี้ถูกเปลี่ยนเป็น "' . ($old === '' ? 'ไม่ระบุ' : $old) . '" แล้ว กรุณาตรวจสอบก่อนอัพเดทอีกครั้ง',
+                'status_changed' => true,
+                'current_status' => $old,
+            ]);
+        }
+
+        if ($old === $new) {
+            return response()->json([
+                'status'  => 200,
+                'message' => 'สถานะไม่มีการเปลี่ยนแปลง',
+                'planning_status'    => $old,
+                'planning_header_id' => $planning->planning_header_id,
+            ]);
+        }
+
+        // ต้องเป็นสถานะที่เปิดใช้งานของแผนกงานนี้ (ค่าว่าง = ล้างสถานะ ทำได้เหมือน dropdown เดิม)
+        if ($new !== '') {
+            $company = $planning->company ?: $header->company;
+            $dept_id = Department::where('name', $company)->value('id');
+            $valid   = PlanningStatus::where('dept', $dept_id)
+                ->where('name', $new)
+                ->where('is_active', 'Y')
+                ->exists();
+
+            if (!$valid) {
+                return response()->json([
+                    'status'  => 422,
+                    'message' => 'สถานะไม่ถูกต้องสำหรับแผนกของงานนี้',
+                ]);
+            }
+        }
+
+        // changed_by: พนักงาน = empno · admin (ตาราง users) = ชื่อ — id ของ users อาจชนกับ empno ตอน join ชื่อใน log
+        $account    = \App\Services\AccessControl::currentAccount();
+        $changed_by = $account instanceof Emp
+            ? $account->empno
+            : mb_substr((string) ($account->name ?? 'admin'), 0, 50);
+
+        DB::transaction(function () use ($planning, $old, $new, $changed_by) {
+            Planning::where('id', $planning->id)->update(['planning_status' => $new === '' ? null : $new]);
+
+            DB::table('tb_planning_status_log')->insert([
+                'planning_id' => $planning->id,
+                'old_status'  => $old === '' ? null : $old,
+                'new_status'  => $new === '' ? null : $new,
+                'changed_by'  => $changed_by,
+                'changed_at'  => now(),
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ]);
+        });
+
+        return response()->json([
+            'status'  => 200,
+            'message' => 'อัพเดทสถานะเรียบร้อย',
+            'planning_status'    => $new,
+            'planning_header_id' => $planning->planning_header_id,
         ]);
     }
 
@@ -1003,19 +1122,62 @@ class ProductionPlanController extends Controller
     }
 
     /**
-     * sync การบรรจุ (tb_planning_packing) ของ planning หนึ่ง ๆ
-     * ลบแถวเดิมทั้งหมดแล้ว insert ใหม่จาก array คู่ขนานที่ส่งมา (ข้ามแถวที่ว่างทั้งหมด)
+     * บันทึกการบรรจุ (tb_planning_packing) ของ planning หนึ่ง ๆ แบบเทียบ id — ดู PlanningPacking::mergeRows()
+     * มีแถวที่ฟอร์มไม่เคยเห็น (Worker เพิ่มระหว่างเปิดฟอร์มค้าง) และผู้ใช้แก้น้ำหนัก → ผลรวมบนจอไม่รวมแถวนั้น
+     * จึงคำนวณ weight_produced ใหม่จาก DB
      * เรียกภายในทรานแซกชันของ saveItem
      */
-    private function syncPackings($planning_id, Request $request): void
+    private function syncPackings($planning_id, Request $request, bool $weight_touched): void
     {
-        // ตรรกะย้ายไป PlanningPacking::syncRows() (22/10/2569) — ใช้ร่วมกับ Worker portal
-        PlanningPacking::syncRows(
+        if (!$request->has('packing_id')) {
+            return;
+        }
+
+        $loaded_ids = $this->loadedIds($request, 'packing_loaded_ids');
+        $has_unseen = PlanningPacking::where('planning_id', $planning_id)
+            ->whereNotIn('id', $loaded_ids)
+            ->exists();
+
+        PlanningPacking::mergeRows(
             $planning_id,
+            (array) $request->input('packing_id', []),
+            $loaded_ids,
             (array) $request->input('packing_datetime', []),
             (array) $request->input('weight_packing', []),
             (array) $request->input('pack_remark', [])
         );
+
+        if ($has_unseen && $weight_touched) {
+            $total = PlanningPacking::totalWeight($planning_id);
+            if ($total !== null) {
+                Planning::where('id', $planning_id)->update(['weight_produced' => $total]);
+            }
+        }
+    }
+
+    // id ของแถวตารางลูกที่ฟอร์มโหลดมาตอนเปิด (hidden คั่นด้วยคอมมา)
+    private function loadedIds(Request $request, string $key): array
+    {
+        return array_values(array_filter(array_map('intval', explode(',', (string) $request->input($key)))));
+    }
+
+    // ผู้ใช้แก้ช่องนี้จากค่าตอนเปิดฟอร์มหรือไม่ — เทียบกับ hidden original_<ช่อง> · ไม่มี hidden = ถือว่าแก้
+    private function fieldTouched(Request $request, string $field): bool
+    {
+        if (!$request->has('original_' . $field)) {
+            return true;
+        }
+
+        $normalize = fn ($value) => str_replace(',', '', trim((string) $value));
+        $value     = $normalize($request->input($field));
+        $original  = $normalize($request->input('original_' . $field));
+
+        // ตัวเลขจัดรูปแบบใหม่ได้ (1250 กับ 1,250.00) จึงเทียบค่าตัวเลข ไม่เทียบข้อความ
+        if (is_numeric($value) && is_numeric($original)) {
+            return (float) $value !== (float) $original;
+        }
+
+        return $value !== $original;
     }
 
     /**

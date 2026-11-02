@@ -15,16 +15,20 @@ class PlanningWarehouse extends Model
     protected $guarded = [];
 
     /**
-     * sync การเข้าคลังของ planning หนึ่ง ๆ (ตรรกะเดียวกับ PlanningPacking::syncRows)
-     * ลบแถวเดิมทั้งหมดแล้ว insert ใหม่จาก array คู่ขนาน (ข้ามแถวที่ว่างทั้งหมด) — เรียกภายในทรานแซกชันของผู้เรียก
+     * บันทึกแถวการเข้าคลังจากฟอร์มแก้ไข Planning Item แบบเทียบ id (02/11/2569) — เรียกภายในทรานแซกชันของผู้เรียก
+     *  - แถวที่มี id = แก้ไขแถวนั้น · ไม่มี id = เพิ่มแถวใหม่ต่อท้าย · แถวว่างทั้งหมด = ข้าม
+     *  - ลบเฉพาะแถวที่ฟอร์มเคยโหลดมา ($loaded_ids) แล้วหายไปจากฟอร์ม
+     *  - แถวที่ฟอร์มไม่เคยเห็น (Worker เพิ่มระหว่างเปิดฟอร์มค้าง) ไม่ถูกแตะ
      */
-    public static function syncRows($planning_id, array $datetimes, array $weights, array $remarks): void
+    public static function mergeRows($planning_id, array $ids, array $loaded_ids, array $datetimes, array $weights, array $remarks): void
     {
-        static::where('planning_id', $planning_id)->delete();
+        $nextSort = ((int) static::where('planning_id', $planning_id)->max('sort')) + 1;
 
-        $count = max(count($datetimes), count($weights), count($remarks));
+        $count = max(count($ids), count($datetimes), count($weights), count($remarks));
+        $keep  = [];
 
         for ($i = 0; $i < $count; $i++) {
+            $id       = (int) ($ids[$i] ?? 0);
             $datetime = trim((string) ($datetimes[$i] ?? ''));
             $remark   = trim((string) ($remarks[$i] ?? ''));
 
@@ -32,19 +36,28 @@ class PlanningWarehouse extends Model
             $weight_raw = str_replace(',', '', trim((string) ($weights[$i] ?? '')));
             $weight_val = ($weight_raw !== '' && is_numeric($weight_raw)) ? (float) $weight_raw : null;
 
-            // ข้ามแถวที่ว่างทั้งหมด
+            // ข้ามแถวที่ว่างทั้งหมด (แถวเดิมที่ถูกล้างค่า = ไม่อยู่ใน $keep จึงถูกลบด้านล่าง)
             if ($datetime === '' && $weight_val === null && $remark === '') {
                 continue;
             }
 
-            static::create([
-                'planning_id'        => $planning_id,
+            $data = [
                 'warehouse_datetime' => $datetime !== '' ? $datetime : null,
-                'weight_warehouse'   => $weight_val,
-                'warehouse_remark'   => $remark !== '' ? $remark : null,
-                'sort'               => $i,
-            ]);
+                'weight_warehouse' => $weight_val,
+                'warehouse_remark' => $remark !== '' ? $remark : null,
+            ];
+
+            if ($id > 0) {
+                static::where('planning_id', $planning_id)->where('id', $id)->update($data);
+                $keep[] = $id;
+            } else {
+                static::create($data + ['planning_id' => $planning_id, 'sort' => $nextSort++]);
+            }
         }
+
+        static::where('planning_id', $planning_id)
+            ->whereIn('id', array_diff($loaded_ids, $keep))
+            ->delete();
     }
 
     /**

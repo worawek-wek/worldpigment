@@ -31,7 +31,8 @@ Route::prefix('production-planning')->group(function () {
     Route::get('/planning/order-defaults', [Production\ProductionPlanController::class, 'orderDefaults'])->name('production.planning.order-defaults');
     Route::get('/planning/dept-options',[Production\ProductionPlanController::class, 'deptOptions'])->name('production.planning.dept-options');
     Route::post('/planning/save-item', [Production\ProductionPlanController::class, 'saveItem'])->name('production.planning.save-item');
-    Route::post('/planning/save-end-order', [Production\ProductionPlanController::class, 'saveEndOrder'])->name('production.planning.save-end-order');
+    Route::post('/planning/update-item-status', [Production\ProductionPlanController::class, 'updateItemStatus'])->name('production.planning.update-item-status');
+    Route::post('/planning/save-end-order',[Production\ProductionPlanController::class, 'saveEndOrder'])->name('production.planning.save-end-order');
     Route::post('/planning/save-end-close', [Production\ProductionPlanController::class, 'saveEndClose'])->name('production.planning.save-end-close');
     // Export หน้าวางแผนการผลิต — ใช้เงื่อนไขค้นหา/ตัวกรองชุดเดียวกับตาราง (datatable) — 2026-08-31
     Route::get('/planning/excel', [Production\ProductionPlanController::class, 'excel'])->name('production.planning.excel');

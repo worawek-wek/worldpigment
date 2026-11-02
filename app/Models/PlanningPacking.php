@@ -15,48 +15,49 @@ class PlanningPacking extends Model
     protected $guarded = [];
 
     /**
-     * sync การบรรจุของ planning หนึ่ง ๆ (ใช้ร่วมกัน: ฟอร์มแก้ไข Planning Item + Worker portal, 22/10/2569)
-     * ลบแถวเดิมทั้งหมดแล้ว insert ใหม่จาก array คู่ขนาน (ข้ามแถวที่ว่างทั้งหมด) — เรียกภายในทรานแซกชันของผู้เรียก
-     * คืนผลรวมน้ำหนักบรรจุ (null = ไม่มีแถวไหนกรอกน้ำหนัก)
+     * บันทึกแถวการบรรจุจากฟอร์มแก้ไข Planning Item แบบเทียบ id (02/11/2569) — เรียกภายในทรานแซกชันของผู้เรียก
+     *  - แถวที่มี id = แก้ไขแถวนั้น · ไม่มี id = เพิ่มแถวใหม่ต่อท้าย · แถวว่างทั้งหมด = ข้าม
+     *  - ลบเฉพาะแถวที่ฟอร์มเคยโหลดมา ($loaded_ids) แล้วหายไปจากฟอร์ม
+     *  - แถวที่ฟอร์มไม่เคยเห็น (Worker เพิ่มระหว่างเปิดฟอร์มค้าง) ไม่ถูกแตะ
      */
-    public static function syncRows($planning_id, array $datetimes, array $weights, array $remarks): ?float
+    public static function mergeRows($planning_id, array $ids, array $loaded_ids, array $datetimes, array $weights, array $remarks): void
     {
-        static::where('planning_id', $planning_id)->delete();
+        $nextSort = ((int) static::where('planning_id', $planning_id)->max('sort')) + 1;
 
-        $count = max(count($datetimes), count($weights), count($remarks));
-        $total = null;
+        $count = max(count($ids), count($datetimes), count($weights), count($remarks));
+        $keep  = [];
 
         for ($i = 0; $i < $count; $i++) {
-            $datetime = $datetimes[$i] ?? null;
-            $weight   = $weights[$i]   ?? null;
-            $remark   = $remarks[$i]   ?? null;
-
-            $datetime = ($datetime !== null && trim((string) $datetime) !== '') ? trim((string) $datetime) : null;
-            $remark   = ($remark   !== null && trim((string) $remark)   !== '') ? trim((string) $remark)   : null;
+            $id       = (int) ($ids[$i] ?? 0);
+            $datetime = trim((string) ($datetimes[$i] ?? ''));
+            $remark   = trim((string) ($remarks[$i] ?? ''));
 
             // ช่องน้ำหนักมาจาก js-number-format (มีคอมมาหลักพัน) → ตัดคอมมาแล้วแปลงเป็นตัวเลข
-            $weight_raw = ($weight !== null) ? str_replace(',', '', trim((string) $weight)) : '';
+            $weight_raw = str_replace(',', '', trim((string) ($weights[$i] ?? '')));
             $weight_val = ($weight_raw !== '' && is_numeric($weight_raw)) ? (float) $weight_raw : null;
 
-            // ข้ามแถวที่ว่างทั้งหมด
-            if ($datetime === null && $weight_val === null && $remark === null) {
+            // ข้ามแถวที่ว่างทั้งหมด (แถวเดิมที่ถูกล้างค่า = ไม่อยู่ใน $keep จึงถูกลบด้านล่าง)
+            if ($datetime === '' && $weight_val === null && $remark === '') {
                 continue;
             }
 
-            if ($weight_val !== null) {
-                $total = ($total ?? 0) + $weight_val;
-            }
+            $data = [
+                'packing_datetime' => $datetime !== '' ? $datetime : null,
+                'weight_packing' => $weight_val,
+                'pack_remark' => $remark !== '' ? $remark : null,
+            ];
 
-            static::create([
-                'planning_id'      => $planning_id,
-                'packing_datetime' => $datetime,
-                'weight_packing'   => $weight_val,
-                'pack_remark'      => $remark,
-                'sort'             => $i,
-            ]);
+            if ($id > 0) {
+                static::where('planning_id', $planning_id)->where('id', $id)->update($data);
+                $keep[] = $id;
+            } else {
+                static::create($data + ['planning_id' => $planning_id, 'sort' => $nextSort++]);
+            }
         }
 
-        return $total;
+        static::where('planning_id', $planning_id)
+            ->whereIn('id', array_diff($loaded_ids, $keep))
+            ->delete();
     }
 
     /**
@@ -92,6 +93,12 @@ class PlanningPacking extends Model
             ]);
         }
 
+        return static::totalWeight($planning_id);
+    }
+
+    // ผลรวมน้ำหนักบรรจุทุกแถวของ planning (null = ไม่มีแถวไหนมีน้ำหนัก)
+    public static function totalWeight($planning_id): ?float
+    {
         $hasWeight = static::where('planning_id', $planning_id)->whereNotNull('weight_packing')->exists();
 
         return $hasWeight

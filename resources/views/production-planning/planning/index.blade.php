@@ -835,6 +835,12 @@
         });
     }
 
+    // ปุ่ม "อัพเดทสถานะ" ในฟอร์ม Planning Item สำเร็จ → โหลดตารางให้เห็นสถานะใหม่ (ฟอร์มยังเปิดอยู่)
+    $(document).on('planning-item-status-updated', function(e, planning_header_id) {
+        reloadPlanningHeaderContent(planning_header_id);
+        oTable.draw(false);
+    });
+
     // แปลงวันที่ Y-m-d → d/m/Y สำหรับแสดงในกล่องยืนยัน (ค่าว่าง = "(ว่าง)")
     function displayDateTH(v) {
         if (!v) return '(ว่าง)';
