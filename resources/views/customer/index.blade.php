@@ -123,6 +123,12 @@
                                         </div>
 
                                         <div class="d-flex gap-2 flex-wrap">
+                                            {{-- ขอเปลี่ยนแปลง Black List / เครดิต + อนุมัติ — 02/11/2569 (รวมเครดิต 03/11/2569) --}}
+                                            <button class="btn btn-label-danger" onclick="customerStatusOpen()">
+                                                <i class="ti ti-ban me-1"></i>
+                                                ขอเปลี่ยนแปลง ข้อมูล Black List / เปลี่ยนแปลงเครดิต
+                                                <span id="csQueueBadge" class="badge bg-danger ms-1 d-none" title="ใบที่รออนุมัติ">0</span>
+                                            </button>
                                             <button class="btn btn-primary" onclick="customerNew()">
                                                 <i class="ti ti-plus me-1"></i>
                                                 เพิ่มลูกค้าใหม่
@@ -285,6 +291,9 @@
     </div>
 
     @include('layout/inc_js')
+
+    {{-- ขอเปลี่ยนสถานะลูกค้า (Black List) — modal + JS (02/11/2569) --}}
+    @include('customer.status-modal')
 
 <script>
     var page = "{{ $page_url }}/datatable";

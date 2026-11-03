@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\CustomerStatusController;
 
 // ฐานข้อมูลลูกค้า (customer / contact / naddress / engname) — 24/08/2569
 // ถูก @include_once ภายใน group middleware('auth') ใน web.php แล้ว — ห้ามครอบ auth ซ้ำ
@@ -14,5 +15,16 @@ Route::prefix('customer')->group(function () {
 
     Route::post('/save',   [CustomerController::class, 'save'])->name('customer.save');
     Route::post('/delete', [CustomerController::class, 'destroy'])->name('customer.delete');
+
+    // ขอเปลี่ยนสถานะลูกค้า (Black List) + อนุมัติด้วยรหัส — 02/11/2569
+    Route::prefix('status')->group(function () {
+        Route::get('/data',     [CustomerStatusController::class, 'data'])->name('customer.status.data');
+        Route::get('/pending',  [CustomerStatusController::class, 'pending'])->name('customer.status.pending');
+        Route::get('/md-state', [CustomerStatusController::class, 'mdState'])->name('customer.status.md_state');
+        Route::post('/unlock',  [CustomerStatusController::class, 'unlock'])->name('customer.status.unlock');
+        Route::post('/lock',    [CustomerStatusController::class, 'lock'])->name('customer.status.lock');
+        Route::post('/save',    [CustomerStatusController::class, 'save'])->name('customer.status.save');
+        Route::post('/delete',  [CustomerStatusController::class, 'destroy'])->name('customer.status.delete');
+    });
 
 });

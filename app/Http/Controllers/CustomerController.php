@@ -140,15 +140,14 @@ class CustomerController extends Controller
             $query->where('customer.city', $city);
         }
 
-        // สถานะ Blacklist — ค่า -1 คือ "ติด Blacklist" ตาม convention ของ Access
-        // (ค่าอื่นที่พบใน DB เช่น -3 / 2 / 5 ยังไม่ทราบความหมาย จึงไม่เอามาเป็นตัวเลือก)
+        // สถานะ Blacklist — 0 เท่านั้นที่ปกติ ค่าอื่นรวม NULL = ติด (ตรงกับ OrderController::isBlacklisted(), 02/11/2569)
         $black = (string) $request->input('black');
         if ($black === 'Y') {
-            $query->where('customer.black', -1);
-        } elseif ($black === 'N') {
             $query->where(function ($q) {
-                $q->whereNull('customer.black')->orWhere('customer.black', '<>', -1);
+                $q->whereNull('customer.black')->orWhere('customer.black', '<>', 0);
             });
+        } elseif ($black === 'N') {
+            $query->where('customer.black', 0);
         }
     }
 
@@ -364,7 +363,8 @@ class CustomerController extends Controller
         if ($existing) {
             DB::table('customer')->where('code', $code)->update($payload);
         } else {
-            DB::table('customer')->insert($payload + ['code' => $code]);
+            // black ต้องเป็น 0 — default ของคอลัมน์คือ NULL ซึ่งนับเป็นติด Blacklist (02/11/2569)
+            DB::table('customer')->insert($payload + ['code' => $code, 'black' => 0]);
         }
 
         // ─── ตารางลูก ────────────────────────────────────────────

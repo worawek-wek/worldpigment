@@ -35,6 +35,10 @@ Route::prefix('order')->group(function () {
 
     // ─── รายงานคำสั่งซื้อรายวัน — เลือกแผนก + ช่วงวันที่ (20/10/2569) ───
     Route::get('/daily-report-pdf', [\App\Http\Controllers\OrderDailyReportController::class, 'pdf'])->name('order.daily_report_pdf');
+    // Order Daily (price) — เลือกวันที่ (02/11/2569)
+    Route::get('/daily-price-pdf', [\App\Http\Controllers\OrderDailyReportController::class, 'pricePdf'])->name('order.daily_price_pdf');
+    // รายงานสินค้าที่มีกำหนดส่ง — เลือกวันที่ + แผนก (02/11/2569)
+    Route::get('/due-report-pdf', [\App\Http\Controllers\OrderDueReportController::class, 'pdf'])->name('order.due_report_pdf');
 
     // ─── Order ค้างส่งลูกค้า ตามรหัสผู้ขาย (26/10/2569) ───
     Route::get('/outstanding-pdf', [\App\Http\Controllers\OrderOutstandingController::class, 'pdf'])->name('order.outstanding_pdf');
@@ -79,6 +83,9 @@ Route::prefix('order')->group(function () {
         Route::get('/data',  [OrderChangeController::class, 'data'])->name('order.change.data');
         Route::post('/save', [OrderChangeController::class, 'save'])->name('order.change.save');
     });
+
+    // ─── ใบทบทวนคำสั่งซื้อ (ฟอร์ม Access "OrderPRT") — เลือกวันที่ Order + แผนก (03/11/2569) ───
+    Route::get('/order-review/data', [\App\Http\Controllers\OrderReviewController::class, 'data'])->name('order.review.data');
 
     // ─── ฟอร์มอนุมัติใบสั่งซื้อ (morderAPPV) ────────────────────────
     Route::prefix('order-approval')->group(function () {

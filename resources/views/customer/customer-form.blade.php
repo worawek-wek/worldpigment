@@ -18,9 +18,9 @@
     $termCurrent = trim((string) $v('term'));
     $termInList  = collect($credit_terms)->contains(fn ($t) => $t->name_th === $termCurrent);
 
-    // ข้อมูล Blacklist — แสดงอย่างเดียว (ค่าใน DB มีทั้ง -1 / -3 / 0 / 2 / 5 ซึ่งยังไม่ทราบความหมายครบ)
+    // ข้อมูล Blacklist — แสดงอย่างเดียว · 0 เท่านั้นที่ปกติ (02/11/2569) · ลูกค้าใหม่ยังไม่มีแถว ไม่นับว่าติด
     $blackValue = $v('black');
-    $isBlack    = (int) $blackValue === -1;
+    $isBlack    = !$isNew && \App\Http\Controllers\OrderController::isBlacklisted($blackValue);
     $hasBlackInfo = $isBlack
         || trim((string) $v('blackrem')) !== ''
         || trim((string) $v('blackdate')) !== '';
@@ -387,7 +387,7 @@
                 </div>
             </div>
             <div class="form-text small mt-2">
-                สถานะเครดิต/Blacklist ถูกจัดการผ่านใบขออนุมัติเครดิต (ตาราง appvcredit) จึงไม่เปิดให้แก้ที่ฟอร์มนี้
+                เปลี่ยนสถานะ Blacklist ที่ปุ่ม "ขอเปลี่ยนแปลง ข้อมูล Black List / เปลี่ยนแปลงเครดิต" (ต้องผ่านการอนุมัติ) จึงไม่เปิดให้แก้ที่ฟอร์มนี้
             </div>
         </div>
     @endif

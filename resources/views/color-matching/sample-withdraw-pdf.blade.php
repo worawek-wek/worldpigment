@@ -35,7 +35,7 @@
     <table width="100%" class="head">
         <tr>
             <td style="width: 25%; {{ $hf }}"></td>
-            <td style="width: 50%; {{ $hf }} font-size: 16px; font-weight: bold; text-align: center;">บริษัท เวิลด์พิกเมนท์อินดัสตรี จำกัด</td>
+            <td style="width: 50%; {{ $hf }} font-size: 16px; font-weight: bold; text-align: center;">บริษัท เวิลด์ปิกเม้นท์อินดัสตรี จำกัด</td>
             <td style="width: 25%; {{ $hf }} font-size: 11px; text-align: right;">หน้าที่ {PAGENO} / {nbpg}&nbsp;&nbsp;{{ now()->format('d/m/Y') }}</td>
         </tr>
     </table>

@@ -131,6 +131,9 @@ class OrderChangeController extends Controller
                 $j->on('s.Runno', '=', 'l.runno')->on('s.Orderno', '=', 'l.orderno');
             })
             ->where('l.orderno', $orderno)
+            // ใบจากเว็บเรียงตามลำดับที่บันทึกจริง (วันที่ใบกรอกย้อนหลังได้) · ใบระบบเดิมมีแต่วันที่ และเก่ากว่าใบเว็บเสมอ
+            ->orderByRaw("h.source = 'web' DESC")
+            ->orderByRaw("CASE WHEN h.source = 'web' THEN h.id END DESC")
             ->orderByRaw('COALESCE(h.change_date, h.created_at) DESC')
             ->orderByDesc('h.id')->orderBy('l.id')
             ->get([

@@ -156,8 +156,9 @@ class OrderOutstandingController extends Controller
     /**
      * คืนฟังก์ชันหาประวัติกำหนดส่งของแต่ละแถว → ['first' => Y-m-d|null, 'shifts' => [Y-m-d, ...]]
      * อ่าน tb_order_change_line ของใบในรายงานครั้งเดียว
+     * public — รายงาน Order Daily (price) ใช้หา "กำหนดส่งแรก" (02/11/2569)
      */
-    private function dueHistory(array $ordernos): \Closure
+    public function dueHistory(array $ordernos): \Closure
     {
         $lines = $ordernos
             ? DB::table('tb_order_change_line')

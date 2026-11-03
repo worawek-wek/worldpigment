@@ -191,6 +191,26 @@
                                     </div>
                                     {{-- ขึ้นแถวใหม่ --}}
                                     <div class="w-100"></div>
+                                    {{-- เม็ดพลาสติกที่ใช้เทียบสี → testmain.ResinSource + CustResinKg (02/11/2569) --}}
+                                    {{-- ติ๊กได้ข้อเดียว ไม่ติ๊ก = ไม่ระบุ · hidden ทำให้ส่ง key มาเสมอ จึงล้างค่าเดิมได้ --}}
+                                    <div class="col-12">
+                                        <label class="form-label small mb-1">นำไปส่งเทียบสี</label>
+                                        <input type="hidden" name="ResinSource" value="">
+                                        <div class="form-check mb-1">
+                                            <input class="form-check-input cm-resin-source" type="checkbox" name="ResinSource" value="WPI" id="cm_resin_wpi">
+                                            <label class="form-check-label" for="cm_resin_wpi">ใช้เม็ดพลาสติกของ WPI</label>
+                                        </div>
+                                        <div class="d-flex align-items-center flex-wrap gap-2">
+                                            <div class="form-check mb-0">
+                                                <input class="form-check-input cm-resin-source" type="checkbox" name="ResinSource" value="CUST" id="cm_resin_cust">
+                                                <label class="form-check-label" for="cm_resin_cust">ใช้เม็ดของลูกค้า มาพร้อมชิ้นงาน จ.น.</label>
+                                            </div>
+                                            <input type="text" name="CustResinKg" class="form-control form-control-sm text-end js-comma" style="width: 120px;" disabled>
+                                            <span>กก.</span>
+                                        </div>
+                                    </div>
+                                    {{-- ขึ้นแถวใหม่ --}}
+                                    <div class="w-100"></div>
                                     {{-- Chemical Safety — มาตรฐานความปลอดภัยสารเคมี (เลือกได้หลายค่า 29/08/2569) --}}
                                     {{-- select2 ของ modal นี้ตั้ง tags:true → พิมพ์ค่านอกรายการเองได้ (= ช่อง "อื่นๆ ระบุ" ในฟอร์มกระดาษ) --}}
                                     {{-- หลายค่าเก็บลง testmain.ChemSafety คอลัมน์เดียว คั่นด้วย ", " (ดู ColorMatchingController::joinMulti) --}}

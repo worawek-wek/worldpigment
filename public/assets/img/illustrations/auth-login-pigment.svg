@@ -69,7 +69,7 @@
     <circle cx="78" cy="128" r="4" fill="#ffffff" opacity="0.45"/>
   </g>
 
-  <!-- ═══ เม็ดพิกเมนต์ลอย ═══ -->
+  <!-- ═══ เม็ดปิกเม้นท์ลอย ═══ -->
   <circle cx="470" cy="250" r="22" fill="#e74c3c" opacity="0.9"/>
   <circle cx="463" cy="243" r="6" fill="#ffffff" opacity="0.4"/>
   <circle cx="510" cy="320" r="15" fill="#f1c40f" opacity="0.9"/>

@@ -60,7 +60,7 @@
 
                     <td class="{{ $sortActive('code') }}">
                         <strong class="text-primary">{{ $row->code }}</strong>
-                        @if ((int) $row->black === -1)
+                        @if (\App\Http\Controllers\OrderController::isBlacklisted($row->black))
                             <br>
                             <span class="badge bg-label-danger mt-1" title="{{ $row->blackrem }}">Blacklist</span>
                         @endif
@@ -132,6 +132,10 @@
                         <button class="btn btn-sm btn-icon btn-label-primary" title="แก้ไขข้อมูลลูกค้า"
                             onclick="customerOpen('{{ $row->code }}')">
                             <i class="ti ti-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-icon btn-label-danger" title="ขอเปลี่ยนแปลง ข้อมูล Black List / เปลี่ยนแปลงเครดิต"
+                            onclick="customerStatusOpen('{{ $row->code }}')">
+                            <i class="ti ti-ban"></i>
                         </button>
                         {{-- ซ่อนปุ่มลบลูกค้าไว้ (08/10/2569 ตามที่ผู้ใช้สั่ง) — เปิดคืน: เปลี่ยน @if(false) เป็น @if(true) --}}
                         @if(false)

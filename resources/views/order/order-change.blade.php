@@ -19,10 +19,14 @@
     /* การ์ดประวัติ — ใช้ทั้งส่วนประวัติของใบ และหน้าต่างประวัติรายการ */
     #orderChangeModal .oc-doc { display: flex; gap: 1rem; padding: .85rem 1rem; margin-bottom: .75rem; color: #2f2b3d;
                                 border: 1px solid #e6e4f5; border-radius: .75rem; background: #fbfbfe; }
-    #orderChangeModal .oc-doc-icon { flex: 0 0 44px; width: 44px; height: 44px; border-radius: 50%; font-size: 1.35rem;
-                                     display: flex; align-items: center; justify-content: center;
+    #orderChangeModal .oc-doc-icon { flex: 0 0 52px; width: 52px; height: 52px; border-radius: 50%; line-height: 1.1;
+                                     display: flex; flex-direction: column; align-items: center; justify-content: center;
                                      background: #eeecfd; color: #7367f0; }
+    #orderChangeModal .oc-doc-seq-cap { font-size: .625rem; }
+    #orderChangeModal .oc-doc-seq-no { font-size: 1.125rem; font-weight: 700; }
     #orderChangeModal .oc-doc.oc-legacy .oc-doc-icon { background: #f0f0f2; color: #8a8d93; }
+    #orderChangeModal .oc-doc.oc-current { border-color: #28c76f; background: #f4fcf7; }
+    #orderChangeModal .oc-doc.oc-current .oc-doc-icon { background: #28c76f; color: #fff; }
     #orderChangeModal .oc-doc-main { flex: 1 1 auto; min-width: 0; }
     #orderChangeModal .oc-doc-head { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .75rem; margin-bottom: .4rem; }
     #orderChangeModal .oc-doc-no { font-weight: 600; font-size: 1rem; }
@@ -337,7 +341,7 @@
         Swal.fire({
             title: '<span class="oc-hpop-icon"><i class="ti ti-file-time"></i></span><span class="oc-hpop-sep"></span>'
                  + '<span>ประวัติรายการ #' + ocNo(runno) + ' ' + escHtml(r.Itemno || '') + '</span>',
-            html: ocHistoryHtml(ocItemDocs(runno)),
+            html: ocHistoryHtml(ocItemDocs(runno), 'ปัจจุบัน'),
             width: 860,
             showCloseButton: true,
             confirmButtonText: '<i class="ti ti-x me-1"></i>ปิด',
@@ -538,18 +542,20 @@
     }
 
     function ocRenderHistory(docs){
-        $('#ocHistory').html(docs.length ? ocHistoryHtml(docs) : '<div class="text-muted small">ยังไม่มีการเปลี่ยนแปลง</div>');
+        $('#ocHistory').html(docs.length ? ocHistoryHtml(docs, 'ล่าสุด') : '<div class="text-muted small">ยังไม่มีการเปลี่ยนแปลง</div>');
     }
 
-    function ocHistoryHtml(docs){
-        return docs.map(function(d){
+    // docs เรียงใหม่→เก่า — ครั้งที่ = นับจากเก่าสุด, ใบแรก = ล่าสุด ติดป้าย latestLabel
+    function ocHistoryHtml(docs, latestLabel){
+        return docs.map(function(d, i){
             var legacy = d.source === 'legacy';
-            return '<div class="oc-doc ' + (legacy ? 'oc-legacy' : 'oc-web') + '">'
-                + '<div class="oc-doc-icon"><i class="ti ti-calendar-event"></i></div>'
+            return '<div class="oc-doc ' + (legacy ? 'oc-legacy' : 'oc-web') + (i === 0 ? ' oc-current' : '') + '">'
+                + '<div class="oc-doc-icon"><span class="oc-doc-seq-cap">ครั้งที่</span><span class="oc-doc-seq-no">' + (docs.length - i) + '</span></div>'
                 + '<div class="oc-doc-main">'
                 +   '<div class="oc-doc-head">'
                 +     '<span class="oc-doc-no">เลขที่ใบเปลี่ยนแปลง ' + escHtml(d.change_no) + '</span>'
                 +     '<span class="oc-doc-date"><i class="ti ti-calendar me-1"></i>วันที่ใบเปลี่ยนแปลง ' + (fmtDate(d.change_date, true) || '-') + '</span>'
+                +     (i === 0 ? '<span class="badge bg-success"><i class="ti ti-circle-check me-1"></i>' + latestLabel + '</span>' : '')
                 +     (legacy ? '<span class="badge bg-label-secondary">ระบบเดิม</span>' : '')
                 +     (d.by ? '<span class="oc-doc-by">ผู้บันทึก ' + escHtml(d.by) + '</span>' : '')
                 +   '</div>'

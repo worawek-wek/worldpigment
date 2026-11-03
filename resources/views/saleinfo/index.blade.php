@@ -775,7 +775,24 @@
             .toggleClass('bg-light', locked);
     }
 
+    // แก้ไขราคาที่บันทึกแล้วได้เฉพาะ MK Admin (02/11/2569) — server กันซ้ำใน update()
+    // ไม่ใช่ MK Admin → เปิดดูได้ แต่ทุกช่องถูกปิด + ไม่มีปุ่มบันทึก (เพิ่มราคาใหม่ยังทำได้ทุกคน)
+    const SALEINFO_CAN_EDIT_SAVED = @json($can_edit_saved);
+    function setSaleinfoReadonly(locked) {
+        const $f = $('#form_saleinfo');
+        if (locked) {
+            // ปิดเฉพาะช่องที่เปิดอยู่ แล้วติดเครื่องหมายไว้ — ตอนปลดล็อกจะไม่ไปเปิดช่องที่ปิดไว้แต่เดิม
+            $f.find('input, select, textarea').not('[type="hidden"]').not(':disabled')
+                .addClass('si-locked').prop('disabled', true);
+        } else {
+            $f.find('.si-locked').prop('disabled', false).removeClass('si-locked');
+        }
+        $('#btn_save_saleinfo').toggleClass('d-none', locked);
+        $('#saleinfo_readonly_note').toggleClass('d-none', !locked);
+    }
+
     function resetSaleinfoForm() {
+        setSaleinfoReadonly(false);
         $('#form_saleinfo')[0].reset();
         $('#form_saleinfo [name="_mode"]').val('create');
         $('#form_saleinfo [name="_pk"]').val('');
@@ -1070,6 +1087,7 @@
                     $('#btn_delete_saleinfo').removeClass('d-none').data('id', id);
                 }
                 setSaleinfoKeyLock(!SALEINFO_CAN_EDIT_KEYS);
+                setSaleinfoReadonly(!SALEINFO_CAN_EDIT_SAVED);
                 lookupCustomer(d.CustNo);
                 // แก้ไขอยู่ → โชว์ประวัติของคู่นี้ แต่ไม่รวมแถวที่กำลังแก้เอง
                 loadSaleinfoHistory(id);

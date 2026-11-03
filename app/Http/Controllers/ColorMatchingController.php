@@ -20,10 +20,11 @@ class ColorMatchingController extends Controller
         'RminWating', 'ColorMatcher', 'MI', 'Density', 'VR', 'Hardness',
         'ColorChar', 'ApprovedLot', 'ChemSafety', 'Brand',
         'ZnstEBS', // คำนวณ Znst+EBS ร่วมในชิ้นงาน (20/10/2569)
+        'ResinSource', 'CustResinKg', // เม็ดพลาสติกที่ใช้เทียบสี (02/11/2569)
     ];
 
     // ─── 4 ช่องที่ต่างกันในแต่ละใบ เมื่อสร้างใบส่ง ต.ย. หลายใบพร้อมกัน (ตาราง "รายการตัวอย่าง", 29/10/2569) ───
-    private const SD_ITEM_FIELDS = ['TestDesc', 'ResinMatch', 'PHR', 'lotno'];
+    private const SD_ITEM_FIELDS = ['TestDesc', 'ResinMatch', 'PHR', 'Wage', 'lotno'];
 
     // ─── Field ที่เป็นวันที่ — flatpickr ส่งมาเป็น d/m/Y ต้อง parse ก่อน save ───
     private const DATE_FIELDS = [
@@ -286,7 +287,12 @@ class ColorMatchingController extends Controller
             return response()->json(['found' => false]);
         }
 
-        return response()->json(['found' => true] + $row->toArray());
+        // รหัสผู้ขายจากฐานข้อมูลลูกค้า (customer.sale) — ใช้เติมช่อง Sale No. ของใบส่ง ต.ย. (02/11/2569)
+        $customerSale = $row->custno
+            ? DB::table('customer')->where('code', trim((string) $row->custno))->value('sale')
+            : null;
+
+        return response()->json(['found' => true, 'customer_sale' => trim((string) $customerSale)] + $row->toArray());
     }
 
     /**
@@ -297,7 +303,7 @@ class ColorMatchingController extends Controller
     {
         $cust = DB::table('customer')
             ->where('code', $code)
-            ->first(['name', 'nameEN']);
+            ->first(['name', 'nameEN', 'sale']);
 
         if (!$cust) {
             return response()->json(['found' => false]);
@@ -307,6 +313,7 @@ class ColorMatchingController extends Controller
             'found'  => true,
             'name'   => $cust->name,
             'nameEN' => $cust->nameEN,
+            'sale'   => trim((string) $cust->sale),   // รหัสผู้ขาย — เติมช่อง Sale No. ของใบส่ง ต.ย. (02/11/2569)
         ]);
     }
 
@@ -404,7 +411,10 @@ class ColorMatchingController extends Controller
             $item = [];
             foreach (self::SD_ITEM_FIELDS as $field) {
                 $v = trim((string) ($r[$field] ?? ''));
-                if ($field === 'PHR') {
+                if ($field === 'Wage') {
+                    $v = str_replace(',', '', $v);            // ช่อง js-comma — ค่าจากตารางยังมีคอมมา
+                }
+                if ($field === 'PHR' || $field === 'Wage') {
                     $v = is_numeric($v) ? $v : '';
                 } elseif (isset($maxLen[$field])) {
                     $v = mb_substr($v, 0, $maxLen[$field]);
@@ -603,6 +613,17 @@ class ColorMatchingController extends Controller
         // ฟอร์มที่ไม่มีช่องนี้ (modal-sd) จะไม่ส่ง key มา → ไม่แตะค่าเดิม
         if ($request->has('ChemSafety')) {
             $payload['ChemSafety'] = $this->joinMulti($request->input('ChemSafety'));
+        }
+
+        // เม็ดพลาสติกที่ใช้เทียบสี (02/11/2569) — ฟอร์ม CM ส่ง key มาเสมอผ่าน hidden เพื่อให้ล้างค่าได้
+        // ฟอร์มที่ไม่มีช่องนี้ (modal-sd) จะไม่ส่ง key มา → ไม่แตะค่าเดิม
+        if ($request->has('ResinSource')) {
+            $source = in_array($request->input('ResinSource'), ['WPI', 'CUST'], true) ? $request->input('ResinSource') : null;
+            $kg     = str_replace(',', '', (string) $request->input('CustResinKg'));
+
+            $payload['ResinSource'] = $source;
+            // จำนวน กก. ใช้เฉพาะเม็ดของลูกค้า
+            $payload['CustResinKg'] = $source === 'CUST' && is_numeric($kg) ? $kg : null;
         }
 
         // ถ้ามี powder_color จาก modal-sd แต่ไม่มี color (เพราะ user กรอกใน SD) → ใช้ powder_color

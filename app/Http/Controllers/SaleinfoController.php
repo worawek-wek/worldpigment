@@ -44,6 +44,8 @@ class SaleinfoController extends Controller
         $data['page_url'] = 'saleinfo';
         // ฟอร์มแก้ไข: รหัสลูกค้า / ชื่อสินค้า / รหัสสินค้า แก้ได้เฉพาะแผนก IT (26/10/2569)
         $data['can_edit_keys'] = self::canEditKeyFields();
+        // แก้ไขราคาที่บันทึกแล้วได้เฉพาะ MK Admin (02/11/2569) — เกณฑ์เดียวกับฐานข้อมูลลูกค้า
+        $data['can_edit_saved'] = CustomerController::canEditSaved();
 
         return view('saleinfo.index', $data);
     }
@@ -458,6 +460,11 @@ class SaleinfoController extends Controller
      */
     public function update(Request $request)
     {
+        // แก้ไขราคาที่บันทึกแล้วได้เฉพาะ MK Admin (02/11/2569) — กันยิง endpoint ตรง
+        if (!CustomerController::canEditSaved()) {
+            return response()->json(['error' => 'แก้ไขราคาได้เฉพาะ MK Admin'], 403);
+        }
+
         $row = Saleinfo::find($request->id);
         if (!$row) {
             return response()->json(['error' => 'not_found'], 404);

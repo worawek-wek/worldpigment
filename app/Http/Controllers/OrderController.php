@@ -438,15 +438,15 @@ class OrderController extends Controller
     }
 
     /**
-     * ลูกค้าติด Blacklist หรือไม่ — **`customer.black` ไม่ใช่ 0** (ผู้ใช้ยืนยัน 19/09/2569)
+     * ลูกค้าติด Blacklist หรือไม่ — **`customer.black` = 0 เท่านั้นที่ปกติ** (ผู้ใช้ยืนยัน 02/11/2569)
+     * ค่าอื่นทั้งหมดถือว่าติด รวม NULL — เกณฑ์กลางของทุกจุด (ใบสั่งซื้อ / ฟอร์ม MK / เมนูลูกค้า)
      *
      * ⚠ ไม่ใช่แค่ `-1` อย่างที่เคยเข้าใจ — ค่าจริงในตารางมี -3 (2,734 ราย) · 0 (1,088) ·
-     *   -1 (220) · 2 (49) · 5 (2) · NULL (1)
-     * ⚠ **NULL ถือว่า "ไม่ติด"** (ข้อมูลว่าง ไม่ใช่การขึ้นบัญชีดำ) — ยังไม่ได้ยืนยันกับผู้ใช้
+     *   -1 (220) · 2 (49) · 5 (2) · NULL (2)
      */
-    public static function isBlacklisted($black): bool   // public — ฟอร์ม MK (PriceApprovalController) ใช้เกณฑ์เดียวกัน (05/10/2569)
+    public static function isBlacklisted($black): bool   // public — ฟอร์ม MK / เมนูลูกค้า ใช้เกณฑ์เดียวกัน
     {
-        return $black !== null && (int) $black !== 0;
+        return $black === null || (int) $black !== 0;
     }
 
     /** สถานที่ส่งของลูกค้ารายนี้ (dropdown "สถานที่ส่ง") */

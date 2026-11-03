@@ -83,6 +83,10 @@
             ['ข้อมูลสี', 'ti-palette', [
                 'สี'                    => $v($row->color),
                 'เม็ดที่ลูกค้าใช้'      => $v($row->CustPigment),
+                'นำไปส่งเทียบสี'        => $v([
+                    'WPI'  => 'ใช้เม็ดพลาสติกของ WPI',
+                    'CUST' => 'ใช้เม็ดของลูกค้า' . ($row->CustResinKg !== null ? ' ' . number_format((float) $row->CustResinKg, 2) . ' กก.' : ''),
+                ][$row->ResinSource] ?? null),
                 'คุณสมบัติ'             => $v($row->pop),
                 'นำไปทำชิ้นงาน (Model)' => $v($row->Model),
                 'ยี่ห้อ'                => $v($row->Brand),

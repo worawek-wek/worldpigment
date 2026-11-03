@@ -138,9 +138,10 @@
                                             <tr class="small">
                                                 <th class="text-center" style="width:40px;">#</th>
                                                 <th>รายละเอียด <span class="text-muted fw-normal">(รายละเอียดผลิตภัณฑ์)</span></th>
-                                                <th style="width:22%;">Resin (Match) <span class="text-muted fw-normal">(เช่น PVC, ABS, PE)</span></th>
-                                                <th style="width:12%;">PHR <span class="text-muted fw-normal">(0.0000)</span></th>
-                                                <th style="width:20%;">Lot No. <span class="text-muted fw-normal">(เช่น 690112-1-2/01)</span></th>
+                                                <th style="width:18%;">Resin (Match) <span class="text-muted fw-normal">(เช่น PVC, ABS, PE)</span></th>
+                                                <th style="width:10%;">PHR <span class="text-muted fw-normal">(0.0000)</span></th>
+                                                <th style="width:11%;">น้ำหนัก (กรัม) <span class="text-muted fw-normal">(เช่น 100)</span></th>
+                                                <th style="width:18%;">Lot No. <span class="text-muted fw-normal">(เช่น 690112-1-2/01)</span></th>
                                                 <th class="text-center sd-item-del-col" style="width:48px;"></th>
                                             </tr>
                                         </thead>
@@ -150,6 +151,8 @@
                                                 <td><input type="text" name="TestDesc" data-f="TestDesc" maxlength="60" class="form-control form-control-sm"></td>
                                                 <td><input type="text" name="ResinMatch" data-f="ResinMatch" maxlength="30" class="form-control form-control-sm"></td>
                                                 <td><input type="number" step="0.0001" name="PHR" data-f="PHR" class="form-control form-control-sm text-end"></td>
+                                                {{-- น้ำหนัก (กรัม) ย้ายมาจากกลุ่ม "รายละเอียดผลิตภัณฑ์" (02/11/2569) — จำนวนเต็ม คอมมาอัตโนมัติ --}}
+                                                <td><input type="text" name="Wage" data-f="Wage" class="form-control form-control-sm text-end js-comma" data-decimals="0" inputmode="numeric" autocomplete="off"></td>
                                                 <td><input type="text" name="lotno" data-f="lotno" maxlength="20" class="form-control form-control-sm"><div class="invalid-feedback sd-lot-msg"></div></td>
                                                 <td class="text-center sd-item-del-col">
                                                     <button type="button" class="btn btn-sm btn-icon btn-label-danger sd-item-del" title="ลบแถว">
@@ -167,6 +170,7 @@
                                         <td><input type="text" data-f="TestDesc" maxlength="60" class="form-control form-control-sm"></td>
                                         <td><input type="text" data-f="ResinMatch" maxlength="30" class="form-control form-control-sm"></td>
                                         <td><input type="number" step="0.0001" data-f="PHR" class="form-control form-control-sm text-end"></td>
+                                        <td><input type="text" data-f="Wage" class="form-control form-control-sm text-end js-comma" data-decimals="0" inputmode="numeric" autocomplete="off"></td>
                                         <td><input type="text" data-f="lotno" maxlength="20" class="form-control form-control-sm"><div class="invalid-feedback sd-lot-msg"></div></td>
                                         <td class="text-center sd-item-del-col">
                                             <button type="button" class="btn btn-sm btn-icon btn-label-danger sd-item-del" title="ลบแถว">
@@ -191,13 +195,7 @@
                                 {{-- align-items-end: label ยาวไม่เท่ากันในแถว → ช่องกรอกชิดล่างเรียงตรงกัน --}}
                                 {{-- of-form: ใช้กับแถว 2 และ 3 (label ซ้าย ช่องกรอกขวา) — แถว 1 ไม่มี of-row จึงยังเป็น label อยู่บน --}}
                                 <div class="row gx-3 gy-2 align-items-end of-form" style="--of-lw: 150px;">
-                                    {{-- แถว 1: น้ำหนัก + Standard — Resin (Match) / PHR ย้ายไปตาราง "รายการตัวอย่าง" (29/10/2569) --}}
-                                    <div class="col-md-2">
-                                        <label class="form-label small mb-1">น้ำหนัก (กรัม) <span class="text-muted fw-normal"><br>(เช่น 100)</span></label>
-                                        {{-- จำนวนเต็ม (กรัม) — คอมมาอัตโนมัติ, ถอดคอมมาก่อน submit --}}
-                                        <input type="text" name="Wage" class="form-control text-end js-comma"
-                                            data-decimals="0" inputmode="numeric" autocomplete="off">
-                                    </div>
+                                    {{-- แถว 1: Standard — Resin (Match) / PHR ย้ายไปตาราง "รายการตัวอย่าง" (29/10/2569) · น้ำหนัก ย้ายไปตาราง (02/11/2569) --}}
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">Standard <span class="text-muted fw-normal">(เช่น PT 494 C)</span></label>
                                         {{-- แก้ไขได้แล้ว (16/10/2569 ตามที่ผู้ใช้สั่ง) — เดิม readonly + พื้นเทา

@@ -40,7 +40,7 @@
     <table width="100%" class="head" style="font-family: garuda;">
         <tr>
             <td style="width: 25%; font-family: garuda;"></td>
-            <td style="width: 50%; font-family: garuda; font-size: 16px; font-weight: bold; text-align: center;">บริษัท เวิลด์พิกเมนท์อินดัสตรี จำกัด</td>
+            <td style="width: 50%; font-family: garuda; font-size: 16px; font-weight: bold; text-align: center;">บริษัท เวิลด์ปิกเม้นท์อินดัสตรี จำกัด</td>
             <td style="width: 25%; text-align: right; font-size: 11px; font-family: garuda;">หน้าที่ {PAGENO} / {nbpg}&nbsp;&nbsp;{{ now()->format('d/m/Y') }}</td>
         </tr>
         <tr>

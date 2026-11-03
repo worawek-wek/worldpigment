@@ -868,9 +868,24 @@
             $('#form_color_matching [name="custname"], #form_color_matching [name="custnameEN"]').prop('readonly', false);
             $('#form_color_matching [name="_mode"]').val('create');
             $('#form_color_matching [name="_pk"]').val('');
+            syncCustResinKg();
             // โหมดสร้างใหม่ → ยังไม่มี record ให้ลบ
             $('#btn_delete_cm').addClass('d-none').removeData('id').removeData('label');
         }
+
+        // ── เม็ดพลาสติกที่ใช้เทียบสี (02/11/2569) ──
+        // ช่องจำนวน กก. กรอกได้เฉพาะตอนติ๊ก "ใช้เม็ดของลูกค้า"
+        function syncCustResinKg() {
+            const isCust = $('#cm_resin_cust').is(':checked');
+            const $kg = $('#form_color_matching [name="CustResinKg"]').prop('disabled', !isCust);
+            if (!isCust) $kg.val('');
+        }
+
+        // ติ๊กได้ข้อเดียว — ติ๊กข้อใหม่แล้วปลดข้อเดิม
+        $('#form_color_matching').on('change', '.cm-resin-source', function () {
+            if (this.checked) $('.cm-resin-source').not(this).prop('checked', false);
+            syncCustResinKg();
+        });
 
         // ── Auto-fill ชื่อลูกค้าจากรหัส (custno) ในฟอร์มเทียบสี ──
         // พิมพ์รหัส → ดึง name(ไทย)/nameEN(อังกฤษ) จากตาราง customer มาเติม + ล็อกแก้ไขไม่ได้
@@ -899,6 +914,8 @@
                         if (resp && resp.found) {
                             $th.val(resp.name   ?? '').prop('readonly', true);
                             $en.val(resp.nameEN ?? '').prop('readonly', true);
+                            // ใบส่ง ต.ย.: Sale No. = รหัสผู้ขายของลูกค้า (customer.sale) — ยังแก้ไขได้ (02/11/2569)
+                            if (form.id === 'form_sample_delivery') $f.find('[name="sale"]').val(resp.sale ?? '');
                         } else {
                             // ไม่พบรหัส → ล้างชื่อให้ว่าง แล้วปลดล็อกให้กรอกเอง
                             $th.add($en).val('').prop('readonly', false);
@@ -934,7 +951,35 @@
 
         // ── ตาราง "รายการตัวอย่าง" ในฟอร์ม SD (29/10/2569) — 1 แถว = ใบส่ง ต.ย. 1 ใบ ──
         // แถวแรกใช้ name เดิม (TestDesc/ResinMatch/PHR/lotno) · แถวที่เพิ่มอ้างช่องด้วย data-f
-        const SD_ITEM_FIELDS = ['TestDesc', 'ResinMatch', 'PHR', 'lotno'];
+        const SD_ITEM_FIELDS = ['TestDesc', 'ResinMatch', 'PHR', 'Wage', 'lotno'];
+
+        // ── ช่องในตารางขยายตามข้อความที่กรอก (02/11/2569 ตามที่ผู้ใช้สั่ง — แบบ oiAutoGrow ของฟอร์มใบสั่งซื้อ) ──
+        // วัดข้อความด้วย canvas แล้วตั้ง min-width ที่ input → คอลัมน์กว้างตาม (ไม่หดต่ำกว่าความกว้างตั้งต้นของ th)
+        // ตารางอยู่ใน .table-responsive จึงเลื่อนแนวนอนได้เมื่อรวมกันกว้างเกินฟอร์ม
+        const SD_MAX_W = 480;
+        let _sdCanvas = null;
+
+        function sdAutoGrow(el) {
+            const cs = getComputedStyle(el);
+            if (!cs.fontSize || parseFloat(cs.fontSize) === 0) return;   // modal ยังซ่อนอยู่ วัดไม่ได้
+            if (!_sdCanvas) _sdCanvas = document.createElement('canvas').getContext('2d');
+            _sdCanvas.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+            const pad = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight)
+                      + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
+            const text = String(el.value ?? '');
+            // ช่องว่าง = ปล่อยตามความกว้างคอลัมน์เดิม · 14 = เผื่อ caret (+ ปุ่มเลื่อนของช่องตัวเลข)
+            el.style.minWidth = text === ''
+                ? ''
+                : Math.min(Math.ceil(_sdCanvas.measureText(text).width + pad + (el.type === 'number' ? 30 : 14)), SD_MAX_W) + 'px';
+        }
+
+        function sdAutoGrowAll() {
+            $('#sd_items_body input').each(function () { sdAutoGrow(this); });
+        }
+
+        // input = พิมพ์เอง · blur = js-comma จัดรูปแบบตัวเลขใหม่
+        $('#sd_items_body').on('input change blur', 'input', function () { sdAutoGrow(this); });
+        $('#sampleDeliveryModal').on('shown.bs.modal', sdAutoGrowAll);
 
         function sdItemsRenumber() {
             $('#sd_items_body tr.sd-item').each(function (i) { $(this).find('.sd-item-no').text(i + 1); });
@@ -954,6 +999,7 @@
             $('#sd_items_body tr.sd-item').not('.sd-item-first').remove();
             $('#sd_items_body [data-f="lotno"]').removeClass('is-invalid');
             sdItemsRenumber();
+            sdAutoGrowAll();
         }
 
         // ── ตรวจ Lot No. ซ้ำตอนกรอก (29/10/2569) — ซ้ำกับแถวอื่นในตาราง หรือซ้ำกับใบที่มีอยู่แล้ว ──
@@ -1017,6 +1063,7 @@
             if ($rows.length > 1) $rows.last().remove();
             sdItemsRenumber();
             sdLotCheckAll();   // ค่าเลื่อนแถวแล้ว → ตรวจซ้ำใหม่ทั้งตาราง
+            sdAutoGrowAll();
         }
 
         // แถวที่จะบันทึก — ตัดแถวที่ว่างทั้ง 4 ช่องทิ้ง
@@ -1043,6 +1090,7 @@
                 TestDesc:   resp.color       ?? '', // รายละเอียด: ดึงจาก "สี" (color) ของใบนำส่งเทียบสี
                 ResinMatch: resp.CustPigment ?? '', // Resin (Match): ดึงจาก "เม็ดที่ลูกค้าใช้" (CustPigment) เช่น AS50%+ABS50%
             });
+            sdAutoGrowAll();   // ค่าที่เติมด้วย .val() ไม่ยิง event input
         }
 
         let sdRefTimer = null;
@@ -1059,13 +1107,15 @@
                         const $f = $('#form_sample_delivery');
                         // ไม่พบ → ล้างช่องที่ auto-fill มาจากใบอ้างอิง (ลูกค้า/ข้อมูลสี)
                         if (!resp || !resp.found) {
-                            $f.find('[name="custno"], [name="custname"], [name="custnameEN"]').val('');
+                            $f.find('[name="custno"], [name="custname"], [name="custnameEN"], [name="sale"]').val('');
                             fillSdColorInfo($f, {});
                             return;
                         }
                         $f.find('[name="custno"]').val(resp.custno ?? '');
                         $f.find('[name="custname"]').val(resp.custname ?? '');
                         $f.find('[name="custnameEN"]').val(resp.custnameEN ?? '');
+                        // Sale No. = รหัสผู้ขายของลูกค้าในฐานข้อมูลลูกค้า (02/11/2569) — ไม่มี = ค่าเดิมของใบนำส่ง
+                        $f.find('[name="sale"]').val(resp.customer_sale || (resp.sale ?? ''));
                         // เติม "ข้อมูลสี" จากใบนำส่งเทียบสี (ผู้ใช้แก้ไขต่อได้)
                         fillSdColorInfo($f, resp);
                         // นำ SendNo ตั้งต้นในช่องเลขที่ใบส่ง ต.ย. เฉพาะเมื่อยังว่าง (กันทับค่าตอนแก้ไข)
@@ -1449,6 +1499,13 @@
                 if ($input.length === 0) return;
 
                 const val = row[col];
+
+                // เม็ดพลาสติกที่ใช้เทียบสี — checkbox ค่าเป็นข้อความ ไม่ใช่ 0/1
+                if (col === 'ResinSource') {
+                    $('.cm-resin-source').each(function () { this.checked = this.value === val; });
+                    syncCustResinKg();
+                    return;
+                }
 
                 if ($input.is(':checkbox')) {
                     $input.prop('checked', val == 1);

@@ -377,12 +377,16 @@
                             <i class="ti ti-trash me-1"></i>
                             ลบราคานี้
                         </button>
+                        {{-- โหมดแก้ไขของผู้ที่ไม่ใช่ MK Admin (02/11/2569) — JS ถอด d-none ให้ --}}
+                        <span id="saleinfo_readonly_note" class="badge bg-label-warning align-self-center d-none">
+                            <i class="ti ti-lock me-1"></i>ดูได้อย่างเดียว — แก้ไขราคาได้เฉพาะ MK Admin
+                        </span>
                     </div>
                     <div class="d-flex gap-2">
                         <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">
                             ปิด
                         </button>
-                        <button type="submit" class="btn btn-success px-5">
+                        <button type="submit" id="btn_save_saleinfo" class="btn btn-success px-5">
                             <i class="ti ti-device-floppy me-1"></i>
                             บันทึกราคา
                         </button>

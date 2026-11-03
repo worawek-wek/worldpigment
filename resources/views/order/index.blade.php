@@ -507,6 +507,11 @@
                         </button>
                         {{-- ปุ่มรายงานปุ่มเดียว (29/10/2569 ตามที่ผู้ใช้สั่ง): กด → เลือกรายงาน → กรอกเงื่อนไข → ออกรายงาน (#orderReportModal)
                              รวม: รายงานที่ต้องผลิต · คำสั่งซื้อรายวัน · Order ค้างส่งลูกค้า · ประมาณการยอดขาย --}}
+                        {{-- ใบทบทวนคำสั่งซื้อ (ฟอร์ม Access "OrderPRT") — 03/11/2569 → #orderReviewModal --}}
+                        <button class="btn btn-label-secondary border" onclick="orderReviewOpen()">
+                            <i class="ti ti-file-check me-1"></i>
+                            ใบทบทวนคำสั่งซื้อ
+                        </button>
                         <button class="btn btn-label-secondary border" onclick="orderReportOpen()">
                             <i class="ti ti-printer me-1"></i>
                             รายงาน
@@ -786,6 +791,8 @@
                         'การผลิต / คำสั่งซื้อ' => [
                             ['prod',  'รายงานผลิตภัณฑ์ที่ต้องผลิต', 'ti-printer', false],
                             ['daily', 'รายงานคำสั่งซื้อรายวัน',     'ti-calendar-event', false],
+                            ['daily_price', 'Order Daily (price)',  'ti-report-money', false],
+                            ['due',   'รายงานสินค้าที่มีกำหนดส่ง',  'ti-calendar-due', false],
                         ],
                         'Order ค้างส่งลูกค้า' => [
                             ['os_sale',   'Order ค้างส่งลูกค้า (ตามรหัสผู้ขาย)',      'ti-truck-delivery', false],
@@ -893,6 +900,37 @@
                                 <span class="fw-semibold">ถึง</span>
                                 <input type="text" id="dr_to" class="form-control" autocomplete="off">
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Order Daily (price) (02/11/2569) — เลือกวันที่ → OrderDailyReportController::pricePdf() --}}
+                <div class="of-form d-none" data-ord-section="daily_price" style="--of-lw: 100px;">
+                    <div class="of-row">
+                        <label class="form-label" for="dp_date">วันที่</label>
+                        <div class="of-ctl">
+                            <input type="text" id="dp_date" class="form-control" autocomplete="off">
+                        </div>
+                    </div>
+                </div>
+
+                {{-- รายงานสินค้าที่มีกำหนดส่ง (02/11/2569) — วันที่ + แผนก → OrderDueReportController::pdf() --}}
+                <div class="of-form d-none" data-ord-section="due" style="--of-lw: 100px;">
+                    <div class="of-row mb-2">
+                        <label class="form-label" for="du_dept">แผนกผลิต</label>
+                        <div class="of-ctl">
+                            <select id="du_dept" class="form-select no-enhance">
+                                <option value="">ทุกแผนก</option>
+                                @foreach ($companies as $c)
+                                    <option value="{{ $c }}">{{ $c }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="of-row">
+                        <label class="form-label" for="du_date">กำหนดส่งวันที่</label>
+                        <div class="of-ctl">
+                            <input type="text" id="du_date" class="form-control" autocomplete="off">
                         </div>
                     </div>
                 </div>
@@ -1045,6 +1083,7 @@
     <!-- / Layout wrapper -->
     @include('color-rate.lookup-modal')   {{-- modal "ดูกลุ่มราคา" (อ่านอย่างเดียว) — 19/09/2569 --}}
     @include('order.order-change')        {{-- modal "การเปลี่ยนแปลงคำสั่งซื้อ" (เลื่อน / แยกส่ง / เปลี่ยนน้ำหนัก) — 20/10/2569 --}}
+    @include('order.order-review')        {{-- modal "ใบทบทวนคำสั่งซื้อ" (OrderPRT) — 03/11/2569 --}}
     @include('layout/inc_js')
 <script>
     var page = "{{ $page_url }}/datatable";
@@ -3497,6 +3536,8 @@
     var ORD_REPORTS = {
         prod:         { section: 'prod',  reset: prodReportReset,      print: prodReportPrint },
         daily:        { section: 'daily', reset: dailyReportReset,     print: dailyReportPrint },
+        daily_price:  { section: 'daily_price', reset: dailyPriceReset, print: dailyPricePrint },
+        due:          { section: 'due',   reset: dueReportReset,       print: dueReportPrint },
         os_sale:      { section: 'os',    print: function(){ outstandingPrint('sale'); }, focus: '#os_sale' },
         os_done:      { section: 'none',  print: function(){ outstandingPrint('done'); } },
         os_undone:    { section: 'none',  print: function(){ outstandingPrint('undone'); } },
@@ -3593,6 +3634,36 @@
         }
         var q = { dept: $('#dr_dept').val() || '', date_from: $('#dr_from').val(), date_to: $('#dr_to').val() };
         window.open('{{ url('order/daily-report-pdf') }}?' + $.param(q), '_blank');
+    }
+
+    //  Order Daily (price) (02/11/2569) — ค่าเริ่มต้น: วันนี้
+    var dpFp = null;
+    function dailyPriceReset(){
+        if (!dpFp) dpFp = flatpickr('#dp_date', { dateFormat: 'd/m/Y', allowInput: true, static: true, disableMobile: true });
+        dpFp.setDate(new Date(), false);
+    }
+    function dailyPricePrint(){
+        var date = $('#dp_date').val();
+        if (!date) {
+            Swal.fire({ icon: 'warning', title: 'กรุณาเลือกวันที่', target: ORD_REPORT_TARGET, heightAuto: false });
+            return;
+        }
+        window.open('{{ url('order/daily-price-pdf') }}?' + $.param({ date: date }), '_blank');
+    }
+
+    //  รายงานสินค้าที่มีกำหนดส่ง (02/11/2569) — ค่าเริ่มต้น: วันนี้ · ทุกแผนก
+    var duFp = null;
+    function dueReportReset(){
+        if (!duFp) duFp = flatpickr('#du_date', { dateFormat: 'd/m/Y', allowInput: true, static: true, disableMobile: true });
+        duFp.setDate(new Date(), false);
+    }
+    function dueReportPrint(){
+        var date = $('#du_date').val();
+        if (!date) {
+            Swal.fire({ icon: 'warning', title: 'กรุณาเลือกวันที่', target: ORD_REPORT_TARGET, heightAuto: false });
+            return;
+        }
+        window.open('{{ url('order/due-report-pdf') }}?' + $.param({ date: date, dept: $('#du_dept').val() || '' }), '_blank');
     }
 
     //  Order ค้างส่งลูกค้า (26/10/2569)
