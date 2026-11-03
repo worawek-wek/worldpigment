@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Mpdf\Mpdf;
 
 /**
  * ฟอร์ม "ใบทบทวนคำสั่งซื้อ" (03/11/2569) — แปลงจากฟอร์ม Access "OrderPRT"
@@ -61,6 +62,126 @@ class OrderReviewController extends Controller
             ->values();
 
         return response()->json(['date' => $date->format('d/m/Y'), 'dept' => $dept, 'rows' => $rows]);
+    }
+
+    /**
+     * ชื่อบริษัทที่พิมพ์ในช่อง "ชื่อลูกค้า" + หน้าข้อความ "ขอรับรองรายการ..." ตามตัวอักษรแรกของเลขที่ใบ
+     * ⚠ รู้แค่ C จากใบตัวอย่าง CI43493 · ใบ WI25290 ไม่มีชื่อ · H ยังไม่รู้ (ว่าง)
+     */
+    private const SELLER_NAMES = [
+        'C' => 'บริษัท เวิลดีปิกเม้นท์เคมีภัณฑ์ จำกัด',
+    ];
+
+    /**
+     * พิมพ์ใบทบทวนคำสั่งซื้อ 1 รายการ (suborder) ลงกระดาษแบบฟอร์ม MK01-FM01.00 ขนาด A5 แนวนอน
+     * พิมพ์เฉพาะข้อมูลทับช่องของฟอร์ม — ตำแหน่ง (มม.) อยู่ใน blade order/order-review-print
+     */
+    public function print(Request $request)
+    {
+        $orderno = trim((string) $request->query('orderno', ''));
+        $runno   = $request->query('runno');
+
+        $r = DB::table('suborder as s')
+            ->join('morder as m', 'm.Orderno', '=', 's.Orderno')
+            ->leftJoin('customer as c', 'c.code', '=', 'm.Custno')
+            ->leftJoin('emp as e', 'e.empno', '=', 'm.Emp')
+            ->where('m.Orderno', $orderno)
+            ->where('s.Runno', $runno)
+            ->first([
+                'm.Orderno', 'm.Mdate', 'm.Custno', 'm.Custname', 'm.Emp', 'm.PO', 'm.supno', 'm.DVpoint',
+                'm.Send', 'm.RP', 'm.Spec', 'm.Cer', 'm.price', 'm.appvDT', 'm.itype',
+                'm.HMStore', 'm.sendmth', 'm.sendend',
+                's.Itemno', 's.nold', 's.prodname', 's.Lotno', 's.Stock', 's.Production', 's.senddate', 's.Remark',
+                'c.name as cust_name', 'c.term', 'c.cashdisc',
+                'e.empname',
+            ]);
+        abort_if(!$r, 404, 'ไม่พบรายการ');
+
+        // "ระบุในบิล" = uprice.inBill ของคู่ ลูกค้า+เบอร์ แถว DATE ล่าสุด (⚠ เดาจากชื่อช่อง)
+        $inBill = DB::table('uprice')
+            ->where('CustNo', $r->Custno)->where('ITEMNO', $r->Itemno)
+            ->orderByDesc('DATE')->value('inBill');
+
+        // itype → ป้ายจาก config ตัดวงเล็บท้ายออก (เช่น "เม็ดพลาสติกสี ( เม็ด WPI )" → "เม็ดพลาสติกสี")
+        $itype = collect(config('order.itypes'))->firstWhere('key', (string) $r->itype);
+        $itypeLabel = $itype ? trim(preg_replace('/\s*\(.*\)\s*$/u', '', $itype['label'])) : '';
+
+        $orderno = trim((string) $r->Orderno);
+        $stock   = (float) $r->Stock;
+        $prod    = (float) $r->Production;
+        $term    = trim((string) $r->term);
+        $mdate   = $r->Mdate ? Carbon::parse($r->Mdate) : null;
+
+        $d = [
+            'orderno'   => $orderno,
+            'day'       => $mdate ? $mdate->format('d') : '',
+            'month'     => $mdate ? $mdate->format('m') : '',
+            'year'      => $mdate ? $mdate->format('y') : '',
+            'in_bill'   => trim((string) $inBill) !== '' ? trim((string) $inBill) : '-',
+            'itype'     => $itypeLabel,
+            'seller'    => self::SELLER_NAMES[strtoupper(substr($orderno, 0, 1))] ?? '',
+            // ตามคำสั่งลูกค้าเพื่อ: รหัสลูกค้า-รหัสผู้ขาย-รหัส O/N + ชื่อลูกค้า (ผู้ใช้ยืนยัน 03/11/2569)
+            'for_code'  => implode('-', array_filter([trim((string) $r->Custno), trim((string) $r->supno), trim((string) $r->nold)], 'strlen')),
+            'for_name'  => trim((string) ($r->cust_name ?: $r->Custname)),
+            'itemno'    => trim((string) $r->Itemno),
+            'nold'      => trim((string) $r->nold),
+            'prodname'  => trim((string) $r->prodname),
+            'lotno'     => trim((string) $r->Lotno),
+            'qty'       => number_format($stock + $prod, 2),
+            'stock'     => self::qtyText($stock),
+            'prod'      => self::qtyText($prod),
+            'price'     => $r->price === null ? '' : number_format((float) $r->price, 2),
+            'term'      => $term === '' ? '' : '( ' . $term . ($r->cashdisc !== null ? ' - ' . (float) $r->cashdisc . '%' : '') . ' )',
+            'dvpoint'   => trim((string) $r->DVpoint),
+            'po'        => trim((string) $r->PO),
+            'remark'    => trim((string) $r->Remark),
+            'hmstore'   => (float) $r->HMStore ? number_format((float) $r->HMStore, 2) : '-',
+            'sendmth'   => (float) $r->sendmth ? number_format((float) $r->sendmth, 2) : '-',
+            'sendend'   => $r->sendend ? Carbon::parse($r->sendend)->format('d/m/y') : '-',
+            'send'      => self::checked($r->Send),
+            'rp'        => self::checked($r->RP),
+            'spec'      => self::checked($r->Spec),
+            'cer'       => self::checked($r->Cer),
+            'senddate'  => $r->senddate ? Carbon::parse($r->senddate)->format('d / m / y') : '',
+            'taker'     => trim(trim((string) $r->Emp) . ' ' . trim((string) $r->empname)),
+            'take_time' => $mdate ? $mdate->format('H:i') : '',
+            // ⚠ ชื่อผู้อนุมัติ — morder ยังไม่ได้เก็บว่าใครอนุมัติ (ผู้ใช้กำลังสืบ) จึงเว้นว่าง
+            'approver'  => '',
+            'appv_time' => $r->appvDT ? Carbon::parse($r->appvDT)->format('H:i') : '',
+            'sign'      => trim((string) $r->supno),   // ลงชื่อ = รหัสผู้ขาย (ผู้ใช้ยืนยัน 03/11/2569)
+        ];
+
+        $html = view('order.order-review-print', ['d' => $d])->render();
+
+        $mpdf = new Mpdf([
+            'mode'          => 'utf-8',
+            'format'        => 'A5-L',
+            'margin_left'   => 0,
+            'margin_right'  => 0,
+            'margin_top'    => 0,
+            'margin_bottom' => 0,
+            'margin_header' => 0,
+            'margin_footer' => 0,
+        ]);
+        $mpdf->autoScriptToLang = true;
+        $mpdf->autoLangToFont   = true;
+        $mpdf->SetFont('sarabun');
+        $mpdf->WriteHTML($html);
+
+        return response($mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="order-review-' . $orderno . '.pdf"',
+        ]);
+    }
+
+    /** น้ำหนัก S / P บนใบ: 0 = ว่าง · จำนวนเต็มไม่มีทศนิยม (ตามใบตัวอย่าง "3", "500") */
+    private static function qtyText(float $v): string
+    {
+        if ($v == 0) {
+            return '';
+        }
+
+        return floor($v) == $v ? number_format($v) : rtrim(rtrim(number_format($v, 2), '0'), '.');
     }
 
     /** checkbox แบบ Access: -1 = ติ๊ก, 0/NULL = ไม่ติ๊ก */

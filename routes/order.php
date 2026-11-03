@@ -86,6 +86,8 @@ Route::prefix('order')->group(function () {
 
     // ─── ใบทบทวนคำสั่งซื้อ (ฟอร์ม Access "OrderPRT") — เลือกวันที่ Order + แผนก (03/11/2569) ───
     Route::get('/order-review/data', [\App\Http\Controllers\OrderReviewController::class, 'data'])->name('order.review.data');
+    // พิมพ์ทับกระดาษแบบฟอร์ม MK01-FM01.00 (A5 แนวนอน) — 1 รายการ / แผ่น
+    Route::get('/order-review/print', [\App\Http\Controllers\OrderReviewController::class, 'print'])->name('order.review.print');
 
     // ─── ฟอร์มอนุมัติใบสั่งซื้อ (morderAPPV) ────────────────────────
     Route::prefix('order-approval')->group(function () {

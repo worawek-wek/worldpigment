@@ -2,7 +2,7 @@
      ใบทบทวนคำสั่งซื้อ (03/11/2569) — แปลงจากฟอร์ม Access "OrderPRT"
      เลือกวันที่ Order + แผนกที่ผลิต → Refresh → เดินดูทีละรายการ (suborder) → พิมพ์
      เฉพาะใบที่อนุมัติแล้ว · ข้อมูลจาก OrderReviewController::data (order/order-review/data)
-     ⚠ ปุ่มพิมพ์ยังไม่ทำ — รอแบบใบพิมพ์จากผู้ใช้ (class wip)
+     ปุ่มพิมพ์ → OrderReviewController::print (order/order-review/print) A5 แนวนอน ทับกระดาษแบบฟอร์ม
      ═══════════════════════════════════════════════════════════════ --}}
 <style>
     #orderReviewModal .orv-rec .form-control[readonly] { background: #f6f7f9; }
@@ -100,7 +100,7 @@
                     <span class="small ms-1">of <span id="orv_total">0</span></span>
                 </div>
                 <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-primary wip" onclick="orvPrint()">
+                    <button type="button" class="btn btn-primary" onclick="orvPrint()">
                         <i class="ti ti-printer me-1"></i> พิมพ์ใบทบทวนฯ
                     </button>
                     <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ปิด</button>
@@ -114,6 +114,7 @@
 <script>
     // ⚠ include ก่อน layout/inc_js — เรียก jQuery ตอนฟังก์ชันถูกเรียกเท่านั้น ส่วนการผูก event รอ DOMContentLoaded
     var ORV_DATA_URL = "{{ route('order.review.data') }}";
+    var ORV_PRINT_URL = "{{ route('order.review.print') }}";
     var ORV = { rows: [], i: -1 };
 
     function orderReviewOpen(){
@@ -173,9 +174,14 @@
         $('#orv_empty').toggleClass('d-none', n > 0);
     }
 
-    // ⚠ รอแบบใบพิมพ์จากผู้ใช้
+    // พิมพ์รายการที่ดูอยู่ (1 รายการ / แผ่น) ทับกระดาษแบบฟอร์ม A5 — สั่งพิมพ์ที่ Scale 100%
     function orvPrint(){
-        Swal.fire({ icon: 'info', title: 'ยังไม่เปิดใช้งาน', text: 'รอแบบฟอร์มใบทบทวนคำสั่งซื้อ', target: '#orderReviewModal', heightAuto: false });
+        var r = ORV.i >= 0 ? ORV.rows[ORV.i] : null;
+        if (!r) {
+            Swal.fire({ icon: 'warning', title: 'ไม่มีรายการให้พิมพ์', target: '#orderReviewModal', heightAuto: false });
+            return;
+        }
+        window.open(ORV_PRINT_URL + '?' + $.param({ orderno: r.orderno, runno: r.runno }), '_blank');
     }
 
     document.addEventListener('DOMContentLoaded', function(){
