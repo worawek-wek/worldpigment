@@ -2,7 +2,7 @@
      ใบทบทวนคำสั่งซื้อ (03/11/2569) — แปลงจากฟอร์ม Access "OrderPRT"
      เลือกวันที่ Order + แผนกที่ผลิต → Refresh → เดินดูทีละรายการ (suborder) → พิมพ์
      เฉพาะใบที่อนุมัติแล้ว · ข้อมูลจาก OrderReviewController::data (order/order-review/data)
-     ปุ่มพิมพ์ → OrderReviewController::print (order/order-review/print) A5 แนวนอน ทับกระดาษแบบฟอร์ม
+     ปุ่มพิมพ์ → OrderReviewController::print (order/order-review/print) A4 แนวตั้ง ฟอร์มอยู่ครึ่งบน
      ═══════════════════════════════════════════════════════════════ --}}
 <style>
     #orderReviewModal .orv-rec .form-control[readonly] { background: #f6f7f9; }
@@ -174,14 +174,29 @@
         $('#orv_empty').toggleClass('d-none', n > 0);
     }
 
-    // พิมพ์รายการที่ดูอยู่ (1 รายการ / แผ่น) ทับกระดาษแบบฟอร์ม A5 — สั่งพิมพ์ที่ Scale 100%
+    // พิมพ์รายการที่ดูอยู่ (1 รายการ / แผ่น) — หน้า A4 แนวตั้ง ฟอร์มอยู่ครึ่งบน · สั่งพิมพ์ที่ Scale 100%
     function orvPrint(){
         var r = ORV.i >= 0 ? ORV.rows[ORV.i] : null;
         if (!r) {
             Swal.fire({ icon: 'warning', title: 'ไม่มีรายการให้พิมพ์', target: '#orderReviewModal', heightAuto: false });
             return;
         }
-        window.open(ORV_PRINT_URL + '?' + $.param({ orderno: r.orderno, runno: r.runno }), '_blank');
+        // พิมพ์ในหน้าเดิมผ่าน iframe ซ่อน ไม่เปิดแท็บใหม่ (ผู้ใช้สั่ง 03/11/2569 — แพทเทิร์นเดียวกับปุ่มพิมพ์ใบเสนอราคา)
+        var frame = document.getElementById('orvPrintFrame');
+        if (!frame) {
+            frame = document.createElement('iframe');
+            frame.id = 'orvPrintFrame';
+            frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+            document.body.appendChild(frame);
+        }
+        frame.onload = function(){
+            // หน่วงให้ตัวแสดง PDF ของเบราว์เซอร์โหลดเสร็จก่อนสั่งพิมพ์
+            setTimeout(function(){
+                try { frame.contentWindow.focus(); frame.contentWindow.print(); }
+                catch (e) { console.error(e); }
+            }, 500);
+        };
+        frame.src = ORV_PRINT_URL + '?' + $.param({ orderno: r.orderno, runno: r.runno, _: Date.now() });
     }
 
     document.addEventListener('DOMContentLoaded', function(){

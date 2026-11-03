@@ -72,8 +72,13 @@ class OrderReviewController extends Controller
         'C' => 'บริษัท เวิลดีปิกเม้นท์เคมีภัณฑ์ จำกัด',
     ];
 
+    /** blade ผังพิมพ์ใบทบทวนฯ ตาม morder.Company — ไม่อยู่ในรายการ = order.order-review-print (ผังเดิม) */
+    private const PRINT_VIEWS = [
+        'CP' => 'order.order-review-print-cp',
+    ];
+
     /**
-     * พิมพ์ใบทบทวนคำสั่งซื้อ 1 รายการ (suborder) ลงกระดาษแบบฟอร์ม MK01-FM01.00 ขนาด A5 แนวนอน
+     * พิมพ์ใบทบทวนคำสั่งซื้อ 1 รายการ (suborder) ลงกระดาษแบบฟอร์ม MK01-FM01.00 — หน้า A4 แนวตั้ง ฟอร์มอยู่ครึ่งบน
      * พิมพ์เฉพาะข้อมูลทับช่องของฟอร์ม — ตำแหน่ง (มม.) อยู่ใน blade order/order-review-print
      */
     public function print(Request $request)
@@ -88,7 +93,7 @@ class OrderReviewController extends Controller
             ->where('m.Orderno', $orderno)
             ->where('s.Runno', $runno)
             ->first([
-                'm.Orderno', 'm.Mdate', 'm.Custno', 'm.Custname', 'm.Emp', 'm.PO', 'm.supno', 'm.DVpoint',
+                'm.Orderno', 'm.Mdate', 'm.Company', 'm.Custno', 'm.Custname', 'm.Emp', 'm.PO', 'm.supno', 'm.DVpoint',
                 'm.Send', 'm.RP', 'm.Spec', 'm.Cer', 'm.price', 'm.appvDT', 'm.itype',
                 'm.HMStore', 'm.sendmth', 'm.sendend',
                 's.Itemno', 's.nold', 's.prodname', 's.Lotno', 's.Stock', 's.Production', 's.senddate', 's.Remark',
@@ -151,11 +156,14 @@ class OrderReviewController extends Controller
             'sign'      => trim((string) $r->supno),   // ลงชื่อ = รหัสผู้ขาย (ผู้ใช้ยืนยัน 03/11/2569)
         ];
 
-        $html = view('order.order-review-print', ['d' => $d])->render();
+        // ผังพิมพ์แยกตามแผนก (03/11/2569) — ทำแล้ว: CP · แผนกอื่นยังใช้ผังเดิม (order-review-print)
+        $view = self::PRINT_VIEWS[strtoupper(trim((string) $r->Company))] ?? 'order.order-review-print';
+        $html = view($view, ['d' => $d])->render();
 
         $mpdf = new Mpdf([
             'mode'          => 'utf-8',
-            'format'        => 'A5-L',
+            // A4 แนวตั้ง — แบบฟอร์ม (210 × 148 มม.) อยู่ครึ่งบนของแผ่น (ผู้ใช้สั่ง 03/11/2569)
+            'format'        => 'A4',
             'margin_left'   => 0,
             'margin_right'  => 0,
             'margin_top'    => 0,
