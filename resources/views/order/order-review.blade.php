@@ -181,7 +181,7 @@
             Swal.fire({ icon: 'warning', title: 'ไม่มีรายการให้พิมพ์', target: '#orderReviewModal', heightAuto: false });
             return;
         }
-        // พิมพ์ในหน้าเดิมผ่าน iframe ซ่อน ไม่เปิดแท็บใหม่ (ผู้ใช้สั่ง 03/11/2569 — แพทเทิร์นเดียวกับปุ่มพิมพ์ใบเสนอราคา)
+        // พิมพ์ในหน้าเดิมผ่าน iframe ซ่อน ไม่เปิดแท็บใหม่ (ผู้ใช้สั่ง 03/11/2569 — เคยเปลี่ยนเป็นเปิดแท็บใหม่ชั่วคราวตอนจูนตำแหน่ง)
         var frame = document.getElementById('orvPrintFrame');
         if (!frame) {
             frame = document.createElement('iframe');
