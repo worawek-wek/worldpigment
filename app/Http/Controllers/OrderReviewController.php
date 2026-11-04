@@ -160,7 +160,7 @@ class OrderReviewController extends Controller
         $view = self::PRINT_VIEWS[strtoupper(trim((string) $r->Company))] ?? 'order.order-review-print';
         $html = view($view, ['d' => $d])->render();
 
-        $mpdf = new Mpdf([
+        $config = [
             'mode'          => 'utf-8',
             // A4 แนวตั้ง — แบบฟอร์ม (210 × 148 มม. = A5 แนวนอน) อยู่ครึ่งบนของแผ่น เพราะตอนสั่งพิมพ์ผู้ใช้เลือกกระดาษ A4 (ผู้ใช้ยืนยัน 03/11/2569)
             'format'        => 'A4',
@@ -170,10 +170,25 @@ class OrderReviewController extends Controller
             'margin_bottom' => 0,
             'margin_header' => 0,
             'margin_footer' => 0,
-        ]);
+        ];
+
+        // ผัง CP ใช้ฟอนต์ BrowalliaUPC ทั้งหมด (ผู้ใช้สั่ง 04/11/2569 — เลิกใช้ Tahoma แล้ว) — ไฟล์อยู่ resources/fonts/ (ต้องอัพขึ้น server ด้วย)
+        // browalliaupc-*.ttf แตกจาก C:\Windows\Fonts\browalia.ttc (หน้า 5 / 6) เพราะ mPDF 8 อ่าน TTCfontID ผิด (ได้หน้า 1 ทุก style)
+        $customFonts = $view === 'order.order-review-print-cp';
+        if ($customFonts) {
+            $defaultConfig     = (new \Mpdf\Config\ConfigVariables())->getDefaults();
+            $defaultFontConfig = (new \Mpdf\Config\FontVariables())->getDefaults();
+            $config['fontDir']  = array_merge($defaultConfig['fontDir'], [resource_path('fonts')]);
+            $config['fontdata'] = $defaultFontConfig['fontdata'] + [
+                'browalliaupc' => ['R' => 'browalliaupc-regular.ttf', 'B' => 'browalliaupc-bold.ttf', 'useOTL' => 0xFF],
+            ];
+        }
+
+        $mpdf = new Mpdf($config);
         $mpdf->autoScriptToLang = true;
-        $mpdf->autoLangToFont   = true;
-        $mpdf->SetFont('sarabun');
+        // ฟอนต์ที่ลงทะเบียนเองมีอักษรไทยในตัว — ปิด autoLangToFont ไม่งั้น mPDF สลับข้อความไทยไปฟอนต์ garuda เอง
+        $mpdf->autoLangToFont   = !$customFonts;
+        $mpdf->SetFont($customFonts ? 'browalliaupc' : 'sarabun');
         $mpdf->WriteHTML($html);
 
         return response($mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200, [
