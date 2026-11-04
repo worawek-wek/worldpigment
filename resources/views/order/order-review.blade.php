@@ -181,7 +181,10 @@
             Swal.fire({ icon: 'warning', title: 'ไม่มีรายการให้พิมพ์', target: '#orderReviewModal', heightAuto: false });
             return;
         }
-        // พิมพ์ในหน้าเดิมผ่าน iframe ซ่อน ไม่เปิดแท็บใหม่ (ผู้ใช้สั่ง 03/11/2569 — เคยเปลี่ยนเป็นเปิดแท็บใหม่ชั่วคราวตอนจูนตำแหน่ง)
+        // เปิด PDF ในแท็บใหม่ (ผู้ใช้สั่ง 04/11/2569) — ทางเดิมพิมพ์ผ่าน iframe ซ่อน คอมเมนต์ไว้ด้านล่าง
+        window.open(ORV_PRINT_URL + '?' + $.param({ orderno: r.orderno, runno: r.runno, _: Date.now() }), '_blank');
+        return;
+
         var frame = document.getElementById('orvPrintFrame');
         if (!frame) {
             frame = document.createElement('iframe');
