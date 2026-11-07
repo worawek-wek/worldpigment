@@ -35,15 +35,19 @@
                                 <i class="ti ti-file-type-pdf me-1"></i>Export PDF
                             </button>
                         </div>
+                        {{-- แถบหัว: ปุ่มพับ/กางตัวกรอง + ล้างตัวกรอง — ค่าเริ่มต้นคือ "ซ่อนไว้" (07/11/2569) --}}
+                        @include('production-planning.partials.filter-toggle', ['box' => 'plFilterBox'])
+                        <div class="collapse" id="plFilterBox">
+                        <div class="pt-3">
                         <div class="row g-3 align-items-end">
                             <div class="col-md-4">
                                 <label class="form-label mb-1 small text-muted">ค้นหา</label>
-                                <input id="searchInput" type="text" class="form-control"
+                                <input id="searchInput" data-fl-label="ค้นหา" type="text" class="form-control"
                                     placeholder="ค้นหา Item No., แผนกที่ใช้, เลขที่ใบเบิก Red Bill (งาน), Item No. (งาน), Order No., แผนกที่ผลิต">
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label mb-1 small text-muted">แผนก</label>
-                                <select id="searchCompany" class="form-select">
+                                <select id="searchCompany" class="form-select" data-fl-label="แผนก">
                                     <option value="">ทุกแผนก</option>
                                     @foreach ($companies as $company)
                                         <option value="{{ $company }}">{{ $company }}</option>
@@ -52,7 +56,7 @@
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label mb-1 small text-muted">สถานะ</label>
-                                <select id="searchStatus" class="form-select">
+                                <select id="searchStatus" class="form-select" data-fl-label="สถานะ" data-fl-default="request">
                                     <option value="">ทุกสถานะ</option>
                                     <option value="request" selected>รออนุมัติ</option>
                                     <option value="approved">อนุมัติแล้ว</option>
@@ -72,11 +76,11 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label mb-1 small text-muted">วันที่เริ่ม</label>
-                                <input id="searchDateStart" type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
+                                <input id="searchDateStart" data-fl-label="ตั้งแต่" data-fl-prefix="#searchDateField" type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label mb-1 small text-muted">ถึง</label>
-                                <input id="searchDateEnd" type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
+                                <input id="searchDateEnd" data-fl-label="ถึง" data-fl-prefix="#searchDateField" type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
                             </div>
                             <div class="col-md-2">
                                 <button id="btn_clear_date" type="button" class="btn btn-outline-secondary w-100">
@@ -84,6 +88,9 @@
                                 </button>
                             </div>
                         </div>
+                        </div>
+                        </div>
+                        {{-- /#plFilterBox --}}
                     </div>
 
                     <div class="card-header">
@@ -133,6 +140,7 @@
 @endsection
 
 @section('script')
+@include('production-planning.partials.filter-toggle-js')
 <script>
     var oTable;
     // instance flatpickr ของช่องวันที่ (ใช้ clear ตอนกดล้าง)
@@ -216,6 +224,23 @@
         if (fpDateStart) fpDateStart.clear(false); else $('#searchDateStart').val('');
         if (fpDateEnd)   fpDateEnd.clear(false);   else $('#searchDateEnd').val('');
         oTable.draw();
+    });
+
+    // แถบตัวกรองแบบพับได้ — ปุ่ม "ล้างตัวกรอง" บนแถบหัวคืนทุกช่องเป็นค่าเริ่มต้น (สถานะ = รออนุมัติ) แล้ว draw ครั้งเดียว (07/11/2569)
+    $(function () {
+        plInitFilterToggle({
+            box: '#plFilterBox',
+            table: '#dataTable',
+            reset: function () {
+                $('#searchInput').val('');
+                $('#searchCompany').val('');
+                $('#searchStatus').val('request');
+                $('#searchDateField').val('created_at');
+                if (fpDateStart) fpDateStart.clear(false); else $('#searchDateStart').val('');
+                if (fpDateEnd)   fpDateEnd.clear(false);   else $('#searchDateEnd').val('');
+                oTable.draw();
+            }
+        });
     });
 
     // ---- Export Excel: ส่งเงื่อนไขค้นหาปัจจุบันไปที่ endpoint แล้วให้เบราว์เซอร์ดาวน์โหลด ----

@@ -44,15 +44,20 @@
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header">
+                    {{-- หัวการ์ด: ปุ่มพับ/กางเงื่อนไขการค้นหา + ล้างตัวกรอง — ค่าเริ่มต้นคือ "ซ่อนไว้" (07/11/2569) --}}
+                    <div class="card-header d-flex align-items-center flex-wrap gap-3">
                         <h5 class="mb-0"><i class="ti ti-filter me-1"></i>เงื่อนไขการค้นหา</h5>
+                        <div class="flex-grow-1">
+                            @include('production-planning.partials.filter-toggle', ['box' => 'plFilterBox'])
+                        </div>
                     </div>
+                    <div class="collapse" id="plFilterBox">
                     <div class="card-body">
                         <div class="row g-3 align-items-end">
                             {{-- แผนก --}}
                             <div class="col-md-4">
                                 <label class="form-label mb-1 small text-muted">แผนก</label>
-                                <select id="searchDept" class="form-select">
+                                <select id="searchDept" class="form-select" data-fl-label="แผนก">
                                     <option value="">-- ทุกแผนก --</option>
                                     @foreach($departments as $department)
                                         <option value="{{ $department->name }}">{{ $department->name }}</option>
@@ -71,6 +76,8 @@
                             </div>
                         </div>
                     </div>
+                    </div>
+                    {{-- /#plFilterBox --}}
                 </div>
             </div>
         </div>
@@ -106,6 +113,7 @@
 @endsection
 
 @section('script')
+@include('production-planning.partials.filter-toggle-js')
 <script>
     var URL_MS_TABLE = '{{ route('production.report.material-shortage.table') }}';
     var URL_MS_EXCEL = '{{ route('production.report.material-shortage.excel') }}';
@@ -201,6 +209,14 @@
     $('#btn_clear').on('click', function () {
         $('#searchDept').val('');
         loadReport();
+    });
+
+    // แถบเงื่อนไขการค้นหาแบบพับได้ — ปุ่ม "ล้างตัวกรอง" บนหัวการ์ดใช้ปุ่มล้าง (#btn_clear) เดิมของหน้า (07/11/2569)
+    $(function () {
+        plInitFilterToggle({
+            box: '#plFilterBox',
+            reset: function () { $('#btn_clear').trigger('click'); }
+        });
     });
 </script>
 @endsection

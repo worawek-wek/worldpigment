@@ -513,6 +513,11 @@ class SemiPigmentController extends Controller
      */
     public function standaloneStore(Request $request)
     {
+        // ปุ่ม "สร้างแผน" ในหน้าวางแผน — role Sale / MK Admin ใช้ไม่ได้ (07/11/2569)
+        if (\App\Services\AccessControl::isPlanningReadOnly()) {
+            return response()->json(["status" => false, "message" => "สิทธิ์ของคุณดูแผนการผลิตได้อย่างเดียว ไม่สามารถสร้างแผนได้"], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'itemno' => 'required|string|max:255',
         ]);

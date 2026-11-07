@@ -20,9 +20,26 @@ use App\Models\PlanningProdMethod;
 use App\Models\PlanningPacking;
 use App\Models\PlanningWarehouse;
 use App\Services\HolidayService;
+use App\Services\AccessControl;
 
 class ProductionPlanController extends Controller
 {
+    /**
+     * กันการสร้าง/แก้ไขแผนของ role ที่ดูได้อย่างเดียว (Emp::PLANNING_READONLY_ROLES) — 07/11/2569
+     * คืน response 403 เมื่อไม่มีสิทธิ์ · null = ผ่าน
+     */
+    private function denyPlanningWrite()
+    {
+        if (!AccessControl::isPlanningReadOnly()) {
+            return null;
+        }
+
+        return response()->json([
+            "status"  => false,
+            "message" => "สิทธิ์ของคุณดูแผนการผลิตได้อย่างเดียว ไม่สามารถสร้างหรือแก้ไขแผนได้",
+        ], 403);
+    }
+
     public function index()
     {
         $departments = Department::where('is_active', 'Y')
@@ -35,12 +52,15 @@ class ProductionPlanController extends Controller
             // ในช่องวันที่ของ modal "สร้างแผน (Semi)" ที่อยู่บนหน้านี้ (เปิดได้โดยไม่ต้องเปิดฟอร์มแก้ไข Item ก่อน)
             'holidays'    => HolidayService::activeMap(),
             'weekly_off'  => HolidayService::weeklyOff(),
+            // role Sale / MK Admin = ซ่อนปุ่ม "สร้างแผน" (07/11/2569)
+            'planning_read_only' => AccessControl::isPlanningReadOnly(),
         ]);
     }
 
     public function datatable()
     {
         $data = $this->dataQuery();
+        $readOnly = AccessControl::isPlanningReadOnly();
 
         return DataTables::of($data)
             // # ใช้ DT_RowIndex จาก addIndexColumn() — เรียงตามลำดับที่แสดงจริง (รองรับ sort + pagination)
@@ -89,13 +109,18 @@ class ProductionPlanController extends Controller
 
                 return $text.'<br>'.$end_job_badge;
             })
-            ->addColumn('btnedit', function($row) {
+            ->addColumn('btnedit', function($row) use ($readOnly) {
                 $btn_view = '<button class="btn btn-sm btn-icon btn-info me-2 btn_view" data-planning_id="'.$row->id.'" title ="ลบ">
                     <i class="ti ti-eye text-white ti-sm"></i>
                 </button>';
                 $btn_edit = '<button class="btn btn-sm btn-icon btn-warning me-2 btn_edit" data-planning_id="'.$row->id.'" title ="แก้ไข">
                     <i class="ti ti-pencil text-white ti-sm"></i>
                 </button>';
+
+                // role Sale / MK Admin ดูได้อย่างเดียว — ไม่มีปุ่มแก้ไข (07/11/2569)
+                if ($readOnly) {
+                    return "";
+                }
 
                 // return $btn_view.$btn_edit;
                 return $btn_edit;
@@ -374,6 +399,11 @@ class ProductionPlanController extends Controller
 
     public function edit()
     {
+        // role Sale / MK Admin ดูหน้าวางแผนได้อย่างเดียว (07/11/2569)
+        if ($deny = $this->denyPlanningWrite()) {
+            return $deny;
+        }
+
         $planning_id = request('planning_id');
         $planning_header_id = request('planning_header_id');
 
@@ -406,6 +436,11 @@ class ProductionPlanController extends Controller
 
     public function editItem()
     {
+        // role Sale / MK Admin ดูหน้าวางแผนได้อย่างเดียว (07/11/2569)
+        if ($deny = $this->denyPlanningWrite()) {
+            return $deny;
+        }
+
         $planning_id        = request('planning_id');
         $planning_header_id = request('planning_header_id');
 
@@ -695,6 +730,11 @@ class ProductionPlanController extends Controller
 
     public function saveItem(Request $request)
     {
+        // role Sale / MK Admin ดูหน้าวางแผนได้อย่างเดียว (07/11/2569)
+        if ($deny = $this->denyPlanningWrite()) {
+            return $deny;
+        }
+
         // ช่องตัวเลขในฟอร์มแสดงผลด้วย number_format จึงอาจมีจุลภาคหลักพัน (เช่น "1,250.00")
         // ตัดจุลภาคออกก่อน validate ไม่งั้น rule numeric จะไม่ผ่าน
         // หมายเหตุ: weight_packing ย้ายไปเป็น array (ตารางลูก tb_planning_packing) — ตัดคอมมาใน syncPackings แทน
@@ -974,6 +1014,11 @@ class ProductionPlanController extends Controller
      */
     public function updateItemStatus(Request $request)
     {
+        // role Sale / MK Admin ดูหน้าวางแผนได้อย่างเดียว (07/11/2569)
+        if ($deny = $this->denyPlanningWrite()) {
+            return $deny;
+        }
+
         $validator = Validator::make($request->all(), [
             'planning_id'    => 'required|integer|exists:tb_planning,id',
             'status'         => 'nullable|string|max:255',
@@ -1270,6 +1315,11 @@ class ProductionPlanController extends Controller
      */
     public function saveEndOrder(Request $request)
     {
+        // role Sale / MK Admin ดูหน้าวางแผนได้อย่างเดียว (07/11/2569)
+        if ($deny = $this->denyPlanningWrite()) {
+            return $deny;
+        }
+
         $validator = Validator::make($request->all(), [
             'planning_header_id' => 'required|exists:tb_planning_header,id',
             'end_order'          => 'required|in:Y,N',
@@ -1324,6 +1374,11 @@ class ProductionPlanController extends Controller
      */
     public function saveEndClose(Request $request)
     {
+        // role Sale / MK Admin ดูหน้าวางแผนได้อย่างเดียว (07/11/2569)
+        if ($deny = $this->denyPlanningWrite()) {
+            return $deny;
+        }
+
         $validator = Validator::make($request->all(), [
             'planning_header_id' => 'required|exists:tb_planning_header,id',
             'end_close'          => 'required|in:Y,N',

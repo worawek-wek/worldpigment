@@ -27,13 +27,17 @@
                 <div class="card">
 
                     <div class="card-header">
+                        {{-- แถบหัว: ปุ่มพับ/กางตัวกรอง + ล้างตัวกรอง — ค่าเริ่มต้นคือ "ซ่อนไว้" (07/11/2569) --}}
+                        @include('production-planning.partials.filter-toggle', ['box' => 'plFilterBox'])
+                        <div class="collapse" id="plFilterBox">
+                        <div class="pt-3">
                         <div class="row g-3 align-items-center">
                             <div class="col-md-3">
-                                <input id="searchInput" type="text" class="form-control"
+                                <input id="searchInput" data-fl-label="ค้นหา" type="text" class="form-control"
                                 placeholder="ค้นหาเลขที่ใบสั่งซื้อ, รหัสลูกค้า, ขื่อลูกค้า, Item No.">
                             </div>
                             <div class="col-md-2">
-                                <select id="searchCompany" class="form-select">
+                                <select id="searchCompany" class="form-select" data-fl-label="แผนก">
                                     <option value="">ทุกแผนก</option>
                                     @foreach($departments as $department)
                                         <option value="{{ $department->name }}">{{ $department->name }}</option>
@@ -42,7 +46,7 @@
                             </div>
                             <div class="col-md-2">
                                 {{-- กรองสถานะแผนการผลิต (has_plan) — 26/10/2569 แทน dropdown mockup เดิม --}}
-                                <select id="searchPlanStatus" class="form-select">
+                                <select id="searchPlanStatus" class="form-select" data-fl-label="แผนการผลิต">
                                     <option value="">ทุกสถานะ</option>
                                     <option value="created">สร้างแล้ว</option>
                                     <option value="not_created">ยังไม่สร้าง</option>
@@ -50,10 +54,13 @@
                             </div>
                             <div class="col-md-2">
                                 {{-- กรองวันที่สั่ง (morder.Mdate) ทั้งวัน — 26/10/2569 · flatpickr แสดง d/m/Y ค่าจริงเป็น Y-m-d --}}
-                                <input type="text" id="searchMdate"
+                                <input type="text" id="searchMdate" data-fl-label="วันที่สั่ง"
                                     class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป">
                             </div>
                         </div>
+                        </div>
+                        </div>
+                        {{-- /#plFilterBox --}}
                     </div>
 
                     <div class="card-header">
@@ -109,6 +116,7 @@
 @endsection
 
 @section('script')
+@include('production-planning.partials.filter-toggle-js')
 <script>
 
     var oTable;
@@ -165,6 +173,22 @@
             },
             initComplete: function(settings, json) {
                 console.log('DataTable loaded');
+            }
+        });
+    });
+
+    // แถบตัวกรองแบบพับได้ — ปุ่มล้างตัวกรองล้างทุกช่องแล้ว draw ครั้งเดียว (07/11/2569)
+    $(function () {
+        plInitFilterToggle({
+            box: '#plFilterBox',
+            table: '#dataTable',
+            reset: function () {
+                $('#searchInput').val('');
+                $('#searchCompany').val('');
+                $('#searchPlanStatus').val('');
+                var mdate = document.getElementById('searchMdate');
+                if (mdate && mdate._flatpickr) mdate._flatpickr.clear(false); else $('#searchMdate').val('');
+                oTable.draw();
             }
         });
     });

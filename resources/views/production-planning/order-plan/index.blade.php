@@ -40,20 +40,24 @@
                 <div class="card">
 
                     <div class="card-header">
+                        {{-- แถบหัว: ปุ่มพับ/กางตัวกรอง + ล้างตัวกรอง — ค่าเริ่มต้นคือ "ซ่อนไว้" (07/11/2569) --}}
+                        @include('production-planning.partials.filter-toggle', ['box' => 'plFilterBox'])
+                        <div class="collapse" id="plFilterBox">
+                        <div class="pt-3">
                         {{-- แถวที่ 1: ค้นหาข้อความ + แผนก + สถานะปิดงาน --}}
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <label class="form-label small mb-1">ค้นหา</label>
-                                <input id="searchInput" type="text" class="form-control"
+                                <input id="searchInput" data-fl-label="ค้นหา" type="text" class="form-control"
                                 placeholder="รหัส Order, รหัสลูกค้า, ชื่อลูกค้า, Item No., ชื่อพนักงานผู้รับผิดชอบ">
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label small mb-1">รหัส Sale</label>
-                                <input id="searchSaleno" type="text" class="form-control" placeholder="saleno">
+                                <input id="searchSaleno" data-fl-label="รหัส Sale" type="text" class="form-control" placeholder="saleno">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label small mb-1">แผนก</label>
-                                <select id="searchCompany" class="form-select">
+                                <select id="searchCompany" class="form-select" data-fl-label="แผนก">
                                     <option value="">ทุกแผนก</option>
                                     @foreach($departments as $department)
                                         <option value="{{ $department->name }}">{{ $department->name }}</option>
@@ -63,7 +67,7 @@
                             {{-- สถานะปิดงาน (อ้างอิงคอลัมน์ end_order ของ tb_planning_header) — ค่าเริ่มต้น: ยังไม่ปิดงาน --}}
                             <div class="col-md-3">
                                 <label class="form-label small mb-1">สถานะปิดorder</label>
-                                <select id="searchEndOrder" class="form-select">
+                                <select id="searchEndOrder" class="form-select" data-fl-label="สถานะปิด order" data-fl-default="N">
                                     {{-- ใช้ค่า 'all' (ไม่ใช่ค่าว่าง) เพื่อไม่ให้ backend เข้าใจผิดว่าไม่ได้ส่งค่ามา แล้วตกไปใช้ค่าเริ่มต้น --}}
                                     <option value="all">ทั้งหมด</option>
                                     <option value="Y">ปิดงาน</option>
@@ -76,23 +80,22 @@
                             <div class="col-md-4">
                                 <label class="form-label small mb-1">Inplan (วันเริ่ม – สิ้นสุด)</label>
                                 <div class="d-flex gap-1">
-                                    <input id="inplanStart" type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" title="Inplan เริ่ม">
-                                    <input id="inplanEnd" type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" title="Inplan สิ้นสุด">
+                                    <input id="inplanStart" data-fl-label="Inplan ตั้งแต่" type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" title="Inplan เริ่ม">
+                                    <input id="inplanEnd" data-fl-label="Inplan ถึง" type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" title="Inplan สิ้นสุด">
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label small mb-1">Custwant (วันเริ่ม – สิ้นสุด)</label>
                                 <div class="d-flex gap-1">
-                                    <input id="custwantStart" type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" title="Custwant เริ่ม">
-                                    <input id="custwantEnd" type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" title="Custwant สิ้นสุด">
+                                    <input id="custwantStart" data-fl-label="Custwant ตั้งแต่" type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" title="Custwant เริ่ม">
+                                    <input id="custwantEnd" data-fl-label="Custwant ถึง" type="text" class="form-control flatpickr-date" autocomplete="off" placeholder="วว/ดด/ปปปป" title="Custwant สิ้นสุด">
                                 </div>
                             </div>
-                            <div class="col-md-2 d-flex align-items-end">
-                                <button id="btnClearFilter" type="button" class="btn btn-label-secondary w-100" title="ล้างตัวกรอง">
-                                    <i class="ti ti-eraser"></i>
-                                </button>
-                            </div>
+                            {{-- ปุ่มล้างตัวกรอง (ไอคอนยางลบ) เดิมตรงนี้ ย้ายไปเป็นปุ่ม "ล้างตัวกรอง" บนแถบหัวแล้ว (07/11/2569) --}}
                         </div>
+                        </div>
+                        </div>
+                        {{-- /#plFilterBox --}}
                     </div>
 
                     <div class="card-header">
@@ -132,6 +135,7 @@
 @endsection
 
 @section('script')
+@include('production-planning.partials.filter-toggle-js')
 <script>
 
     var oTable;
@@ -179,8 +183,8 @@
                 { 'className': "text-center col-custwant", data: 'custwant', name: 'custwant' },
                 { 'className': "text-left", data: 'custno', name: 'custno' },
                 { 'className': "text-left", data: 'custname', name: 'custname', searchable: false },
-                { 'className': "text-left", data: 'itemno_list', name: 'itemno_list', orderable: false, searchable: false },
-                { 'className': "text-left", data: 'status_list', name: 'status_list', orderable: false, searchable: false },
+                { 'className': "text-left", data: 'itemno_list', name: 'itemno_list', searchable: false },
+                { 'className': "text-left", data: 'status_list', name: 'status_list', searchable: false },
                 { 'className': "text-center", data: 'item_count', name: 'item_count', searchable: false },
                 { 'className': "text-center", data: 'btnedit', name: 'btnedit', orderable: false, searchable: false },
             ],
@@ -220,8 +224,13 @@
         oTable.draw();
     });
 
+    // แถบตัวกรองแบบพับได้ — ปุ่ม "ล้างตัวกรอง" บนแถบหัวเรียก clearOrderPlanFilters() (07/11/2569)
+    $(function () {
+        plInitFilterToggle({ box: '#plFilterBox', table: '#dataTable', reset: clearOrderPlanFilters });
+    });
+
     // ล้างตัวกรองทั้งหมด
-    $(document).on('click', '#btnClearFilter', function(){
+    function clearOrderPlanFilters(){
         $('#searchInput').val('');
         $('#searchSaleno').val('');
         $('#searchCompany').val('');
@@ -232,7 +241,7 @@
             if (this._flatpickr) this._flatpickr.clear(false); else this.value = '';
         });
         oTable.draw();
-    });
+    }
 
     $(document).on('click', '.btn_view', function(e){
         e.preventDefault();

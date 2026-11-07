@@ -60,15 +60,20 @@
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header">
+                    {{-- หัวการ์ด: ปุ่มพับ/กางเงื่อนไขการค้นหา + ล้างตัวกรอง — ค่าเริ่มต้นคือ "ซ่อนไว้" (07/11/2569) --}}
+                    <div class="card-header d-flex align-items-center flex-wrap gap-3">
                         <h5 class="mb-0"><i class="ti ti-filter me-1"></i>เงื่อนไขการค้นหา</h5>
+                        <div class="flex-grow-1">
+                            @include('production-planning.partials.filter-toggle', ['box' => 'plFilterBox'])
+                        </div>
                     </div>
+                    <div class="collapse" id="plFilterBox">
                     <div class="card-body">
                         <div class="row g-3 align-items-end">
                             {{-- แผนก --}}
                             <div class="col-md-3">
                                 <label class="form-label mb-1 small text-muted">แผนก</label>
-                                <select id="searchDept" class="form-select">
+                                <select id="searchDept" class="form-select" data-fl-label="แผนก">
                                     <option value="">-- ทุกแผนก --</option>
                                     @foreach($departments as $department)
                                         <option value="{{ $department->name }}">{{ $department->name }}</option>
@@ -79,7 +84,7 @@
                             {{-- พนักงาน (โหลดตามแผนกที่เลือก) --}}
                             <div class="col-md-3">
                                 <label class="form-label mb-1 small text-muted">พนักงาน</label>
-                                <select id="searchEmp" class="form-select">
+                                <select id="searchEmp" class="form-select" data-fl-label="พนักงาน">
                                     <option value="">-- ทุกคน --</option>
                                 </select>
                             </div>
@@ -87,7 +92,7 @@
                             {{-- วันที่ (ค่าเริ่มต้น = วันนี้) — flatpickr โชว์ d/m/Y แต่ค่าจริงยังเป็น Y-m-d --}}
                             <div class="col-md-3">
                                 <label class="form-label mb-1 small text-muted">วันที่</label>
-                                <input id="searchDate" type="text" class="form-control flatpickr-date"
+                                <input id="searchDate" data-fl-label="วันที่" data-fl-default="{{ now()->format('Y-m-d') }}" type="text" class="form-control flatpickr-date"
                                     autocomplete="off" placeholder="วว/ดด/ปปปป"
                                     value="{{ now()->format('Y-m-d') }}">
                             </div>
@@ -103,6 +108,8 @@
                             </div>
                         </div>
                     </div>
+                    </div>
+                    {{-- /#plFilterBox --}}
                 </div>
             </div>
         </div>
@@ -138,6 +145,7 @@
 @endsection
 
 @section('script')
+@include('production-planning.partials.filter-toggle-js')
 <script>
     var URL_EMP_OPTIONS = '{{ route('production.report.employee.options') }}';
     var URL_EMP_TABLE   = '{{ route('production.report.employee.table') }}';
@@ -247,6 +255,14 @@
         $('#searchEmp').html('<option value="">-- ทุกคน --</option>').val('');
         if (fpDate) fpDate.setDate(today, false, 'Y-m-d'); else $('#searchDate').val(today);
         loadReport();
+    });
+
+    // แถบเงื่อนไขการค้นหาแบบพับได้ — ปุ่ม "ล้างตัวกรอง" บนหัวการ์ดใช้ปุ่มล้าง (#btn_clear) เดิมของหน้า (07/11/2569)
+    $(function () {
+        plInitFilterToggle({
+            box: '#plFilterBox',
+            reset: function () { $('#btn_clear').trigger('click'); }
+        });
     });
 </script>
 @endsection

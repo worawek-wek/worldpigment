@@ -25,6 +25,10 @@ class Emp extends Authenticatable
     // ชื่อ Role ที่ถือว่าเป็น "พนักงาน QC" — เข้าหน้าตรวจ QC (09/09/2569)
     public const QC_ROLE_NAME = 'QC';
 
+    // Role ที่ดูหน้าวางแผนการผลิต (production-planning/planning) ได้อย่างเดียว
+    // — ไม่มีปุ่ม "สร้างแผน" / "แก้ไข" และ server ตอบ 403 ถ้ายิงตรง (07/11/2569 ตามที่ผู้ใช้สั่ง)
+    public const PLANNING_READONLY_ROLES = ['Sale', 'MK Admin'];
+
     // ไม่ส่งรหัสผ่าน (hash) ออกไปกับ response JSON
     protected $hidden = ['password', 'pwd'];
 
@@ -42,6 +46,14 @@ class Emp extends Authenticatable
         return $this->role_id
             && $this->role
             && $this->role->name === self::QC_ROLE_NAME;
+    }
+
+    // ดูหน้าวางแผนการผลิตได้อย่างเดียว (สร้าง/แก้ไขแผนไม่ได้) หรือไม่ — ดูจากชื่อ role
+    public function isPlanningReadOnly(): bool
+    {
+        return $this->role_id
+            && $this->role
+            && in_array($this->role->name, self::PLANNING_READONLY_ROLES, true);
     }
 
     // ตาราง emp ไม่มีคอลัมน์ remember_token → ปิดการใช้ remember token

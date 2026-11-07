@@ -44,6 +44,14 @@ class AccessControl
         return $account instanceof Emp && $account->isWorker();
     }
 
+    /** ดูหน้าวางแผนการผลิตได้อย่างเดียว (role Sale / MK Admin) — admin ตาราง users ไม่นับ */
+    public static function isPlanningReadOnly(): bool
+    {
+        $account = self::currentAccount();
+
+        return $account instanceof Emp && $account->isPlanningReadOnly();
+    }
+
     /** เป็นพนักงาน QC หรือไม่ */
     public static function isQc(): bool
     {

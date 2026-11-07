@@ -43,36 +43,48 @@
             <div class="col-12 mt-4">
                 <div class="card">
                     <div class="card-header">
-                        <form method="GET" action="{{ route('production.orderchange.index') }}" id="filterForm">
+                        {{-- แถบหัว: ปุ่มพับ/กางตัวกรอง + ล้างตัวกรอง (ค่าเริ่มต้นคือ "ซ่อนไว้") — ปุ่มพิมพ์ PDF ย้ายมาอยู่ข้างแถบ ให้กดได้ตอนพับ (07/11/2569) --}}
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="flex-grow-1">
+                                @include('production-planning.partials.filter-toggle', ['box' => 'plFilterBox'])
+                            </div>
+                            <a href="{{ route('production.orderchange.pdf', ['date_from' => $date_from, 'date_to' => $date_to, 'keyword' => $keyword]) }}"
+                               target="_blank"
+                               class="btn btn-danger btn-sm {{ $rows->isEmpty() ? 'disabled' : '' }}">
+                                <i class="ti ti-file-type-pdf me-1"></i> พิมพ์ PDF
+                            </a>
+                        </div>
+                        <div class="collapse" id="plFilterBox">
+                        <form method="GET" action="{{ route('production.orderchange.index') }}" id="filterForm" class="pt-3">
                             <div class="row g-3 align-items-end">
                                 <div class="col-md-3">
                                     <label class="form-label" for="keyword">ค้นหา</label>
-                                    <input type="text" class="form-control" id="keyword" name="keyword"
+                                    <input type="text" class="form-control" id="keyword" name="keyword" data-fl-label="ค้นหา"
                                            value="{{ $keyword }}"
                                            placeholder="เลขที่ใบทบทวน / รหัสสินค้า / ชื่อลูกค้า">
                                 </div>
+                                {{-- ค่าเริ่มต้นของช่วงวันที่ = วันนี้ (controller) → ไม่นับเป็นการกรอง --}}
                                 <div class="col-md-3">
                                     <label class="form-label" for="date_from">วันที่ปิดจบงาน (จาก)</label>
                                     <input type="text" class="form-control flatpickr-date" id="date_from" name="date_from"
+                                           data-fl-label="วันที่ปิดจบงาน ตั้งแต่" data-fl-default="{{ now()->format('Y-m-d') }}"
                                            autocomplete="off" placeholder="วว/ดด/ปปปป" value="{{ $date_from }}">
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label" for="date_to">ถึง</label>
                                     <input type="text" class="form-control flatpickr-date" id="date_to" name="date_to"
+                                           data-fl-label="ถึง" data-fl-default="{{ now()->format('Y-m-d') }}"
                                            autocomplete="off" placeholder="วว/ดด/ปปปป" value="{{ $date_to }}">
                                 </div>
                                 <div class="col-md-3 text-end">
                                     <button type="submit" class="btn btn-primary">
                                         <i class="ti ti-search me-1"></i> ค้นหา
                                     </button>
-                                    <a href="{{ route('production.orderchange.pdf', ['date_from' => $date_from, 'date_to' => $date_to, 'keyword' => $keyword]) }}"
-                                       target="_blank"
-                                       class="btn btn-danger {{ $rows->isEmpty() ? 'disabled' : '' }}">
-                                        <i class="ti ti-file-type-pdf me-1"></i> พิมพ์ PDF
-                                    </a>
                                 </div>
                             </div>
                         </form>
+                        </div>
+                        {{-- /#plFilterBox --}}
                     </div>
 
                     <div class="card-body">
@@ -131,6 +143,7 @@
 @endsection
 
 @section('script')
+@include('production-planning.partials.filter-toggle-js')
 <script>
     // flatpickr: บังคับช่องวันที่แสดง d/m/Y เหมือนกันทุกเครื่อง แต่ค่าจริง (input.value) ยังเป็น Y-m-d
     // → form GET submit และลิงก์ PDF ยังส่ง Y-m-d ให้ server เหมือนเดิม ไม่ต้องแก้ฝั่ง PHP
@@ -162,5 +175,11 @@
         });
     });
 @endif
+
+    // แถบตัวกรองแบบพับได้ — ปุ่ม "ล้างตัวกรอง" = เปิดหน้าใหม่โดยไม่ส่งเงื่อนไข (ช่วงวันที่กลับเป็นวันนี้) (07/11/2569)
+    plInitFilterToggle({
+        box: '#plFilterBox',
+        reset: function () { window.location.href = '{{ route('production.orderchange.index') }}'; }
+    });
 </script>
 @endsection

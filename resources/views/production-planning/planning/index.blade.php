@@ -42,10 +42,13 @@
                     <div class="card-header">
                         <div class="row g-3 align-items-center">
                             <div class="col-md-12 d-flex justify-content-end gap-2">
+                                {{-- role Sale / MK Admin ดูได้อย่างเดียว — ไม่มีปุ่มสร้างแผน (07/11/2569) --}}
+                                @unless($planning_read_only ?? false)
                                 <button class="btn btn-primary" id="btn_add">
                                     <i class="ti ti-plus me-1"></i>
                                     สร้างแผน
                                 </button>
+                                @endunless
                                 <button class="btn btn-success" id="btn_export_excel">
                                     <i class="ti ti-file-spreadsheet me-1"></i>
                                     Export Excel
@@ -56,17 +59,23 @@
                                 </button>
                             </div>
                         </div>
+                        {{-- แถบหัว: ปุ่มพับ/กางตัวกรอง + ล้างตัวกรอง — ค่าเริ่มต้นคือ "ซ่อนไว้" (07/11/2569) --}}
+                        <div class="mt-3">
+                            @include('production-planning.partials.filter-toggle', ['box' => 'plFilterBox'])
+                        </div>
+                        <div class="collapse" id="plFilterBox">
+                        <div class="pt-3">
                         {{-- แถวที่ 1: ค้นหาข้อความ + แผนก + สถานะ --}}
                         <div class="row g-3 align-items-end">
                             <div class="col-md-4">
                                 <label class="form-label mb-1 small text-muted">ค้นหา</label>
-                                <input id="searchInput" type="text" class="form-control"
+                                <input id="searchInput" data-fl-label="ค้นหา" type="text" class="form-control"
                                 placeholder="ค้นหาเลขที่ใบสั่งซื้อ, รหัสลูกค้า, Item No., เลขที่ใบเบิก (Red Bill), ชื่อพนักงานผู้รับผิดชอบ">
                             </div>
                             {{-- สถานะปิดงาน (อ้างอิงคอลัมน์ end_job ของ tb_planning) — ค่าเริ่มต้น: ยังไม่ปิดงาน --}}
                             <div class="col-md-2">
                                 <label class="form-label mb-1 small text-muted">สถานะปิดงาน</label>
-                                <select id="searchEndJob" class="form-select">
+                                <select id="searchEndJob" class="form-select" data-fl-label="สถานะปิดงาน" data-fl-default="N">
                                     {{-- ใช้ค่า 'all' (ไม่ใช่ค่าว่าง) เพื่อไม่ให้ backend เข้าใจผิดว่าไม่ได้ส่งค่ามา แล้วตกไปใช้ค่าเริ่มต้น --}}
                                     <option value="all">ทั้งหมด</option>
                                     <option value="Y">ปิดงาน</option>
@@ -75,7 +84,7 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label mb-1 small text-muted">แผนก</label>
-                                <select id="searchCompany" class="form-select">
+                                <select id="searchCompany" class="form-select" data-fl-label="แผนก">
                                     <option value="">ทุกแผนก</option>
                                     @foreach($departments as $department)
                                         <option value="{{ $department->name }}">{{ $department->name }}</option>
@@ -85,7 +94,7 @@
                             <div class="col-md-3">
                                 <label class="form-label mb-1 small text-muted">สถานะ</label>
                                 {{-- สถานะจะโหลดตามแผนกที่เลือก (อ้างอิงความสัมพันธ์แผนก↔สถานะในฐานข้อมูล) --}}
-                                <select id="searchStatus" class="form-select" disabled>
+                                <select id="searchStatus" class="form-select" data-fl-label="สถานะ" disabled>
                                     <option value="">ทุกสถานะ</option>
                                 </select>
                             </div>
@@ -101,12 +110,12 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label mb-1 small text-muted">วันที่เริ่ม</label>
-                                <input id="searchDateStart" type="text" class="form-control flatpickr-date"
+                                <input id="searchDateStart" data-fl-label="ตั้งแต่" data-fl-prefix="#searchDateField" type="text" class="form-control flatpickr-date"
                                     autocomplete="off" placeholder="วว/ดด/ปปปป">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label mb-1 small text-muted">วันที่สิ้นสุด</label>
-                                <input id="searchDateEnd" type="text" class="form-control flatpickr-date"
+                                <input id="searchDateEnd" data-fl-label="ถึง" data-fl-prefix="#searchDateField" type="text" class="form-control flatpickr-date"
                                     autocomplete="off" placeholder="วว/ดด/ปปปป">
                             </div>
                             <div class="col-md-2">
@@ -120,16 +129,16 @@
                         <div class="row g-3 align-items-end mt-1">
                             <div class="col-md-4">
                                 <label class="form-label mb-1 small text-muted">วันที่บรรจุ (Packing)</label>
-                                <input id="searchPackingDate" type="text" class="form-control flatpickr-date"
+                                <input id="searchPackingDate" data-fl-label="วันที่บรรจุ" type="text" class="form-control flatpickr-date"
                                     autocomplete="off" placeholder="วว/ดด/ปปปป">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label mb-1 small text-muted">เวลาเริ่ม</label>
-                                <input id="searchPackingTimeStart" type="text" class="form-control" autocomplete="off">
+                                <input id="searchPackingTimeStart" data-fl-label="เวลาบรรจุ ตั้งแต่" type="text" class="form-control" autocomplete="off">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label mb-1 small text-muted">เวลาสิ้นสุด</label>
-                                <input id="searchPackingTimeEnd" type="text" class="form-control" autocomplete="off">
+                                <input id="searchPackingTimeEnd" data-fl-label="เวลาบรรจุ ถึง" type="text" class="form-control" autocomplete="off">
                             </div>
                             <div class="col-md-2">
                                 <button id="btn_clear_packing" type="button" class="btn btn-outline-secondary w-100">
@@ -137,6 +146,9 @@
                                 </button>
                             </div>
                         </div>
+                        </div>
+                        </div>
+                        {{-- /#plFilterBox --}}
                     </div>
 
                     <div class="card-header">
@@ -245,6 +257,7 @@
 @endsection
 
 @section('script')
+@include('production-planning.partials.filter-toggle-js')
 <script>
 
     var oTable;
@@ -412,6 +425,29 @@
     $(document).on('keyup', '#searchInput', function(e){
         e.preventDefault();
         oTable.draw();
+    });
+
+    // แถบตัวกรองแบบพับได้ — ปุ่ม "ล้างตัวกรอง" บนแถบหัวล้างทุกช่องกลับเป็นค่าเริ่มต้น แล้ว draw ครั้งเดียว (07/11/2569)
+    // (ปุ่ม "ล้างวันที่" / "ล้างวันบรรจุ" ในกล่องตัวกรองยังใช้ได้เหมือนเดิม)
+    $(function () {
+        plInitFilterToggle({
+            box: '#plFilterBox',
+            table: '#dataTable',
+            reset: function () {
+                $('#searchInput').val('');
+                $('#searchEndJob').val('N');
+                $('#searchCompany').val('');
+                $('#searchStatus').prop('disabled', true).html('<option value="">ทุกสถานะ</option>');
+                $('#searchDateField').val('inplan');
+                // clear(false) = ไม่ยิง change → กัน redraw ซ้ำ
+                [fpDateStart, fpDateEnd, fpPacking, fpPackingTimeStart, fpPackingTimeEnd].forEach(function (fp) {
+                    if (fp) fp.clear(false);
+                });
+                $('#searchDateStart, #searchDateEnd, #searchPackingDate, #searchPackingTimeStart, #searchPackingTimeEnd').val('');
+                clearTimeout(packingTimeTimer);
+                oTable.draw();
+            }
+        });
     });
 
     // ---- Export Excel / PDF ----

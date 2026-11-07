@@ -69,6 +69,9 @@ class OrderPlanController extends Controller
             ->orderColumn('inplan', $this->maxInplanSql() . ' $1')
             ->orderColumn('custname', $this->custnameSql() . ' $1')
             ->orderColumn('item_count', $this->itemCountSql() . ' $1')
+            // Item No / สถานะ (07/11/2569) — แถวที่ไม่มีค่าไปท้ายสุดเสมอ (ทั้ง asc/desc)
+            ->orderColumn('itemno_list', '(' . $this->itemnoSortSql() . ' IS NULL), ' . $this->itemnoSortSql() . ' $1')
+            ->orderColumn('status_list', '(' . $this->statusSortSql() . ' IS NULL), ' . $this->statusSortSql() . ' $1')
             ->rawColumns(['status_list', 'btnedit'])
             ->make(true);
     }
@@ -87,6 +90,26 @@ class OrderPlanController extends Controller
     private function itemCountSql(): string
     {
         return '(SELECT COUNT(*) FROM tb_planning p WHERE p.planning_header_id = tb_planning_header.id)';
+    }
+
+    /**
+     * คีย์ sort ของคอลัมน์ Item No = itemno ของรายการตรงของ Order เรียงตาม id
+     * (ลำดับเดียวกับที่แสดง — ที่แสดงตัดตัวซ้ำ คีย์ sort ไม่ตัด) · ไม่มีรายการ = NULL
+     */
+    private function itemnoSortSql(): string
+    {
+        return "(SELECT GROUP_CONCAT(TRIM(p.itemno) ORDER BY p.id SEPARATOR ', ') FROM tb_planning p"
+            . " WHERE p.planning_header_id = tb_planning_header.id AND TRIM(p.itemno) <> '')";
+    }
+
+    /**
+     * คีย์ sort ของคอลัมน์สถานะ = planning_status ของรายการตรงของ Order เรียงตาม id
+     * (ไม่นับสถานะใน sub plan semi/pigment — แต่สถานะตัวแรกตรงกับตัวแรกที่แสดงเสมอ)
+     */
+    private function statusSortSql(): string
+    {
+        return "(SELECT GROUP_CONCAT(TRIM(p.planning_status) ORDER BY p.id SEPARATOR ', ') FROM tb_planning p"
+            . " WHERE p.planning_header_id = tb_planning_header.id AND TRIM(p.planning_status) <> '')";
     }
 
     /**
