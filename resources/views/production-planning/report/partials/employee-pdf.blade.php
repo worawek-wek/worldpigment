@@ -82,12 +82,12 @@
                 {{-- ผู้ทวนสอบ/เวลา --}}
                 <tr>
                     <td class="rowlabel">ผู้ทวนสอบ/เวลา</td>
-                    <td class="signcell" colspan="{{ count($slots) }}"></td>
+                    @foreach($slots as $slot)<td class="signcell"></td>@endforeach
                 </tr>
                 {{-- ผู้ผลิต --}}
                 <tr>
                     <td class="rowlabel">ผู้ผลิต</td>
-                    <td class="signcell" colspan="{{ count($slots) }}"></td>
+                    @foreach($slots as $slot)<td class="signcell"></td>@endforeach
                 </tr>
                 @if(!empty($group['unscheduled']))
                     @foreach($group['unscheduled'] as $u)

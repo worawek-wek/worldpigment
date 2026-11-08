@@ -172,7 +172,9 @@ class OrderChangeRequestController extends Controller
                     'orderno'       => $h->orderno,
                     'red_bill_code' => $rep->red_bill_code, // เลขที่ใบทบทวนคำสั่งซื้อ: จาก tb_planning ของแถวตัวแทน
                     'due_original'  => $due_original,    // กำหนดเสร็จเดิม: วันที่ล่าสุดใน senddate_log (null = ไม่เคยเปลี่ยน)
-                    'due_postpone'  => $rep->senddate,   // ขอเลื่อนเป็นวันที่: senddate ปัจจุบันของแถวตัวแทน
+                    // ขอเลื่อนเป็นวันที่: senddate ปัจจุบันของแถวตัวแทน — เฉพาะเมื่อเคยเลื่อนจริง (มีกำหนดเสร็จเดิม)
+                    // ไม่เคยเลื่อน = null (แสดง "-") ไม่งั้น senddate ที่ไม่ได้เลื่อนจะดูเหมือนวันที่ขอเลื่อน (08/11/2569 ตามที่ผู้ใช้สั่ง)
+                    'due_postpone'  => $due_original ? $rep->senddate : null,
                     'weight_from'   => $h->netqty,       // จาก: netqty ของ header
                     'weight_to'     => $weight_to,       // เป็น: ผลรวม weight_packing ของ item รหัสเดียวกัน
                     'reason'        => $h->end_close_remark, // สาเหตุ: หมายเหตุตอนปิดจบงาน

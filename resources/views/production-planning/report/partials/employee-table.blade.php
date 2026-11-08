@@ -64,12 +64,12 @@
             {{-- ผู้ทวนสอบ/เวลา (เว้นว่างให้เซ็นมือ) --}}
             <tr>
                 <td class="rowlabel">ผู้ทวนสอบ/เวลา</td>
-                <td class="signcell" colspan="{{ count($slots) }}"></td>
+                @foreach($slots as $slot)<td class="signcell"></td>@endforeach
             </tr>
             {{-- ผู้ผลิต (เว้นว่างให้เซ็นมือ) --}}
             <tr>
                 <td class="rowlabel">ผู้ผลิต</td>
-                <td class="signcell" colspan="{{ count($slots) }}"></td>
+                @foreach($slots as $slot)<td class="signcell"></td>@endforeach
             </tr>
 
             {{-- รายการที่ไม่ระบุเวลา (วางลงกริดไม่ได้) --}}

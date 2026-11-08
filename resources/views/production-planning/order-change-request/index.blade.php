@@ -117,7 +117,7 @@
                                             <td class="text-center" data-order="{{ $sortDate($row['due_original']) }}">{{ $fmtDate($row['due_original']) }}</td>
                                             <td class="text-center" data-order="{{ $sortDate($row['due_postpone']) }}">{{ $fmtDate($row['due_postpone']) }}</td>
                                             <td class="text-end" data-order="{{ (float) ($row['weight_from'] ?? 0) }}">{{ $fmtNum($row['weight_from']) }}</td>
-                                            <td class="text-end" data-order="{{ (float) ($row['weight_to'] ?? 0) }}">{{ $fmtNum($row['weight_to']) }}</td>
+                                            <td class="text-end" data-order="{{ (float) ($row['weight_to'] ?? 0) }}">{{ (float) ($row['weight_to'] ?? 0) == 0 ? '-' : $fmtNum($row['weight_to']) }}</td>{{-- เป็น = 0 แสดง "-" (08/11/2569) --}}
                                             <td>{{ $row['reason'] }}</td>
                                         </tr>
                                     @empty
