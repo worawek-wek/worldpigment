@@ -27,7 +27,8 @@
 @endphp
 
 <form id="customer_form" class="of-form" autocomplete="off"
-    @if(!$can_edit) data-readonly="{{ $can_edit_sub ? 'main' : 'all' }}" @endif>
+    @if(!$can_edit) data-readonly="{{ $can_edit_sub ? 'main' : 'all' }}" @endif
+    @if(!$can_edit && $can_edit_credit && $can_edit_sub) data-credit-editable="1" @endif>
     @csrf
 
     @if(!$can_edit)
@@ -36,7 +37,7 @@
         <div class="alert alert-secondary py-2 mb-3">
             <i class="ti ti-lock me-1"></i>
             @if($can_edit_sub)
-                แก้ได้เฉพาะผู้ติดต่อและสถานที่ส่ง — ข้อมูลส่วนอื่นแก้ไขได้เฉพาะ MK Admin
+                แก้ได้เฉพาะ{{ $can_edit_credit ? 'เครดิต ' : '' }}ผู้ติดต่อและสถานที่ส่ง — ข้อมูลส่วนอื่นแก้ไขได้เฉพาะ MK Admin
             @else
                 ดูได้อย่างเดียว — ข้อมูลลูกค้าที่บันทึกแล้ว แก้ไขได้เฉพาะ MK Admin
             @endif
@@ -143,9 +144,9 @@
             <div class="col-md-8 of-row">
                 <label class="form-label">เครดิต</label>
                 <div class="of-ctl">
-                    {{-- แก้ไขลูกค้าเดิม = ล็อกช่องเครดิต (26/10/2569) — server คงค่าเดิมเองอยู่แล้ว --}}
+                    {{-- เดิมล็อกช่องนี้ตอนแก้ไขลูกค้าเดิม (26/10/2569) — ปลดล็อกแล้ว 06/11/2569 ตามที่ผู้ใช้สั่ง --}}
                     {{-- select2-tags = ไม่มีในรายการ (อื่น ๆ) พิมพ์ค่าเองได้ (27/10/2569) --}}
-                    <select class="form-select select2-tags" name="term" {{ $customer ? 'disabled' : '' }}>
+                    <select class="form-select select2-tags" name="term">
                         <option value="">- ไม่ระบุ -</option>
                         @if ($termCurrent !== '' && !$termInList)
                             <option value="{{ $termCurrent }}" selected>{{ $termCurrent }} (ค่าเดิม)</option>

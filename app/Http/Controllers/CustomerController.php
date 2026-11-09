@@ -69,6 +69,69 @@ class CustomerController extends Controller
         return view('customer.index', $data);
     }
 
+    // ─────────────────────────────────────────────────────────────
+    //  แปลงเครดิตแบบ "N วัน" → "เครดิต N วัน นับจากวันส่งสินค้า" (07/11/2569 ตามที่ผู้ใช้สั่ง)
+    // ─────────────────────────────────────────────────────────────
+
+    /** เครดิตที่เป็น "ตัวเลข + วัน" ล้วน ๆ เท่านั้น (เช่น "30 วัน") — "90 วัน IV" ไม่นับ */
+    private const TERM_DAYS_PATTERN = '/^\s*(\d+)\s*วัน\s*$/u';
+
+    /**
+     * ค่าเดิมใน customer.term ที่เข้ารูปแบบ → [ค่าเดิม (ตรงตามที่เก็บ), ค่าใหม่, จำนวนลูกค้า]
+     * จับคู่ใน PHP แทน REGEXP ของ MySQL กันปัญหา regex กับภาษาไทย
+     */
+    private function termDaysCandidates(): array
+    {
+        $rows = DB::table('customer')
+            ->whereNotNull('term')
+            ->where('term', 'like', '%วัน%')
+            ->groupBy('term')
+            ->selectRaw('term, COUNT(*) AS n')
+            ->get();
+
+        $list = [];
+        foreach ($rows as $r) {
+            if (preg_match(self::TERM_DAYS_PATTERN, (string) $r->term, $m)) {
+                $days   = (int) $m[1];
+                $list[] = [
+                    'old'   => $r->term,
+                    'new'   => 'เครดิต ' . $days . ' วัน นับจากวันส่งสินค้า',
+                    'days'  => $days,
+                    'count' => (int) $r->n,
+                ];
+            }
+        }
+
+        usort($list, fn ($a, $b) => $a['days'] <=> $b['days']);
+
+        return $list;
+    }
+
+    /** GET — ดูก่อนว่าจะแปลงค่าไหน กี่ราย */
+    public function termDaysPreview()
+    {
+        $list = $this->termDaysCandidates();
+
+        return response()->json([
+            'items' => $list,
+            'total' => array_sum(array_column($list, 'count')),
+        ]);
+    }
+
+    /** POST — แปลงจริง (อ่านค่าจาก DB ใหม่ ไม่เชื่อรายการที่จอส่งมา) */
+    public function termDaysConvert()
+    {
+        $updated = 0;
+        foreach ($this->termDaysCandidates() as $c) {
+            $updated += DB::table('customer')->where('term', $c['old'])->update(['term' => $c['new']]);
+        }
+
+        return response()->json([
+            'message' => 'แปลงเครดิตเรียบร้อย ' . number_format($updated) . ' ราย',
+            'updated' => $updated,
+        ]);
+    }
+
     /**
      * GET — ตารางรายการลูกค้า (HTML partial ใส่ #table-data)
      */
@@ -202,6 +265,8 @@ class CustomerController extends Controller
             'can_edit'  => $customer === null || self::canEditSaved(),
             // ผู้ติดต่อ + สถานที่ส่ง แก้ได้ทุก Admin (31/10/2569)
             'can_edit_sub' => $customer === null || self::canEditSubData(),
+            // เครดิต แก้ได้ MK Admin + IT Admin (06/11/2569)
+            'can_edit_credit' => $customer === null || self::canEditCredit(),
         ])->render();
 
         return response()->json([
@@ -313,19 +378,22 @@ class CustomerController extends Controller
             $this->syncContacts($code, (array) $request->input('contacts', []));
             $this->syncDeliveryPoints($code, (array) $request->input('dvpoints', []));
 
+            // IT Admin แก้เครดิตได้ด้วย (06/11/2569) — แตะเฉพาะ customer.term
+            if (self::canEditCredit() && $request->has('term')) {
+                Customer::where('code', $code)->update(['term' => $this->nn($request->input('term'))]);
+            }
+
             return response()->json([
                 'status'  => 200,
                 'code'    => $code,
-                'message' => 'บันทึกผู้ติดต่อและสถานที่ส่งเรียบร้อย',
+                'message' => 'บันทึกข้อมูลเรียบร้อย',
             ]);
         }
 
-        // ─── เครดิต (26/10/2569) ───
-        // แก้ไข = แก้เครดิตไม่ได้ คงค่าเดิมเสมอ (ช่องบนจอถูก disabled จึงไม่ส่งค่ามา)
-        // เพิ่มใหม่ = เลือกจาก tb_credit_term หรือพิมพ์เอง ("อื่น ๆ", 27/10/2569) — ยาวไม่เกิน 100 ตาม validator
-        $term = $mode === 'update'
-            ? $existing->term
-            : $this->nn($request->input('term'));
+        // ─── เครดิต ───
+        // เลือกจาก tb_credit_term หรือพิมพ์เอง ("อื่น ๆ", 27/10/2569) — ยาวไม่เกิน 100 ตาม validator
+        // เดิม (26/10/2569) แก้ไขลูกค้าเดิมจะคงค่าเดิมเสมอ — ปลดล็อกแล้ว 06/11/2569 ตามที่ผู้ใช้สั่ง
+        $term = $this->nn($request->input('term'));
 
         // ─── หัวข้อมูลลูกค้า ───────────────────────────────────────
         // เขียนเฉพาะคอลัมน์ที่ฟอร์มดูแล — คอลัมน์อื่น (black/blackdate/blackrem/zone/DV/flprt)
@@ -438,6 +506,24 @@ class CustomerController extends Controller
 
         return $account instanceof Emp
             && strtoupper(trim((string) $account->dept)) === 'MK'
+            && $account->role
+            && $account->role->name === 'Admin';
+    }
+
+    /**
+     * แก้ "เครดิต" (customer.term) ของลูกค้าที่บันทึกแล้วได้ (06/11/2569 ตามที่ผู้ใช้สั่ง)
+     * = MK Admin + พนักงานแผนก IT ที่มี role "Admin" (ต้องครบทั้ง 2 เงื่อนไข)
+     */
+    public static function canEditCredit(): bool
+    {
+        if (self::canEditSaved()) {
+            return true;
+        }
+
+        $account = AccessControl::currentAccount();
+
+        return $account instanceof Emp
+            && strtoupper(trim((string) $account->dept)) === 'IT'
             && $account->role
             && $account->role->name === 'Admin';
     }

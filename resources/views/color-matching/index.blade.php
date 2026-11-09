@@ -1011,6 +1011,8 @@
         function sdLotCheck(el) {
             const v = String($(el).val() ?? '').trim();
             sdLotMark(el, '');
+            // Lot No. ซ้ำได้แล้ว (09/11/2569 ตามที่ผู้ใช้สั่ง) — ปิดการตรวจ ลบ return นี้เพื่อเปิดคืน
+            return;
             if (v === '') return;
 
             // ซ้ำกับแถวอื่นในตาราง (ไม่สนตัวพิมพ์เล็ก/ใหญ่)

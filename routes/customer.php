@@ -16,6 +16,10 @@ Route::prefix('customer')->group(function () {
     Route::post('/save',   [CustomerController::class, 'save'])->name('customer.save');
     Route::post('/delete', [CustomerController::class, 'destroy'])->name('customer.delete');
 
+    // แปลงเครดิตแบบ "N วัน" → "เครดิต N วัน นับจากวันส่งสินค้า" — 07/11/2569
+    Route::get('/term-days/preview',  [CustomerController::class, 'termDaysPreview'])->name('customer.term_days.preview');
+    Route::post('/term-days/convert', [CustomerController::class, 'termDaysConvert'])->name('customer.term_days.convert');
+
     // ขอเปลี่ยนสถานะลูกค้า (Black List) + อนุมัติด้วยรหัส — 02/11/2569
     Route::prefix('status')->group(function () {
         Route::get('/data',     [CustomerStatusController::class, 'data'])->name('customer.status.data');

@@ -123,6 +123,14 @@
                                         </div>
 
                                         <div class="d-flex gap-2 flex-wrap">
+                                            {{-- แปลงเครดิต "N วัน" → "เครดิต N วัน นับจากวันส่งสินค้า" — ไม่ล็อกสิทธิ์ (07/11/2569 ตามที่ผู้ใช้สั่ง)
+                                                 ปิดปุ่มไว้ (07/11/2569 ตามที่ผู้ใช้สั่ง) — เปิดคืน: เปลี่ยน @if(false) เป็น @if(true) --}}
+                                            @if(false)
+                                                <button class="btn btn-label-warning" onclick="termDaysConvert()">
+                                                    <i class="ti ti-replace me-1"></i>
+                                                    แปลงเครดิต "N วัน"
+                                                </button>
+                                            @endif
                                             {{-- ขอเปลี่ยนแปลง Black List / เครดิต + อนุมัติ — 02/11/2569 (รวมเครดิต 03/11/2569) --}}
                                             <button class="btn btn-label-danger" onclick="customerStatusOpen()">
                                                 <i class="ti ti-ban me-1"></i>
@@ -380,9 +388,10 @@
                 $cf.find('#btn_add_contact, #btn_add_dv, .cf-del-contact, .cf-del-dv').addClass('d-none');
             } else if (cfLock === 'main') {
                 // คง hidden (token/mode) และรหัสลูกค้าให้ถูกส่งไปตอนบันทึก — รหัสใช้ readonly แทน disabled
-                $cf.find('input, select, textarea')
-                    .not('input[type="hidden"], [name="code"], .cf-sec-contact *, .cf-sec-dv *')
-                    .prop('disabled', true);
+                // IT Admin แก้เครดิตได้ด้วย (06/11/2569) — data-credit-editable มาจาก server
+                var keep = 'input[type="hidden"], [name="code"], .cf-sec-contact *, .cf-sec-dv *'
+                    + ($cf.data('credit-editable') ? ', [name="term"]' : '');
+                $cf.find('input, select, textarea').not(keep).prop('disabled', true);
                 $cf.find('[name="code"]').prop('readonly', true);
             }
             enhanceSelects('#customerFormBody');   // ฟอร์มเพิ่งถูกใส่เข้า DOM → ยกระดับ select ในฟอร์ม
@@ -463,6 +472,53 @@
             complete: function () { $btn.prop('disabled', false); }
         });
     });
+
+    // แปลงเครดิต "N วัน" → "เครดิต N วัน นับจากวันส่งสินค้า" (07/11/2569)
+    // ดูตัวอย่างจาก server ก่อน → ยืนยัน → แปลงจริง
+    function termDaysConvert() {
+        $.get("{{ route('customer.term_days.preview') }}", function (res) {
+            if (!res.items || !res.items.length) {
+                Swal.fire({ icon: 'info', title: 'ไม่มีเครดิตแบบ "N วัน" ให้แปลงแล้ว' });
+                return;
+            }
+            var rows = res.items.map(function (it) {
+                return '<tr><td class="text-start">' + escHtml(it.old) + '</td>'
+                    + '<td class="text-start">' + escHtml(it.new) + '</td>'
+                    + '<td class="text-end">' + Number(it.count).toLocaleString() + '</td></tr>';
+            }).join('');
+            Swal.fire({
+                icon: 'question',
+                title: 'แปลงเครดิตลูกค้า ' + Number(res.total).toLocaleString() + ' ราย?',
+                width: 640,
+                html: '<table class="table table-sm table-bordered mb-2" style="font-size:.9rem">'
+                    + '<thead><tr><th>ค่าเดิม</th><th>ค่าใหม่</th><th class="text-end">ราย</th></tr></thead>'
+                    + '<tbody>' + rows + '</tbody></table>'
+                    + '<small class="text-muted">แปลงเฉพาะค่าที่เป็น "ตัวเลข + วัน" ล้วน ๆ — ค่าอย่าง "90 วัน IV" ไม่ถูกแตะ</small>',
+                showCancelButton: true,
+                confirmButtonText: 'แปลง',
+                cancelButtonText: 'ยกเลิก'
+            }).then(function (r) {
+                if (!r.isConfirmed) return;
+                $.ajax({
+                    url: "{{ route('customer.term_days.convert') }}",
+                    method: 'POST',
+                    dataType: 'json',
+                    data: { _token: "{{ csrf_token() }}" },
+                    success: function (res2) {
+                        loadData(page);
+                        Swal.fire({ icon: 'success', title: res2.message });
+                    },
+                    error: function (xhr) {
+                        var msg = (xhr.responseJSON && xhr.responseJSON.message) || 'แปลงไม่สำเร็จ กรุณาลองใหม่';
+                        Swal.fire({ icon: 'error', title: 'แปลงไม่ได้', text: msg });
+                    }
+                });
+            });
+        }).fail(function (xhr) {
+            var msg = (xhr.responseJSON && xhr.responseJSON.message) || 'โหลดข้อมูลไม่สำเร็จ';
+            Swal.fire({ icon: 'error', title: msg });
+        });
+    }
 
     // ลบลูกค้า — server จะปฏิเสธถ้ามีธุรกรรมผูกอยู่
     function customerDelete(code, name) {

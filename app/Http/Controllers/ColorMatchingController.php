@@ -359,14 +359,14 @@ class ColorMatchingController extends Controller
             // ข้อมูลอื่นเหมือนกันทุกใบ ต่างกันแค่ 4 ช่องใน SD_ITEM_FIELDS · ไม่มี sd_items = สร้างใบเดียวตามเดิม
             $items = $this->sdItems($request);
 
-            // Lot No. ต้องไม่ซ้ำ — ทั้งกับใบที่มีอยู่แล้ว และระหว่างแถวที่สร้างพร้อมกัน (29/10/2569)
-            $lots = empty($items)
-                ? [(string) ($payload['lotno'] ?? '')]
-                : array_column($items, 'lotno');
-            if ($dupMsg = $this->lotDuplicateError($lots)) {
-                DB::rollBack();
-                return response()->json(['error' => $dupMsg, 'lot_duplicate' => true], 422);
-            }
+            // Lot No. ซ้ำได้แล้ว (09/11/2569 ตามที่ผู้ใช้สั่ง) — ปิดการตรวจซ้ำที่เพิ่ม 29/10/2569
+            // $lots = empty($items)
+            //     ? [(string) ($payload['lotno'] ?? '')]
+            //     : array_column($items, 'lotno');
+            // if ($dupMsg = $this->lotDuplicateError($lots)) {
+            //     DB::rollBack();
+            //     return response()->json(['error' => $dupMsg, 'lot_duplicate' => true], 422);
+            // }
 
             if (empty($items)) {
                 Testmain::create($payload);
@@ -495,14 +495,14 @@ class ColorMatchingController extends Controller
 
             $payload = $this->extractPayload($request);
 
-            // Lot No. ต้องไม่ซ้ำกับใบอื่น — ตรวจเฉพาะตอนเปลี่ยนค่า (29/10/2569)
-            $newLot = trim((string) ($payload['lotno'] ?? ''));
-            if ($newLot !== '' && $newLot !== trim((string) $row->lotno)) {
-                if ($dupMsg = $this->lotDuplicateError([$newLot], (int) $row->id)) {
-                    DB::rollBack();
-                    return response()->json(['error' => $dupMsg, 'lot_duplicate' => true], 422);
-                }
-            }
+            // Lot No. ซ้ำได้แล้ว (09/11/2569 ตามที่ผู้ใช้สั่ง) — ปิดการตรวจซ้ำที่เพิ่ม 29/10/2569
+            // $newLot = trim((string) ($payload['lotno'] ?? ''));
+            // if ($newLot !== '' && $newLot !== trim((string) $row->lotno)) {
+            //     if ($dupMsg = $this->lotDuplicateError([$newLot], (int) $row->id)) {
+            //         DB::rollBack();
+            //         return response()->json(['error' => $dupMsg, 'lot_duplicate' => true], 422);
+            //     }
+            // }
 
             // ชื่อพนักงานที่กรอก (ผู้รับเอกสาร/Color Matcher) ถ้าใหม่ → สร้างใน emp
             $this->ensureEmployee($request->TNname);
