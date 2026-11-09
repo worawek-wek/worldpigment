@@ -23,7 +23,7 @@
             <th style="max-width: 200px;">Cust Name</th>
             {{-- <th>Order Date</th> --}}
             <th>PRODUCT NO</th>
-            <th>น้ำหนัก</th>
+            <th>น้ำหนัก TP</th>
             {{-- <th>สถานะปัจจุบัน</th> --}}
         </tr>
     </thead>
@@ -48,7 +48,7 @@
                 </td>
                 {{-- <td class="text-center">{{ $it->order_date ? \Carbon\Carbon::parse($it->order_date)->format('d/m/Y') : '-' }}</td> --}}
                 <td>{{ $it->itemno ?: '-' }}</td>
-                <td class="text-end" data-order="{{ $it->quantity !== null ? $it->quantity : '' }}">{{ $it->quantity !== null ? number_format($it->quantity, 2) : '-' }}</td>
+                <td class="text-end" data-order="{{ $it->weight !== null ? $it->weight : '' }}">{{ $it->weight !== null ? number_format($it->weight, 2) : '-' }}</td>
                 {{-- <td>
                     @if($it->planning_status)
                         <span class="badge bg-label-warning">{{ $it->planning_status }}</span>

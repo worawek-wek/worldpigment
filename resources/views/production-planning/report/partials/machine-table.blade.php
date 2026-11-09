@@ -63,7 +63,8 @@
                     <td class="text-center">{{ $it->red_bill_code ?: '-' }}</td>
                     <td>{{ $it->itemno ?: '-' }}</td>
                     <td class="text-center">{{ $it->lot ?: '-' }}</td>
-                    <td class="text-end">{{ $it->quantity !== null ? number_format($it->quantity, 2) : '-' }}</td>
+                    {{-- น้ำหนักผลิต = น้ำหนัก TP (tb_planning.weight) — 09/11/2569 ตามที่ผู้ใช้สั่ง (เดิม quantity = น้ำหนัก PO) --}}
+                    <td class="text-end">{{ $it->weight !== null ? number_format($it->weight, 2) : '-' }}</td>
                 </tr>
             </tbody>
         @endforeach

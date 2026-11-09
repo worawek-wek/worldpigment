@@ -61,8 +61,16 @@
                 {{-- จำนวน --}}
                 <tr>
                     <td class="rowlabel">จำนวน</td>
-                    @foreach($slots as $i => $slot)
-                        <td>{{ $group['cells'][$i]['qty'] !== null ? number_format($group['cells'][$i]['qty'], 2).' KG' : '' }}</td>
+                    {{-- ผสานเซลล์ตามช่วงของงานเดียวกัน ($group['merged']) — 09/11/2569 --}}
+                    @foreach($group['merged'] as $mc)
+                        <td colspan="{{ $mc['span'] }}">{{ $mc['qty'] !== null ? number_format($mc['qty'], 2).' KG' : '' }}</td>
+                    @endforeach
+                </tr>
+                {{-- วันที่กำหนดทบทวน (tb_planning.senddate ล่าสุด) — 09/11/2569 --}}
+                <tr>
+                    <td class="rowlabel">วันที่กำหนดทบทวน</td>
+                    @foreach($group['merged'] as $mc)
+                        <td colspan="{{ $mc['span'] }}">{!! implode('<br>', array_map('e', $mc['senddate'])) !!}</td>
                     @endforeach
                 </tr>
                 {{-- รหัสเครื่อง --}}
@@ -96,6 +104,7 @@
                             <td class="unsched" colspan="{{ count($slots) }}">
                                 รหัสสี {{ $u['color'] ?: '-' }}
                                 | จำนวน {{ $u['qty'] !== null ? number_format($u['qty'], 2).' KG' : '-' }}
+                                | กำหนดทบทวน {{ $u['senddate'] ?: '-' }}
                                 | เครื่อง {{ $u['machine'] ?: '-' }}
                                 | วิธี {{ $u['method'] ?: '-' }}
                             </td>

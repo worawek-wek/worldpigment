@@ -30,7 +30,8 @@
                 <th class="col-custwant" style="width: 9%;">Custwant</th>
                 <th style="width: 11%;">วันเวลาบรรจุเสร็จ</th>
                 <th style="width: 11%;">Itemno</th>
-                <th style="width: 8%;">Quantity</th>
+                {{-- เดิม Quantity (tb_planning.quantity) → น้ำหนัก TP (tb_planning.weight) 09/11/2569 --}}
+                <th style="width: 8%;">น้ำหนัก TP</th>
                 <th style="width: 9%;">MachineNo</th>
                 <th style="width: 15%;">สถานะภายใน</th>
             </tr>
@@ -53,7 +54,7 @@
                         {{ $row->pk_last ? \Carbon\Carbon::parse($row->pk_last)->format('d/m/Y H:i') : '-' }}@if($row->pk_last && ($row->pk_count ?? 0) > 1) ({{ (int) $row->pk_count }} รายการ)@endif
                     </td>
                     <td>{{ $row->itemno ?: '-' }}</td>
-                    <td class="text-end">{{ $row->quantity !== null ? number_format($row->quantity, 2) : '-' }}</td>
+                    <td class="text-end">{{ $row->weight !== null ? number_format($row->weight, 2) : '-' }}</td>
                     <td class="text-center">{{ $row->machine_no ?: '-' }}</td>
                     <td>{{ $row->inner_status_text }} ({{ $row->end_job_label }})</td>
                 </tr>

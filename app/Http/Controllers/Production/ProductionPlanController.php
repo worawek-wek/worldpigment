@@ -280,7 +280,8 @@ class ProductionPlanController extends Controller
     {
         return [
             '#', 'Orderno', 'เลขที่ใบเบิก', 'Company', 'Inplan', 'Custwant',
-            'วันเวลาบรรจุเสร็จ', 'Itemno', 'Quantity', 'MachineNo', 'สถานะภายใน',
+            // 'Quantity' (tb_planning.quantity = น้ำหนัก PO) → น้ำหนัก TP (tb_planning.weight) — 09/11/2569 ตามที่ผู้ใช้สั่ง
+            'วันเวลาบรรจุเสร็จ', 'Itemno', 'น้ำหนัก TP', 'MachineNo', 'สถานะภายใน',
         ];
     }
 
@@ -344,7 +345,8 @@ class ProductionPlanController extends Controller
             $sheet->getStyle("F{$r}")->getFont()->getColor()->setRGB('842029');
             $sheet->setCellValue("G{$r}", $packing);
             $sheet->setCellValueExplicit("H{$r}", $row->itemno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-            $sheet->setCellValue("I{$r}", $row->quantity !== null ? number_format($row->quantity, 2) : '-');
+            // น้ำหนัก TP (tb_planning.weight) แทน quantity — 09/11/2569
+            $sheet->setCellValue("I{$r}", $row->weight !== null ? number_format($row->weight, 2) : '-');
             $sheet->setCellValueExplicit("J{$r}", $row->machine_no ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
             $sheet->setCellValue("K{$r}", $status);
             $r++;

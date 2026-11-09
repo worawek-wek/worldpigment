@@ -839,7 +839,7 @@ class ReportController extends Controller
         //     เปิดคืน: เพิ่ม 'Cust no' หลัง 'Cust Due' และ 'Order Date' หลัง 'Cust Name' + เลื่อนคอลัมน์ตาม
         $headers = [
             '#', 'แผนก', 'เลขที่ใบแดง', 'Revise', 'ขาดวัตถุดิบ', 'ขาด semi', 'Cust Due',
-            'Cust Name', 'PRODUCT NO', 'น้ำหนัก',
+            'Cust Name', 'PRODUCT NO', 'น้ำหนัก TP',
         ];
         $cols = [
             'A', 'B', 'C', 'D', 'E', 'F', 'G',
@@ -892,7 +892,7 @@ class ReportController extends Controller
             // $sheet->setCellValueExplicit("O{$r}", $it->orderno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);  // Order No
             $sheet->setCellValueExplicit("I{$r}", $it->itemno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);  // PRODUCT NO
             // $sheet->setCellValue("Q{$r}", $it->lot ?: '-');  // LOT
-            $sheet->setCellValue("J{$r}", $it->quantity !== null ? number_format($it->quantity, 2) : '-');  // น้ำหนัก (quantity)
+            $sheet->setCellValue("J{$r}", $it->weight !== null ? number_format($it->weight, 2) : '-');  // น้ำหนัก TP (tb_planning.weight) — 09/11/2569 เดิม quantity
             // $sheet->setCellValue("S{$r}", '');  // ส่งชั่งสี (ยังไม่มีฟิลด์)
             // $sheet->setCellValue("T{$r}", $it->start_date ? \Carbon\Carbon::parse($it->start_date)->format('d/m/Y') : '');  // เริ่มผลิต
             // $sheet->setCellValue("U{$r}", $it->qc_date ? \Carbon\Carbon::parse($it->qc_date)->format('d/m/Y') : '');  // วันที่ส่ง QC
@@ -1079,6 +1079,7 @@ class ReportController extends Controller
                 'tb_planning.itemno',
                 'tb_planning.quantity',
                 'tb_planning.inplan',
+                'tb_planning.senddate',   // วันที่กำหนดทบทวน (ค่าล่าสุด — ค่าเดิมอยู่ใน senddate_log) 09/11/2569
                 'tb_planning.company',
                 'tb_planning.start_time as p_start',
                 'tb_planning.end_time as p_end',
@@ -1133,13 +1134,15 @@ class ReportController extends Controller
                 // เตรียมเซลล์ว่างทั้ง 9 ช่อง
                 $cells = [];
                 foreach ($slots as $i => $s) {
-                    $cells[$i] = ['color' => [], 'qty' => null, 'machine' => [], 'method' => []];
+                    $cells[$i] = ['color' => [], 'qty' => null, 'senddate' => [], 'machine' => [], 'method' => [], 'jobs' => []];
                 }
                 $unscheduled = [];
 
                 foreach ($items as $job) {
                     $steps      = $stepsByPlanning->get($job->id, collect());
                     $placedCols = [];
+                    // วันที่กำหนดทบทวน (senddate ล่าสุด) d/m/Y — 09/11/2569 ตามที่ผู้ใช้สั่ง
+                    $sendText   = $job->senddate ? \Carbon\Carbon::parse($job->senddate)->format('d/m/Y') : '';
 
                     // 1) วางตามเวลาในแต่ละขั้นตอนผลิต
                     foreach ($steps as $st) {
@@ -1153,6 +1156,7 @@ class ReportController extends Controller
                                 $cells[$i]['method'][]  = $st->method_name ?: '';
                                 $cells[$i]['machine'][] = $job->machine_no ?: '';
                                 $cells[$i]['color'][]   = $job->itemno ?: '';
+                                $cells[$i]['jobs'][]    = $job->id;
                                 $placedCols[]           = $i;
                             }
                         }
@@ -1171,6 +1175,7 @@ class ReportController extends Controller
                                     }
                                     $cells[$i]['machine'][] = $job->machine_no ?: '';
                                     $cells[$i]['color'][]   = $job->itemno ?: '';
+                                    $cells[$i]['jobs'][]    = $job->id;
                                     $placedCols[]           = $i;
                                 }
                             }
@@ -1183,12 +1188,17 @@ class ReportController extends Controller
                         if ($cells[$fc]['qty'] === null && $job->quantity !== null) {
                             $cells[$fc]['qty'] = $job->quantity;
                         }
+                        // วันที่กำหนดทบทวน: ช่องเดียวกับจำนวน (ช่องแรกของงาน)
+                        if ($sendText !== '') {
+                            $cells[$fc]['senddate'][] = $sendText;
+                        }
                     } else {
                         // ไม่มีเวลาเลย → แยกไปแสดงเป็น "รายการไม่ระบุเวลา"
                         $unscheduled[] = [
                             'color'   => $job->itemno,
-                            'qty'     => $job->quantity,
-                            'machine' => $job->machine_no,
+                            'qty'      => $job->quantity,
+                            'senddate' => $sendText,
+                            'machine'  => $job->machine_no,
                             'method'  => implode(', ', $this->uniqueValues($steps->pluck('method_name')->all())),
                         ];
                     }
@@ -1197,8 +1207,41 @@ class ReportController extends Controller
                 // แปลง array ในเซลล์ให้เหลือค่าไม่ซ้ำ (view จัด <br> / \n เอง)
                 foreach ($cells as $i => $c) {
                     $cells[$i]['color']   = $this->uniqueValues($c['color']);
+                    $cells[$i]['senddate'] = $this->uniqueValues($c['senddate']);
                     $cells[$i]['machine'] = $this->uniqueValues($c['machine']);
                     $cells[$i]['method']  = $this->uniqueValues($c['method']);
+                    $jobIds = array_values(array_unique($c['jobs']));
+                    sort($jobIds);
+                    $cells[$i]['jobs'] = $jobIds;
+                }
+
+                // ผสานเซลล์บรรทัด "จำนวน" + "วันที่กำหนดทบทวน" (09/11/2569 ตามที่ผู้ใช้สั่ง)
+                // ช่องติดกันที่มีชุดงานเดียวกัน (ไม่ว่าง) = 1 เซลล์ (colspan) · ช่องว่าง/งานต่างกัน = เซลล์เดี่ยว
+                // บรรทัดอื่น (รหัสสี/เครื่อง/วิธี) ยังแสดงแยกช่องเหมือนเดิม
+                $merged = [];
+                $n = count($cells);
+                for ($i = 0; $i < $n; $i++) {
+                    $len = 1;
+                    if (!empty($cells[$i]['jobs'])) {
+                        while ($i + $len < $n && $cells[$i + $len]['jobs'] === $cells[$i]['jobs']) {
+                            $len++;
+                        }
+                    }
+                    $qty  = null;
+                    $send = [];
+                    for ($k = $i; $k < $i + $len; $k++) {
+                        if ($qty === null && $cells[$k]['qty'] !== null) {
+                            $qty = $cells[$k]['qty'];
+                        }
+                        $send = array_merge($send, $cells[$k]['senddate']);
+                    }
+                    $merged[] = [
+                        'col'      => $i,
+                        'span'     => $len,
+                        'qty'      => $qty,
+                        'senddate' => $this->uniqueValues($send),
+                    ];
+                    $i += $len - 1;
                 }
 
                 return [
@@ -1206,6 +1249,7 @@ class ReportController extends Controller
                     'dept'        => trim((string) ($first->emp_dept ?? '')),
                     'label'       => $label,
                     'cells'       => $cells,
+                    'merged'      => $merged,
                     'unscheduled' => $unscheduled,
                     'job_count'   => $items->count(),
                 ];
@@ -1331,8 +1375,9 @@ class ReportController extends Controller
 
         $rowLabels = [
             'color'   => 'รหัสสี',
-            'qty'     => 'จำนวน',
-            'machine' => 'รหัสเครื่อง',
+            'qty'      => 'จำนวน',
+            'senddate' => 'วันที่กำหนดทบทวน',
+            'machine'  => 'รหัสเครื่อง',
             'method'  => 'วิธีการผลิต',
         ];
 
@@ -1349,14 +1394,25 @@ class ReportController extends Controller
 
             foreach ($rowLabels as $key => $label) {
                 $sheet->setCellValue("A{$r}", $label);
-                foreach ($slots as $k => $slot) {
-                    $c = $group['cells'][$k];
-                    if ($key === 'qty') {
-                        $val = $c['qty'] !== null ? number_format($c['qty'], 2).' KG' : '';
-                    } else {
-                        $val = implode("\n", $c[$key]);
+                if ($key === 'qty' || $key === 'senddate') {
+                    // ผสานเซลล์ตามช่วงของงานเดียวกัน ($group['merged']) — 09/11/2569
+                    foreach ($group['merged'] as $mc) {
+                        $val = $key === 'qty'
+                            ? ($mc['qty'] !== null ? number_format($mc['qty'], 2).' KG' : '')
+                            : implode("\n", $mc['senddate']);
+                        $from = $cols[$mc['col'] + 1];
+                        $sheet->setCellValueExplicit($from.$r, $val, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                        if ($mc['span'] > 1) {
+                            $sheet->mergeCells($from.$r.':'.$cols[$mc['col'] + $mc['span']].$r);
+                            $sheet->getStyle($from.$r)->getAlignment()
+                                ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                        }
                     }
-                    $sheet->setCellValueExplicit($cols[$k + 1].$r, $val, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                } else {
+                    foreach ($slots as $k => $slot) {
+                        $val = implode("\n", $group['cells'][$k][$key]);
+                        $sheet->setCellValueExplicit($cols[$k + 1].$r, $val, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                    }
                 }
                 $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getAlignment()->setWrapText(true)->setVertical(
                     \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP
@@ -1375,6 +1431,7 @@ class ReportController extends Controller
                 foreach ($group['unscheduled'] as $u) {
                     $txt = 'ไม่ระบุเวลา: รหัสสี '.($u['color'] ?: '-')
                         .' | จำนวน '.($u['qty'] !== null ? number_format($u['qty'], 2).' KG' : '-')
+                        .' | กำหนดทบทวน '.($u['senddate'] ?: '-')
                         .' | เครื่อง '.($u['machine'] ?: '-')
                         .' | วิธี '.($u['method'] ?: '-');
                     $sheet->setCellValue("A{$r}", $txt);

@@ -46,7 +46,7 @@
                 {{-- <th style="width: 7%;">Order No</th> --}}
                 <th style="width: 11%;">PRODUCT NO</th>
                 {{-- <th style="width: 5%;">LOT</th> --}}
-                <th style="width: 8%;">น้ำหนัก</th>
+                <th style="width: 8%;">น้ำหนัก TP</th>
                 {{-- <th style="width: 4%;">ส่งชั่งสี</th> --}}
                 {{-- <th style="width: 5%;">เริ่มผลิต</th> --}}
                 {{-- <th style="width: 5%;">วันที่ส่ง QC</th> --}}
@@ -75,7 +75,7 @@
                     {{-- <td class="text-center">{{ $it->orderno ?: '-' }}</td> --}}
                     <td>{{ $it->itemno ?: '-' }}</td>
                     {{-- <td class="text-center">{{ $it->lot ?: '-' }}</td> --}}
-                    <td class="text-end">{{ $it->quantity !== null ? number_format($it->quantity, 2) : '' }}</td> {{-- น้ำหนัก (quantity) --}}
+                    <td class="text-end">{{ $it->weight !== null ? number_format($it->weight, 2) : '' }}</td> {{-- น้ำหนัก TP (tb_planning.weight) — 09/11/2569 เดิม quantity --}}
                     {{-- <td></td> ส่งชั่งสี (ยังไม่มีฟิลด์) --}}
                     {{-- <td class="text-center">{{ $it->start_date ? \Carbon\Carbon::parse($it->start_date)->format('d/m/y') : '' }}</td> --}}
                     {{-- <td class="text-center">{{ $it->qc_date ? \Carbon\Carbon::parse($it->qc_date)->format('d/m/y') : '' }}</td> --}}
