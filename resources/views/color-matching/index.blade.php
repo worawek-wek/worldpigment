@@ -173,6 +173,51 @@
     cursor: pointer;
     transition: opacity .15s;
 }
+
+/* ── SweetAlert แจ้ง error ตอนบันทึก (09/11/2569 ตามที่ผู้ใช้สั่ง) — ใช้ผ่าน cmErrorAlert() ──
+   กล่องมุมโค้ง · หัวข้อตัวหนาสีเข้ม · เส้นคั่นเหนือปุ่ม · ปุ่ม OK สีม่วง · ปุ่มปิด X มุมขวาบน */
+.swal2-popup.wp-swal-err {
+    width: 34em;
+    padding: 1.75rem 1.5rem 1.5rem;
+    border-radius: 1.25rem;
+    box-shadow: 0 1.25rem 3rem rgba(15, 23, 42, .18);
+}
+.wp-swal-err .swal2-icon.swal2-warning {
+    border-color: #ffc896;   /* สี warning ของ theme (#FF9F43) */
+    background: #fff3e8;
+    color: #ff9f43;
+    margin-top: .5rem;
+}
+.wp-swal-err .swal2-title {
+    color: #1e2235;
+    font-size: 1.75rem;
+    font-weight: 700;
+    padding-top: .75rem;
+}
+.wp-swal-err .swal2-html-container {
+    color: #5d6075;
+    font-size: 1.15rem;
+    margin-top: .5rem;
+}
+.wp-swal-err .swal2-actions {
+    width: 100%;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid #e6e8f0;
+}
+.wp-swal-err .swal2-confirm.wp-swal-err-btn {
+    min-width: 8.5rem;
+    padding: .65rem 2rem;
+    border: 0;
+    border-radius: .6rem;
+    background: #6650dc;
+    color: #fff;
+    font-size: 1.15rem;
+    font-weight: 600;
+    box-shadow: 0 .4rem 1rem rgba(102, 80, 220, .3);
+}
+.wp-swal-err .swal2-confirm.wp-swal-err-btn:hover { background: #5641c9; }
+.wp-swal-err .swal2-close { color: #6b6f85; font-size: 2.25rem; }
 </style>
 
 <body>
@@ -869,6 +914,7 @@
             $('#form_color_matching [name="_mode"]').val('create');
             $('#form_color_matching [name="_pk"]').val('');
             syncCustResinKg();
+            cmSendNoMark('');
             // โหมดสร้างใหม่ → ยังไม่มี record ให้ลบ
             $('#btn_delete_cm').addClass('d-none').removeData('id').removeData('label');
         }
@@ -1001,6 +1047,55 @@
             sdItemsRenumber();
             sdAutoGrowAll();
         }
+
+        // ── SweetAlert แจ้ง error ตอนบันทึก CM / SD (09/11/2569) — หน้าตาตาม CSS .wp-swal-err ด้านบน ──
+        function cmErrorAlert(text) {
+            return Swal.fire({
+                title: 'ไม่สามารถบันทึกได้',
+                text: text,
+                icon: 'warning',   // ไอคอนตกใจ (!) — 09/11/2569 ตามที่ผู้ใช้สั่ง
+                confirmButtonText: 'OK',
+                showCloseButton: true,
+                buttonsStyling: false,
+                heightAuto: false,
+                customClass: { popup: 'wp-swal-err', confirmButton: 'wp-swal-err-btn' },
+            });
+        }
+
+        // ── ตรวจเลขที่ใบนำส่งเทียบสีซ้ำตอนกรอก (09/11/2569) — server ตรวจซ้ำอีกชั้นตอนบันทึก (cmSendNoExists) ──
+        function cmSendNoMark(msg) {
+            $('#form_color_matching [name="SendNo"]').toggleClass('is-invalid', !!msg)
+                .siblings('.cm-sendno-msg').text(msg || '');
+        }
+
+        function cmSendNoCheck() {
+            const $in = $('#form_color_matching [name="SendNo"]');
+            const v = String($in.val() ?? '').trim();
+            cmSendNoMark('');
+            if (v === '') return;
+            $.ajax({
+                type: 'GET',
+                url: '{{$page_url}}/check-sendno',
+                data: { sendno: v, exclude_id: $('#form_color_matching [name="_pk"]').val() || '' },
+                success: function (resp) {
+                    if (String($in.val() ?? '').trim() !== v) return;   // ผู้ใช้พิมพ์ต่อไปแล้ว
+                    if (resp && resp.exists) cmSendNoMark('เลขที่ใบนำส่งเทียบสี "' + v + '" มีอยู่แล้ว');
+                }
+            });
+        }
+
+        // ตรวจระหว่างพิมพ์ (หน่วง 400ms หลังหยุดพิมพ์) + ตอนออกจากช่อง
+        // ⚠ ห้ามพึ่ง 'change' อย่างเดียว — ยิงเฉพาะตอนค่าต่างจากรอบก่อน: แก้แล้วกลับมาเป็นเลขเดิม ข้อความหายไม่กลับมา
+        let cmSendNoTimer = null;
+        $('#form_color_matching').on('input', '[name="SendNo"]', function () {
+            cmSendNoMark('');
+            clearTimeout(cmSendNoTimer);
+            cmSendNoTimer = setTimeout(cmSendNoCheck, 400);
+        });
+        $('#form_color_matching').on('blur', '[name="SendNo"]', function () {
+            clearTimeout(cmSendNoTimer);
+            cmSendNoCheck();
+        });
 
         // ── ตรวจ Lot No. ซ้ำตอนกรอก (29/10/2569) — ซ้ำกับแถวอื่นในตาราง หรือซ้ำกับใบที่มีอยู่แล้ว ──
         // server ตรวจซ้ำอีกชั้นตอนบันทึก (ColorMatchingController::lotDuplicateError)
@@ -1600,11 +1695,11 @@
                             $('#colorMatchingModal').modal('hide');
                             loadData(page);
                         } else {
-                            Swal.fire('เกิดข้อผิดพลาด', resp.error ?? '', 'error');
+                            cmErrorAlert(resp.error ?? '');
                         }
                     },
                     error: function(xhr) {
-                        Swal.fire('เกิดข้อผิดพลาด', xhr.responseJSON?.error ?? '', 'error');
+                        cmErrorAlert(xhr.responseJSON?.error ?? '');
                     }
                 });
             });
@@ -1688,11 +1783,11 @@
                             if (backTo && $('#detailModal').is(':visible')) loadDetailInto(backTo, '#detailView', '#detailModal');
                             loadData(page);
                         } else {
-                            Swal.fire('เกิดข้อผิดพลาด', resp.error ?? '', 'error');
+                            cmErrorAlert(resp.error ?? '');
                         }
                     },
                     error: function(xhr) {
-                        Swal.fire('เกิดข้อผิดพลาด', xhr.responseJSON?.error ?? '', 'error');
+                        cmErrorAlert(xhr.responseJSON?.error ?? '');
                     }
                 });
             });

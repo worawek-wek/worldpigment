@@ -294,8 +294,17 @@
     </div>
 
     <!-- Footer -->
-    <div class="modal-footer justify-content-end flex-wrap gap-2">
-        {{-- ปุ่มลบเอาออกจากหน้า View ทั้ง CM และ SD (28/10/2569 ตามที่ผู้ใช้สั่ง) — ยังลบได้จากฟอร์มแก้ไข (modal-cm / modal-sd) --}}
+    <div class="modal-footer justify-content-between flex-wrap gap-2">
+        {{-- ปุ่มลบ: เอาออก 28/10/2569 → 09/11/2569 เปิดคืนเฉพาะ MK Admin (แผนก MK + role "MK Admin") ตามที่ผู้ใช้สั่ง
+             ซ้ายล่างเหมือนฟอร์มแก้ไข · server กันซ้ำที่ destroy() · deleteFromDetail() อยู่ใน index.blade.php --}}
+        <div>
+            @if (\App\Http\Controllers\ColorMatchingController::canDelete())
+                <button type="button" class="btn btn-label-danger"
+                        onclick="deleteFromDetail({{ (int) $row->id }}, @js((string) ($isSD ? $row->Testno : $row->SendNo)))">
+                    <i class="ti ti-trash me-1"></i>{{ $isSD ? 'ลบใบส่ง ต.ย.' : 'ลบใบนำส่งเทียบสี' }}
+                </button>
+            @endif
+        </div>
         <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ปิด</button>
     </div>
 

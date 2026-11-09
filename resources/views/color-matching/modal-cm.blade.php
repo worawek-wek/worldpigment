@@ -84,6 +84,8 @@
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">เลขที่ใบนำส่งเทียบสี <span class="text-muted fw-normal">(เช่น 26/0001)</span></label>
                                         <input type="text" name="SendNo" class="form-control" required>
+                                        {{-- ข้อความเตือนเลขที่ซ้ำ (09/11/2569) — เติมโดย cmSendNoCheck() --}}
+                                        <div class="invalid-feedback cm-sendno-msg"></div>
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label small mb-1">วันที่ส่งเทียบสี</label>
@@ -323,8 +325,8 @@
                 <div class="modal-footer justify-content-between flex-wrap gap-2">
                     <div class="d-flex gap-2 flex-wrap">
                         {{-- ลบใบนำส่งเทียบสี — แสดงเฉพาะโหมดแก้ไข (JS ถอด d-none ให้ตอนเปิดจากปุ่มแก้ไข) --}}
-                        {{-- ปิดไว้ 28/10/2569 ตามที่ผู้ใช้สั่ง "เอาปุ่มลบออกให้หมด" — เปิดคืน: ถอด @if(false) / @endif --}}
-                        @if (false)
+                        {{-- 28/10/2569 ปิดทุกคน → 09/11/2569 เปิดเฉพาะ MK Admin (แผนก MK + role "MK Admin") ตามที่ผู้ใช้สั่ง · server กันซ้ำที่ destroy() --}}
+                        @if (!empty($can_delete))
                         <button type="button" id="btn_delete_cm" class="btn btn-label-danger d-none">
                             <i class="ti ti-trash me-1"></i>
                             ลบใบนำส่งเทียบสี

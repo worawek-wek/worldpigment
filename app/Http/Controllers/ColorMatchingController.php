@@ -53,7 +53,23 @@ class ColorMatchingController extends Controller
             ->pluck(DB::raw('TRIM(sale) as sale'))
             ->sort(fn ($a, $b) => strnatcasecmp($a, $b))
             ->values();
+        // ปุ่มลบในฟอร์ม CM / SD — เห็นเฉพาะ MK Admin (09/11/2569)
+        $data['can_delete'] = self::canDelete();
         return view('color-matching.index', $data);
+    }
+
+    /**
+     * ลบใบนำส่งเทียบสี / ใบส่ง ต.ย. ได้ (09/11/2569 ตามที่ผู้ใช้สั่ง)
+     * = พนักงาน (guard emp) แผนก MK ที่ role ชื่อ "MK Admin" · admin ตาราง users ไม่นับ
+     */
+    public static function canDelete(): bool
+    {
+        $account = \App\Services\AccessControl::currentAccount();
+
+        return $account instanceof \App\Models\Emp
+            && strtoupper(trim((string) $account->dept)) === 'MK'
+            && $account->role
+            && $account->role->name === 'MK Admin';
     }
 
     /**
@@ -351,6 +367,12 @@ class ColorMatchingController extends Controller
                 return response()->json(['error' => 'SendNo required'], 422);
             }
 
+            // เลขที่ใบนำส่งเทียบสี (CM = ไม่มี Testno) ห้ามซ้ำกับ CM ใบอื่น (09/11/2569 ตามที่ผู้ใช้สั่ง)
+            if (trim((string) ($payload['Testno'] ?? '')) === '' && $this->cmSendNoExists($payload['SendNo'])) {
+                DB::rollBack();
+                return response()->json(['error' => 'เลขที่ใบนำส่งเทียบสี "' . trim($payload['SendNo']) . '" มีอยู่แล้ว', 'sendno_duplicate' => true], 422);
+            }
+
             // ชื่อพนักงานที่กรอก (ผู้รับเอกสาร/Color Matcher) ถ้าใหม่ → สร้างใน emp
             $this->ensureEmployee($request->TNname);
             $this->ensureEmployee($request->ColorMatcher);
@@ -393,6 +415,32 @@ class ColorMatchingController extends Controller
             DB::rollBack();
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * มีใบนำส่งเทียบสี (CM = ไม่มี Testno) ที่ใช้ SendNo นี้อยู่แล้วไหม (09/11/2569)
+     * เทียบแบบ TRIM · ใบส่ง ต.ย. (มี Testno) ใช้ SendNo เดียวกับ CM ได้ จึงไม่นับ
+     */
+    private function cmSendNoExists(string $sendNo, ?int $excludeId = null): bool
+    {
+        return DB::table('testmain')
+            ->whereRaw('TRIM(SendNo) = ?', [trim($sendNo)])
+            ->where(fn ($q) => $q->whereNull('Testno')->orWhere('Testno', ''))
+            ->when($excludeId, fn ($q) => $q->where('id', '!=', $excludeId))
+            ->exists();
+    }
+
+    /**
+     * GET — ตรวจเลขที่ใบนำส่งเทียบสีซ้ำ ให้ฟอร์ม CM เช็คตอนกรอก (09/11/2569)
+     * ?sendno=…&exclude_id=… (id ของใบที่กำลังแก้ไข) — รับผ่าน query string เพราะ SendNo มี "/"
+     */
+    public function checkSendNo(Request $request)
+    {
+        $sendNo = trim((string) $request->query('sendno', ''));
+        if ($sendNo === '') return response()->json(['exists' => false]);
+
+        $excludeId = (int) $request->query('exclude_id') ?: null;
+        return response()->json(['exists' => $this->cmSendNoExists($sendNo, $excludeId)]);
     }
 
     /**
@@ -504,6 +552,15 @@ class ColorMatchingController extends Controller
             //     }
             // }
 
+            // เลขที่ใบนำส่งเทียบสี (CM) ห้ามซ้ำ (09/11/2569) — ตรวจเฉพาะตอนเปลี่ยนเลข (ไม่นับตัวเอง)
+            $newSendNo = trim((string) ($payload['SendNo'] ?? ''));
+            $isCm = trim((string) ($payload['Testno'] ?? $row->Testno)) === '';
+            if ($isCm && $newSendNo !== '' && $newSendNo !== trim((string) $row->SendNo)
+                && $this->cmSendNoExists($newSendNo, (int) $row->id)) {
+                DB::rollBack();
+                return response()->json(['error' => "เลขที่ใบนำส่งเทียบสี \"{$newSendNo}\" มีอยู่แล้ว", 'sendno_duplicate' => true], 422);
+            }
+
             // ชื่อพนักงานที่กรอก (ผู้รับเอกสาร/Color Matcher) ถ้าใหม่ → สร้างใน emp
             $this->ensureEmployee($request->TNname);
             $this->ensureEmployee($request->ColorMatcher);
@@ -578,6 +635,11 @@ class ColorMatchingController extends Controller
      */
     public function destroy($id)
     {
+        // ลบได้เฉพาะพนักงานแผนก MK ที่ role "MK Admin" (09/11/2569 ตามที่ผู้ใช้สั่ง) — กันยิง POST ตรง
+        if (!self::canDelete()) {
+            return response()->json(['error' => 'ไม่มีสิทธิ์ลบเอกสาร (เฉพาะ MK Admin)'], 403);
+        }
+
         try {
             DB::beginTransaction();
 

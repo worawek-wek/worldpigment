@@ -17,6 +17,7 @@ Route::prefix('color-matching')->group(function () {
     Route::get('/ref',                 [ColorMatchingController::class, 'lookupBySendNo'])->name('color_matching.ref');
 
     // ─── ตรวจ Lot No. ซ้ำ (ฟอร์มใบส่ง ต.ย., 29/10/2569) — query string เพราะ Lot มี "/" ───
+    Route::get('/check-sendno',        [ColorMatchingController::class, 'checkSendNo'])->name('color_matching.check_sendno');
     Route::get('/check-lot',           [ColorMatchingController::class, 'checkLot'])->name('color_matching.check_lot');
 
     // ─── รายงาน PDF "ใบส่งตัวอย่างเทียบสี" ตามรหัสลูกค้า + ช่วงวันที่ (29/10/2569) ───
