@@ -75,6 +75,8 @@ class OrderReviewController extends Controller
     /** blade ผังพิมพ์ใบทบทวนฯ ตาม morder.Company — ไม่อยู่ในรายการ = order.order-review-print (ผังเดิม) */
     private const PRINT_VIEWS = [
         'CP' => 'order.order-review-print-cp',
+        'DB' => 'order.order-review-print-db',   // ตำแหน่งเท่าผัง CP เป๊ะ ๆ (09/11/2569 ตามที่ผู้ใช้สั่ง)
+        'MB' => 'order.order-review-print-db',   // MB ใช้ผังเดียวกับ DB (09/11/2569 ตามที่ผู้ใช้สั่ง)
     ];
 
     /**
@@ -119,7 +121,8 @@ class OrderReviewController extends Controller
 
         $d = [
             'orderno'   => $orderno,
-            'day'       => $mdate ? $mdate->format('d') : '',
+            'company'   => strtoupper(trim((string) $r->Company)),   // ให้ blade ที่ใช้ร่วมหลายแผนก (DB/MB) ปรับเฉพาะแผนกได้
+            'day'     => $mdate ? $mdate->format('d') : '',
             'month'     => $mdate ? $mdate->format('m') : '',
             'year'      => $mdate ? $mdate->format('y') : '',
             'in_bill'   => trim((string) $inBill) !== '' ? trim((string) $inBill) : '-',
