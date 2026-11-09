@@ -1091,6 +1091,7 @@
                 STD:        resp.STD         ?? '', // Standard: ดึงจากใบนำส่งเทียบสีเป็นค่าตั้งต้น (แก้ไขได้ 16/10/2569)
                 TestDesc:   resp.color       ?? '', // รายละเอียด: ดึงจาก "สี" (color) ของใบนำส่งเทียบสี
                 ResinMatch: resp.CustPigment ?? '', // Resin (Match): ดึงจาก "เม็ดที่ลูกค้าใช้" (CustPigment) เช่น AS50%+ABS50%
+                remark:     resp.Mems        ?? '', // หมายเหตุ: ดึงจาก "หมายเหตุ" (Mems) ของใบนำส่งเทียบสี (09/11/2569 · แก้ไขได้)
             });
             sdAutoGrowAll();   // ค่าที่เติมด้วย .val() ไม่ยิง event input
         }
