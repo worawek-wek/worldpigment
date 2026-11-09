@@ -100,7 +100,7 @@
                     <span class="small ms-1">of <span id="orv_total">0</span></span>
                 </div>
                 <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-primary" onclick="orvPrint()">
+                    <button type="button" id="orv_btn_print" class="btn btn-primary" onclick="orvPrint()">
                         <i class="ti ti-printer me-1"></i> พิมพ์ใบทบทวนฯ
                     </button>
                     <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">ปิด</button>
@@ -172,6 +172,17 @@
         $('#orv_pos').val(n ? ORV.i + 1 : '');
         $('#orv_total').text(n);
         $('#orv_empty').toggleClass('d-none', n > 0);
+
+        // แผนก SPP ไม่มีการพิมพ์ใบทบทวนฯ → ปิดปุ่มพิมพ์ (ผู้ใช้สั่ง 09/11/2569) · ไม่มีรายการก็ปิด
+        var noPrint = ORV.i < 0 || orvIsNoPrintDept(r.company);
+        $('#orv_btn_print').prop('disabled', noPrint)
+            .attr('title', ORV.i >= 0 && noPrint ? 'แผนก SPP ไม่มีการพิมพ์ใบทบทวนคำสั่งซื้อ' : '');
+    }
+
+    // แผนกที่ไม่มีการพิมพ์ใบทบทวนฯ (ตรงกับ OrderReviewController::NO_PRINT_DEPTS)
+    var ORV_NO_PRINT_DEPTS = ['SPP'];
+    function orvIsNoPrintDept(company){
+        return ORV_NO_PRINT_DEPTS.indexOf(String(company || '').trim().toUpperCase()) !== -1;
     }
 
     // พิมพ์รายการที่ดูอยู่ (1 รายการ / แผ่น) — หน้า A4 แนวตั้ง ฟอร์มอยู่ครึ่งบน · สั่งพิมพ์ที่ Scale 100%
@@ -181,6 +192,7 @@
             Swal.fire({ icon: 'warning', title: 'ไม่มีรายการให้พิมพ์', target: '#orderReviewModal', heightAuto: false });
             return;
         }
+        if (orvIsNoPrintDept(r.company)) return;   // กันเผื่อเรียกตรง (ปุ่มถูก disabled อยู่แล้ว)
         // พิมพ์ในหน้าเดิมผ่าน iframe ซ่อน ไม่เปิดแท็บใหม่ (ผู้ใช้สั่ง 03/11/2569 — เคยเปลี่ยนเป็นเปิดแท็บใหม่ชั่วคราวตอนจูนตำแหน่ง)
         var frame = document.getElementById('orvPrintFrame');
         if (!frame) {

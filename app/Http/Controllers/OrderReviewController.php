@@ -72,6 +72,9 @@ class OrderReviewController extends Controller
         'C' => 'บริษัท เวิลดีปิกเม้นท์เคมีภัณฑ์ จำกัด',
     ];
 
+    /** แผนกที่ไม่มีการพิมพ์ใบทบทวนฯ (09/11/2569 ตามที่ผู้ใช้สั่ง) — ต้องตรงกับ ORV_NO_PRINT_DEPTS ใน order/order-review.blade.php */
+    private const NO_PRINT_DEPTS = ['SPP'];
+
     /** blade ผังพิมพ์ใบทบทวนฯ ตาม morder.Company — ไม่อยู่ในรายการ = order.order-review-print (ผังเดิม) */
     private const PRINT_VIEWS = [
         'CP' => 'order.order-review-print-cp',
@@ -103,6 +106,8 @@ class OrderReviewController extends Controller
                 'e.empname',
             ]);
         abort_if(!$r, 404, 'ไม่พบรายการ');
+        // แผนกที่ไม่มีการพิมพ์ใบทบทวนฯ (SPP — ผู้ใช้สั่ง 09/11/2569) · ฝั่งจอปิดปุ่มพิมพ์ไว้แล้ว ด่านนี้กันยิง URL ตรง
+        abort_if(in_array(strtoupper(trim((string) $r->Company)), self::NO_PRINT_DEPTS, true), 403, 'แผนกนี้ไม่มีการพิมพ์ใบทบทวนคำสั่งซื้อ');
 
         // "ระบุในบิล" = uprice.inBill ของคู่ ลูกค้า+เบอร์ แถว DATE ล่าสุด (⚠ เดาจากชื่อช่อง)
         $inBill = DB::table('uprice')
