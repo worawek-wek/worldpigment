@@ -47,14 +47,17 @@ class ProductionPlanController extends Controller
             ->get(['id', 'name']);
 
         // ตัวเลือกตัวกรองกะการผลิต = กะที่เปิดใช้งานใน master + ค่าที่มีอยู่จริงใน tb_planning (กะที่ถูกปิด/ลบไปแล้ว) (10/11/2569)
-        $work_shifts = \App\Models\WorkShift::activeNames()
-            ->merge(Planning::whereNotNull('work_shift')->where('work_shift', '<>', '')
-                ->distinct()->orderBy('work_shift')->pluck('work_shift'))
-            ->unique()->values();
+        // จัดกลุ่มตาม shift_group (เวลาปกติ / ล่วงเวลา) — ค่าใน tb_planning ที่ไม่อยู่ในกะที่เปิดใช้งาน ไปอยู่กลุ่ม "อื่น ๆ" (10/11/2569)
+        $work_shift_groups = \App\Models\WorkShift::activeNamesByGroup();
+        $known = collect($work_shift_groups)->flatten();
+        $work_shift_others = Planning::whereNotNull('work_shift')->where('work_shift', '<>', '')
+            ->distinct()->orderBy('work_shift')->pluck('work_shift')
+            ->reject(fn ($name) => $known->contains($name))->values();
 
         return view('production-planning.planning.index', [
             'departments' => $departments,
-            'work_shifts' => $work_shifts,
+            'work_shift_groups' => $work_shift_groups,
+            'work_shift_others' => $work_shift_others,
             // วันหยุด (tb_holiday ที่เปิดใช้งาน) + วันหยุดประจำสัปดาห์ — ให้ JS เตือนตอนเลือกวันหยุด
             // ในช่องวันที่ของ modal "สร้างแผน (Semi)" ที่อยู่บนหน้านี้ (เปิดได้โดยไม่ต้องเปิดฟอร์มแก้ไข Item ก่อน)
             'holidays'    => HolidayService::activeMap(),
@@ -217,7 +220,13 @@ class ProductionPlanController extends Controller
                     $q->whereNull('tb_planning.work_shift')->orWhere('tb_planning.work_shift', '');
                 });
             })
-            ->when(!in_array(request('work_shift'), [null, '', '__none'], true), function ($query) {
+            // '__group:<shift_group>' = ทั้งกลุ่ม (เวลาปกติ / ล่วงเวลา) — ชื่อกะทุกตัวของกลุ่มใน master รวมที่ปิดใช้งาน (10/11/2569)
+            ->when(str_starts_with((string) request('work_shift'), '__group:'), function ($query) {
+                $group = substr(request('work_shift'), strlen('__group:'));
+                $query->whereIn('tb_planning.work_shift', \App\Models\WorkShift::namesInGroup($group)->all() ?: ['__no_match__']);
+            })
+            ->when(!in_array(request('work_shift'), [null, '', '__none'], true)
+                && !str_starts_with((string) request('work_shift'), '__group:'), function ($query) {
                 $query->where('tb_planning.work_shift', request('work_shift'));
             })
             // กรองด้วยสถานะปิดงาน — 'ยังไม่ปิดงาน' นับรวมค่า NULL/ว่าง ด้วย

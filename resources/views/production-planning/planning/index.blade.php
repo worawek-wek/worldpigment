@@ -103,9 +103,22 @@
                                 <label class="form-label mb-1 small text-muted">กะการผลิต</label>
                                 <select id="searchWorkShift" class="form-select" data-fl-label="กะ">
                                     <option value="">ทุกกะ</option>
-                                    @foreach($work_shifts as $shift)
-                                        <option value="{{ $shift }}">{{ $shift }}</option>
+                                    {{-- จัดกลุ่ม เวลาปกติ / ล่วงเวลา (tb_work_shift.shift_group) — ตัวเลือกแรกของกลุ่ม = เลือกทั้งกลุ่ม (10/11/2569) --}}
+                                    @foreach(\App\Models\WorkShift::GROUPS as $groupKey => $groupLabel)
+                                        <optgroup label="{{ $groupLabel }}">
+                                            <option value="__group:{{ $groupKey }}">{{ $groupLabel }} (ทั้งกลุ่ม)</option>
+                                            @foreach($work_shift_groups[$groupKey] ?? [] as $shift)
+                                                <option value="{{ $shift }}">{{ $shift }}</option>
+                                            @endforeach
+                                        </optgroup>
                                     @endforeach
+                                    @if($work_shift_others->isNotEmpty())
+                                        <optgroup label="อื่น ๆ (ปิดใช้งาน/ไม่อยู่ใน master)">
+                                            @foreach($work_shift_others as $shift)
+                                                <option value="{{ $shift }}">{{ $shift }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
                                     <option value="__none">ยังไม่ระบุกะ</option>
                                 </select>
                             </div>

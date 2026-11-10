@@ -11,6 +11,19 @@
     </div>
 
     <div class="mb-2">
+        <label class="form-label" for="workshift_group">
+            กลุ่ม <span class="text-danger">*</span>
+        </label>
+        <select class="form-select" id="workshift_group" name="shift_group">
+            @foreach (\App\Models\WorkShift::GROUPS as $key => $label)
+                <option value="{{ $key }}" {{ ($item?->shift_group ?? 'Normal Working') === $key ? 'selected' : '' }}>
+                    {{ $label }} ({{ $key }})
+                </option>
+            @endforeach
+        </select>
+    </div>
+
+    <div class="mb-2">
         <label class="form-label" for="workshift_sort">ลำดับ</label>
         <input type="number" class="form-control" id="workshift_sort" name="sort"
             value="{{ $item?->sort ?? 0 }}" min="0" placeholder="0">

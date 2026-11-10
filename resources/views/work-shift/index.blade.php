@@ -32,6 +32,14 @@
                                 placeholder="ค้นหา...">
                             </div>
                             <div class="col-md-3">
+                                <select id="searchGroup" class="form-select">
+                                    <option value="">ทุกกลุ่ม</option>
+                                    @foreach (\App\Models\WorkShift::GROUPS as $key => $label)
+                                        <option value="{{ $key }}">{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-3">
                                 <select id="searchStatus" class="form-select">
                                     <option value="">ทุกสถานะ</option>
                                     <option value="Y">เปิดใช้งาน</option>
@@ -54,7 +62,8 @@
                                     <tr>
                                         <th class="col-1">#</th>
                                         <th class="col-2">ลำดับ</th>
-                                        <th class="col-5">กะการผลิต</th>
+                                        <th class="col-3">กะการผลิต</th>
+                                        <th class="col-2">กลุ่ม</th>
                                         <th class="col-2">สถานะ</th>
                                         <th class="col-2">จัดการ</th>
                                     </tr>
@@ -103,6 +112,7 @@
                 url: "{{ route('workshift.datatable') }}",
                 data: function(d) {
                     d.search = $('#searchInput').val();
+                    d.group = $('#searchGroup').val();
                     d.status = $('#searchStatus').val();
                 },
                 error: function(xhr, error, thrown) {
@@ -115,6 +125,7 @@
                 { 'className': "text-center", data: 'rownum', name: 'rownum', orderable: false },
                 { 'className': "text-center", data: 'sort', name: 'sort', orderable: true, searchable: false },
                 { 'className': "text-left", data: 'name', name: 'name', orderable: true },
+                { 'className': "text-center", data: 'group_label', name: 'shift_group', orderable: true, searchable: false },
                 { 'className': "text-center", data: 'status_switch', name: 'is_active', orderable: true, searchable: false },
                 { 'className': "text-center", data: 'btnaction', name: 'btnaction', orderable: false, searchable: false },
             ],
@@ -128,7 +139,7 @@
         oTable.draw();
     });
 
-    $(document).on('change', '#searchStatus', function(e){
+    $(document).on('change', '#searchStatus, #searchGroup', function(e){
         e.preventDefault();
         oTable.draw();
     });

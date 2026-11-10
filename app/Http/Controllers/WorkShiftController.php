@@ -22,9 +22,12 @@ class WorkShiftController extends Controller
 
     public function datatable()
     {
-        $items = WorkShift::select(['id', 'name', 'sort', 'is_active'])
+        $items = WorkShift::select(['id', 'name', 'shift_group', 'sort', 'is_active'])
             ->when(request('search'), function ($q, $search) {
                 $q->where('name', 'like', "%{$search}%");
+            })
+            ->when(array_key_exists((string) request('group'), WorkShift::GROUPS), function ($q) {
+                $q->where('shift_group', request('group'));
             })
             ->when(in_array(request('status'), ['Y', 'N'], true), function ($q) {
                 $q->where('is_active', request('status'));
@@ -43,6 +46,10 @@ class WorkShiftController extends Controller
             ->editColumn('name', function ($item) {
                 return $item->name ?: '-';
             })
+            ->addColumn('group_label', function ($item) {
+                $cls = $item->shift_group === 'Overtime' ? 'bg-label-warning' : 'bg-label-success';
+                return '<span class="badge '.$cls.'">'.e(WorkShift::groupLabel($item->shift_group)).'</span>';
+            })
             ->addColumn('status_switch', function ($item) {
                 $checked = $item->is_active === 'Y' ? 'checked' : '';
                 return '<div class="form-check form-switch d-flex justify-content-center mb-0">
@@ -60,7 +67,7 @@ class WorkShiftController extends Controller
                             </button>
                         </div>';
             })
-            ->rawColumns(['status_switch', 'btnaction'])
+            ->rawColumns(['group_label', 'status_switch', 'btnaction'])
             ->make(true);
     }
 
@@ -84,9 +91,12 @@ class WorkShiftController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:50',
+            'shift_group' => ['required', \Illuminate\Validation\Rule::in(array_keys(WorkShift::GROUPS))],
             'sort' => 'nullable|integer|min:0',
         ], [
             'name.required' => 'กรุณากรอกชื่อกะการผลิต',
+            'shift_group.required' => 'กรุณาเลือกกลุ่ม',
+            'shift_group.in'       => 'กลุ่มไม่ถูกต้อง',
             'sort.integer'  => 'ลำดับต้องเป็นตัวเลข',
         ]);
 
@@ -100,6 +110,7 @@ class WorkShiftController extends Controller
 
         $data = [
             'name'      => $request->name,
+            'shift_group' => $request->shift_group,
             'sort'      => (int) $request->sort,
             // switch ในฟอร์ม: ติ๊ก = ส่ง is_active (Y), ไม่ติ๊ก = ไม่ส่ง (N)
             'is_active' => $request->has('is_active') ? 'Y' : 'N',
