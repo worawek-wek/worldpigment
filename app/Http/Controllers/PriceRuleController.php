@@ -34,9 +34,16 @@ class PriceRuleController extends Controller
      */
     public function data(ProductPriceService $prices)
     {
-        $rows = array_map(function ($rule) {
+        // SPdCode ที่ชี้มาแถวนี้ (config product_price.spdcode_rules — ใช้กับจอ Test Price) · 10/11/2569
+        $spdByKey = [];
+        foreach ((array) config('product_price.spdcode_rules', []) as $spd => $ruleKey) {
+            $spdByKey[$ruleKey][] = (string) $spd;
+        }
+
+        $rows = array_map(function ($rule) use ($spdByKey) {
             return [
                 'key'        => $rule['key'] ?? null,
+                'spdcodes'   => $spdByKey[$rule['key'] ?? ''] ?? [],
                 'label'      => $rule['label'] ?? '',
                 'prefix'     => implode(', ', $rule['prefix'] ?? []),
                 'suffix'     => implode(', ', $rule['suffix'] ?? []),

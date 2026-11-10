@@ -362,10 +362,11 @@
         </div>
     </div>
 
-    {{-- ═══ Blacklist (แสดงอย่างเดียว) ═══ --}}
-    @if ($hasBlackInfo)
-        <div class="cf-sec cf-sec-black mb-3">
-            <div class="cf-sec-title"><i class="ti ti-ban"></i> ข้อมูล Blacklist (แก้ไขที่นี่ไม่ได้)</div>
+    {{-- ═══ สถานะเครดิต/Blacklist (แสดงอย่างเดียว) — ปกติ = แถบเขียว · ติด = แถบแดง (10/11/2569 ตามที่ผู้ใช้สั่ง)
+         แสดงทุกลูกค้าเดิม (เดิมแสดงเฉพาะเมื่อมีข้อมูล blacklist) · ลูกค้าใหม่ไม่แสดง ═══ --}}
+    @if (!$isNew)
+        <div class="cf-sec {{ $isBlack ? 'cf-sec-black' : 'cf-sec-credit-ok' }} mb-3">
+            <div class="cf-sec-title"><i class="ti {{ $isBlack ? 'ti-ban' : 'ti-circle-check' }}"></i> สถานะเครดิต/Blacklist</div>
             <div class="row gx-3 gy-2">
                 <div class="col-md-3 of-row">
                     <label class="form-label">สถานะ</label>

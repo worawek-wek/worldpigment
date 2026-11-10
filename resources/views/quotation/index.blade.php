@@ -602,7 +602,7 @@
                             {{-- เทอมการชำระเงิน --}}
                             <div class="col-md-6 of-row">
                                 <label class="form-label">
-                                    <span class="i18n-th">เทอมการชำระเงิน</span><span class="i18n-en">Term of Payment</span>
+                                    <span class="i18n-th">กำหนดชำระเงิน</span><span class="i18n-en">Term of Payment</span>
                                 </label>
                                 <div class="of-ctl">
                                     <input type="text" name="Term" id="q_Term" class="form-control">

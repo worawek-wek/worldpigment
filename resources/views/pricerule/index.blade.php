@@ -112,6 +112,7 @@
                     <thead>
                         <tr class="text-center">
                             <th style="min-width: 260px;">เงื่อนไข</th>
+                            <th style="width: 120px;" title="SPdCode ของใบเทส (จอ Test Price) ที่ใช้เงื่อนไขนี้">SPdCode</th>
                             <th style="width: 130px;">× คูณ</th>
                             <th style="width: 130px;">÷ หาร</th>
                             <th style="width: 130px;">บวก +</th>
@@ -119,7 +120,7 @@
                     </thead>
                     <tbody id="pr_tbody">
                         <tr>
-                            <td colspan="4" class="text-center text-muted py-4">กำลังโหลด…</td>
+                            <td colspan="5" class="text-center text-muted py-4">กำลังโหลด…</td>
                         </tr>
                     </tbody>
                 </table>
@@ -206,7 +207,7 @@
         const $tbody = $('#pr_tbody').empty();
 
         if (!rows.length) {
-            $tbody.append('<tr><td colspan="4" class="text-center text-muted py-4">ไม่มีเงื่อนไข</td></tr>');
+            $tbody.append('<tr><td colspan="5" class="text-center text-muted py-4">ไม่มีเงื่อนไข</td></tr>');
             return;
         }
 
@@ -224,6 +225,12 @@
                     '<td>' +
                         '<div class="fw-semibold small">' + prEsc(r.label) + '</div>' +
                         '<div class="text-muted" style="font-size: 0.75rem;">' + prEsc(cond) + '</div>' +
+                    '</td>' +
+                    // SPdCode ที่ใช้เงื่อนไขนี้ (อ่านอย่างเดียว — มาจาก config product_price.spdcode_rules) · 10/11/2569
+                    '<td class="text-center">' +
+                        ((r.spdcodes || []).length
+                            ? r.spdcodes.map(function (c) { return '<span class="badge bg-label-primary me-1">' + prEsc(c) + '</span>'; }).join('')
+                            : '<span class="text-muted">-</span>') +
                     '</td>' +
                     '<td><input type="number" step="any" class="form-control form-control-sm text-end pr_mul"></td>' +
                     '<td><input type="number" step="any" class="form-control form-control-sm text-end pr_div"></td>' +
@@ -243,7 +250,7 @@
 
     function prLoad() {
         $('#pr_error').addClass('d-none').text('');
-        $('#pr_tbody').html('<tr><td colspan="4" class="text-center text-muted py-4">กำลังโหลด…</td></tr>');
+        $('#pr_tbody').html('<tr><td colspan="5" class="text-center text-muted py-4">กำลังโหลด…</td></tr>');
 
         $.getJSON(PAGE_URL + "/data")
             .done(function (res) {
@@ -269,7 +276,7 @@
                 }
             })
             .fail(function () {
-                $('#pr_tbody').html('<tr><td colspan="4" class="text-center text-danger py-4">โหลดเงื่อนไขไม่สำเร็จ</td></tr>');
+                $('#pr_tbody').html('<tr><td colspan="5" class="text-center text-danger py-4">โหลดเงื่อนไขไม่สำเร็จ</td></tr>');
             });
     }
 
