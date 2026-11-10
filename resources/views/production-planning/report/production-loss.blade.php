@@ -1,7 +1,7 @@
 @extends('./layout/main')
 
 {{-- รายงานการผลิตและสูญเสีย (สถิติสูญเสีย) — 10/11/2569
-     กรองแผนก + ช่วงวันที่ Inplan · ตาราง client-side DataTables (โหลด HTML ผ่าน AJAX) --}}
+     กรองแผนก + ช่วงวันที่ผลิตเสร็จ (end_date) · ตาราง client-side DataTables (โหลด HTML ผ่าน AJAX) --}}
 @section('content')
     <style>
         #productionLossTable th.col-loss,
@@ -49,15 +49,15 @@
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label mb-1 small text-muted">Inplan ตั้งแต่</label>
+                                <label class="form-label mb-1 small text-muted">วันที่ผลิตเสร็จ ตั้งแต่</label>
                                 <input id="searchDateFrom" type="text" class="form-control" autocomplete="off"
-                                    data-fl-label="Inplan ตั้งแต่" data-fl-default="{{ now()->startOfMonth()->format('Y-m-d') }}"
+                                    data-fl-label="ผลิตเสร็จ ตั้งแต่" data-fl-default="{{ now()->startOfMonth()->format('Y-m-d') }}"
                                     value="{{ now()->startOfMonth()->format('Y-m-d') }}">
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label mb-1 small text-muted">ถึง</label>
                                 <input id="searchDateTo" type="text" class="form-control" autocomplete="off"
-                                    data-fl-label="Inplan ถึง" data-fl-default="{{ now()->endOfMonth()->format('Y-m-d') }}"
+                                    data-fl-label="ผลิตเสร็จ ถึง" data-fl-default="{{ now()->endOfMonth()->format('Y-m-d') }}"
                                     value="{{ now()->endOfMonth()->format('Y-m-d') }}">
                             </div>
                             <div class="col-md-3 d-flex gap-2">

@@ -32,14 +32,14 @@
                 <th style="width:5%">หน่วย</th>
                 <th style="width:9%">เลขที่ใบสั่ง</th>
                 <th style="width:10%">เลขที่ใบเบิก</th>
-                <th style="width:12%">รหัสสินค้า</th>
-                <th style="width:8%">Lot No.</th>
+                <th style="width:13%">รหัสสินค้า</th>
+                <th style="width:7%">Lot No.</th>
+                <th style="width:6%">เลขที่เครื่องจักร</th>
                 <th style="width:7%">น้ำหนัก PO</th>
                 <th style="width:8%">น้ำหนักผลิต</th>
                 <th style="width:8%">น.น.บรรจุได้</th>
                 <th style="width:7%">สูญเสีย (กก.)</th>
                 <th style="width:7%">สูญเสีย (%)</th>
-                <th style="width:6%">Inplan</th>
                 <th style="width:10%">วันที่ผลิตเสร็จ</th>
             </tr>
         </thead>
@@ -52,12 +52,12 @@
                     <td>{{ $it->red_bill_code }}</td>
                     <td>{{ $it->itemno }}</td>
                     <td>{{ $it->lot }}</td>
+                    <td>{{ $it->machine_no }}</td>
                     <td class="r">{{ $n2($it->quantity) }}</td>
                     <td class="r">{{ $n2($it->weight) }}</td>
                     <td class="r">{{ $n2($it->weight_produced) }}</td>
                     <td class="r {{ $cls($it->loss_pct) }}">{{ $n2($it->loss_kg) }}</td>
                     <td class="r {{ $cls($it->loss_pct) }}">{{ $it->loss_pct !== null ? number_format($it->loss_pct, 2).'%' : '-' }}</td>
-                    <td class="c">{{ $dmy($it->inplan) }}</td>
                     <td class="c">{{ $dmy($it->end_date) }}</td>
                 </tr>
             @empty
@@ -65,13 +65,13 @@
             @endforelse
             @if($total > 0)
                 <tr class="total">
-                    <td colspan="6" class="r">รวม {{ number_format($total) }} รายการ</td>
+                    <td colspan="7" class="r">รวม {{ number_format($total) }} รายการ</td>
                     <td class="r">{{ number_format($sum['po'], 2) }}</td>
                     <td class="r">{{ number_format($sum['tp'], 2) }}</td>
                     <td class="r">{{ number_format($sum['produced'], 2) }}</td>
                     <td class="r">{{ number_format($sum['loss_kg'], 2) }}</td>
                     <td class="r">{{ $sum['loss_pct'] !== null ? number_format($sum['loss_pct'], 2).'%' : '-' }}</td>
-                    <td colspan="2"></td>
+                    <td></td>
                 </tr>
             @endif
         </tbody>

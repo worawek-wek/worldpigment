@@ -977,7 +977,7 @@ class ReportController extends Controller
     //  รายงานการผลิตและสูญเสีย (สถิติสูญเสีย) — 10/11/2569 ตามที่ผู้ใช้สั่ง
     //
     //  แถว = tb_planning ที่มี "น้ำหนักที่ผลิตได้" (weight_produced > 0) กรองด้วย
-    //  แผนก (COALESCE item → header) + ช่วงวันที่ inplan
+    //  แผนก (COALESCE item → header) + ช่วงวันที่ผลิตเสร็จ (end_date — เปลี่ยนจาก inplan 10/11/2569 ตามที่ผู้ใช้สั่ง)
     //  สูญเสีย (กก.) = น้ำหนักผลิต (TP, tb_planning.weight) − นน.บรรจุได้ (weight_produced)
     //  สูญเสีย (%)   = สูญเสีย (กก.) ÷ น้ำหนักผลิต × 100  (ติดลบ = บรรจุได้มากกว่า TP)
     //  ตรงกับกระดาษเดิม: (115.12 − 111.70) ÷ 115.12 = 2.97%
@@ -1026,6 +1026,7 @@ class ReportController extends Controller
                 'tb_planning.red_bill_code',
                 'tb_planning.itemno',
                 'tb_planning.lot',
+                'tb_planning.machine_no',        // เลขที่เครื่องจักร (เพิ่ม 10/11/2569)
                 'tb_planning.quantity',          // น้ำหนัก PO
                 'tb_planning.weight',            // น้ำหนักผลิต (TP)
                 'tb_planning.weight_produced',   // นน.บรรจุได้
@@ -1042,9 +1043,9 @@ class ReportController extends Controller
             // เฉพาะงานที่จบงานแล้ว (บรรจุครบ) — ผู้ใช้สั่ง 10/11/2569 กันงานที่บรรจุยังไม่ครบดัน % สูญเสียสูงเกินจริง
             ->where('tb_planning.end_job', 'Y')
             ->when($dept !== '', fn ($q) => $q->whereRaw($deptSql.' = ?', [$dept]))
-            ->when($from, fn ($q) => $q->where('tb_planning.inplan', '>=', $from))
-            ->when($to, fn ($q) => $q->where('tb_planning.inplan', '<=', $to))
-            ->orderByRaw('tb_planning.inplan IS NULL, tb_planning.inplan ASC')
+            ->when($from, fn ($q) => $q->where('tb_planning.end_date', '>=', $from))
+            ->when($to, fn ($q) => $q->where('tb_planning.end_date', '<=', $to))
+            ->orderByRaw('tb_planning.end_date IS NULL, tb_planning.end_date ASC')
             ->orderBy('tb_planning_header.orderno')
             ->orderBy('tb_planning.id')
             ->get();
@@ -1092,7 +1093,7 @@ class ReportController extends Controller
 
         return implode('   |   ', [
             'แผนก: '.($filters['dept'] ?: 'ทุกแผนก'),
-            'วันที่ Inplan: '.(($filters['from'] || $filters['to']) ? $fmt($filters['from']).' ถึง '.$fmt($filters['to']) : 'ทั้งหมด'),
+            'วันที่ผลิตเสร็จ: '.(($filters['from'] || $filters['to']) ? $fmt($filters['from']).' ถึง '.$fmt($filters['to']) : 'ทั้งหมด'),
             'เฉพาะงานที่จบงานแล้ว',
             'พบ '.number_format($total).' รายการ',
         ]);
@@ -1129,10 +1130,10 @@ class ReportController extends Controller
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('สถิติสูญเสีย');
 
-        $headers = ['#', 'หน่วย', 'เลขที่ใบสั่ง', 'เลขที่ใบเบิก', 'รหัสสินค้า', 'Lot No.', 'น้ำหนัก PO', 'น้ำหนักผลิต (TP)',
-            'นน.บรรจุได้', 'สูญเสีย (กก.)', 'สูญเสีย (%)', 'Inplan', 'วันที่ผลิตเสร็จ', 'บรรจุล่าสุด', 'ครั้งที่บรรจุ'];
+        $headers = ['#', 'หน่วย', 'เลขที่ใบสั่ง', 'เลขที่ใบเบิก', 'รหัสสินค้า', 'Lot No.', 'เลขที่เครื่องจักร', 'น้ำหนัก PO', 'น้ำหนักผลิต (TP)',
+            'นน.บรรจุได้', 'สูญเสีย (กก.)', 'สูญเสีย (%)', 'วันที่ผลิตเสร็จ', 'บรรจุล่าสุด', 'ครั้งที่บรรจุ'];
         $cols    = range('A', 'O');
-        $lastCol = 'O';
+        $lastCol = 'O';  // ตัด Inplan ออก + เพิ่มเลขที่เครื่องจักร (G) 10/11/2569
         $str     = \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING;
         $d       = fn ($v, $f = 'd/m/Y') => $v ? \Carbon\Carbon::parse($v)->format($f) : '';
 
@@ -1159,12 +1160,12 @@ class ReportController extends Controller
             $sheet->setCellValueExplicit("D{$r}", (string) $it->red_bill_code, $str);
             $sheet->setCellValueExplicit("E{$r}", (string) $it->itemno, $str);
             $sheet->setCellValueExplicit("F{$r}", (string) $it->lot, $str);
-            $sheet->setCellValue("G{$r}", $it->quantity !== null ? (float) $it->quantity : null);
-            $sheet->setCellValue("H{$r}", $it->weight !== null ? (float) $it->weight : null);
-            $sheet->setCellValue("I{$r}", (float) $it->weight_produced);
-            $sheet->setCellValue("J{$r}", $it->loss_kg);
-            $sheet->setCellValue("K{$r}", $it->loss_pct !== null ? $it->loss_pct / 100 : null);
-            $sheet->setCellValue("L{$r}", $d($it->inplan));
+            $sheet->setCellValueExplicit("G{$r}", (string) $it->machine_no, $str);
+            $sheet->setCellValue("H{$r}", $it->quantity !== null ? (float) $it->quantity : null);
+            $sheet->setCellValue("I{$r}", $it->weight !== null ? (float) $it->weight : null);
+            $sheet->setCellValue("J{$r}", (float) $it->weight_produced);
+            $sheet->setCellValue("K{$r}", $it->loss_kg);
+            $sheet->setCellValue("L{$r}", $it->loss_pct !== null ? $it->loss_pct / 100 : null);
             $sheet->setCellValue("M{$r}", $d($it->end_date));
             $sheet->setCellValue("N{$r}", $d($it->pk_last, 'd/m/Y H:i'));
             $sheet->setCellValue("O{$r}", (int) $it->pk_count ?: '');
@@ -1176,17 +1177,17 @@ class ReportController extends Controller
             $sheet->mergeCells("A{$r}:{$lastCol}{$r}");
         } else {
             $last = $r - 1;
-            $sheet->getStyle("G{$first}:J{$last}")->getNumberFormat()->setFormatCode('#,##0.00');
-            $sheet->getStyle("K{$first}:K{$last}")->getNumberFormat()->setFormatCode('0.00%');
+            $sheet->getStyle("H{$first}:K{$last}")->getNumberFormat()->setFormatCode('#,##0.00');
+            $sheet->getStyle("L{$first}:L{$last}")->getNumberFormat()->setFormatCode('0.00%');
             // แถวรวม (% รวม ถ่วงน้ำหนักตาม TP)
-            $sheet->setCellValue("F{$r}", 'รวม');
-            $sheet->setCellValue("G{$r}", $sum['po']);
-            $sheet->setCellValue("H{$r}", $sum['tp']);
-            $sheet->setCellValue("I{$r}", $sum['produced']);
-            $sheet->setCellValue("J{$r}", $sum['loss_kg']);
-            $sheet->setCellValue("K{$r}", $sum['loss_pct'] !== null ? $sum['loss_pct'] / 100 : null);
-            $sheet->getStyle("G{$r}:J{$r}")->getNumberFormat()->setFormatCode('#,##0.00');
-            $sheet->getStyle("K{$r}")->getNumberFormat()->setFormatCode('0.00%');
+            $sheet->setCellValue("G{$r}", 'รวม');
+            $sheet->setCellValue("H{$r}", $sum['po']);
+            $sheet->setCellValue("I{$r}", $sum['tp']);
+            $sheet->setCellValue("J{$r}", $sum['produced']);
+            $sheet->setCellValue("K{$r}", $sum['loss_kg']);
+            $sheet->setCellValue("L{$r}", $sum['loss_pct'] !== null ? $sum['loss_pct'] / 100 : null);
+            $sheet->getStyle("H{$r}:K{$r}")->getNumberFormat()->setFormatCode('#,##0.00');
+            $sheet->getStyle("L{$r}")->getNumberFormat()->setFormatCode('0.00%');
             $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setBold(true);
         }
 
