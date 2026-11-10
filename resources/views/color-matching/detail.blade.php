@@ -300,7 +300,7 @@
         <div>
             @if (\App\Http\Controllers\ColorMatchingController::canDelete())
                 <button type="button" class="btn btn-label-danger"
-                        onclick="deleteFromDetail({{ (int) $row->id }}, @js((string) ($isSD ? $row->Testno : $row->SendNo)))">
+                        onclick="deleteFromDetail({{ (int) $row->id }}, @js((string) ($isSD ? $row->Testno : $row->SendNo)), {{ $isSD ? 'false' : 'true' }})">
                     <i class="ti ti-trash me-1"></i>{{ $isSD ? 'ลบใบส่ง ต.ย.' : 'ลบใบนำส่งเทียบสี' }}
                 </button>
             @endif

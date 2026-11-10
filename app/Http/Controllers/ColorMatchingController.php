@@ -648,10 +648,22 @@ class ColorMatchingController extends Controller
                 return response()->json(['error' => 'not_found'], 404);
             }
 
+            // ลบใบนำส่งเทียบสี (CM) = ลบใบส่ง ต.ย. ที่ SendNo เดียวกันด้วย (10/11/2569 ตามที่ผู้ใช้สั่ง)
+            // ข้ามถ้ายังมีแถว CM อื่นที่ SendNo เดียวกันเหลืออยู่ (ข้อมูลเดิมซ้ำ เช่น 111/56) — ใบ ต.ย. ยังมีเจ้าของ
+            $deletedSd = 0;
+            $sendNo    = trim((string) $row->SendNo);
+            $isCm      = trim((string) $row->Testno) === '';
+            if ($isCm && $sendNo !== '' && !$this->cmSendNoExists($sendNo, (int) $row->id)) {
+                $deletedSd = Testmain::query()
+                    ->whereRaw('TRIM(SendNo) = ?', [$sendNo])
+                    ->whereNotNull('Testno')->where('Testno', '!=', '')
+                    ->delete();
+            }
+
             $row->delete();
 
             DB::commit();
-            return response()->json(['ok' => true]);
+            return response()->json(['ok' => true, 'deleted_sd' => $deletedSd]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['error' => $e->getMessage()], 500);

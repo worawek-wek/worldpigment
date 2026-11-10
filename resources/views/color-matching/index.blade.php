@@ -1490,11 +1490,13 @@
 
         // ── ลบ record testmain (CM/SD) — ยืนยันก่อน แล้ว POST ไป /delete/{id} ──
         // เรียกจากปุ่มลบใน footer ของ form (โหมดแก้ไข) — modalSel = modal ที่ต้องปิดเมื่อลบสำเร็จ
-        function deleteRow(id, label, modalSel) {
+        // isCm = ใบนำส่งเทียบสี → ใบส่ง ต.ย. ที่ SendNo เดียวกันถูกลบด้วย (10/11/2569)
+        function deleteRow(id, label, modalSel, isCm) {
             const name = label ? String(label) : '#' + id;
             Swal.fire({
                 title: 'ยืนยันการลบ?',
                 html: 'ต้องการลบรายการ <strong>' + $('<div>').text(name).html() + '</strong> ใช่หรือไม่?'
+                    + (isCm ? '<br><span class="text-danger">ใบส่ง ต.ย. ทั้งหมดของใบเทียบสีนี้จะถูกลบด้วย</span>' : '')
                     + '<br><small class="text-muted">การลบไม่สามารถกู้คืนได้</small>',
                 icon: 'warning',
                 showCancelButton: true,
@@ -1512,7 +1514,8 @@
                     success: function(resp) {
                         if (resp && resp.ok) {
                             if (modalSel) $(modalSel).modal('hide');
-                            Swal.fire({ title: 'ลบเรียบร้อย', icon: 'success', heightAuto: false });
+                            Swal.fire({ title: 'ลบเรียบร้อย', icon: 'success', heightAuto: false,
+                                text: resp.deleted_sd > 0 ? 'ลบใบส่ง ต.ย. ด้วย ' + resp.deleted_sd + ' ใบ' : '' });
                             loadData(page);
                         } else {
                             Swal.fire({ title: 'เกิดข้อผิดพลาด', text: resp.error ?? '', icon: 'error', heightAuto: false });
@@ -1527,13 +1530,13 @@
 
         // ปุ่มลบใน footer ของหน้ารายละเอียด (detail.blade.php) — เนื้อหาอาจอยู่ใน modal ชั้น 1 หรือ ชั้น 2
         // ลบสำเร็จ → ปิดทั้งสองชั้น (ชั้น 1 อาจเป็นใบ CM ที่ลิสต์ใบ ต.ย. ซึ่งเพิ่งถูกลบไป — ข้อมูลจะค้าง)
-        function deleteFromDetail(id, label) {
-            deleteRow(id, label, '#detailModal2, #detailModal');
+        function deleteFromDetail(id, label, isCm) {
+            deleteRow(id, label, '#detailModal2, #detailModal', isCm);
         }
 
         // ปุ่มลบใน footer ของ form (id/label ถูกผูกไว้ตอนเปิด modal โหมดแก้ไข)
         $('#btn_delete_cm').on('click', function () {
-            deleteRow($(this).data('id'), $(this).data('label'), '#colorMatchingModal');
+            deleteRow($(this).data('id'), $(this).data('label'), '#colorMatchingModal', true);
         });
         $('#btn_delete_sd').on('click', function () {
             deleteRow($(this).data('id'), $(this).data('label'), '#sampleDeliveryModal');
