@@ -37,6 +37,7 @@ class OrderOutstandingController extends Controller
     /**
      * ประเภทใบสั่ง (2 ตัวหน้าเลขที่ใบ) ที่ดึงมาในรายงาน sale / done (27/10/2569 ตามที่ผู้ใช้สั่ง)
      * ⇒ ตัดใบสั่งทำสต๊อก (CM/HM/WM) และใบจอง (CR/HR/WR) ออก · แบบ undone ไม่กรอง (ดึงทุกประเภทเหมือนเดิม)
+     * ⚠ ไม่มีผู้เรียกแล้ว (09/11/2569) — ทั้ง 3 แบบเปลี่ยนไปใช้เงื่อนไขตาม query Access เดิม (sale/undone/doneConditions)
      */
     public const ORDER_TYPES_FILTERED = ['HI', 'WI', 'CI', 'HE', 'WE', 'CE'];
 
@@ -54,11 +55,12 @@ class OrderOutstandingController extends Controller
         $rows = DB::table('suborder as s')
             ->join('morder as m', 'm.Orderno', '=', 's.Orderno')
             ->leftJoin('customer as c', 'c.code', '=', 'm.Custno')
-            ->whereNull('s.DVDate')
-            ->when($type === 'sale', fn ($q) => $q->where('m.supno', $sale))
-            ->when($type === 'done', fn ($q) => $q->whereNotNull('s.EndP'))
-            ->when($type === 'undone', fn ($q) => $q->whereNull('s.EndP'))
-            ->when($type !== 'undone', fn ($q) => $q->whereIn(DB::raw('UPPER(LEFT(m.Orderno, 2))'), self::ORDER_TYPES_FILTERED))
+            // แบบ sale = เงื่อนไขตาม query Access เดิมที่ผู้ใช้ส่งมา (09/11/2569) — ดู saleConditions()
+            ->when($type === 'sale', fn ($q) => $this->saleConditions($q, $sale))
+            // แบบ undone = เงื่อนไขตาม query Access เดิม (09/11/2569) — ดู undoneConditions()
+            ->when($type === 'undone', fn ($q) => $this->undoneConditions($q))
+            // แบบ done = เงื่อนไขตาม query Access เดิม (09/11/2569) — ดู doneConditions()
+            ->when($type === 'done', fn ($q) => $this->doneConditions($q))
             // เรียง supno → custno → senddate → itemno (26/10/2569 ตามที่ผู้ใช้สั่ง) · senddate ว่างไปท้ายกลุ่ม
             ->orderBy('m.supno')
             ->orderBy('m.Custno')
@@ -151,6 +153,68 @@ class OrderOutstandingController extends Controller
             'Content-Type'        => 'application/pdf',
             'Content-Disposition' => 'inline; filename="outstanding-' . ($type === 'sale' ? preg_replace('/[^A-Za-z0-9_-]/', '', $sale) : $type) . '-' . now()->format('Ymd') . '.pdf"',
         ]);
+    }
+
+    /**
+     * เงื่อนไขแบบ "ตามรหัสผู้ขาย" — แปลงจาก query Access เดิม (09/11/2569 ตามที่ผู้ใช้สั่ง)
+     *   - supno = รหัสที่กรอก · ต้องมีรหัสลูกค้าในตาราง customer (INNER JOIN เดิม)
+     *   - senddate > 1/1/2005 (กำหนดส่งว่าง = ไม่ออก) · Stock > 0 หรือ Production > 0
+     *   - ตัวที่ 2 ของเลขที่ใบ = I/E → ยังไม่ส่ง (DVDate ว่าง หรือเป็นวันในอนาคต)
+     *   - ตัวที่ 2 ของเลขที่ใบ = M/R → ยังผลิตไม่เสร็จ (EndP ว่าง หรือเป็นวันในอนาคต)
+     * ⚠ query เดิมเขียน Like "%I*" — ตีความว่า "ตัวที่ 2 = I" (ยังไม่ได้ยืนยัน)
+     */
+    private function saleConditions($q, string $sale)
+    {
+        $today = now()->toDateString();
+
+        return $q->where('m.supno', $sale)
+            ->whereNotNull('c.code')
+            ->where('s.senddate', '>', '2005-01-01')
+            ->where(fn ($w) => $w->where('s.Stock', '>', 0)->orWhere('s.Production', '>', 0))
+            ->where(fn ($w) => $w
+                ->where(fn ($ie) => $ie
+                    ->whereIn(DB::raw('UPPER(SUBSTRING(s.Orderno, 2, 1))'), ['I', 'E'])
+                    ->where(fn ($d) => $d->whereNull('s.DVDate')->orWhere('s.DVDate', '>', $today)))
+                ->orWhere(fn ($mr) => $mr
+                    ->whereIn(DB::raw('UPPER(SUBSTRING(s.Orderno, 2, 1))'), ['M', 'R'])
+                    ->where(fn ($d) => $d->whereNull('s.EndP')->orWhere('s.EndP', '>', $today))));
+    }
+
+    /**
+     * เงื่อนไขแบบ "เฉพาะผลิตไม่เสร็จ" (ทุก Sale) — แปลงจาก query Access เดิม (09/11/2569 ตามที่ผู้ใช้สั่ง)
+     *   - ต้องมีรหัสลูกค้าในตาราง customer · senddate > 1/1/2005 · Production > 0 · EndP ว่าง
+     *   - ยังไม่ส่ง: DVDate ว่าง หรือเป็นวันในอนาคต
+     *   - ตัวที่ 2 ของเลขที่ใบ = I / E / M / R
+     * ⚠ query เดิม GROUP BY แล้วกรอง Sum(Production) > 0 — ที่นี่กรองทีละแถว (ต่างกันเฉพาะแถวที่ซ้ำกันทุกคีย์ ซึ่งแทบไม่มี)
+     */
+    private function undoneConditions($q)
+    {
+        $today = now()->toDateString();
+
+        return $q->whereNotNull('c.code')
+            ->where('s.senddate', '>', '2005-01-01')
+            ->where('s.Production', '>', 0)
+            ->whereNull('s.EndP')
+            ->where(fn ($d) => $d->whereNull('s.DVDate')->orWhere('s.DVDate', '>', $today))
+            ->whereIn(DB::raw('UPPER(SUBSTRING(s.Orderno, 2, 1))'), ['I', 'E', 'M', 'R']);
+    }
+
+    /**
+     * เงื่อนไขแบบ "เฉพาะผลิตเสร็จ" (ทุก Sale) — แปลงจาก query Access เดิม (09/11/2569 ตามที่ผู้ใช้สั่ง)
+     *   - ต้องมีรหัสลูกค้าในตาราง customer · senddate > 1/1/2005 · Stock > 0 หรือ Production > 0
+     *   - ผลิตเสร็จแล้ว (EndP มีค่า) · ยังไม่ส่ง: DVDate ว่าง หรือเป็นวันในอนาคต
+     *   - ตัวที่ 2 ของเลขที่ใบ = I / E
+     */
+    private function doneConditions($q)
+    {
+        $today = now()->toDateString();
+
+        return $q->whereNotNull('c.code')
+            ->where('s.senddate', '>', '2005-01-01')
+            ->where(fn ($w) => $w->where('s.Stock', '>', 0)->orWhere('s.Production', '>', 0))
+            ->whereNotNull('s.EndP')
+            ->where(fn ($d) => $d->whereNull('s.DVDate')->orWhere('s.DVDate', '>', $today))
+            ->whereIn(DB::raw('UPPER(SUBSTRING(s.Orderno, 2, 1))'), ['I', 'E']);
     }
 
     /**

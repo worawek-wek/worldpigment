@@ -72,9 +72,14 @@ class OrderReviewController extends Controller
         'C' => 'บริษัท เวิลดีปิกเม้นท์เคมีภัณฑ์ จำกัด',
     ];
 
+    /** แผนกที่ไม่มีการพิมพ์ใบทบทวนฯ (09/11/2569 ตามที่ผู้ใช้สั่ง) — ต้องตรงกับ ORV_NO_PRINT_DEPTS ใน order/order-review.blade.php */
+    private const NO_PRINT_DEPTS = ['SPP'];
+
     /** blade ผังพิมพ์ใบทบทวนฯ ตาม morder.Company — ไม่อยู่ในรายการ = order.order-review-print (ผังเดิม) */
     private const PRINT_VIEWS = [
         'CP' => 'order.order-review-print-cp',
+        'DB' => 'order.order-review-print-db',   // ตำแหน่งเท่าผัง CP เป๊ะ ๆ (09/11/2569 ตามที่ผู้ใช้สั่ง)
+        'MB' => 'order.order-review-print-db',   // MB ใช้ผังเดียวกับ DB (09/11/2569 ตามที่ผู้ใช้สั่ง)
     ];
 
     /**
@@ -101,6 +106,8 @@ class OrderReviewController extends Controller
                 'e.empname',
             ]);
         abort_if(!$r, 404, 'ไม่พบรายการ');
+        // แผนกที่ไม่มีการพิมพ์ใบทบทวนฯ (SPP — ผู้ใช้สั่ง 09/11/2569) · ฝั่งจอปิดปุ่มพิมพ์ไว้แล้ว ด่านนี้กันยิง URL ตรง
+        abort_if(in_array(strtoupper(trim((string) $r->Company)), self::NO_PRINT_DEPTS, true), 403, 'แผนกนี้ไม่มีการพิมพ์ใบทบทวนคำสั่งซื้อ');
 
         // "ระบุในบิล" = uprice.inBill ของคู่ ลูกค้า+เบอร์ แถว DATE ล่าสุด (⚠ เดาจากชื่อช่อง)
         $inBill = DB::table('uprice')
@@ -119,7 +126,8 @@ class OrderReviewController extends Controller
 
         $d = [
             'orderno'   => $orderno,
-            'day'       => $mdate ? $mdate->format('d') : '',
+            'company'   => strtoupper(trim((string) $r->Company)),   // ให้ blade ที่ใช้ร่วมหลายแผนก (DB/MB) ปรับเฉพาะแผนกได้
+            'day'     => $mdate ? $mdate->format('d') : '',
             'month'     => $mdate ? $mdate->format('m') : '',
             'year'      => $mdate ? $mdate->format('y') : '',
             'in_bill'   => trim((string) $inBill) !== '' ? trim((string) $inBill) : '-',
@@ -160,7 +168,7 @@ class OrderReviewController extends Controller
         $view = self::PRINT_VIEWS[strtoupper(trim((string) $r->Company))] ?? 'order.order-review-print';
         $html = view($view, ['d' => $d])->render();
 
-        $config = [
+        $mpdf = new Mpdf([
             'mode'          => 'utf-8',
             // A4 แนวตั้ง — แบบฟอร์ม (210 × 148 มม. = A5 แนวนอน) อยู่ครึ่งบนของแผ่น เพราะตอนสั่งพิมพ์ผู้ใช้เลือกกระดาษ A4 (ผู้ใช้ยืนยัน 03/11/2569)
             'format'        => 'A4',
@@ -170,25 +178,10 @@ class OrderReviewController extends Controller
             'margin_bottom' => 0,
             'margin_header' => 0,
             'margin_footer' => 0,
-        ];
-
-        // ผัง CP ใช้ฟอนต์ BrowalliaUPC ทั้งหมด (ผู้ใช้สั่ง 04/11/2569 — เลิกใช้ Tahoma แล้ว) — ไฟล์อยู่ resources/fonts/ (ต้องอัพขึ้น server ด้วย)
-        // browalliaupc-*.ttf แตกจาก C:\Windows\Fonts\browalia.ttc (หน้า 5 / 6) เพราะ mPDF 8 อ่าน TTCfontID ผิด (ได้หน้า 1 ทุก style)
-        $customFonts = $view === 'order.order-review-print-cp';
-        if ($customFonts) {
-            $defaultConfig     = (new \Mpdf\Config\ConfigVariables())->getDefaults();
-            $defaultFontConfig = (new \Mpdf\Config\FontVariables())->getDefaults();
-            $config['fontDir']  = array_merge($defaultConfig['fontDir'], [resource_path('fonts')]);
-            $config['fontdata'] = $defaultFontConfig['fontdata'] + [
-                'browalliaupc' => ['R' => 'browalliaupc-regular.ttf', 'B' => 'browalliaupc-bold.ttf', 'useOTL' => 0xFF],
-            ];
-        }
-
-        $mpdf = new Mpdf($config);
+        ]);
         $mpdf->autoScriptToLang = true;
-        // ฟอนต์ที่ลงทะเบียนเองมีอักษรไทยในตัว — ปิด autoLangToFont ไม่งั้น mPDF สลับข้อความไทยไปฟอนต์ garuda เอง
-        $mpdf->autoLangToFont   = !$customFonts;
-        $mpdf->SetFont($customFonts ? 'browalliaupc' : 'sarabun');
+        $mpdf->autoLangToFont   = true;
+        $mpdf->SetFont('sarabun');
         $mpdf->WriteHTML($html);
 
         return response($mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200, [
