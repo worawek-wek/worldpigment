@@ -45,7 +45,7 @@
                     <td class="text-center">{{ $row->company_display ?: '-' }}</td>
                     <td class="col-inplan text-center">
                         {{ $row->inplan ? \Carbon\Carbon::parse($row->inplan)->format('d/m/Y') : '-' }}
-                        @if(!empty($row->work_shift)) (กะ {{ $row->work_shift }})@endif
+                        @if(!empty($row->work_shift)) ({{ $row->work_shift }})@endif
                     </td>
                     <td class="col-custwant text-center">
                         {{ $row->custwant ? \Carbon\Carbon::parse($row->custwant)->format('d/m/Y') : '-' }}

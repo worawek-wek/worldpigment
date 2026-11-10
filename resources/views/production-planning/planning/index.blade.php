@@ -67,7 +67,7 @@
                         <div class="pt-3">
                         {{-- แถวที่ 1: ค้นหาข้อความ + แผนก + สถานะ --}}
                         <div class="row g-3 align-items-end">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label mb-1 small text-muted">ค้นหา</label>
                                 <input id="searchInput" data-fl-label="ค้นหา" type="text" class="form-control"
                                 placeholder="ค้นหาเลขที่ใบสั่งซื้อ, รหัสลูกค้า, Item No., เลขที่ใบเบิก (Red Bill), ชื่อพนักงานผู้รับผิดชอบ">
@@ -82,7 +82,7 @@
                                     <option value="N" selected>ยังไม่ปิดงาน</option>
                                 </select>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <label class="form-label mb-1 small text-muted">แผนก</label>
                                 <select id="searchCompany" class="form-select" data-fl-label="แผนก">
                                     <option value="">ทุกแผนก</option>
@@ -96,6 +96,17 @@
                                 {{-- สถานะจะโหลดตามแผนกที่เลือก (อ้างอิงความสัมพันธ์แผนก↔สถานะในฐานข้อมูล) --}}
                                 <select id="searchStatus" class="form-select" data-fl-label="สถานะ" disabled>
                                     <option value="">ทุกสถานะ</option>
+                                </select>
+                            </div>
+                            {{-- กะการผลิต (tb_planning.work_shift — ตัวเลือกจาก master tb_work_shift, 10/11/2569) --}}
+                            <div class="col-md-2">
+                                <label class="form-label mb-1 small text-muted">กะการผลิต</label>
+                                <select id="searchWorkShift" class="form-select" data-fl-label="กะ">
+                                    <option value="">ทุกกะ</option>
+                                    @foreach($work_shifts as $shift)
+                                        <option value="{{ $shift }}">{{ $shift }}</option>
+                                    @endforeach
+                                    <option value="__none">ยังไม่ระบุกะ</option>
                                 </select>
                             </div>
                         </div>
@@ -374,6 +385,7 @@
                     d.search = $('#searchInput').val();
                     d.company = $('#searchCompany').val();
                     d.planning_status = $('#searchStatus').val();
+                    d.work_shift = $('#searchWorkShift').val();
                     // ส่งค่าเสมอ ('all' | 'Y' | 'N') — ถ้าหา element ไม่เจอให้ใช้ค่าเริ่มต้น 'N'
                     d.end_job = $('#searchEndJob').val() || 'N';
                     d.date_field = $('#searchDateField').val();
@@ -438,6 +450,7 @@
                 $('#searchEndJob').val('N');
                 $('#searchCompany').val('');
                 $('#searchStatus').prop('disabled', true).html('<option value="">ทุกสถานะ</option>');
+                $('#searchWorkShift').val('');
                 $('#searchDateField').val('inplan');
                 // clear(false) = ไม่ยิง change → กัน redraw ซ้ำ
                 [fpDateStart, fpDateEnd, fpPacking, fpPackingTimeStart, fpPackingTimeEnd].forEach(function (fp) {
@@ -457,6 +470,7 @@
             search:             $('#searchInput').val() || '',
             company:            $('#searchCompany').val() || '',
             planning_status:    $('#searchStatus').val() || '',
+            work_shift:         $('#searchWorkShift').val() || '',
             end_job:            $('#searchEndJob').val() || 'N',
             date_field:         $('#searchDateField').val() || '',
             date_start:         $('#searchDateStart').val() || '',
@@ -526,7 +540,7 @@
         oTable.draw();
     });
 
-    $(document).on('change', '#searchStatus', function(e){
+    $(document).on('change', '#searchStatus, #searchWorkShift', function(e){
         e.preventDefault();
         oTable.draw();
     });

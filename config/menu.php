@@ -164,6 +164,14 @@ return [
         'permission' => 'qcstatus read',
     ],
 
+    // กะการผลิต (master) — ตาราง tb_work_shift — ใช้ในฟอร์มแก้ไข Planning Item — 10/11/2569
+    'WorkShift' => [
+        'title' => 'กะการผลิต',
+        'icon' => 'ti-clock-hour-4',
+        'route_name' => 'workshift.index',
+        'permission' => 'workshift read',
+    ],
+
     // ตั้งค่าเงื่อนไขราคา — แยกออกจาก modal ในหน้ากำหนดราคา มาเป็นเมนูของตัวเอง — 21/08/2569
     'PriceRule' => [
         'title' => 'ตั้งค่าเงื่อนไขราคา',

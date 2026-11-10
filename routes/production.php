@@ -9,6 +9,7 @@ use App\Http\Controllers\ProdMethodController as ProdMethodController;
 use App\Http\Controllers\TempController as TempController;
 use App\Http\Controllers\PlanningRemarkController as PlanningRemarkController;
 use App\Http\Controllers\QcStatusController as QcStatusController;
+use App\Http\Controllers\WorkShiftController as WorkShiftController;
 
 Route::prefix('production-planning')->group(function () {
 
@@ -174,5 +175,13 @@ Route::prefix('production-planning')->group(function () {
     Route::post('/qc-status/store', [QcStatusController::class, 'store'])->name('qcstatus.store');
     Route::post('/qc-status/delete', [QcStatusController::class, 'destroy'])->name('qcstatus.delete');
     Route::post('/qc-status/toggle-status', [QcStatusController::class, 'toggleStatus'])->name('qcstatus.toggle-status');
+
+    // กะการผลิต (master) — ตาราง tb_work_shift (10/11/2569)
+    Route::get('/work-shift', [WorkShiftController::class, 'index'])->name('workshift.index');
+    Route::get('/work-shift/datatable', [WorkShiftController::class, 'datatable'])->name('workshift.datatable');
+    Route::get('/work-shift/edit', [WorkShiftController::class, 'edit'])->name('workshift.edit');
+    Route::post('/work-shift/store', [WorkShiftController::class, 'store'])->name('workshift.store');
+    Route::post('/work-shift/delete', [WorkShiftController::class, 'destroy'])->name('workshift.delete');
+    Route::post('/work-shift/toggle-status', [WorkShiftController::class, 'toggleStatus'])->name('workshift.toggle-status');
 
 });

@@ -330,9 +330,15 @@
                 <div class="col-md-3 mb-2">
                     <label class="form-label">กะการผลิต (Work Shift)</label>
                     @php $current_shift = $planning_item?->work_shift ?? ''; @endphp
+                    {{-- ตัวเลือกจาก master tb_work_shift (เมนู Settings → กะการผลิต, 10/11/2569) เก็บเป็นชื่อกะ
+                         ค่าที่บันทึกไว้แต่ไม่อยู่ในรายการ (ถูกปิดใช้งาน/ลบ/เปลี่ยนชื่อ) → เติมกลับให้ ไม่ให้ค่าหาย --}}
+                    @php $work_shifts = collect($work_shifts ?? []); @endphp
                     <select name="work_shift" class="form-select">
                         <option value="">เลือกกะ</option>
-                        @foreach(['A', 'B', 'C'] as $shift)
+                        @if($current_shift !== '' && !$work_shifts->contains($current_shift))
+                            <option value="{{ $current_shift }}" selected>{{ $current_shift }} (ค่าเดิม)</option>
+                        @endif
+                        @foreach($work_shifts as $shift)
                             <option value="{{ $shift }}" {{ $current_shift === $shift ? 'selected' : '' }}>{{ $shift }}</option>
                         @endforeach
                     </select>

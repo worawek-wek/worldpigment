@@ -59,6 +59,7 @@ worldpigment/
 │   │   ├── HolidayController.php    # วันหยุดนักขัตฤกษ์ tb_holiday — CRUD + ปฏิทินรายปี (01/09/2569)
 │   │   ├── PlanningRemarkController.php # หมายเหตุวางแผน tb_planning_remark — CRUD master (08/09/2569)
 │   │   ├── QcStatusController.php   # สถานะ QC tb_qc_status — CRUD master (09/09/2569)
+│   │   ├── WorkShiftController.php  # กะการผลิต tb_work_shift — CRUD master (10/11/2569)
 │   │   └── ExportExcelController.php
 │   ├── Models/
 │   └── Services/                # AccessService, ProductPriceService (04/08/2569), HolidayService (01/09/2569)
@@ -1322,6 +1323,16 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 - **คงค่าเดิมที่อ้าง id ของสถานะที่ถูกปิด/ลบไว้** — `editItem()` ถ้า id ที่บันทึกไว้ไม่อยู่ในรายการ active จะ `push` แถวนั้นกลับเข้า `$qc_statuses` ให้ยังแสดง (กันค่าหายเมื่อ master ถูก deactivate ทีหลัง)
 - **controller:** `ProductionPlanController::editItem()` ส่ง `$qc_statuses` = `QcStatus::where('is_active','Y')->orderBy('sort')->orderBy('id')->get(['id','name'])` (+ แถว current ที่ inactive)
 - ⚠ **เป็น plain `<select>` ไม่ใช่ `select2-tags`** (ต่างจาก planning_remark) — QC status เป็นรายการควบคุม (พิมพ์ค่าเองไม่ได้) จึงไม่ต้อง init select2. master มีข้อมูลตั้งต้น 3 แถวจาก `QcStatusSeeder` (ผ่าน/ไม่ผ่าน/รอสูตรปรับแก้) — เพิ่ม/แก้ได้ที่เมนู "สถานะ QC"
+
+## กะการผลิต (เมนู Settings → "กะการผลิต", `/production-planning/work-shift`) — 10/11/2569
+
+`WorkShiftController` + Model `WorkShift` (`tb_work_shift`, InnoDB: `name` varchar(50) · `sort` · `is_active` Y/N · timestamps · `created_by`/`updated_by`) + view `work-shift/{index,work-shift-form}.blade.php` — โคลนโครงจาก QcStatus · route name `workshift.*` (ใน `routes/production.php`) · menu key **`WorkShift`** ใต้ "สถานะ QC" → พนักงานต้องติ๊กเมนูนี้ให้ role ก่อน
+- migration `2026_11_10_100000_create_tb_work_shift_table` (idempotent, **รันแล้ว** บน `203.146.170.155` / `zwek_worldpigment` 10/11/2569): สร้างตาราง + 10 ตัวเลือกตั้งต้นตามที่ผู้ใช้ส่งมา (ปกติ A/B/C · OT A 1-3 ชม · OT B 1-3 ชม · วันอาทิตย์) · **`tb_planning.work_shift` ENUM('A','B','C') → VARCHAR(50)** + แปลงค่าเดิม A/B/C → "ปกติ A/B/C" (101/8/1 แถว) · `down()` คืนเป็น enum (ค่า OT/วันอาทิตย์ → NULL)
+- **เก็บเป็น "ชื่อกะ" (ข้อความ) ไม่ใช่ id** (แพทเทิร์นเดียวกับหมายเหตุวางแผน) — แก้ชื่อ/ลบใน master ไม่กระทบแผนเก่า
+- ฟอร์มแก้ไข Planning Item: dropdown `work_shift` จาก `WorkShift::activeNames()` (`editItem()` ส่ง `$work_shifts`) · ค่าที่บันทึกไว้แต่ไม่อยู่ในรายการ = เติมเป็น "<ค่า> (ค่าเดิม)" · `saveItem()` validate `nullable|string|max:50` (ไม่บังคับต้องอยู่ใน master)
+- หน้ารายการ/Excel/PDF แสดงชื่อกะใต้ Inplan **ไม่มีคำ "กะ" นำหน้าแล้ว** (เช่น badge "OT A 1 ชม")
+- **ตัวกรองกะในหน้า `production.planning.index` (10/11/2569 ตามที่ผู้ใช้สั่ง):** `#searchWorkShift` แถวแรกของกล่องตัวกรอง (ช่องค้นหา col-md-4 → 3 · แผนก 3 → 2) → param `work_shift` → `dataQuery()` กรองตรงตัว · ค่า `__none` = ยังไม่ระบุกะ (NULL/ว่าง) · ตัวเลือก = กะที่เปิดใช้งาน + ค่าที่มีจริงใน `tb_planning` (`index()` ส่ง `$work_shifts`) · ส่งไป Excel/PDF ด้วย (`collectExportParams`) · รวมในปุ่มล้างตัวกรอง/แถบสรุป (`data-fl-label="กะ"`) · ทดสอบ count ผ่าน controller แล้ว (ทั้งหมด 182 = ปกติ A 101 + B 8 + C 1 + ไม่ระบุ 72)
+- ทดสอบ datatable + render ฟอร์มผ่าน controller แล้ว · ⚠ ยังไม่ได้กดในเบราว์เซอร์ · ⚠ route ป้องกันแค่ `auth` + สิทธิ์ระดับเมนู
 
 ## สถานะ Planning (`/production-planning/planning-status`) — เปิดสถานะบรรจุ `is_packing` — 22/10/2569
 

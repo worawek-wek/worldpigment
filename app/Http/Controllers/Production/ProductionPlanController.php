@@ -46,8 +46,15 @@ class ProductionPlanController extends Controller
             ->orderBy('name', 'asc')
             ->get(['id', 'name']);
 
+        // ตัวเลือกตัวกรองกะการผลิต = กะที่เปิดใช้งานใน master + ค่าที่มีอยู่จริงใน tb_planning (กะที่ถูกปิด/ลบไปแล้ว) (10/11/2569)
+        $work_shifts = \App\Models\WorkShift::activeNames()
+            ->merge(Planning::whereNotNull('work_shift')->where('work_shift', '<>', '')
+                ->distinct()->orderBy('work_shift')->pluck('work_shift'))
+            ->unique()->values();
+
         return view('production-planning.planning.index', [
             'departments' => $departments,
+            'work_shifts' => $work_shifts,
             // วันหยุด (tb_holiday ที่เปิดใช้งาน) + วันหยุดประจำสัปดาห์ — ให้ JS เตือนตอนเลือกวันหยุด
             // ในช่องวันที่ของ modal "สร้างแผน (Semi)" ที่อยู่บนหน้านี้ (เปิดได้โดยไม่ต้องเปิดฟอร์มแก้ไข Item ก่อน)
             'holidays'    => HolidayService::activeMap(),
@@ -67,11 +74,11 @@ class ProductionPlanController extends Controller
             ->addIndexColumn()
             // แผนกจริงของ item: ใช้ของ item ก่อน ถ้าว่างจึง fallback ไปที่ header
             ->editColumn('company', fn ($row) => $row->company ?: $row->header_company)
-            // Inplan: แสดงวันที่ แล้วขึ้นบรรทัดใหม่แสดงกะการผลิต (work_shift) ถ้ามี — เช่น "กะ A"
+            // Inplan: แสดงวันที่ แล้วขึ้นบรรทัดใหม่แสดงกะการผลิต (work_shift) ถ้ามี — เช่น "ปกติ A" (ชื่อจาก master tb_work_shift, 10/11/2569)
             ->editColumn('inplan', function ($row) {
                 $date = $row->inplan ? \Carbon\Carbon::parse($row->inplan)->format('d/m/Y') : '-';
                 if (!empty($row->work_shift)) {
-                    $date .= '<br><span class="badge bg-label-info">กะ '.e($row->work_shift).'</span>';
+                    $date .= '<br><span class="badge bg-label-info">'.e($row->work_shift).'</span>';
                 }
                 return $date;
             })
@@ -204,6 +211,15 @@ class ProductionPlanController extends Controller
             ->when(!empty($planning_status), function ($query) use ($planning_status) {
                 $query->where('tb_planning.planning_status', $planning_status);
             })
+            // กรองด้วยกะการผลิต (tb_planning.work_shift เก็บชื่อกะ, 10/11/2569) — '__none' = ยังไม่ระบุกะ
+            ->when(request('work_shift') === '__none', function ($query) {
+                $query->where(function ($q) {
+                    $q->whereNull('tb_planning.work_shift')->orWhere('tb_planning.work_shift', '');
+                });
+            })
+            ->when(!in_array(request('work_shift'), [null, '', '__none'], true), function ($query) {
+                $query->where('tb_planning.work_shift', request('work_shift'));
+            })
             // กรองด้วยสถานะปิดงาน — 'ยังไม่ปิดงาน' นับรวมค่า NULL/ว่าง ด้วย
             ->when($end_job === 'Y', function ($query) {
                 $query->where('tb_planning.end_job', 'Y');
@@ -324,7 +340,7 @@ class ProductionPlanController extends Controller
         foreach ($rows as $row) {
             $inplan   = $row->inplan ? \Carbon\Carbon::parse($row->inplan)->format('d/m/Y') : '-';
             if (!empty($row->work_shift)) {
-                $inplan .= ' (กะ '.$row->work_shift.')';
+                $inplan .= ' ('.$row->work_shift.')';
             }
             $custwant = $row->custwant ? \Carbon\Carbon::parse($row->custwant)->format('d/m/Y') : '-';
             $packing  = $row->pk_last ? \Carbon\Carbon::parse($row->pk_last)->format('d/m/Y H:i') : '-';
@@ -575,6 +591,9 @@ class ProductionPlanController extends Controller
             ->get(['id', 'name']);
         $prod_method_rows = $planning_item ? $planning_item->prodMethods : collect();
 
+        // กะการผลิต (master tb_work_shift, 10/11/2569) — เก็บลง tb_planning.work_shift เป็น "ชื่อกะ" (ข้อความ)
+        $work_shifts = \App\Models\WorkShift::activeNames();
+
         // หมายเหตุวางแผน (master) — ตัวเลือก dropdown เฉพาะที่เปิดใช้งาน (เก็บลง tb_planning.planning_remark เป็นข้อความ)
         $planning_remarks = \App\Models\PlanningRemark::where('is_active', 'Y')
             ->orderBy('sort', 'asc')->orderBy('id', 'asc')
@@ -615,6 +634,7 @@ class ProductionPlanController extends Controller
             // การเข้าคลัง (tb_planning_warehouse, 29/10/2569) — แถวเดิมของ item (item ใหม่ = ว่าง)
             'warehouse_rows'   => $planning_item ? $planning_item->warehouses : collect(),
             'planning_remarks' => $planning_remarks,
+            'work_shifts'      => $work_shifts,
             'qc_statuses'      => $qc_statuses,
             // วันหยุด (tb_holiday ที่เปิดใช้งาน) + วันหยุดประจำสัปดาห์ — ให้ JS เตือนตอนเลือกวันหยุด
             'holidays'         => HolidayService::activeMap(),
@@ -764,7 +784,7 @@ class ProductionPlanController extends Controller
             'plan_type'          => 'nullable|string|max:255',
             'planning_status'    => 'nullable|string|max:255',
             'inplan'         => 'nullable|date',
-            'work_shift'         => 'nullable|in:A,B,C',
+            'work_shift'         => 'nullable|string|max:50',
             'start_date'         => 'nullable|date',
             'start_time'         => 'nullable|date_format:H:i',
             'end_date'           => 'nullable|date',
