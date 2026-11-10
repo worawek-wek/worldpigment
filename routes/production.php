@@ -67,6 +67,12 @@ Route::prefix('production-planning')->group(function () {
     Route::get('/report/material-shortage/excel', [Production\ReportController::class, 'materialShortageExcel'])->name('production.report.material-shortage.excel');
     Route::get('/report/material-shortage/pdf', [Production\ReportController::class, 'materialShortagePdf'])->name('production.report.material-shortage.pdf');
 
+    // รายงานการผลิตและสูญเสีย (สถิติสูญเสีย) — กรองแผนก + ช่วงวันที่ inplan — 10/11/2569
+    Route::get('/report/production-loss', [Production\ReportController::class, 'productionLoss'])->name('production.report.production-loss.index');
+    Route::get('/report/production-loss/table', [Production\ReportController::class, 'productionLossTable'])->name('production.report.production-loss.table');
+    Route::get('/report/production-loss/excel', [Production\ReportController::class, 'productionLossExcel'])->name('production.report.production-loss.excel');
+    Route::get('/report/production-loss/pdf', [Production\ReportController::class, 'productionLossPdf'])->name('production.report.production-loss.pdf');
+
     // สถานะ Planning (master data)
     Route::get('/planning-status', [Production\PlanningStatusController::class, 'index'])->name('production.planningstatus.index');
     Route::get('/planning-status/datatable', [Production\PlanningStatusController::class, 'datatable'])->name('production.planningstatus.datatable');

@@ -102,6 +102,14 @@ return [
                         'route_name' => 'production.report.material-shortage.index',
                         'permission' => 'productionplanning read',
                     ],
+                    // รายงานการผลิตและสูญเสีย (สถิติสูญเสีย) — เพิ่ม 10/11/2569
+                    'ProductionReportLoss' => [
+                        'title' => 'รายงานสถิติสูญเสีย',
+                        'icon' => '',
+                        'menu_parent' => 'ProductionReport',
+                        'route_name' => 'production.report.production-loss.index',
+                        'permission' => 'productionplanning read',
+                    ],
                 ],
             ],
         ],

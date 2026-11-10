@@ -973,6 +973,234 @@ class ReportController extends Controller
             'Content-Disposition' => 'inline; filename="report-material-shortage.pdf"',
         ]);
     }
+    // ─────────────────────────────────────────────────────────────────────────
+    //  รายงานการผลิตและสูญเสีย (สถิติสูญเสีย) — 10/11/2569 ตามที่ผู้ใช้สั่ง
+    //
+    //  แถว = tb_planning ที่มี "น้ำหนักที่ผลิตได้" (weight_produced > 0) กรองด้วย
+    //  แผนก (COALESCE item → header) + ช่วงวันที่ inplan
+    //  สูญเสีย (กก.) = น้ำหนักผลิต (TP, tb_planning.weight) − นน.บรรจุได้ (weight_produced)
+    //  สูญเสีย (%)   = สูญเสีย (กก.) ÷ น้ำหนักผลิต × 100  (ติดลบ = บรรจุได้มากกว่า TP)
+    //  ตรงกับกระดาษเดิม: (115.12 − 111.70) ÷ 115.12 = 2.97%
+    // ─────────────────────────────────────────────────────────────────────────
+    public function productionLoss()
+    {
+        return view('production-planning.report.production-loss', [
+            'departments' => $this->activeDepartments(),
+        ]);
+    }
+
+    public function productionLossTable(Request $request)
+    {
+        return view('production-planning.report.partials.production-loss-table', $this->buildProductionLossReport($request));
+    }
+
+    // แปลงวันที่จาก request (Y-m-d หรือ d/m/Y) — ผิดรูปแบบ = null
+    private function lossDate($value): ?string
+    {
+        $value = trim((string) $value);
+        foreach (['Y-m-d', 'd/m/Y'] as $fmt) {
+            $d = \DateTime::createFromFormat('!'.$fmt, $value);
+            if ($d && $d->format($fmt) === $value) {
+                return $d->format('Y-m-d');
+            }
+        }
+        return null;
+    }
+
+    // query กลาง ใช้ร่วมทั้งจอ/Excel/PDF
+    private function buildProductionLossReport(Request $request): array
+    {
+        $dept = trim((string) $request->get('dept'));
+        $from = $this->lossDate($request->get('date_from'));
+        $to   = $this->lossDate($request->get('date_to'));
+        if ($from && $to && $from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+
+        $deptSql = "COALESCE(NULLIF(tb_planning.company, ''), tb_planning_header.company)";
+
+        $rows = Planning::query()
+            ->leftJoin('tb_planning_header', 'tb_planning_header.id', '=', 'tb_planning.planning_header_id')
+            ->select([
+                'tb_planning.id',
+                'tb_planning.red_bill_code',
+                'tb_planning.itemno',
+                'tb_planning.lot',
+                'tb_planning.quantity',          // น้ำหนัก PO
+                'tb_planning.weight',            // น้ำหนักผลิต (TP)
+                'tb_planning.weight_produced',   // นน.บรรจุได้
+                'tb_planning.inplan',
+                'tb_planning.end_date',          // วันที่ผลิตเสร็จ
+                'tb_planning.end_job',
+                'tb_planning_header.orderno',
+                \Illuminate\Support\Facades\DB::raw($deptSql.' as dept'),
+                // วันเวลาบรรจุล่าสุด + จำนวนครั้งที่บรรจุ (ตารางลูก tb_planning_packing)
+                \Illuminate\Support\Facades\DB::raw('(SELECT MAX(pk.packing_datetime) FROM tb_planning_packing pk WHERE pk.planning_id = tb_planning.id) as pk_last'),
+                \Illuminate\Support\Facades\DB::raw('(SELECT COUNT(*) FROM tb_planning_packing pk WHERE pk.planning_id = tb_planning.id AND pk.weight_packing > 0) as pk_count'),
+            ])
+            ->where('tb_planning.weight_produced', '>', 0)
+            // เฉพาะงานที่จบงานแล้ว (บรรจุครบ) — ผู้ใช้สั่ง 10/11/2569 กันงานที่บรรจุยังไม่ครบดัน % สูญเสียสูงเกินจริง
+            ->where('tb_planning.end_job', 'Y')
+            ->when($dept !== '', fn ($q) => $q->whereRaw($deptSql.' = ?', [$dept]))
+            ->when($from, fn ($q) => $q->where('tb_planning.inplan', '>=', $from))
+            ->when($to, fn ($q) => $q->where('tb_planning.inplan', '<=', $to))
+            ->orderByRaw('tb_planning.inplan IS NULL, tb_planning.inplan ASC')
+            ->orderBy('tb_planning_header.orderno')
+            ->orderBy('tb_planning.id')
+            ->get();
+
+        $sumPo = $sumTp = $sumProduced = 0.0;
+        $sumTpWithLoss = $sumProducedWithLoss = 0.0;
+        foreach ($rows as $row) {
+            $tp       = $row->weight !== null ? (float) $row->weight : null;
+            $produced = (float) $row->weight_produced;
+
+            $row->loss_kg  = ($tp !== null && $tp > 0) ? $tp - $produced : null;
+            $row->loss_pct = $row->loss_kg !== null ? $row->loss_kg / $tp * 100 : null;
+
+            $sumPo       += (float) $row->quantity;
+            $sumTp       += (float) $tp;
+            $sumProduced += $produced;
+            if ($row->loss_kg !== null) {
+                $sumTpWithLoss       += $tp;
+                $sumProducedWithLoss += $produced;
+            }
+        }
+
+        // % รวม = (TP รวม − บรรจุได้รวม) ÷ TP รวม — นับเฉพาะแถวที่มีน้ำหนัก TP (ถ่วงน้ำหนักตาม TP)
+        $totalLossKg  = $sumTpWithLoss - $sumProducedWithLoss;
+        $totalLossPct = $sumTpWithLoss > 0 ? $totalLossKg / $sumTpWithLoss * 100 : null;
+
+        return [
+            'rows'    => $rows,
+            'total'   => $rows->count(),
+            'sum'     => [
+                'po'       => $sumPo,
+                'tp'       => $sumTp,
+                'produced' => $sumProduced,
+                'loss_kg'  => $totalLossKg,
+                'loss_pct' => $totalLossPct,
+                'no_tp'    => $rows->whereNull('loss_kg')->count(),
+            ],
+            'filters' => ['dept' => $dept, 'from' => $from, 'to' => $to],
+        ];
+    }
+
+    private function productionLossSummary(array $filters, int $total): string
+    {
+        $fmt = fn ($d) => $d ? \Carbon\Carbon::parse($d)->format('d/m/Y') : '…';
+
+        return implode('   |   ', [
+            'แผนก: '.($filters['dept'] ?: 'ทุกแผนก'),
+            'วันที่ Inplan: '.(($filters['from'] || $filters['to']) ? $fmt($filters['from']).' ถึง '.$fmt($filters['to']) : 'ทั้งหมด'),
+            'เฉพาะงานที่จบงานแล้ว',
+            'พบ '.number_format($total).' รายการ',
+        ]);
+    }
+
+    public function productionLossPdf(Request $request)
+    {
+        $data = $this->buildProductionLossReport($request);
+        $data['summary'] = $this->productionLossSummary($data['filters'], $data['total']);
+
+        $html = view('production-planning.report.partials.production-loss-pdf', $data)->render();
+
+        $mpdf = new \Mpdf\Mpdf([
+            'mode' => 'utf-8', 'format' => 'A4-L',
+            'margin_left' => 8, 'margin_right' => 8, 'margin_top' => 8, 'margin_bottom' => 8,
+        ]);
+        $mpdf->autoScriptToLang = true;
+        $mpdf->autoLangToFont   = true;
+        $mpdf->SetFont('sarabun');
+        ini_set('pcre.backtrack_limit', '10000000');
+        $mpdf->WriteHTML($html);
+
+        return response($mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="report-production-loss.pdf"',
+        ]);
+    }
+
+    public function productionLossExcel(Request $request)
+    {
+        ['rows' => $rows, 'total' => $total, 'sum' => $sum, 'filters' => $filters] = $this->buildProductionLossReport($request);
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('สถิติสูญเสีย');
+
+        $headers = ['#', 'หน่วย', 'เลขที่ใบสั่ง', 'เลขที่ใบเบิก', 'รหัสสินค้า', 'Lot No.', 'น้ำหนัก PO', 'น้ำหนักผลิต (TP)',
+            'นน.บรรจุได้', 'สูญเสีย (กก.)', 'สูญเสีย (%)', 'Inplan', 'วันที่ผลิตเสร็จ', 'บรรจุล่าสุด', 'ครั้งที่บรรจุ'];
+        $cols    = range('A', 'O');
+        $lastCol = 'O';
+        $str     = \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING;
+        $d       = fn ($v, $f = 'd/m/Y') => $v ? \Carbon\Carbon::parse($v)->format($f) : '';
+
+        $sheet->setCellValue('A1', 'รายงานการผลิตและสูญเสีย');
+        $sheet->mergeCells("A1:{$lastCol}1");
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->setCellValue('A2', $this->productionLossSummary($filters, $total));
+        $sheet->mergeCells("A2:{$lastCol}2");
+
+        $r = 4;
+        foreach ($headers as $i => $h) {
+            $sheet->setCellValue($cols[$i].$r, $h);
+        }
+        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setBold(true);
+        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('E9ECEF');
+
+        $r++;
+        $first = $r;
+        foreach ($rows->values() as $i => $it) {
+            $sheet->setCellValue("A{$r}", $i + 1);
+            $sheet->setCellValue("B{$r}", $it->dept ?: '');
+            $sheet->setCellValueExplicit("C{$r}", (string) $it->orderno, $str);
+            $sheet->setCellValueExplicit("D{$r}", (string) $it->red_bill_code, $str);
+            $sheet->setCellValueExplicit("E{$r}", (string) $it->itemno, $str);
+            $sheet->setCellValueExplicit("F{$r}", (string) $it->lot, $str);
+            $sheet->setCellValue("G{$r}", $it->quantity !== null ? (float) $it->quantity : null);
+            $sheet->setCellValue("H{$r}", $it->weight !== null ? (float) $it->weight : null);
+            $sheet->setCellValue("I{$r}", (float) $it->weight_produced);
+            $sheet->setCellValue("J{$r}", $it->loss_kg);
+            $sheet->setCellValue("K{$r}", $it->loss_pct !== null ? $it->loss_pct / 100 : null);
+            $sheet->setCellValue("L{$r}", $d($it->inplan));
+            $sheet->setCellValue("M{$r}", $d($it->end_date));
+            $sheet->setCellValue("N{$r}", $d($it->pk_last, 'd/m/Y H:i'));
+            $sheet->setCellValue("O{$r}", (int) $it->pk_count ?: '');
+            $r++;
+        }
+
+        if ($total === 0) {
+            $sheet->setCellValue("A{$r}", 'ไม่พบข้อมูลตามเงื่อนไขที่เลือก');
+            $sheet->mergeCells("A{$r}:{$lastCol}{$r}");
+        } else {
+            $last = $r - 1;
+            $sheet->getStyle("G{$first}:J{$last}")->getNumberFormat()->setFormatCode('#,##0.00');
+            $sheet->getStyle("K{$first}:K{$last}")->getNumberFormat()->setFormatCode('0.00%');
+            // แถวรวม (% รวม ถ่วงน้ำหนักตาม TP)
+            $sheet->setCellValue("F{$r}", 'รวม');
+            $sheet->setCellValue("G{$r}", $sum['po']);
+            $sheet->setCellValue("H{$r}", $sum['tp']);
+            $sheet->setCellValue("I{$r}", $sum['produced']);
+            $sheet->setCellValue("J{$r}", $sum['loss_kg']);
+            $sheet->setCellValue("K{$r}", $sum['loss_pct'] !== null ? $sum['loss_pct'] / 100 : null);
+            $sheet->getStyle("G{$r}:J{$r}")->getNumberFormat()->setFormatCode('#,##0.00');
+            $sheet->getStyle("K{$r}")->getNumberFormat()->setFormatCode('0.00%');
+            $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setBold(true);
+        }
+
+        foreach ($cols as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            (new \PhpOffice\PhpSpreadsheet\Writer\Xls($spreadsheet))->save('php://output');
+        }, 'report-production-loss-'.now()->format('Ymd-His').'.xls', [
+            'Content-Type' => 'application/vnd.ms-excel',
+        ]);
+    }
+
 
     // ─────────────────────────────────────────────────────────────────────────
     //  รายงานผลิตตามพนักงาน (time-grid รายวัน) — 2026-08-11
