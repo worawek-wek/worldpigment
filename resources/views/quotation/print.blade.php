@@ -52,8 +52,8 @@
     $subject  = $isRevision ? 'ขอแจ้งปรับราคา' : 'ขอเสนอราคา';
     // ข้อความเนื้อจดหมาย — ตามแบบที่ลูกค้ากำหนด (12/09/2569)
     $bodyText = $isRevision
-        ? 'บริษัทฯ ขอเรียนแจ้งการปรับเปลี่ยนราคา ของผลิตภัณฑ์ตามรายละเอียดด้านล่างนี้'
-        : 'บริษัทฯ มีความยินดีขอเสนอราคาผลิตภัณฑ์ตามรายละเอียดด้านล่างนี้';
+        ? 'บริษัทฯ ขอเรียนแจ้งการปรับเปลี่ยนราคา ของผลิตภัณฑ์ตามรายละเอียดดังต่อไปนี้'
+        : 'บริษัทฯ มีความยินดีขอเสนอราคาผลิตภัณฑ์ตามรายละเอียดดังต่อไปนี้';
 
     // ── ข้อความหัวบิลภาษาอังกฤษ ──
     $subjectEn  = $isRevision ? 'Price Revision' : 'Quotation';
@@ -69,9 +69,11 @@
     <style>
         * { box-sizing: border-box; }
         body {
-            /* Arial Narrow ไม่มี glyph ภาษาไทย — ตัวไทยจะ fallback ไป Tahoma ให้อัตโนมัติ */
-            font-family: 'Arial Narrow', 'Tahoma', sans-serif;
-            font-size: 17px; color: #000; margin: 0; padding: 28px 40px; line-height: 1.5;
+            /* ฟอนต์เดียวทั้งเอกสาร (10/11/2569 ตามที่ผู้ใช้สั่ง "ใช้ font เดียวกัน อย่างเป็นทางการ")
+               เดิม 'Arial Narrow' ซึ่งไม่มีตัวไทย → ไทยไป Tahoma / อังกฤษเป็น Arial Narrow / รหัสสินค้าเป็น monospace = ปนกัน 3 แบบ
+               Tahoma มีทั้งไทยและอังกฤษในตัว และมีในทุกเครื่อง Windows · Tahoma กว้างกว่า Arial Narrow จึงลดขนาด 17 → 15px */
+            font-family: 'Tahoma', sans-serif;
+            font-size: 15px; color: #000; margin: 0; padding: 28px 40px; line-height: 1.5;
         }
         .toolbar { text-align: center; margin-bottom: 18px; }
         .toolbar button { padding: 8px 22px; font-size: 15px; cursor: pointer; }
@@ -101,7 +103,7 @@
         .revised-stamp .word {
             display: inline-block; padding: 0 8px;
             border: 2px solid #d32f2f; border-radius: 5px;
-            color: #d32f2f; font-family: 'Arial Black', 'Arial', sans-serif;
+            color: #d32f2f; font-family: inherit; /* เดิม Arial Black — ใช้ฟอนต์เดียวกับเอกสาร (10/11/2569) */
             font-size: 20px; font-weight: 900; letter-spacing: 1.5px; line-height: 1.15; /* ย่อจาก 30px (19/10/2569) */
             opacity: .85;
         }
@@ -114,7 +116,10 @@
         .body-text { text-indent: 40px; margin: 14px 0 10px; }
 
         /* ── ตารางรายการ (ไม่มีเส้นตาราง; หัวคอลัมน์ขีดเส้นใต้อย่างเดียว) ── */
-        table.items { width: 100%; border-collapse: collapse; margin-top: 6px; }
+        /* table-layout: fixed = ใช้ความกว้างจาก <colgroup> ตรง ๆ ไม่ยืดตามข้อความ (10/11/2569) */
+        table.items { width: 100%; border-collapse: collapse; margin-top: 6px; table-layout: fixed; }
+        /* ข้อความยาว (รายละเอียด 30 ตัวขึ้นไป / รหัสยาว) ตัดขึ้นบรรทัดใหม่ในช่อง ไม่ล้นไปช่องข้าง ๆ */
+        table.items td { overflow-wrap: anywhere; word-break: break-word; }
         table.items th, table.items td { padding: 4px 7px; vertical-align: top; }
         table.items thead th { text-align: left; font-weight: bold; line-height: 1.25; }
         table.items thead th small { font-weight: normal; color: #333; font-size: .78em; }
@@ -124,7 +129,8 @@
            — ช่องยอดเงิน/น้ำหนักจึงเคยชิดซ้าย (แก้ 19/10/2569) */
         table.items th.text-end, table.items td.text-end { text-align: right; }
         .text-center { text-align: center; }
-        .code { font-family: ui-monospace, Consolas, monospace; }
+        /* รหัสสินค้าใช้ฟอนต์เดียวกับทั้งเอกสาร (เดิม monospace — 10/11/2569) */
+        .code { font-family: inherit; }
         tfoot th { border-top: 1px solid #000; }
 
         /* ส่วนท้าย (หมายเหตุ + ลายเซ็น) — ระยะห่างจากตารางอย่างน้อย 20px (เดิมเป็น margin-top ของ .footer-info) */
@@ -221,7 +227,19 @@
     @endif
 
     {{-- ตารางรายการ — คอลัมน์ตาม col_config (ผู้ใช้กำหนดเอง) --}}
+    {{-- ความกว้างคอลัมน์ (10/11/2569 ตามที่ผู้ใช้สั่ง) — สินค้า 20 · รายละเอียด 35 · หมายเหตุ 20 · ช่องอื่น 15 (เป็นสัดส่วน)
+         รวมเป็น 100% ของคอลัมน์ที่แสดงจริง ⇒ 5 คอลัมน์ (สินค้า/รายละเอียด/ราคาปัจจุบัน/ราคาใหม่/รวม VAT) = 20/35/15/15/15 พอดี --}}
+    @php
+        $colWeights = ['code' => 20, 'name' => 35, 'remark' => 20];
+        $colW = array_map(fn ($c) => $colWeights[$c['key']] ?? 15, $colConfig);
+        $colWSum = array_sum($colW) ?: 1;
+    @endphp
     <table class="items">
+        <colgroup>
+            @foreach ($colW as $w)
+                <col style="width: {{ round($w * 100 / $colWSum, 2) }}%">
+            @endforeach
+        </colgroup>
         <thead>
             <tr>
                 @foreach ($colConfig as $c)

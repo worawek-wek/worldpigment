@@ -73,7 +73,16 @@
     .cf-sec-dv      { background: #f7fbff; border-color: #cfe2f3; }
     .cf-sec-dv .cf-sec-title { color: #2c6ea4; border-bottom-color: #cfe2f3; }
     .cf-sec-black   { background: #fdf3f3; border-color: #f0cccc; }
-    .cf-sec-black .cf-sec-title { color: #a33; border-bottom-color: #f0cccc; }
+    /* สถานะเครดิต/Blacklist — หัวเป็นแถบสีเต็ม: ติด = แดง · ปกติ = เขียว (10/11/2569) */
+    .cf-sec-black .cf-sec-title,
+    .cf-sec-credit-ok .cf-sec-title {
+        color: #fff; border-bottom: 0;
+        margin: -1rem -1.15rem .9rem; padding: .55rem 1.15rem;
+        border-radius: .6rem .6rem 0 0;
+    }
+    .cf-sec-black .cf-sec-title { background: #c0392b; }
+    .cf-sec-credit-ok { background: #f3fbf5; border-color: #c7e6cf; --of-lw: 64px; }
+    .cf-sec-credit-ok .cf-sec-title { background: #2e8b57; }
 
     /* ช่องเน้นสีตามฟอร์ม Access */
     .cf-hl-yellow { background-color: #fffbcc !important; }
