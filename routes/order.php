@@ -47,6 +47,8 @@ Route::prefix('order')->group(function () {
     Route::get('/sales-forecast/order-pdf', [SalesForecastController::class, 'orderPdf'])->name('order.salesforecast.order_pdf');
     // ยอดขายที่ส่งลูกค้า เฉพาะเบอร์ที่ราคาผ่านช่อง 2 (27/10/2569)
     Route::get('/sales-forecast/delivered-pdf', [SalesForecastController::class, 'deliveredPdf'])->name('order.salesforecast.delivered_pdf');
+    // ยอดขายสะสมที่มีกำหนดส่ง (แรก) เทียบกับ Sale Target (12/11/2569)
+    Route::get('/sales-forecast/due-pdf', [SalesForecastController::class, 'duePdf'])->name('order.salesforecast.due_pdf');
 
     // ─── ฟอร์มขออนุมัติราคาพิเศษ (MD) — ฟอร์มลูกของเมนูนี้ ─────────────
     Route::prefix('price-approval')->group(function () {
