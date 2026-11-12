@@ -154,9 +154,10 @@ class ProductionPlanController extends Controller
         $end_job = request('end_job', 'N');
         $end_job = in_array($end_job, ['all', 'Y', 'N'], true) ? $end_job : 'N';
 
-        // ค้นหาช่วงวันที่: เลือกฟิลด์ได้เฉพาะ inplan / custwant (whitelist กัน SQL injection ที่ชื่อคอลัมน์)
+        // ค้นหาช่วงวันที่: เลือกฟิลด์ได้เฉพาะ inplan / custwant / senddate (whitelist กัน SQL injection ที่ชื่อคอลัมน์)
+        // senddate = วันที่กำหนดทบทวน ค่าล่าสุด — เพิ่ม 12/11/2569
         $date_field = request('date_field');
-        $date_field = in_array($date_field, ['inplan', 'custwant'], true) ? $date_field : 'inplan';
+        $date_field = in_array($date_field, ['inplan', 'custwant', 'senddate'], true) ? $date_field : 'inplan';
         $date_start = request('date_start');
         $date_end   = request('date_end');
 

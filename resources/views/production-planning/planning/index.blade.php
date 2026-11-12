@@ -130,6 +130,8 @@
                                 <select id="searchDateField" class="form-select">
                                     <option value="inplan">วันที่วางแผนผลิต (Inplan)</option>
                                     <option value="custwant">วันที่ต้องการรับ (Custwant)</option>
+                                    {{-- 12/11/2569: tb_planning.senddate = วันที่กำหนดทบทวนล่าสุด (ค่าเดิมอยู่ใน senddate_log) --}}
+                                    <option value="senddate">วันที่กำหนดทบทวน (senddate)</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
