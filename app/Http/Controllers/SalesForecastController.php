@@ -229,6 +229,22 @@ class SalesForecastController extends Controller
      */
     public function duePdf(Request $request)
     {
+        return $this->dueReport($request, 'first');
+    }
+
+    /**
+     * ยอดขายสะสมตามวันที่เลื่อนล่าสุด ของรหัสพนักงานขาย เทียบกับ Sale Target (12/11/2569 — กระดาษ + query Order-SQL บรรทัด 1667)
+     * เหมือน duePdf() ทุกอย่าง ต่างที่: วันที่ที่กรอง = กำหนดส่งปัจจุบัน suborder.senddate (= วันที่เลื่อนล่าสุด
+     * — ระบบใหม่เขียน senddate ทับทุกครั้งที่เลื่อน) + มีคอลัมน์ชื่อลูกค้า target.custname (LEFT JOIN TARGET ตาม query เดิม)
+     */
+    public function latestPdf(Request $request)
+    {
+        return $this->dueReport($request, 'latest');
+    }
+
+    /** ตัวกลางของ duePdf() / latestPdf() — $mode = 'first' (กำหนดส่งแรก) | 'latest' (เลื่อนล่าสุด) */
+    private function dueReport(Request $request, string $mode)
+    {
         $from  = self::parseDateTime((string) $request->query('from', ''), now()->startOfMonth());
         $to    = self::parseDateTime((string) $request->query('to', ''), now()->endOfMonth()->startOfMinute());
         $sale  = trim((string) $request->query('sale', ''));
@@ -237,7 +253,10 @@ class SalesForecastController extends Controller
         $toYmd   = $to->copy()->second(59)->format('Y-m-d H:i:s');
 
         // ใบที่เคยเลื่อน/แยกส่ง — กำหนดส่งแรกอาจไม่ใช่ senddate ปัจจุบัน จึงต้องดึงมาคิดด้วย
-        $changed = DB::table('tb_order_change_line')->distinct()->pluck('orderno')->all();
+        // (เลื่อนล่าสุด = senddate ปัจจุบัน ไม่ต้องดึงเพิ่ม)
+        $changed = $mode === 'first'
+            ? DB::table('tb_order_change_line')->distinct()->pluck('orderno')->all()
+            : [];
 
         $rows = DB::table('suborder as s')
             ->join('morder as m', 'm.Orderno', '=', 's.Orderno')
@@ -257,8 +276,8 @@ class SalesForecastController extends Controller
         $blank = array_fill_keys(self::COMPANIES, 0.0);
         $sales = [];   // supno → custno → ['amt' => …, 'total' => …]
         foreach ($rows as $r) {
-            $first = $history($r)['first'] ?? null;
-            $first = $first ?: ($r->senddate ? Carbon::parse($r->senddate)->format('Y-m-d') : null);
+            $current = $r->senddate ? Carbon::parse($r->senddate)->format('Y-m-d') : null;
+            $first   = $mode === 'first' ? (($history($r)['first'] ?? null) ?: $current) : $current;
             if (!$first || $first < $from->format('Y-m-d') || $first > $to->format('Y-m-d')) {
                 continue;
             }
@@ -279,10 +298,12 @@ class SalesForecastController extends Controller
         // Sale Target ของเดือน
         $targets = DB::table('target')
             ->when($sale !== '', fn ($q) => $q->whereRaw('TRIM(saleNo) = ?', [$sale]))
-            ->get(['saleNo', 'custid', DB::raw('`' . $month . '` as tg')]);
+            ->get(['saleNo', 'custid', 'custname', DB::raw('`' . $month . '` as tg')]);
         $tgBySale = [];
+        $tgName   = [];   // ชื่อลูกค้าจาก target.custname (รายงานเลื่อนล่าสุด)
         foreach ($targets as $t) {
             $tgBySale[trim((string) $t->saleNo)][trim((string) $t->custid)] = (float) $t->tg;
+            $tgName[trim((string) $t->saleNo)][trim((string) $t->custid)]   = trim((string) $t->custname);
         }
 
         $codes = array_unique(array_merge(array_keys($sales), array_keys($tgBySale)));
@@ -302,7 +323,7 @@ class SalesForecastController extends Controller
                 $s = $sold[$cust] ?? ['amt' => $blank, 'total' => 0.0];
                 $hasSale = abs($s['total']) > 0.000001;
                 $groupA['rows'][] = [
-                    'custno' => $cust, 'amt' => $s['amt'], 'total' => $s['total'],
+                    'custno' => $cust, 'name' => $tgName[$sup][$cust] ?? '', 'amt' => $s['amt'], 'total' => $s['total'],
                     'target' => $tg[$cust], 'diff' => $hasSale ? $s['total'] - $tg[$cust] : null,
                 ];
                 foreach (self::COMPANIES as $c) {
@@ -337,6 +358,7 @@ class SalesForecastController extends Controller
             'to'        => $to,
             'month'     => $month,
             'sale'      => $sale,
+            'mode'      => $mode,
         ])->render();
 
         $mpdf = new Mpdf([
@@ -357,7 +379,7 @@ class SalesForecastController extends Controller
 
         return response($mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200, [
             'Content-Type'        => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="sales-due-' . $from->format('Ymd') . '-' . $to->format('Ymd') . '.pdf"',
+            'Content-Disposition' => 'inline; filename="sales-' . ($mode === 'first' ? 'due' : 'latest') . '-' . $from->format('Ymd') . '-' . $to->format('Ymd') . '.pdf"',
         ]);
     }
 

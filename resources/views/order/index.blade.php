@@ -803,7 +803,7 @@
                             ['sf_order',     'ยอดรับ Order',                                'ti-report-money', false],
                             ['sf_delivered', 'ยอดขาย ที่จัดส่งลูกค้า เฉพาะราคาผ่านช่อง 2', 'ti-report-money', false],
                             ['sf_due',       'กำหนดส่ง (แรก)',                              'ti-report-money', false],
-                            ['sf_latest',    'เลื่อนล่าสุด',                                'ti-report-money', true],
+                            ['sf_latest',    'เลื่อนล่าสุด',                                'ti-report-money', false],
                         ],
                     ];
                 @endphp
@@ -3707,6 +3707,7 @@
             order:     '{{ url('order/sales-forecast/order-pdf') }}',
             delivered: '{{ url('order/sales-forecast/delivered-pdf') }}',
             due:       '{{ url('order/sales-forecast/due-pdf') }}',
+            latest:    '{{ url('order/sales-forecast/latest-pdf') }}',
         };
         if (!urls[kind]) {
             Swal.fire({ icon: 'info', title: 'ยังไม่เปิดใช้งาน', text: 'รายงานนี้ยังไม่ได้ทำ', target: ORD_REPORT_TARGET, heightAuto: false });
