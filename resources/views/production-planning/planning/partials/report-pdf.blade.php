@@ -23,17 +23,19 @@
         <thead>
             <tr>
                 <th style="width: 3%;">#</th>
-                <th style="width: 9%;">Orderno</th>
-                <th style="width: 9%;">เลขที่ใบเบิก</th>
+                <th style="width: 8%;">Orderno</th>
+                <th style="width: 8%;">เลขที่ใบเบิก</th>
                 <th style="width: 7%;">Company</th>
                 <th class="col-inplan" style="width: 9%;">Inplan</th>
+                {{-- 12/11/2569: วันที่กำหนดทบทวนล่าสุด (tb_planning.senddate) — ความกว้างทุกคอลัมน์รวม 100% --}}
+                <th style="width: 8%;">SendDate</th>
                 <th class="col-custwant" style="width: 9%;">Custwant</th>
-                <th style="width: 11%;">วันเวลาบรรจุเสร็จ</th>
-                <th style="width: 11%;">Itemno</th>
+                <th style="width: 10%;">วันเวลาบรรจุเสร็จ</th>
+                <th style="width: 10%;">Itemno</th>
                 {{-- เดิม Quantity (tb_planning.quantity) → น้ำหนัก TP (tb_planning.weight) 09/11/2569 --}}
                 <th style="width: 8%;">น้ำหนัก TP</th>
                 <th style="width: 9%;">MachineNo</th>
-                <th style="width: 15%;">สถานะภายใน</th>
+                <th style="width: 11%;">สถานะภายใน</th>
             </tr>
         </thead>
         <tbody>
@@ -46,6 +48,9 @@
                     <td class="col-inplan text-center">
                         {{ $row->inplan ? \Carbon\Carbon::parse($row->inplan)->format('d/m/Y') : '-' }}
                         @if(!empty($row->work_shift)) ({{ $row->work_shift }})@endif
+                    </td>
+                    <td class="text-center">
+                        {{ $row->senddate ? \Carbon\Carbon::parse($row->senddate)->format('d/m/Y') : '-' }}
                     </td>
                     <td class="col-custwant text-center">
                         {{ $row->custwant ? \Carbon\Carbon::parse($row->custwant)->format('d/m/Y') : '-' }}
@@ -60,7 +65,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="11" class="text-center">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td>
+                    <td colspan="12" class="text-center">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td>
                 </tr>
             @endforelse
         </tbody>

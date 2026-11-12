@@ -190,6 +190,7 @@
                                         {{-- เรียงคอลัมน์ใหม่ 21/10/2569 ตามที่ผู้ใช้สั่ง — ต้องตรงกับลำดับ columns ของ DataTables ด้านล่าง --}}
                                         <th class="col-1 col-custwant">Custwant</th>
                                         <th class="col-1 col-inplan">Inplan</th>
+                                        <th class="col-1">SendDate</th>
                                         <th class="col-2">MachineNo</th>
                                         <th class="col-1">Itemno</th>
                                         {{-- <th class="col-1">Quantity</th> --}}
@@ -428,6 +429,8 @@
                 // ลำดับ (21/10/2569): Custwant → Inplan → MachineNo → Itemno → วันเวลาบรรจุเสร็จ — ต้องตรงกับ <th> ด้านบน
                 { 'className': "text-center col-custwant", data: 'custwant', name: 'tb_planning.custwant', orderable: true },
                 { 'className': "text-center col-inplan", data: 'inplan', name: 'tb_planning.inplan', orderable: true },
+                // 12/11/2569: วันที่กำหนดทบทวนล่าสุด (tb_planning.senddate)
+                { 'className': "text-center", data: 'senddate', name: 'tb_planning.senddate', orderable: true, searchable: false },
                 { 'className': "text-left", data: 'machine_no', name: 'tb_planning.machine_no', orderable: true },
                 { 'className': "text-left", data: 'itemno', name: 'tb_planning.itemno', orderable: true },
                 // { 'className': "text-left", data: 'quantity', name: 'quantity', orderable: false },

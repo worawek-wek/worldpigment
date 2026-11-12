@@ -86,6 +86,8 @@ class ProductionPlanController extends Controller
                 return $date;
             })
             ->editColumn('custwant', fn ($row) => $row->custwant ? \Carbon\Carbon::parse($row->custwant)->format('d/m/Y') : '-')
+            // 12/11/2569: วันที่กำหนดทบทวนล่าสุด (ค่าเดิมอยู่ใน senddate_log)
+            ->editColumn('senddate', fn ($row) => $row->senddate ? \Carbon\Carbon::parse($row->senddate)->format('d/m/Y') : '-')
             // วันเวลาที่บรรจุเสร็จ — จากตารางลูก tb_planning_packing: แสดงวันเวลาล่าสุด + "(N รายการ)" เมื่อมีหลายแถว
             // ใช้ addColumn คีย์ใหม่ (packing_display) ไม่ผูกกับคอลัมน์เดิม packing_datetie จึงไม่ชนตอน drop
             ->addColumn('packing_display', function ($row) {
@@ -305,7 +307,9 @@ class ProductionPlanController extends Controller
     private function reportHeaders(): array
     {
         return [
-            '#', 'Orderno', 'เลขที่ใบเบิก', 'Company', 'Inplan', 'Custwant',
+            '#', 'Orderno', 'เลขที่ใบเบิก', 'Company', 'Inplan',
+            'SendDate', // วันที่กำหนดทบทวนล่าสุด (tb_planning.senddate) — 12/11/2569 ตามที่ผู้ใช้สั่ง
+            'Custwant',
             // 'Quantity' (tb_planning.quantity = น้ำหนัก PO) → น้ำหนัก TP (tb_planning.weight) — 09/11/2569 ตามที่ผู้ใช้สั่ง
             'วันเวลาบรรจุเสร็จ', 'Itemno', 'น้ำหนัก TP', 'MachineNo', 'สถานะภายใน',
         ];
@@ -320,8 +324,8 @@ class ProductionPlanController extends Controller
         $sheet->setTitle('วางแผนการผลิต');
 
         $headers = $this->reportHeaders();
-        $cols    = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'];
-        $lastCol = 'K';
+        $cols    = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+        $lastCol = 'L';
 
         // หัวรายงาน
         $sheet->setCellValue('A1', 'รายงานวางแผนการผลิต');
@@ -339,11 +343,11 @@ class ProductionPlanController extends Controller
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
             ->getStartColor()->setRGB('E9ECEF');
         $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getAlignment()->setWrapText(true);
-        // Inplan (E) พื้นน้ำเงิน, Custwant (F) พื้นแดง — ให้เหมือนฝั่งเว็บ
+        // Inplan (E) พื้นน้ำเงิน, Custwant (G) พื้นแดง — F = SendDate (12/11/2569) — ให้เหมือนฝั่งเว็บ
         $sheet->getStyle("E{$r}")->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('CFE2FF');
         $sheet->getStyle("E{$r}")->getFont()->getColor()->setRGB('084298');
-        $sheet->getStyle("F{$r}")->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('F8D7DA');
-        $sheet->getStyle("F{$r}")->getFont()->getColor()->setRGB('842029');
+        $sheet->getStyle("G{$r}")->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('F8D7DA');
+        $sheet->getStyle("G{$r}")->getFont()->getColor()->setRGB('842029');
 
         $rownum = 0;
         $r++;
@@ -353,6 +357,7 @@ class ProductionPlanController extends Controller
                 $inplan .= ' ('.$row->work_shift.')';
             }
             $custwant = $row->custwant ? \Carbon\Carbon::parse($row->custwant)->format('d/m/Y') : '-';
+            $senddate = $row->senddate ? \Carbon\Carbon::parse($row->senddate)->format('d/m/Y') : '-';
             $packing  = $row->pk_last ? \Carbon\Carbon::parse($row->pk_last)->format('d/m/Y H:i') : '-';
             if ($row->pk_last && ($row->pk_count ?? 0) > 1) {
                 $packing .= ' ('.((int) $row->pk_count).' รายการ)';
@@ -366,15 +371,16 @@ class ProductionPlanController extends Controller
             $sheet->setCellValue("E{$r}", $inplan);
             $sheet->getStyle("E{$r}")->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('CFE2FF');
             $sheet->getStyle("E{$r}")->getFont()->getColor()->setRGB('084298');
-            $sheet->setCellValue("F{$r}", $custwant);
-            $sheet->getStyle("F{$r}")->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('F8D7DA');
-            $sheet->getStyle("F{$r}")->getFont()->getColor()->setRGB('842029');
-            $sheet->setCellValue("G{$r}", $packing);
-            $sheet->setCellValueExplicit("H{$r}", $row->itemno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue("F{$r}", $senddate);
+            $sheet->setCellValue("G{$r}", $custwant);
+            $sheet->getStyle("G{$r}")->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('F8D7DA');
+            $sheet->getStyle("G{$r}")->getFont()->getColor()->setRGB('842029');
+            $sheet->setCellValue("H{$r}", $packing);
+            $sheet->setCellValueExplicit("I{$r}", $row->itemno ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
             // น้ำหนัก TP (tb_planning.weight) แทน quantity — 09/11/2569
-            $sheet->setCellValue("I{$r}", $row->weight !== null ? number_format($row->weight, 2) : '-');
-            $sheet->setCellValueExplicit("J{$r}", $row->machine_no ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-            $sheet->setCellValue("K{$r}", $status);
+            $sheet->setCellValue("J{$r}", $row->weight !== null ? number_format($row->weight, 2) : '-');
+            $sheet->setCellValueExplicit("K{$r}", $row->machine_no ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue("L{$r}", $status);
             $r++;
         }
 
