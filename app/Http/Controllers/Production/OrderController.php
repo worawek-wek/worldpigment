@@ -12,6 +12,8 @@ use App\Models\PlanningHeader;
 use App\Models\Planning;
 use App\Models\Department;
 use App\Models\PlanningStatus;
+use App\Services\HolidayService;
+use Carbon\Carbon;
 
 class OrderController extends Controller
 {
@@ -256,7 +258,7 @@ class OrderController extends Controller
                     'plan_type'          => 'ORDER',
                     'mdate'              => $order->Mdate ?: null,
                     'custwant'           => $suborder->custwant ?: null,
-                    'senddate'           => $suborder->senddate ?: null, // กำหนดส่งทบทวนจาก suborder → tb_planning.senddate
+                    'senddate'           => $this->planningSenddate($suborder->senddate), // suborder.senddate − 1 วัน (จันทร์ − 2) แล้วถอยพ้นวันหยุด (13/11/2569)
                     'remark'             => $suborder->Remark ?: null,
                     'red_bill_code'      => $red_bill, // เลขที่ Order (+ /Rn ถ้าหลาย item) → เลขที่ใบเบิก
                     'quantity'           => $order->netqty, // น้ำหนักสั่งตาม Order
@@ -291,6 +293,29 @@ class OrderController extends Controller
             'status' => 200,
             'message' => 'Success'
         ]);
+    }
+
+    /**
+     * senddate ของแผนการผลิตจาก suborder.senddate (13/11/2569 ตามที่ผู้ใช้สั่ง)
+     * 1) ลบ 1 วัน — ถ้า suborder.senddate เป็นวันจันทร์ ลบ 2 วัน
+     * 2) ผลลัพธ์ตรงวันอาทิตย์ / วันหยุดนักขัตฤกษ์ (tb_holiday ที่เปิดใช้งาน) → ถอยไปวันทำการก่อนหน้า
+     * suborder.senddate ว่าง/อ่านไม่ได้ = null
+     */
+    private function planningSenddate($senddate): ?string
+    {
+        if (empty($senddate)) {
+            return null;
+        }
+
+        try {
+            $date = Carbon::parse($senddate)->startOfDay();
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        $date->subDays($date->isMonday() ? 2 : 1);
+
+        return HolidayService::workingDayOnOrBefore($date);
     }
 
     // ชื่อสถานะบรรจุ (is_packing='Y') ตัวแรกตามลำดับของแผนก — ไม่มี = null

@@ -76,6 +76,25 @@ class HolidayService
         return $day->format('Y-m-d');
     }
 
+    /**
+     * วันทำการที่ "ไม่เกิน" $date (13/11/2569)
+     * $date เป็นวันทำการอยู่แล้ว = คืนวันนั้นเลย · เป็นวันหยุด = ถอยไปทีละวันจนเจอวันทำการ
+     *
+     * ใช้ที่: Production\OrderController::planningSenddate() (senddate ตอนแปลง Order → แผนการผลิต)
+     *
+     * @return string 'Y-m-d'
+     */
+    public static function workingDayOnOrBefore($date): string
+    {
+        $day = self::toCarbon($date);
+
+        for ($i = 0; $i < self::MAX_SCAN_DAYS && self::isHoliday($day); $i++) {
+            $day->subDay();
+        }
+
+        return $day->format('Y-m-d');
+    }
+
     /** ล้าง cache (ใช้ในสคริปต์/เทสต์ที่เพิ่มวันหยุดแล้วคำนวณต่อทันที) */
     public static function flush(): void
     {
