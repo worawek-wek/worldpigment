@@ -215,6 +215,174 @@ class SalesForecastController extends Controller
         ]);
     }
 
+    /**
+     * ยอดขายสะสมที่มีกำหนดส่ง (แรก) ตามรหัสพนักงานขาย เทียบกับ Sale Target (12/11/2569 — ผังตามกระดาษของระบบเดิม)
+     * (query Access เดิม: Sale_Send_GrpT — grp / supno / Custno / MB / DB / CP / SPP / TOTAL / TARGET / DIFF)
+     *
+     * แถว       = suborder ที่ "กำหนดส่งแรก" อยู่ในช่วงวันที่ · เฉพาะใบ HI / CI / WI (ตามที่ผู้ใช้เขียนกำกับบนกระดาษ)
+     * กำหนดส่งแรก = OrderOutstandingController::dueHistory() (ไม่เคยเลื่อน = suborder.senddate)
+     * ยอด       = (Stock + Production) × morder.price แยกคอลัมน์ตาม morder.Company
+     * Target    = ตาราง target คอลัมน์เดือนของ "จากวันที่" (`1`..`12`) ของคู่ saleNo + custid
+     * กลุ่ม A    = ลูกค้าที่มีแถวใน target ของเซลส์นั้น (แสดงทุกราย แม้ไม่มียอด) · Diff = รวม − Target เฉพาะรายที่มียอด
+     * กลุ่ม OTHER = ลูกค้าที่มียอดแต่ไม่มีใน target (Target/Diff = 0) + แถว "OTHER" = target.custid 'OTHER'
+     * ไม่เลือกเซลส์ = ทุกเซลส์ที่มียอดหรือมี target · เซลส์ละหน้า
+     */
+    public function duePdf(Request $request)
+    {
+        return $this->dueReport($request, 'first');
+    }
+
+    /**
+     * ยอดขายสะสมตามวันที่เลื่อนล่าสุด ของรหัสพนักงานขาย เทียบกับ Sale Target (12/11/2569 — กระดาษ + query Order-SQL บรรทัด 1667)
+     * เหมือน duePdf() ทุกอย่าง ต่างที่: วันที่ที่กรอง = กำหนดส่งปัจจุบัน suborder.senddate (= วันที่เลื่อนล่าสุด
+     * — ระบบใหม่เขียน senddate ทับทุกครั้งที่เลื่อน) + มีคอลัมน์ชื่อลูกค้า target.custname (LEFT JOIN TARGET ตาม query เดิม)
+     */
+    public function latestPdf(Request $request)
+    {
+        return $this->dueReport($request, 'latest');
+    }
+
+    /** ตัวกลางของ duePdf() / latestPdf() — $mode = 'first' (กำหนดส่งแรก) | 'latest' (เลื่อนล่าสุด) */
+    private function dueReport(Request $request, string $mode)
+    {
+        $from  = self::parseDateTime((string) $request->query('from', ''), now()->startOfMonth());
+        $to    = self::parseDateTime((string) $request->query('to', ''), now()->endOfMonth()->startOfMinute());
+        $sale  = trim((string) $request->query('sale', ''));
+        $month = (int) $from->format('n');
+        $fromYmd = $from->format('Y-m-d H:i:s');
+        $toYmd   = $to->copy()->second(59)->format('Y-m-d H:i:s');
+
+        // ใบที่เคยเลื่อน/แยกส่ง — กำหนดส่งแรกอาจไม่ใช่ senddate ปัจจุบัน จึงต้องดึงมาคิดด้วย
+        // (เลื่อนล่าสุด = senddate ปัจจุบัน ไม่ต้องดึงเพิ่ม)
+        $changed = $mode === 'first'
+            ? DB::table('tb_order_change_line')->distinct()->pluck('orderno')->all()
+            : [];
+
+        $rows = DB::table('suborder as s')
+            ->join('morder as m', 'm.Orderno', '=', 's.Orderno')
+            ->whereRaw("LEFT(m.Orderno, 1) IN ('H', 'C', 'W') AND SUBSTRING(m.Orderno, 2, 1) = 'I'")
+            ->when($sale !== '', fn ($q) => $q->whereRaw('TRIM(m.supno) = ?', [$sale]))
+            ->where(function ($q) use ($fromYmd, $toYmd, $changed) {
+                $q->whereBetween('s.senddate', [$fromYmd, $toYmd]);
+                if ($changed) {
+                    $q->orWhereIn('s.Orderno', $changed);
+                }
+            })
+            ->get(['s.Orderno', 's.Runno', 's.senddate', 's.Stock', 's.Production', 'm.supno', 'm.Custno', 'm.Company', 'm.price']);
+
+        $history = app(OrderOutstandingController::class)
+            ->dueHistory($rows->pluck('Orderno')->unique()->values()->all());
+
+        $blank = array_fill_keys(self::COMPANIES, 0.0);
+        $sales = [];   // supno → custno → ['amt' => …, 'total' => …]
+        foreach ($rows as $r) {
+            $current = $r->senddate ? Carbon::parse($r->senddate)->format('Y-m-d') : null;
+            $first   = $mode === 'first' ? (($history($r)['first'] ?? null) ?: $current) : $current;
+            if (!$first || $first < $from->format('Y-m-d') || $first > $to->format('Y-m-d')) {
+                continue;
+            }
+            $amt = ((float) $r->Stock + (float) $r->Production) * (float) $r->price;
+            if (abs($amt) < 0.000001) {
+                continue;
+            }
+            $sup  = trim((string) $r->supno);
+            $cust = trim((string) $r->Custno);
+            $comp = strtoupper(trim((string) $r->Company));
+            $sales[$sup][$cust] ??= ['amt' => $blank, 'total' => 0.0];
+            if (isset($blank[$comp])) {
+                $sales[$sup][$cust]['amt'][$comp] += $amt;
+            }
+            $sales[$sup][$cust]['total'] += $amt;
+        }
+
+        // Sale Target ของเดือน
+        $targets = DB::table('target')
+            ->when($sale !== '', fn ($q) => $q->whereRaw('TRIM(saleNo) = ?', [$sale]))
+            ->get(['saleNo', 'custid', 'custname', DB::raw('`' . $month . '` as tg')]);
+        $tgBySale = [];
+        $tgName   = [];   // ชื่อลูกค้าจาก target.custname (รายงานเลื่อนล่าสุด)
+        foreach ($targets as $t) {
+            $tgBySale[trim((string) $t->saleNo)][trim((string) $t->custid)] = (float) $t->tg;
+            $tgName[trim((string) $t->saleNo)][trim((string) $t->custid)]   = trim((string) $t->custname);
+        }
+
+        $codes = array_unique(array_merge(array_keys($sales), array_keys($tgBySale)));
+        usort($codes, 'strnatcasecmp');
+
+        $sections = [];
+        foreach ($codes as $sup) {
+            $sold = $sales[$sup] ?? [];
+            $tg   = $tgBySale[$sup] ?? [];
+            $otherTarget = $tg['OTHER'] ?? 0.0;
+            unset($tg['OTHER']);
+
+            $groupA = ['rows' => [], 'sum' => $blank + ['total' => 0.0, 'target' => 0.0, 'diff' => 0.0]];
+            $custA  = array_keys($tg);
+            usort($custA, 'strnatcasecmp');
+            foreach ($custA as $cust) {
+                $s = $sold[$cust] ?? ['amt' => $blank, 'total' => 0.0];
+                $hasSale = abs($s['total']) > 0.000001;
+                $groupA['rows'][] = [
+                    'custno' => $cust, 'name' => $tgName[$sup][$cust] ?? '', 'amt' => $s['amt'], 'total' => $s['total'],
+                    'target' => $tg[$cust], 'diff' => $hasSale ? $s['total'] - $tg[$cust] : null,
+                ];
+                foreach (self::COMPANIES as $c) {
+                    $groupA['sum'][$c] += $s['amt'][$c];
+                }
+                $groupA['sum']['total']  += $s['total'];
+                $groupA['sum']['target'] += $tg[$cust];
+            }
+            $groupA['sum']['diff'] = $groupA['sum']['total'] - $groupA['sum']['target'];
+
+            $groupO = ['rows' => [], 'sum' => $blank + ['total' => 0.0, 'target' => $otherTarget, 'diff' => 0.0],
+                       'other_target' => $otherTarget];
+            $custO = array_values(array_diff(array_keys($sold), $custA));
+            usort($custO, 'strnatcasecmp');
+            foreach ($custO as $cust) {
+                $s = $sold[$cust];
+                $groupO['rows'][] = ['custno' => $cust, 'amt' => $s['amt'], 'total' => $s['total'], 'target' => 0.0, 'diff' => 0.0];
+                foreach (self::COMPANIES as $c) {
+                    $groupO['sum'][$c] += $s['amt'][$c];
+                }
+                $groupO['sum']['total'] += $s['total'];
+            }
+            $groupO['sum']['diff'] = $groupO['sum']['total'] - $otherTarget;
+
+            $sections[] = ['sale' => $sup, 'a' => $groupA, 'other' => $groupO];
+        }
+
+        $html = view('order.sales-due-pdf', [
+            'sections'  => $sections,
+            'companies' => self::COMPANIES,
+            'from'      => $from,
+            'to'        => $to,
+            'month'     => $month,
+            'sale'      => $sale,
+            'mode'      => $mode,
+        ])->render();
+
+        $mpdf = new Mpdf([
+            'mode' => 'utf-8', 'format' => 'A4',
+            'margin_left' => 10, 'margin_right' => 10, 'margin_top' => 10, 'margin_bottom' => 14,
+        ]);
+        $mpdf->autoScriptToLang = true;
+        $mpdf->autoLangToFont   = true;
+        $mpdf->SetFont('sarabun');
+        $mpdf->SetHTMLFooter(
+            '<table width="100%" style="font-family: sarabun; font-size: 10px; color: #c0504d;"><tr>'
+            . '<td>' . now()->format('d/m/Y') . '</td>'
+            . '<td style="text-align: center;">Page {PAGENO} of {nbpg}</td><td></td>'
+            . '</tr></table>'
+        );
+        ini_set('pcre.backtrack_limit', '10000000');
+        $mpdf->WriteHTML($html);
+
+        return response($mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="sales-' . ($mode === 'first' ? 'due' : 'latest') . '-' . $from->format('Ymd') . '-' . $to->format('Ymd') . '.pdf"',
+        ]);
+    }
+
     /** รหัสพนักงานขายที่เคยใช้จริงใน morder.supno — ตัวเลือกของ dropdown (เรียงแบบข้อความ ตามรายงานเดิม) */
     public static function saleCodes()
     {
