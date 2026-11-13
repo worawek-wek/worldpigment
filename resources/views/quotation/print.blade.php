@@ -336,7 +336,10 @@
     <div class="sign">
         <div class="box">
             {{-- คำลงท้ายเหนือลายเซ็น (29/10/2569 ตามที่ผู้ใช้สั่ง) --}}
-            <div class="closing">{{ $isEn ? 'Sincerely Yours,' : 'ขอแสดงความนับถืออย่างสูง' }}</div>
+            {{-- 13/11/2569 ตามที่ผู้ใช้สั่ง: เอาคำลงท้ายภาษาไทย "ขอแสดงความนับถืออย่างสูง" ออก (ฉบับอังกฤษยังมี Sincerely Yours,) --}}
+            @if ($isEn)
+                <div class="closing">Sincerely Yours,</div>
+            @endif
             {{-- รูปลายเซ็นของพนักงานผู้เสนอราคา (emp.signature) — ไม่มีก็เว้นช่องไว้ให้เซ็นมือ --}}
             <div class="sign-space">
                 @if (!empty($empSign))
