@@ -83,7 +83,9 @@
         /* ขนาด 90% ของความกว้างหน้า (ย่อลง 10% ตามที่ผู้ใช้สั่ง 16/10/2569) จัดกึ่งกลาง */
         /* 26/10/2569: ย่อหน้าเนื้อหาด้านล่างให้เท่าขอบรูป — .page เว้นซ้าย/ขวา 5% แล้วรูปกว้าง 100% ของ .page
            (= 90% ของหน้าเท่าเดิม) เนื้อหาทุกส่วนจึงตรงแนวขอบรูป */
-        .page { padding: 0 5%; }
+        /* 13/11/2569 ตามที่ผู้ใช้สั่ง "พิมพ์ออกมาแล้วระยะขอบเป็น 0.5 นิ้ว" — เอาระยะเว้นซ้าย/ขวา 5% ออก
+           ให้ขอบที่เห็นจริง = ขอบกระดาษ @page 0.5in ทั้ง 4 ด้าน (หัวกระดาษกว้างเต็มพื้นที่พิมพ์) */
+        .page { padding: 0; }
         .letterhead img { display: block; width: 100%; height: auto; margin: 0 auto; }
         /* ไม่พิมพ์หัวกระดาษ — ซ่อนรูปแต่คงพื้นที่ไว้ (visibility ไม่ใช่ display) */
         .letterhead.blank img { visibility: hidden; }
@@ -144,11 +146,12 @@
         .footer-info table.other-notes td div { margin-bottom: 2px; }
         .sign { margin-top: 44px; display: flex; justify-content: flex-end; }
         /* กล่องเซ็นชื่อกว้างขึ้นให้รับกับรูปลายเซ็นขนาดใหญ่ (เส้นเซ็นชื่อยาวขึ้นตาม) */
-        .sign .box { text-align: center; width: 420px; }
+        /* 13/11/2569 ตามที่ผู้ใช้สั่ง "ขยับขวา" — กล่อง 420 → 300px (ชิดขวาอยู่แล้ว กล่องแคบลง = กึ่งกลางเลื่อนไปขวา 60px) */
+        .sign .box { text-align: center; width: 300px; }
         /* ช่องว่างเหนือเส้นเซ็นชื่อ — ใส่รูปลายเซ็นของพนักงานคนที่เสนอราคา (ถ้ามี)
            สูง 84px = 2 เท่าของระยะเว้นเดิม (42px) เพื่อให้ลายเซ็นเห็นชัด */
         .sign .sign-space { height: 84px; display: flex; align-items: flex-end; justify-content: center; }
-        .sign .sign-space img { max-height: 84px; max-width: 420px; object-fit: contain; }
+        .sign .sign-space img { max-height: 84px; max-width: 300px; object-fit: contain; }
         /* เส้นประเซ็นชื่อ — สั้นครึ่งหนึ่งของกล่อง (210px) จัดกึ่งกลางใต้รูปลายเซ็น
            แยกความกว้างออกจากกล่อง เพื่อให้รูปลายเซ็นยังใหญ่เต็ม 420px ได้ */
         .sign .line { border-top: 1px dotted #000; padding-top: 4px; width: 210px; margin: 0 auto; white-space: nowrap; }
@@ -162,9 +165,10 @@
         /* ── ส่วนท้ายชิดล่างของหน้ากระดาษ (19/10/2569 ตามที่ผู้ใช้สั่ง) ──
            .page สูงเท่าพื้นที่พิมพ์ของ A4 (297mm − ขอบ 10mm×2 − padding ของ body) แล้วดัน .page-bottom ลงล่างด้วย margin-top:auto
            ตั้งต่ำกว่าพื้นที่จริงเล็กน้อย กันปัดเศษแล้วล้นไปหน้า 2 · ใบที่ยาวเกิน 1 หน้า ส่วนท้ายจะต่อท้ายตารางตามปกติ */
-        @page { size: A4; margin: 10mm; }
+        /* 13/11/2569 ตามที่ผู้ใช้สั่ง — ขอบ 0.5 นิ้วทั้ง 4 ด้าน */
+        @page { size: A4; margin: 0.5in; }
         @media print {
-            .page { display: flex; flex-direction: column; min-height: 270mm; }
+            .page { display: flex; flex-direction: column; min-height: 264mm; }/* 13/11/2569: ขอบบน+ล่างรวม 25.4mm เหลือพื้นที่ 271.6mm — 270 → 264 กันล้นหน้า 2 */
             .page-bottom { margin-top: auto; }
         }
     </style>
@@ -249,7 +253,7 @@
                         $headHtml = preg_replace('/\s*(\(?(?:ปัจจุบัน|ใหม่)\)?)/u', '<br>$1', e($head), 1);
                     @endphp
                     {{-- น้ำหนักส่งครั้งละ (delivery_qty) เก็บเป็นข้อความ แต่ให้ชิดขวาเหมือนช่องตัวเลข (19/10/2569) --}}
-                    <th class="{{ (($colRegistry[$c['key']]['num'] ?? false) || $c['key'] === 'delivery_qty') ? 'text-end' : '' }}"><u>{!! $headHtml !!}</u></th>
+                    <th class="{{ (($colRegistry[$c['key']]['num'] ?? false) || $c['key'] === 'delivery_qty') ? 'text-end' : '' }}">{!! $headHtml !!}</th>{{-- เอาขีดเส้นใต้ (<u>) ออก 13/11/2569 ตามที่ผู้ใช้สั่ง --}}
                 @endforeach
             </tr>
         </thead>
