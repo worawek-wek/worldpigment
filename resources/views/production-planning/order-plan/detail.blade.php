@@ -50,8 +50,8 @@
                         <div class="fw-semibold">{{ $planning_header->saleno ?? '-' }}</div>
                     </div>
                     <div class="col-md-3 mb-2">
-                        <div class="text-muted small">จำนวนสุทธิ</div>
-                        <div class="fw-semibold">{{ $planning_header->netqty ?? '-' }}</div>
+                        <div class="text-muted small">น้ำหนัก PO</div>
+                        <div class="fw-semibold">{{ is_numeric($planning_header->netqty) ? number_format((float) $planning_header->netqty, 3) : '-' }}</div>
                     </div>
                     <div class="col-md-3 mb-2">
                         <div class="text-muted small">วันที่ (Mdate)</div>
@@ -99,7 +99,7 @@
                         <th class="text-left col-2">Item No.</th>
                         {{-- <th class="text-center">Quantity</th> --}}
                         <th class="text-center col-1">Lot</th>
-                        <th class="text-center col-1">Weight</th>
+                        <th class="text-center col-1">น้ำหนัก TP</th>
                         <th class="text-center col-2"">Machine No.</th>
                         <th class="text-center col-1">Inplan</th>
                         <th class="text-center col-2">Custwant</th>
