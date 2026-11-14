@@ -772,6 +772,23 @@ class QuotationController extends Controller
     }
 
     /**
+     * ชื่อหัวคอลัมน์ (ไทย) เดิม → ชื่อใหม่ — 13/11/2569 ตามที่ผู้ใช้สั่ง
+     * ใช้แปลงชื่อที่บันทึกไว้ใน qmast.col_config ของใบเก่า (ทั้งแบบ preset และแบบ registry)
+     */
+    private const LABEL_RENAMES = [
+        'น้ำหนักส่งครั้งละ (กก)' => 'น้ำหนักต่อครั้ง (กก)',
+        'ค่าผลิต ปัจจุบัน'       => 'ราคาปัจจุบัน',
+        'ค่าผลิต (ปัจจุบัน)'     => 'ราคาปัจจุบัน',
+        'ค่าแม่สี ปัจจุบัน'       => 'ค่าแม่สี',
+        'ค่าแม่สี (ปัจจุบัน)'     => 'ค่าแม่สี',
+        'ค่าผลิต ใหม่'          => 'ค่าผลิต',
+        'ค่าผลิต (ใหม่)'        => 'ค่าผลิต',
+        'ค่าแม่สี ใหม่'          => 'ราคาใหม่',
+        'ค่าแม่สี (ใหม่)'        => 'ราคาใหม่',
+        'รวมราคา (บาท/กก) ใหม่'  => 'รวม (บาท/กก)',
+    ];
+
+    /**
      * คลังคอลัมน์ทั้งหมด (master registry) — key => [label, num, suffix?]
      */
     private function colRegistry(): array
@@ -779,16 +796,17 @@ class QuotationController extends Controller
         return [
             'code'              => ['label' => 'รหัสสินค้า',            'num' => false],
             'name'              => ['label' => 'ชื่อสินค้า',            'num' => false],
-            'delivery_qty'      => ['label' => 'น้ำหนักส่งครั้งละ (กก)',     'num' => false],
+            'delivery_qty'      => ['label' => 'น้ำหนักต่อครั้ง (กก)',     'num' => false],
             'resin_price'       => ['label' => 'ราคาเม็ดพลาสติก',       'num' => true],
             'process_fee'       => ['label' => 'ค่าผลิตและค่าแม่สี',        'num' => true],
             'pigment_price'     => ['label' => 'ค่าแม่สี',                 'num' => true],
             'loss_pct'          => ['label' => '% สูญเสีย',             'num' => true, 'suffix' => '%'],
             // ── ค่าผลิต/ค่าแม่สี แบบปรับราคา (ปัจจุบัน | ใหม่) ── กล่องเน้นเฉพาะกลุ่มนี้
-            'cur_process_fee'   => ['label' => 'ค่าผลิต (ปัจจุบัน)',     'num' => true],
-            'cur_pigment_price' => ['label' => 'ค่าแม่สี (ปัจจุบัน)',       'num' => true],
-            'new_process_fee'   => ['label' => 'ค่าผลิต (ใหม่)',        'num' => true],
-            'new_pigment_price' => ['label' => 'ค่าแม่สี (ใหม่)',          'num' => true],
+            // 13/11/2569 เปลี่ยนชื่อ (ไทย) ตามที่ผู้ใช้สั่ง — ชื่อเดิมดู LABEL_RENAMES
+            'cur_process_fee'   => ['label' => 'ราคาปัจจุบัน',     'num' => true],
+            'cur_pigment_price' => ['label' => 'ค่าแม่สี',       'num' => true],
+            'new_process_fee'   => ['label' => 'ค่าผลิต',        'num' => true],
+            'new_pigment_price' => ['label' => 'ราคาใหม่',          'num' => true],
             // ── ราคา (ส่วนราคา แยกต่างหาก) — ปัจจุบัน/ใหม่ ──
             'price_kg'          => ['label' => 'ราคา (บาท/กก) ปัจจุบัน',  'num' => true],
             'new_price'         => ['label' => 'ราคา (บาท/กก) ใหม่',     'num' => true],
@@ -823,15 +841,15 @@ class QuotationController extends Controller
         $c = fn ($k, $l) => ['key' => $k, 'label' => $l];
         return [
             ''    => [$c('code','รหัสสินค้า'), $c('name','ชื่อสินค้า'), $c('price_kg','ราคา (บาท/กก)'), $c('price_vat','ราคารวมภาษี')],
-            '1.1' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักส่งครั้งละ (กก)'), $c('price_kg','ราคา (บาท/กก)'), $c('price_vat','รวม Vat (บาท/กก)'), $c('remark','หมายเหตุ')],
-            '2.1' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักส่งครั้งละ (กก)'), $c('price_kg','ราคา (บาท/กก) ปัจจุบัน'), $c('new_price','ราคา (บาท/กก) ใหม่'), $c('price_vat','รวม Vat ใหม่'), $c('remark','หมายเหตุ')],
-            '1.2' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักส่งครั้งละ (กก)'), $c('resin_price','ราคาเม็ดพลาสติก'), $c('process_fee','ค่าผลิตและค่าแม่สี'), $c('price_kg','ราคา (บาท/กก)'), $c('price_vat','รวม Vat (บาท/กก)')],
+            '1.1' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักต่อครั้ง (กก)'), $c('price_kg','ราคา (บาท/กก)'), $c('price_vat','รวม Vat (บาท/กก)'), $c('remark','หมายเหตุ')],
+            '2.1' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักต่อครั้ง (กก)'), $c('price_kg','ราคา (บาท/กก) ปัจจุบัน'), $c('new_price','ราคา (บาท/กก) ใหม่'), $c('price_vat','รวม Vat ใหม่'), $c('remark','หมายเหตุ')],
+            '1.2' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักต่อครั้ง (กก)'), $c('resin_price','ราคาเม็ดพลาสติก'), $c('process_fee','ค่าผลิตและค่าแม่สี'), $c('price_kg','ราคา (บาท/กก)'), $c('price_vat','รวม Vat (บาท/กก)')],
             // 2.2 ตามแบบฟอร์มลูกค้า: มีแค่ ค่าผลิตและค่าสี ปัจจุบัน|ใหม่ — ไม่มีเม็ดพลาสติก/ราคา/VAT
-            '2.2' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักส่งครั้งละ (กก)'), $c('cur_process_fee','ค่าผลิตและค่าสี ปัจจุบัน'), $c('new_process_fee','ค่าผลิตและค่าสี ใหม่')],
-            '1.3' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักส่งครั้งละ (กก)'), $c('process_fee','ค่าผลิต'), $c('pigment_price','ค่าแม่สี'), $c('price_kg','ราคา (บาท/กก)'), $c('price_vat','รวม Vat (บาท/กก)')],
+            '2.2' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักต่อครั้ง (กก)'), $c('cur_process_fee','ค่าผลิตและค่าสี ปัจจุบัน'), $c('new_process_fee','ค่าผลิตและค่าสี ใหม่')],
+            '1.3' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักต่อครั้ง (กก)'), $c('process_fee','ค่าผลิต'), $c('pigment_price','ค่าแม่สี'), $c('price_kg','ราคา (บาท/กก)'), $c('price_vat','รวม Vat (บาท/กก)')],
             // 2.3 ตามแบบฟอร์มลูกค้า: ปิดท้ายด้วย "รวมราคา" ของฝั่งใหม่ (= ค่าผลิตใหม่ + ค่าแม่สีใหม่) — ไม่มีคอลัมน์ VAT
-            '2.3' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักส่งครั้งละ (กก)'), $c('cur_process_fee','ค่าผลิต ปัจจุบัน'), $c('cur_pigment_price','ค่าแม่สี ปัจจุบัน'), $c('new_process_fee','ค่าผลิต ใหม่'), $c('new_pigment_price','ค่าแม่สี ใหม่'), $c('price_kg','รวมราคา (บาท/กก) ใหม่')],
-            '1.4' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักส่งครั้งละ (กก)'), $c('resin_price','ราคาเม็ดพลาสติก'), $c('process_fee','ค่าผลิตและค่าแม่สี'), $c('loss_pct','% สูญเสีย'), $c('price_kg','ราคา (บาท/กก)'), $c('price_vat','รวม Vat (บาท/กก)')],
+            '2.3' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักต่อครั้ง (กก)'), $c('cur_process_fee','ราคาปัจจุบัน'), $c('cur_pigment_price','ค่าแม่สี'), $c('new_process_fee','ค่าผลิต'), $c('new_pigment_price','ราคาใหม่'), $c('price_kg','รวม (บาท/กก)')],
+            '1.4' => [$c('code','สินค้า'), $c('name','รายละเอียด'), $c('delivery_qty','น้ำหนักต่อครั้ง (กก)'), $c('resin_price','ราคาเม็ดพลาสติก'), $c('process_fee','ค่าผลิตและค่าแม่สี'), $c('loss_pct','% สูญเสีย'), $c('price_kg','ราคา (บาท/กก)'), $c('price_vat','รวม Vat (บาท/กก)')],
         ];
     }
 
@@ -849,6 +867,8 @@ class QuotationController extends Controller
                 foreach ($decoded as $c) {
                     if (empty($c['key']) || !isset($reg[$c['key']])) continue;
                     $label = $c['label'] ?? $reg[$c['key']]['label'];
+                    // ใบเก่าที่บันทึกชื่อหัวคอลัมน์แบบเดิมไว้ → แสดงเป็นชื่อใหม่ (13/11/2569)
+                    $label = self::LABEL_RENAMES[trim($label)] ?? $label;
                     $out[] = [
                         'key'      => $c['key'],
                         'label'    => $label,
@@ -913,6 +933,8 @@ class QuotationController extends Controller
             'ชื่อสินค้า'                  => 'Description',
             'รายละเอียด'                 => 'Description',
             'น้ำหนักส่งครั้งละ (กก)'      => 'Delivery Quantity (kg)',
+            'น้ำหนักต่อครั้ง (กก)'        => 'Delivery Quantity (kg)',
+            'รวม (บาท/กก)'              => 'New Total Price (THB/kg)',
             'ราคาเม็ดพลาสติก'            => 'Resin Price',
             'ค่าผลิตและค่าแม่สี'          => 'Process&Pigment Fee',
             'ค่าผลิต'                    => 'Process Fee',
@@ -955,6 +977,13 @@ class QuotationController extends Controller
             'price_vat'         => 'Incld VAT (THB/Kg)',
             'remark'            => 'Remarks',
         ];
+
+        // 13/11/2569: ชื่อไทยใหม่ของคอลัมน์ ปัจจุบัน/ใหม่ ("ค่าแม่สี" / "ค่าผลิต" / "ราคาปัจจุบัน" / "ราคาใหม่")
+        // ซ้ำหรือไม่ได้บอกฝั่ง → 4 คีย์นี้แปลตามคีย์ก่อน อังกฤษจึงยังเป็น Current/New … เหมือนเดิม
+        if (in_array($key, ['cur_process_fee', 'cur_pigment_price', 'new_process_fee', 'new_pigment_price'], true)
+            && !in_array(trim($thaiLabel), ['ค่าผลิตและค่าสี ปัจจุบัน', 'ค่าผลิตและค่าสี ใหม่'], true)) {
+            return $byKey[$key];
+        }
 
         $t = trim($thaiLabel);
         return $byLabel[$t] ?? $byKey[$key] ?? $thaiLabel;
