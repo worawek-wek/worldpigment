@@ -68,35 +68,35 @@
     <title>ใบเสนอราคา {{ $qno }}</title>
     <style>
         * { box-sizing: border-box; }
-        /* 16/11/2569 ตามที่ผู้ใช้สั่ง: Liberation Sans Narrow (แทน Arial Narrow ที่ไม่มีในทุกเครื่อง/นำมาฝังไม่ได้)
-           ไฟล์เก็บในเครื่อง public/assets/vendor/fonts/liberation-sans-narrow/ (SIL OFL) — ไม่มีตัวไทย ตัวไทยจึงไปใช้ Tahoma */
+        /* 16/11/2569 ตามที่ผู้ใช้สั่ง: ฟอนต์ TH Sarabun New ทั้งเอกสาร (ฟอนต์แห่งชาติของ SIPA — แจกฟรี)
+           ไฟล์เก็บในเครื่อง public/assets/vendor/fonts/thsarabunnew/ — ไม่โหลดจาก CDN
+           ใช้ชื่อ family 'WP TH Sarabun New' เพื่อไม่ให้ไปจับฟอนต์ที่ลงไว้ในเครื่องผู้ใช้ (ถ้ามี) แทนไฟล์ของระบบ
+           (ระหว่างทางเคยลอง Liberation Sans Narrow และ Sarabun ของ Google — ไฟล์ยังอยู่ใน fonts/ แต่ไม่ได้ใช้แล้ว) */
         @font-face {
-            font-family: 'Liberation Sans Narrow';
-            src: url('{{ asset('assets/vendor/fonts/liberation-sans-narrow/LiberationSansNarrow-Regular.ttf') }}') format('truetype');
+            font-family: 'WP TH Sarabun New';
+            src: url('{{ asset('assets/vendor/fonts/thsarabunnew/THSarabunNew-Regular.ttf') }}') format('truetype');
             font-weight: normal; font-style: normal;
         }
         @font-face {
-            font-family: 'Liberation Sans Narrow';
-            src: url('{{ asset('assets/vendor/fonts/liberation-sans-narrow/LiberationSansNarrow-Bold.ttf') }}') format('truetype');
+            font-family: 'WP TH Sarabun New';
+            src: url('{{ asset('assets/vendor/fonts/thsarabunnew/THSarabunNew-Bold.ttf') }}') format('truetype');
             font-weight: bold; font-style: normal;
         }
         @font-face {
-            font-family: 'Liberation Sans Narrow';
-            src: url('{{ asset('assets/vendor/fonts/liberation-sans-narrow/LiberationSansNarrow-Italic.ttf') }}') format('truetype');
+            font-family: 'WP TH Sarabun New';
+            src: url('{{ asset('assets/vendor/fonts/thsarabunnew/THSarabunNew-Italic.ttf') }}') format('truetype');
             font-weight: normal; font-style: italic;
         }
         @font-face {
-            font-family: 'Liberation Sans Narrow';
-            src: url('{{ asset('assets/vendor/fonts/liberation-sans-narrow/LiberationSansNarrow-BoldItalic.ttf') }}') format('truetype');
+            font-family: 'WP TH Sarabun New';
+            src: url('{{ asset('assets/vendor/fonts/thsarabunnew/THSarabunNew-BoldItalic.ttf') }}') format('truetype');
             font-weight: bold; font-style: italic;
         }
         body {
             /* ฟอนต์เดียวทั้งเอกสาร (10/11/2569 ตามที่ผู้ใช้สั่ง "ใช้ font เดียวกัน อย่างเป็นทางการ")
-               เดิม 'Arial Narrow' ซึ่งไม่มีตัวไทย → ไทยไป Tahoma / อังกฤษเป็น Arial Narrow / รหัสสินค้าเป็น monospace = ปนกัน 3 แบบ
-               Tahoma มีทั้งไทยและอังกฤษในตัว และมีในทุกเครื่อง Windows · Tahoma กว้างกว่า Arial Narrow จึงลดขนาด 17 → 15px */
-            /* 16/11/2569 ตามที่ผู้ใช้สั่ง: Liberation Sans Narrow (ฝังในระบบ ดู @font-face ด้านบน) — ตัวไทยไปใช้ Tahoma */
-            font-family: 'Liberation Sans Narrow', 'Tahoma', sans-serif;
-            font-size: 15px; color: #000; margin: 0; padding: 28px 40px; line-height: 1.5;
+               16/11/2569: เปลี่ยนเป็น TH Sarabun New (ดู @font-face ด้านบน) · ตัวดูเล็กกว่าฟอนต์อื่นที่ขนาดเท่ากัน จึงตั้ง 18px */
+            font-family: 'WP TH Sarabun New', 'Tahoma', sans-serif;
+            font-size: 18px; color: #000; margin: 0; padding: 28px 40px; line-height: 1.5;
         }
         .toolbar { text-align: center; margin-bottom: 18px; }
         .toolbar button { padding: 8px 22px; font-size: 15px; cursor: pointer; }
@@ -137,6 +137,11 @@
             letter-spacing: 2px; opacity: .85;
         }
         .field-label { display: inline-block; }
+        /* 16/11/2569 ตามที่ผู้ใช้สั่ง: ป้าย "เรียน" กว้างเท่าป้าย "ลูกค้า:" พอดี (ซ้อนคำ "ลูกค้า:" แบบมองไม่เห็นไว้ใต้คำ "เรียน")
+           ข้อความหลังป้ายจึงเริ่มตรงแนวเดียวกัน โดยระยะห่างเท่าเดิม (&nbsp;&nbsp;) */
+        .to-label { display: inline-grid; }
+        .to-label > span { grid-area: 1 / 1; }
+        .to-label .to-ghost { visibility: hidden; }
         .subject { margin: 2px 0; }
         .body-text { text-indent: 40px; margin: 14px 0 10px; }
 
@@ -146,13 +151,13 @@
         /* ข้อความยาว (รายละเอียด 30 ตัวขึ้นไป / รหัสยาว) ตัดขึ้นบรรทัดใหม่ในช่อง ไม่ล้นไปช่องข้าง ๆ */
         table.items td { overflow-wrap: anywhere; word-break: break-word; }
         table.items th, table.items td { padding: 4px 7px; vertical-align: top; }
-        table.items thead th { text-align: left; font-weight: bold; line-height: 1.25; }
+        table.items thead th { text-align: center; /* 16/11/2569 ตามที่ผู้ใช้สั่ง: หัวคอลัมน์จัดกึ่งกลาง (เดิม left) */ font-weight: bold; line-height: 1.25; }
         table.items thead th small { font-weight: normal; color: #333; font-size: .78em; }
-        table.items td { text-align: left; }
+        table.items td { text-align: center; } /* 16/11/2569 ตามที่ผู้ใช้สั่ง: ข้อมูลในตารางจัดกึ่งกลาง (เดิม left) */
         .text-end { text-align: right; }
         /* ต้อง qualify ด้วย table.items ไม่งั้นกฎ text-align:left ของ th/td ข้างบนชนะ (specificity สูงกว่า)
            — ช่องยอดเงิน/น้ำหนักจึงเคยชิดซ้าย (แก้ 19/10/2569) */
-        table.items th.text-end, table.items td.text-end { text-align: right; }
+        table.items td.text-end { text-align: center; } /* 16/11/2569 ตามที่ผู้ใช้สั่ง: ทั้ง th และ td กึ่งกลางทุกช่อง (เดิมช่องตัวเลขชิดขวา) */
         .text-center { text-align: center; }
         /* รหัสสินค้าใช้ฟอนต์เดียวกับทั้งเอกสาร (เดิม monospace — 10/11/2569) */
         .code { font-family: inherit; }
@@ -160,7 +165,7 @@
 
         /* ส่วนท้าย (หมายเหตุ + ลายเซ็น) — ระยะห่างจากตารางอย่างน้อย 20px (เดิมเป็น margin-top ของ .footer-info) */
         .page-bottom { padding-top: 20px; }
-        .footer-info { margin-top: 0; }
+        .footer-info { margin-top: 1.5em; } /* 16/11/2569 ตามที่ผู้ใช้สั่ง: เว้น 1 บรรทัดใต้ตาราง (เดิม 0 อยู่ใน .page-bottom ที่ชิดล่าง) */
         .footer-info .row { margin: 2px 0; }
         /* หมายเหตุอื่น — ป้ายซ้าย + รายการเรียงลงมาในคอลัมน์ขวา */
         .footer-info table.other-notes { border-collapse: collapse; font: inherit; }
@@ -248,7 +253,7 @@
             <span class="field-label">ลูกค้า:</span> &nbsp;&nbsp;
             {{ $tname ?: '—' }} @if($header->Custid) ({{ $header->Custid }}) @endif
         </div>
-        <div class="subject"><span class="field-label">เรียน</span> &nbsp;&nbsp; ผู้จัดการฝ่ายจัดซื้อ</div>
+        <div class="subject"><span class="field-label to-label"><span>เรียน</span><span class="to-ghost" aria-hidden="true">ลูกค้า:</span></span> &nbsp;&nbsp; ผู้จัดการฝ่ายจัดซื้อ</div>
 
         <div class="body-text">{{ $bodyText }}</div>
     @endif
@@ -340,7 +345,6 @@
             ? $enDate
             : fn ($d) => $d ? \Carbon\Carbon::parse($d)->format('d/m/Y') : '-';
     @endphp
-    <div class="page-bottom">
     <div class="footer-info">
         @if ($header->resin_price_note)
             <div class="row">{{ $L['resin'] }} : {{ $header->resin_price_note }}</div>
@@ -375,6 +379,8 @@
         @endif
     </div>
 
+    {{-- 16/11/2569 ตามที่ผู้ใช้สั่ง: หมายเหตุ (เทอมการชำระเงิน ฯลฯ) อยู่ใต้ตารางเว้น 1 บรรทัด — เหลือเฉพาะลายเซ็นที่ชิดล่างของหน้า --}}
+    <div class="page-bottom">
     <div class="sign">
         <div class="box">
             {{-- คำลงท้ายเหนือลายเซ็น (29/10/2569 ตามที่ผู้ใช้สั่ง) --}}
