@@ -68,11 +68,34 @@
     <title>ใบเสนอราคา {{ $qno }}</title>
     <style>
         * { box-sizing: border-box; }
+        /* 16/11/2569 ตามที่ผู้ใช้สั่ง: Liberation Sans Narrow (แทน Arial Narrow ที่ไม่มีในทุกเครื่อง/นำมาฝังไม่ได้)
+           ไฟล์เก็บในเครื่อง public/assets/vendor/fonts/liberation-sans-narrow/ (SIL OFL) — ไม่มีตัวไทย ตัวไทยจึงไปใช้ Tahoma */
+        @font-face {
+            font-family: 'Liberation Sans Narrow';
+            src: url('{{ asset('assets/vendor/fonts/liberation-sans-narrow/LiberationSansNarrow-Regular.ttf') }}') format('truetype');
+            font-weight: normal; font-style: normal;
+        }
+        @font-face {
+            font-family: 'Liberation Sans Narrow';
+            src: url('{{ asset('assets/vendor/fonts/liberation-sans-narrow/LiberationSansNarrow-Bold.ttf') }}') format('truetype');
+            font-weight: bold; font-style: normal;
+        }
+        @font-face {
+            font-family: 'Liberation Sans Narrow';
+            src: url('{{ asset('assets/vendor/fonts/liberation-sans-narrow/LiberationSansNarrow-Italic.ttf') }}') format('truetype');
+            font-weight: normal; font-style: italic;
+        }
+        @font-face {
+            font-family: 'Liberation Sans Narrow';
+            src: url('{{ asset('assets/vendor/fonts/liberation-sans-narrow/LiberationSansNarrow-BoldItalic.ttf') }}') format('truetype');
+            font-weight: bold; font-style: italic;
+        }
         body {
             /* ฟอนต์เดียวทั้งเอกสาร (10/11/2569 ตามที่ผู้ใช้สั่ง "ใช้ font เดียวกัน อย่างเป็นทางการ")
                เดิม 'Arial Narrow' ซึ่งไม่มีตัวไทย → ไทยไป Tahoma / อังกฤษเป็น Arial Narrow / รหัสสินค้าเป็น monospace = ปนกัน 3 แบบ
                Tahoma มีทั้งไทยและอังกฤษในตัว และมีในทุกเครื่อง Windows · Tahoma กว้างกว่า Arial Narrow จึงลดขนาด 17 → 15px */
-            font-family: 'Tahoma', sans-serif;
+            /* 16/11/2569 ตามที่ผู้ใช้สั่ง: Liberation Sans Narrow (ฝังในระบบ ดู @font-face ด้านบน) — ตัวไทยไปใช้ Tahoma */
+            font-family: 'Liberation Sans Narrow', 'Tahoma', sans-serif;
             font-size: 15px; color: #000; margin: 0; padding: 28px 40px; line-height: 1.5;
         }
         .toolbar { text-align: center; margin-bottom: 18px; }
@@ -249,8 +272,27 @@
                 @foreach ($colConfig as $c)
                     @php
                         $head = $headEn ? ($c['label_en'] ?? $c['label']) : $c['label'];
-                        // คำว่า "ปัจจุบัน" / "ใหม่" (รวมวงเล็บ) ขึ้นบรรทัดใหม่ — 26/10/2569 · escape ก่อนแล้วค่อยแทรก <br>
-                        $headHtml = preg_replace('/\s*(\(?(?:ปัจจุบัน|ใหม่)\)?)/u', '<br>$1', e($head), 1);
+                        // การขึ้นบรรทัดของหัวคอลัมน์ภาษาไทย — 16/11/2569 ตามแบบที่ผู้ใช้ส่งมา (แทนกติกาเดิม 26/10/2569)
+                        //  - คำว่า ปัจจุบัน/ใหม่ ที่ต่อท้ายแบบมีเว้นวรรค → ขึ้นเป็นบรรทัดแรก (เช่น ปัจจุบัน / ราคา / (บาท/กก))
+                        //  - หน่วยในวงเล็บ (บาท/กก) → บรรทัดใหม่
+                        //  - บางชื่อกำหนดจุดตัดเอง ($thBreaks) · ภาษาอังกฤษไม่แตะ · escape ก่อนแล้วค่อยแทรก <br>
+                        $headHtml = e($head);
+                        if (!$headEn) {
+                            $thBreaks = [
+                                'น้ำหนักต่อครั้ง (กก)' => 'น้ำหนัก<br>ต่อครั้ง (กก)',
+                                'ราคาเม็ดพลาสติก'     => 'ราคาเม็ด<br>พลาสติก',
+                                'ค่าผลิตและค่าแม่สี'    => 'ค่าผลิต<br>และค่าแม่สี',
+                            ];
+                            $t = trim($head);
+                            $brkUnit = fn ($s) => preg_replace('/\s*(\()/u', '<br>$1', e($s), 1);
+                            if (isset($thBreaks[$t])) {
+                                $headHtml = $thBreaks[$t];
+                            } elseif (preg_match('/^(.*\S)\s+\(?(ปัจจุบัน|ใหม่)\)?$/u', $t, $m)) {
+                                $headHtml = e($m[2]) . '<br>' . $brkUnit($m[1]);
+                            } else {
+                                $headHtml = $brkUnit($t);
+                            }
+                        }
                     @endphp
                     {{-- น้ำหนักส่งครั้งละ (delivery_qty) เก็บเป็นข้อความ แต่ให้ชิดขวาเหมือนช่องตัวเลข (19/10/2569) --}}
                     <th class="{{ (($colRegistry[$c['key']]['num'] ?? false) || $c['key'] === 'delivery_qty') ? 'text-end' : '' }}">{!! $headHtml !!}</th>{{-- เอาขีดเส้นใต้ (<u>) ออก 13/11/2569 ตามที่ผู้ใช้สั่ง --}}

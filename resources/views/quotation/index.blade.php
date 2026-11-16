@@ -1537,11 +1537,22 @@
                 frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
                 document.body.appendChild(frame);
             }
-            frame.onload = function(){
+            frame.onload = function(){ printFrameWhenFontsReady(frame); };
+            frame.src ="{{ $page_url }}/print?qno=" + encodeURIComponent(qno) + (withLh ? '' : '&lh=0');
+        }
+
+        // สั่งพิมพ์ iframe หลังฟอนต์ที่ฝังในหน้าพิมพ์ (Liberation Sans Narrow) โหลดเสร็จ — 16/11/2569
+        // ไม่รอ = ครั้งแรกอาจพิมพ์ออกมาเป็นฟอนต์สำรอง · เบราว์เซอร์ที่ไม่มี document.fonts พิมพ์ทันทีตามเดิม
+        function printFrameWhenFontsReady(frame){
+            var doPrint = function(){
                 try { frame.contentWindow.focus(); frame.contentWindow.print(); }
                 catch (e) { console.error(e); }
             };
-            frame.src = "{{ $page_url }}/print?qno=" + encodeURIComponent(qno) + (withLh ? '' : '&lh=0');
+            try {
+                var fonts = frame.contentDocument && frame.contentDocument.fonts;
+                if (fonts && fonts.ready) { fonts.ready.then(doPrint, doPrint); return; }
+            } catch (e) { /* ignore */ }
+            doPrint();
         }
 
         // ── พิมพ์ตัวอย่างจากฟอร์มที่ยังไม่บันทึก ──
@@ -1573,10 +1584,7 @@
                     frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
                     document.body.appendChild(frame);
                 }
-                frame.onload = function(){
-                    try { frame.contentWindow.focus(); frame.contentWindow.print(); }
-                    catch (e) { console.error(e); }
-                };
+                frame.onload = function(){ printFrameWhenFontsReady(frame); };
                 frame.srcdoc = html;   // โหลดในหน้าเดิม → ไม่เปิดแท็บใหม่
             })
             .catch(function(e){
