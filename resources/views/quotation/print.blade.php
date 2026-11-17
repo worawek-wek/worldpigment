@@ -188,7 +188,9 @@
         .sign .closing { white-space: nowrap; }
         .fmt-tag { font-size: .75em; color: #888; }
 
-        @media print { .toolbar { display: none; } body { padding: 10px 24px; } }
+        /* 17/11/2569 ตามที่ผู้ใช้สั่ง "ระยะขอบซ้าย ขวา บน ล่าง ต้อง 0.5 นิ้ว" — ตอนพิมพ์ body ไม่มี padding (เดิม 10px 24px บวกเพิ่มจากขอบ @page)
+           ขอบที่เห็นจริงจึง = @page margin 0.5in ทั้ง 4 ด้าน · รูปหัวกระดาษกว้าง 100% = ชนขอบ 0.5in ซ้าย/ขวาพอดี */
+        @media print { .toolbar { display: none; } body { padding: 0; } }
 
         /* ── ส่วนท้ายชิดล่างของหน้ากระดาษ (19/10/2569 ตามที่ผู้ใช้สั่ง) ──
            .page สูงเท่าพื้นที่พิมพ์ของ A4 (297mm − ขอบ 10mm×2 − padding ของ body) แล้วดัน .page-bottom ลงล่างด้วย margin-top:auto
@@ -196,7 +198,7 @@
         /* 13/11/2569 ตามที่ผู้ใช้สั่ง — ขอบ 0.5 นิ้วทั้ง 4 ด้าน */
         @page { size: A4; margin: 0.5in; }
         @media print {
-            .page { display: flex; flex-direction: column; min-height: 264mm; }/* 13/11/2569: ขอบบน+ล่างรวม 25.4mm เหลือพื้นที่ 271.6mm — 270 → 264 กันล้นหน้า 2 */
+            .page { display: flex; flex-direction: column; min-height: 270mm; }/* พื้นที่พิมพ์สูง 297 − 25.4 = 271.6mm · 17/11/2569: body ไม่มี padding แล้ว 264 → 270 (เผื่อ 1.6mm กันล้นหน้า 2) ลายเซ็นจึงชิดขอบล่าง 0.5in */
             .page-bottom { margin-top: auto; }
         }
     </style>
