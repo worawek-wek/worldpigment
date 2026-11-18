@@ -96,7 +96,7 @@
             /* ฟอนต์เดียวทั้งเอกสาร (10/11/2569 ตามที่ผู้ใช้สั่ง "ใช้ font เดียวกัน อย่างเป็นทางการ")
                16/11/2569: เปลี่ยนเป็น TH Sarabun New (ดู @font-face ด้านบน) · ตัวดูเล็กกว่าฟอนต์อื่นที่ขนาดเท่ากัน จึงตั้ง 18px */
             font-family: 'WP TH Sarabun New', 'Tahoma', sans-serif;
-            font-size: 18px; color: #000; margin: 0; padding: 28px 40px; line-height: 1.5;
+            font-size: 18px; color: #000; margin: 0; padding: 28px 40px; line-height: 1.2; /* 18/11/2569 ตามที่ผู้ใช้สั่ง: ลดระยะบรรทัด (เดิม 1.5 — TH Sarabun New เผื่อพื้นที่บน/ล่างในตัวฟอนต์อยู่แล้ว) */
         }
         .toolbar { text-align: center; margin-bottom: 18px; }
         .toolbar button { padding: 8px 22px; font-size: 15px; cursor: pointer; }
@@ -164,6 +164,8 @@
            — ช่องยอดเงิน/น้ำหนักจึงเคยชิดซ้าย (แก้ 19/10/2569) */
         table.items td.text-end { text-align: center; } /* 16/11/2569 ตามที่ผู้ใช้สั่ง: ทั้ง th และ td กึ่งกลางทุกช่อง (เดิมช่องตัวเลขชิดขวา) */
         .text-center { text-align: center; }
+        /* 18/11/2569 ตามที่ผู้ใช้สั่ง: คอลัมน์ สินค้า (code) + รายละเอียด (name) ชิดซ้ายทั้ง th และ td */
+        table.items th.col-left, table.items td.col-left { text-align: left; }
         /* รหัสสินค้าใช้ฟอนต์เดียวกับทั้งเอกสาร (เดิม monospace — 10/11/2569) */
         .code { font-family: inherit; }
         tfoot th { border-top: 1px solid #000; }
@@ -307,7 +309,7 @@
                         }
                     @endphp
                     {{-- น้ำหนักส่งครั้งละ (delivery_qty) เก็บเป็นข้อความ แต่ให้ชิดขวาเหมือนช่องตัวเลข (19/10/2569) --}}
-                    <th class="{{ (($colRegistry[$c['key']]['num'] ?? false) || $c['key'] === 'delivery_qty') ? 'text-end' : '' }}">{!! $headHtml !!}</th>{{-- เอาขีดเส้นใต้ (<u>) ออก 13/11/2569 ตามที่ผู้ใช้สั่ง --}}
+                    <th class="{{ (($colRegistry[$c['key']]['num'] ?? false) || $c['key'] === 'delivery_qty') ? 'text-end' : '' }} {{ in_array($c['key'], ['code', 'name'], true) ? 'col-left' : '' }}">{!! $headHtml !!}</th>{{-- เอาขีดเส้นใต้ (<u>) ออก 13/11/2569 ตามที่ผู้ใช้สั่ง --}}
                 @endforeach
             </tr>
         </thead>
@@ -328,7 +330,7 @@
                                 $disp = preg_replace_callback('/(?<![\d,.])\d{4,}/', fn ($m) => number_format((int) $m[0]), (string) $disp);
                             }
                         @endphp
-                        <td class="{{ ($num || $k === 'delivery_qty') ? 'text-end' : '' }} {{ $k === 'code' ? 'code' : '' }}">{{ $disp }}</td>
+                        <td class="{{ ($num || $k === 'delivery_qty') ? 'text-end' : '' }} {{ $k === 'code' ? 'code' : '' }} {{ in_array($k, ['code', 'name'], true) ? 'col-left' : '' }}">{{ $disp }}</td>
                     @endforeach
                 </tr>
             @empty
