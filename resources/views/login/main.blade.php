@@ -134,9 +134,13 @@
         tailwind.svgLoader()
         await helper.delay(1500)
 
+        // 17/11/2569 — ส่ง token จาก meta ของหน้านี้ (X-CSRF-TOKEN) — cookie XSRF-TOKEN
+        // ชื่อเดียวกันทุกโปรเจ็ค Laravel บน localhost จึงอาจเป็นของโปรเจ็คอื่น
         axios.post(`login`, {
             email: email,
             password: password
+        }, {
+            headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }
         }).then(res => {
             location.href = '/'  // ให้เซิร์ฟเวอร์เลือกหน้าแรกตามสิทธิ์ของบัญชี
         }).catch(err => {

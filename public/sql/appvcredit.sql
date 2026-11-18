@@ -1,15 +1,18 @@
+-- แปลงแล้ว 17/11/2569: TIS-620(CP874) -> UTF-8 · TYPE= -> ENGINE= · INSERT ระบุชื่อคอลัมน์
+-- โครงสร้างตาม DB ปัจจุบัน (zwek_worldpigment_2)
+SET NAMES utf8;
+SET SESSION sql_mode='';
+
 /*
 MySQL Data Transfer
 Source Host: localhost
 Source Database: Order
 Target Host: localhost
 Target Database: Order
-Date: 14/10/26 10:13:12
+Date: 17/11/26 10:54:04
 */
 
 SET FOREIGN_KEY_CHECKS=0;
-SET NAMES utf8;
-SET SESSION sql_mode='';
 -- ----------------------------
 -- Table structure for appvcredit
 -- ----------------------------
@@ -17,9 +20,9 @@ DROP TABLE IF EXISTS `appvcredit`;
 CREATE TABLE `appvcredit` (
   `ReqDate` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
   `custno` varchar(10) NOT NULL DEFAULT '',
-  `TermOld` varchar(15) DEFAULT NULL,
+  `TermOld` varchar(100) DEFAULT NULL,
   `CashDiscOld` double DEFAULT NULL,
-  `TermNew` varchar(15) DEFAULT NULL,
+  `TermNew` varchar(100) DEFAULT NULL,
   `CashDiscNew` double DEFAULT NULL,
   `Remark` varchar(100) DEFAULT NULL,
   `Appv` tinyint(4) DEFAULT NULL,
@@ -28,6 +31,14 @@ CREATE TABLE `appvcredit` (
   `BlackRemOld` varchar(50) DEFAULT NULL,
   `TypeChg` char(1) DEFAULT NULL,
   `BlackNew` varchar(50) DEFAULT NULL,
+  `BlackNewVal` tinyint(4) DEFAULT NULL,
+  `BlackDateNew` date DEFAULT NULL,
+  `BlackRemNew` varchar(50) DEFAULT NULL,
+  `ReqBy` varchar(20) DEFAULT NULL,
+  `ReqByName` varchar(100) DEFAULT NULL,
+  `AppvDT` datetime DEFAULT NULL,
+  `AppvBy` varchar(20) DEFAULT NULL,
+  `AppvByName` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`ReqDate`,`custno`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
@@ -744,4 +755,6 @@ INSERT INTO `appvcredit` (`ReqDate`, `custno`, `TermOld`, `CashDiscOld`, `TermNe
 INSERT INTO `appvcredit` (`ReqDate`, `custno`, `TermOld`, `CashDiscOld`, `TermNew`, `CashDiscNew`, `Remark`, `Appv`, `AppvRem`, `black`, `BlackRemOld`, `TypeChg`, `BlackNew`) VALUES ('2026-04-16 11:21:07', '00523', 'CASH', null, '7 วัน', '0', 'วงเงิน 30,000 บาท', null, null, null, null, null, null);
 INSERT INTO `appvcredit` (`ReqDate`, `custno`, `TermOld`, `CashDiscOld`, `TermNew`, `CashDiscNew`, `Remark`, `Appv`, `AppvRem`, `black`, `BlackRemOld`, `TypeChg`, `BlackNew`) VALUES ('2026-05-26 14:37:34', '40024', '60 วัน', null, 'เงินสด', '0', 'เคลียร์ยอดเก่าแล้ว  เงินโอนก่อนส่งของ', '-1', null, 'ขึ้นบัญชีดำ', 'รอเคลียร์ยอด 1+2/69', null, '-1');
 INSERT INTO `appvcredit` (`ReqDate`, `custno`, `TermOld`, `CashDiscOld`, `TermNew`, `CashDiscNew`, `Remark`, `Appv`, `AppvRem`, `black`, `BlackRemOld`, `TypeChg`, `BlackNew`) VALUES ('2026-09-03 08:27:38', '40469', '60 วัน', '0', 'เงินสด', '0', 'คุณปานแจ้งเปลี่ยนค่ะ3/9/26', '-1', null, null, null, null, null);
+INSERT INTO `appvcredit` (`ReqDate`, `custno`, `TermOld`, `CashDiscOld`, `TermNew`, `CashDiscNew`, `Remark`, `Appv`, `AppvRem`, `black`, `BlackRemOld`, `TypeChg`, `BlackNew`) VALUES ('2026-10-28 13:09:22', '10633', 'Cash', '0', '30 วัน', '0', 'วงเงิน 200,000 บาท  ส่งของวางบิล', '-1', null, null, null, null, null);
+INSERT INTO `appvcredit` (`ReqDate`, `custno`, `TermOld`, `CashDiscOld`, `TermNew`, `CashDiscNew`, `Remark`, `Appv`, `AppvRem`, `black`, `BlackRemOld`, `TypeChg`, `BlackNew`) VALUES ('2026-11-02 14:58:58', '40024', 'เงินสด', '0', '30 วัน', '0', 'WH= วงเงิน 30,000 บาท./WPI= วงเงิน 30,000 บาท รวม 60,000.-', '-1', 'ส่งของพร้อมวางบิล', null, null, null, null);
 INSERT INTO `appvcredit` (`ReqDate`, `custno`, `TermOld`, `CashDiscOld`, `TermNew`, `CashDiscNew`, `Remark`, `Appv`, `AppvRem`, `black`, `BlackRemOld`, `TypeChg`, `BlackNew`) VALUES ('2026-09-17 14:03:10', '40243', '90 วัน', null, 'CASH', '0', 'คุณจวงแจ้งว่า ยอดค้างชำระ 554,490.59.- ชำระหมดแล้ว มีOrder ใหม่ให้โอนเงินก่อนส่ง', '-1', 'โอนเงินก่อนส่ง', 'ขึ้นบัญชีดำ', 'ค้างชำระ 554,490.59  รอผ่อนหมด', null, '-1');

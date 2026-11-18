@@ -126,10 +126,9 @@ return [
     |
     */
 
-    'cookie' => env(
-        'SESSION_COOKIE',
-        Str::slug(env('APP_NAME', 'laravel'), '_').'_session'
-    ),
+    // 17/11/2569 — ใช้ชื่อเฉพาะของโปรเจ็คนี้ (เดิม = APP_NAME "Laravel" → laravel_session)
+    // กัน cookie ชนกับโปรเจ็ค Laravel อื่นบน localhost เดียวกัน (login ที่หนึ่งแล้วอีกที่หลุด)
+    'cookie' => env('SESSION_COOKIE', 'worldpigment_session'),
 
     /*
     |--------------------------------------------------------------------------

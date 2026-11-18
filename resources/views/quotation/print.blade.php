@@ -113,6 +113,10 @@
         /* ไม่พิมพ์หัวกระดาษ — ซ่อนรูปแต่คงพื้นที่ไว้ (visibility ไม่ใช่ display) */
         .letterhead.blank img { visibility: hidden; }
         .doc-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+        /* 17/11/2569 ตามที่ผู้ใช้สั่ง: หัวเอกสาร (เลขที่/วันที่) + บรรทัดลูกค้า/เรียน ใหญ่ขึ้น 1 ขนาด (body 18px → 20px) */
+        .doc-head, .subject { font-size: 20px; }
+        /* 18/11/2569 ตามที่ผู้ใช้สั่ง: หมายเหตุใต้ตาราง (จำนวนส่งมอบขั้นต่ำ/เทอมการชำระเงิน ฯลฯ) + ชื่อ/ตำแหน่งใต้ลายเซ็น ใหญ่ขึ้น 1 ขนาดด้วย */
+        .footer-info, .sign { font-size: 20px; }
         /* ใบที่มีตรา REVISED — เว้นที่ใต้หัวเอกสารให้ตรา (ลอยใต้วันที่ สูง ~60px) ไม่ทับบรรทัดลูกค้า (19/10/2569) */
         .doc-head.has-stamp { margin-bottom: 60px; }
         .doc-head .qno { font-weight: bold; }
@@ -153,6 +157,7 @@
         table.items th, table.items td { padding: 4px 7px; vertical-align: top; }
         table.items thead th { text-align: center; /* 16/11/2569 ตามที่ผู้ใช้สั่ง: หัวคอลัมน์จัดกึ่งกลาง (เดิม left) */ font-weight: bold; line-height: 1.25; }
         table.items thead th small { font-weight: normal; color: #333; font-size: .78em; }
+        table.items tbody td { font-weight: bold; } /* 18/11/2569 ตามที่ผู้ใช้สั่ง: ข้อมูลในตารางเป็นตัวหนา */
         table.items td { text-align: center; } /* 16/11/2569 ตามที่ผู้ใช้สั่ง: ข้อมูลในตารางจัดกึ่งกลาง (เดิม left) */
         .text-end { text-align: right; }
         /* ต้อง qualify ด้วย table.items ไม่งั้นกฎ text-align:left ของ th/td ข้างบนชนะ (specificity สูงกว่า)
@@ -196,7 +201,7 @@
            .page สูงเท่าพื้นที่พิมพ์ของ A4 (297mm − ขอบ 10mm×2 − padding ของ body) แล้วดัน .page-bottom ลงล่างด้วย margin-top:auto
            ตั้งต่ำกว่าพื้นที่จริงเล็กน้อย กันปัดเศษแล้วล้นไปหน้า 2 · ใบที่ยาวเกิน 1 หน้า ส่วนท้ายจะต่อท้ายตารางตามปกติ */
         /* 13/11/2569 ตามที่ผู้ใช้สั่ง — ขอบ 0.5 นิ้วทั้ง 4 ด้าน */
-        @page { size: A4; margin: 0.5in; }
+        @page { size: A4; margin: 0.5in 0.5in 0.5in 0.8in; } /* 17/11/2569 ตามที่ผู้ใช้สั่ง: ขอบซ้าย 0.8 นิ้ว (บน/ขวา/ล่าง 0.5) */
         @media print {
             .page { display: flex; flex-direction: column; min-height: 270mm; }/* พื้นที่พิมพ์สูง 297 − 25.4 = 271.6mm · 17/11/2569: body ไม่มี padding แล้ว 264 → 270 (เผื่อ 1.6mm กันล้นหน้า 2) ลายเซ็นจึงชิดขอบล่าง 0.5in */
             .page-bottom { margin-top: auto; }
