@@ -158,7 +158,9 @@ class QuotationController extends Controller
         return response()->json([
             'found'   => true,
             'name'    => $cust->name,
-            'nameEN'  => $cust->nameEN,
+            // ชื่ออังกฤษเก็บจริงที่ตาราง engname (customer.nameEN แทบไม่มีข้อมูล) → อ่าน engname ก่อน แล้ว fallback nameEN
+            // (19/11/2569 — แบบเดียวกับฟอร์มฐานข้อมูลลูกค้า)
+            'nameEN'  => trim((string) DB::table('engname')->where('code', $code)->value('name')) ?: $cust->nameEN,
             'term'    => $cust->term,
             'term_en' => $termEn,
         ]);
