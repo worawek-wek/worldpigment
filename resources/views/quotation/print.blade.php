@@ -117,6 +117,8 @@
         .doc-head, .subject { font-size: 20px; }
         /* 18/11/2569 ตามที่ผู้ใช้สั่ง: หมายเหตุใต้ตาราง (จำนวนส่งมอบขั้นต่ำ/เทอมการชำระเงิน ฯลฯ) + ชื่อ/ตำแหน่งใต้ลายเซ็น ใหญ่ขึ้น 1 ขนาดด้วย */
         .footer-info, .sign { font-size: 20px; }
+        /* 19/11/2569 ตามที่ผู้ใช้สั่ง: ย่อหน้าเนื้อความ (บริษัทฯ มีความยินดี…) ขนาดเท่าหัวเอกสาร/ลูกค้า/หมายเหตุ/ลายเซ็น */
+        .body-text { font-size: 20px; }
         /* ใบที่มีตรา REVISED — เว้นที่ใต้หัวเอกสารให้ตรา (ลอยใต้วันที่ สูง ~60px) ไม่ทับบรรทัดลูกค้า (19/10/2569) */
         .doc-head.has-stamp { margin-bottom: 60px; }
         .doc-head .qno { font-weight: bold; }
@@ -156,6 +158,7 @@
         table.items td { overflow-wrap: anywhere; word-break: break-word; }
         table.items th, table.items td { padding: 4px 7px; vertical-align: top; }
         table.items thead th { text-align: center; /* 16/11/2569 ตามที่ผู้ใช้สั่ง: หัวคอลัมน์จัดกึ่งกลาง (เดิม left) */ font-weight: bold; line-height: 1.25; }
+        table.items thead th { border-top: 1px solid #000; border-bottom: 1px solid #000; } /* 19/11/2569 ตามที่ผู้ใช้สั่ง: หัวตารางมีเส้นบน-ล่าง */
         table.items thead th small { font-weight: normal; color: #333; font-size: .78em; }
         table.items tbody td { font-weight: bold; } /* 18/11/2569 ตามที่ผู้ใช้สั่ง: ข้อมูลในตารางเป็นตัวหนา */
         table.items td { text-align: center; } /* 16/11/2569 ตามที่ผู้ใช้สั่ง: ข้อมูลในตารางจัดกึ่งกลาง (เดิม left) */
@@ -293,7 +296,8 @@
                         $headHtml = e($head);
                         if (!$headEn) {
                             $thBreaks = [
-                                'น้ำหนักต่อครั้ง (กก)' => 'น้ำหนัก<br>ต่อครั้ง (กก)',
+                                // "ต่อครั้ง (กก)" อยู่บรรทัดเดียวกันเสมอ — nowrap (19/11/2569 ตามที่ผู้ใช้สั่ง)
+                                'น้ำหนักต่อครั้ง (กก)' => 'น้ำหนัก<br><span style="white-space: nowrap">ต่อครั้ง (กก)</span>',
                                 'ราคาเม็ดพลาสติก'     => 'ราคาเม็ด<br>พลาสติก',
                                 'ค่าผลิตและค่าแม่สี'    => 'ค่าผลิต<br>และค่าแม่สี',
                             ];

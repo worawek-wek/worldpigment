@@ -26,7 +26,10 @@
                     <small class="text-body-secondary fw-normal">วันที่เสนอราคา</small>
                 </th>
                 <th class="align-middle th-sort{{ $sortActive('Custid') }}" data-sort="Custid">ลูกค้า {!! $sortIcon('Custid') !!}</th>
+                {{-- ชนิดสินค้า — ซ่อนไว้ 19/11/2569 ตามที่ผู้ใช้สั่ง (เปิดคืน: @if(true) ทั้งหัวและแถว + colspan แถวว่าง 7 → 8) --}}
+                @if(false)
                 <th class="align-middle text-center th-sort{{ $sortActive('PDtype') }}" data-sort="PDtype">ชนิดสินค้า {!! $sortIcon('PDtype') !!}</th>
+                @endif
                 <th class="align-middle text-end th-sort{{ $sortActive('item_count') }}" data-sort="item_count">จำนวนรายการ {!! $sortIcon('item_count') !!}</th>
                 <th class="align-middle text-end th-sort{{ $sortActive('total_net') }}" data-sort="total_net">มูลค่ารวม {!! $sortIcon('total_net') !!}</th>
                 <th class="align-middle">หมายเหตุ</th>
@@ -57,6 +60,7 @@
                         <small>{{ $row->cust_name ?: '—' }}</small>
                     </td>
 
+                    @if(false)
                     <td class="text-center{{ $sortActive('PDtype') }}">
                         @if ($row->PDtype)
                             <span class="badge bg-label-info">{{ $row->PDtype }}</span>
@@ -64,6 +68,7 @@
                             <span class="text-muted">-</span>
                         @endif
                     </td>
+                    @endif
 
                     <td class="text-end{{ $sortActive('item_count') }}">{{ number_format($row->item_count) }}</td>
 
@@ -115,7 +120,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="8" class="text-center py-5 text-muted">
+                    <td colspan="7" class="text-center py-5 text-muted">
                         <i class="ti ti-database-off fs-2 d-block mb-2 opacity-50"></i>
                         ไม่พบข้อมูลที่ตรงกับเงื่อนไข
                     </td>
