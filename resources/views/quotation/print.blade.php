@@ -183,6 +183,7 @@
         .footer-info table.other-notes td.on-label { white-space: nowrap; padding-right: 4px; }
         .footer-info table.other-notes td div { margin-bottom: 2px; }
         .sign { margin-top: 44px; display: flex; justify-content: flex-end; }
+        .sign { margin-bottom: 1.2em; } /* 19/11/2569 ตามที่ผู้ใช้สั่ง: ลายเซ็นขยับขึ้นจากขอบล่าง 1 บรรทัด (1.2em = ระยะบรรทัด) */
         /* กล่องเซ็นชื่อกว้างขึ้นให้รับกับรูปลายเซ็นขนาดใหญ่ (เส้นเซ็นชื่อยาวขึ้นตาม) */
         /* 13/11/2569 ตามที่ผู้ใช้สั่ง "ขยับขวา" — กล่อง 420 → 300px (ชิดขวาอยู่แล้ว กล่องแคบลง = กึ่งกลางเลื่อนไปขวา 60px) */
         .sign .box { text-align: center; width: 300px; }
