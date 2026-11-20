@@ -328,7 +328,8 @@ class ColorMatchingController extends Controller
         return response()->json([
             'found'  => true,
             'name'   => $cust->name,
-            'nameEN' => $cust->nameEN,
+            // 20/11/2569 ชื่ออังกฤษอ่าน engname ก่อน (customer.nameEN แทบว่าง) แล้ว fallback nameEN
+            'nameEN' => trim((string) DB::table('engname')->where('code', $code)->value('name')) ?: $cust->nameEN,
             'sale'   => trim((string) $cust->sale),   // รหัสผู้ขาย — เติมช่อง Sale No. ของใบส่ง ต.ย. (02/11/2569)
         ]);
     }

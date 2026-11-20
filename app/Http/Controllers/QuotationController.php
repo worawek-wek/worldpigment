@@ -98,9 +98,10 @@ class QuotationController extends Controller
     {
         $list = Qmast::query()
             ->leftJoin('customer as c', 'qmast.Custid', '=', 'c.code')
+            ->leftJoin('engname as en', 'en.code', '=', 'c.code') // 20/11/2569 ชื่ออังกฤษอยู่ที่ engname
             ->whereRaw("TRIM(COALESCE(qmast.Custid, '')) <> ''")
             ->selectRaw('TRIM(qmast.Custid) as custid')
-            ->selectRaw('MAX(c.name) as name, MAX(c.nameEN) as nameEN')
+            ->selectRaw("MAX(c.name) as name, MAX(COALESCE(NULLIF(TRIM(en.name), ''), c.nameEN)) as nameEN")
             ->selectRaw('COUNT(*) as qcount, MAX(qmast.Qdate) as last_date')
             ->groupBy(DB::raw('TRIM(qmast.Custid)'))
             ->orderByDesc('last_date')
@@ -122,6 +123,10 @@ class QuotationController extends Controller
 
         // ชื่อลูกค้าจริงจากตาราง customer (qmast.CustName เก่าภาษาไทยเสีย)
         $cust = DB::table('customer')->where('code', $custid)->first(['name', 'nameEN']);
+        // 20/11/2569 ชื่ออังกฤษอ่าน engname ก่อน แล้ว fallback customer.nameEN
+        if ($cust) {
+            $cust->nameEN = trim((string) DB::table('engname')->where('code', $custid)->value('name')) ?: $cust->nameEN;
+        }
 
         // ใบเสนอราคาทั้งหมดของลูกค้า + จำนวนรายการ/มูลค่ารวม (เหมือน datatable)
         $list = Qmast::query()
@@ -610,6 +615,10 @@ class QuotationController extends Controller
         $cust = DB::table('customer')
             ->where('code', $row->Custid)
             ->first(['name', 'nameEN']);
+        // 20/11/2569 ชื่ออังกฤษอ่าน engname ก่อน (customer.nameEN แทบว่าง → PDF ฉบับ EN เคยออกชื่อไทย)
+        if ($cust) {
+            $cust->nameEN = trim((string) DB::table('engname')->where('code', $row->Custid)->value('name')) ?: $cust->nameEN;
+        }
 
         $items = DB::table('qdetail')
             ->whereRaw('TRIM(Qno) = ?', [$qno])

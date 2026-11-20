@@ -120,13 +120,13 @@
         /* 19/11/2569 ตามที่ผู้ใช้สั่ง: ย่อหน้าเนื้อความ (บริษัทฯ มีความยินดี…) ขนาดเท่าหัวเอกสาร/ลูกค้า/หมายเหตุ/ลายเซ็น */
         .body-text { font-size: 20px; }
         /* ใบที่มีตรา REVISED — เว้นที่ใต้หัวเอกสารให้ตรา (ลอยใต้วันที่ สูง ~60px) ไม่ทับบรรทัดลูกค้า (19/10/2569) */
-        .doc-head.has-stamp { margin-bottom: 60px; }
+        /* 20/11/2569 ตามที่ผู้ใช้สั่ง: ตรา REVISED ขยับลงมาอยู่แถวเดียวกับบรรทัดลูกค้า → ไม่ต้องเว้นที่ 60px แล้ว (เดิม .doc-head.has-stamp { margin-bottom: 60px; }) */
         .doc-head .qno { font-weight: bold; }
 
         /* ── ตราประทับ REVISED (19/10/2569) — ลอยใต้วันที่มุมขวาบน ไม่ดันเนื้อหาส่วนอื่น ── */
         .doc-head .date-col { position: relative; }
         .revised-stamp {
-            position: absolute; right: 0; top: 100%; margin-top: 10px;
+            position: absolute; right: 0; top: 100%; margin-top: 14px; /* 20/11/2569: เดิม 10px — 14px ≈ ระยะใต้หัวเอกสาร (16px) ให้กรอบ REVISED ตรงแถวลูกค้า */
             text-align: center;
             white-space: nowrap; pointer-events: none;
             -webkit-print-color-adjust: exact; print-color-adjust: exact;
@@ -159,6 +159,11 @@
         table.items th, table.items td { padding: 4px 7px; vertical-align: top; }
         table.items thead th { text-align: center; /* 16/11/2569 ตามที่ผู้ใช้สั่ง: หัวคอลัมน์จัดกึ่งกลาง (เดิม left) */ font-weight: bold; line-height: 1.25; }
         table.items thead th { border-top: 1px solid #000; border-bottom: 1px solid #000; } /* 19/11/2569 ตามที่ผู้ใช้สั่ง: หัวตารางมีเส้นบน-ล่าง */
+        /* 20/11/2569 หัวตาราง 2 ชั้น: ไม่มีเส้นคั่นระหว่างหัวกลุ่มกับแถว ปัจจุบัน|ใหม่ (เส้นใต้หัวกลุ่มเอาออกตามที่ผู้ใช้สั่ง)
+           · หัวที่กินสูง 2 ชั้นจัดกึ่งกลางแนวตั้ง */
+        table.items thead th.th-group { border-bottom: none; padding-bottom: 0; }
+        table.items thead th.th-sub { border-top: none; padding-top: 0; }
+        table.items thead th[rowspan] { vertical-align: middle; }
         table.items thead th small { font-weight: normal; color: #333; font-size: .78em; }
         table.items tbody td { font-weight: bold; } /* 18/11/2569 ตามที่ผู้ใช้สั่ง: ข้อมูลในตารางเป็นตัวหนา */
         table.items td { text-align: center; } /* 16/11/2569 ตามที่ผู้ใช้สั่ง: ข้อมูลในตารางจัดกึ่งกลาง (เดิม left) */
@@ -275,8 +280,33 @@
     {{-- ความกว้างคอลัมน์ (10/11/2569 ตามที่ผู้ใช้สั่ง) — สินค้า 20 · รายละเอียด 35 · หมายเหตุ 20 · ช่องอื่น 15 (เป็นสัดส่วน)
          รวมเป็น 100% ของคอลัมน์ที่แสดงจริง ⇒ 5 คอลัมน์ (สินค้า/รายละเอียด/ราคาปัจจุบัน/ราคาใหม่/รวม VAT) = 20/35/15/15/15 พอดี --}}
     @php
+        // 20/11/2569 ตามที่ผู้ใช้สั่ง: หัวตาราง 2 ชั้น — คอลัมน์คู่ "X ปัจจุบัน" + "X ใหม่" ที่อยู่ติดกัน
+        // (EN: "Current X" + "New X") → แถวบน X คลุม 2 ช่อง · แถวล่าง ปัจจุบัน | ใหม่ (Current | New)
+        // คอลัมน์อื่นในแถวบน rowspan=2 · ไม่มีคู่ = หัวแถวเดียวแบบเดิม
+        $splitPair = function ($c) use ($headEn) {
+            $t = trim($headEn ? ($c['label_en'] ?? $c['label']) : $c['label']);
+            if ($headEn) {
+                return preg_match('/^(Current|New)\s+(.+)$/u', $t, $m) ? [$m[2], $m[1]] : null;
+            }
+            return preg_match('/^(.*\S)\s+\(?(ปัจจุบัน|ใหม่)\)?$/u', $t, $m) ? [$m[1], $m[2]] : null;
+        };
+        $grpStart = []; $grpSub = []; // index → ชื่อกลุ่ม · index → ป้ายแถวล่าง
+        for ($i = 0; $i < count($colConfig) - 1; $i++) {
+            $a = $splitPair($colConfig[$i]); $b = $splitPair($colConfig[$i + 1]);
+            if ($a && $b && $a[0] === $b[0] && in_array($a[1], ['ปัจจุบัน', 'Current'], true) && in_array($b[1], ['ใหม่', 'New'], true)) {
+                $grpStart[$i] = $a[0];
+                $grpSub[$i] = $a[1]; $grpSub[$i + 1] = $b[1];
+                $i++;
+            }
+        }
+        $hasGrp = !empty($grpStart);
+
         $colWeights = ['code' => 20, 'name' => 35, 'remark' => 20];
         $colW = array_map(fn ($c) => $colWeights[$c['key']] ?? 15, $colConfig);
+        // 20/11/2569 ตามที่ผู้ใช้สั่ง: 2 ช่องในหัวกลุ่มแคบลง (15 → 10) ให้ ปัจจุบัน|ใหม่ ชิดกันขึ้น ไม่ดูเหมือนแยก 3 คอลัมน์
+        foreach (array_keys($grpSub) as $gi) {
+            $colW[$gi] = 10;
+        }
         $colWSum = array_sum($colW) ?: 1;
     @endphp
     <table class="items">
@@ -287,7 +317,15 @@
         </colgroup>
         <thead>
             <tr>
-                @foreach ($colConfig as $c)
+                @foreach ($colConfig as $ci => $c)
+                    @if (isset($grpStart[$ci]))
+                        {{-- หัวกลุ่ม (คลุม 2 ช่อง) — ภาษาไทยหน่วยในวงเล็บขึ้นบรรทัดใหม่เหมือนหัวอื่น --}}
+                        <th colspan="2" class="th-group">{!! $headEn ? e($grpStart[$ci]) : preg_replace('/\s*(\()/u', '<br>$1', e($grpStart[$ci]), 1) !!}</th>
+                        @continue
+                    @endif
+                    @if (isset($grpSub[$ci]))
+                        @continue
+                    @endif
                     @php
                         $head = $headEn ? ($c['label_en'] ?? $c['label']) : $c['label'];
                         // การขึ้นบรรทัดของหัวคอลัมน์ภาษาไทย — 16/11/2569 ตามแบบที่ผู้ใช้ส่งมา (แทนกติกาเดิม 26/10/2569)
@@ -314,9 +352,17 @@
                         }
                     @endphp
                     {{-- น้ำหนักส่งครั้งละ (delivery_qty) เก็บเป็นข้อความ แต่ให้ชิดขวาเหมือนช่องตัวเลข (19/10/2569) --}}
-                    <th class="{{ (($colRegistry[$c['key']]['num'] ?? false) || $c['key'] === 'delivery_qty') ? 'text-end' : '' }} {{ in_array($c['key'], ['code', 'name'], true) ? 'col-left' : '' }}">{!! $headHtml !!}</th>{{-- เอาขีดเส้นใต้ (<u>) ออก 13/11/2569 ตามที่ผู้ใช้สั่ง --}}
+                    <th @if($hasGrp) rowspan="2" @endif class="{{ (($colRegistry[$c['key']]['num'] ?? false) || $c['key'] === 'delivery_qty') ? 'text-end' : '' }} {{ in_array($c['key'], ['code', 'name'], true) ? 'col-left' : '' }}">{!! $headHtml !!}</th>{{-- เอาขีดเส้นใต้ (<u>) ออก 13/11/2569 ตามที่ผู้ใช้สั่ง --}}
                 @endforeach
             </tr>
+            @if ($hasGrp)
+                {{-- แถวล่างของหัวกลุ่ม: ปัจจุบัน | ใหม่ (20/11/2569) --}}
+                <tr>
+                    @foreach ($grpSub as $sub)
+                        <th class="th-sub">{{ $sub }}</th>
+                    @endforeach
+                </tr>
+            @endif
         </thead>
         <tbody>
             @forelse ($items as $it)
@@ -399,7 +445,8 @@
         <div class="box">
             {{-- คำลงท้ายเหนือลายเซ็น (29/10/2569 ตามที่ผู้ใช้สั่ง) --}}
             {{-- 13/11/2569 ตามที่ผู้ใช้สั่ง: เอาคำลงท้ายภาษาไทย "ขอแสดงความนับถืออย่างสูง" ออก (ฉบับอังกฤษยังมี Sincerely Yours,) --}}
-            @if ($isEn)
+            {{-- 20/11/2569 ตามที่ผู้ใช้สั่ง: ตัด "Sincerely Yours," ของฉบับอังกฤษออกด้วย (เปิดคืน: @if ($isEn)) --}}
+            @if (false)
                 <div class="closing">Sincerely Yours,</div>
             @endif
             {{-- รูปลายเซ็นของพนักงานผู้เสนอราคา (emp.signature) — ไม่มีก็เว้นช่องไว้ให้เซ็นมือ --}}
