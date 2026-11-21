@@ -113,6 +113,11 @@
                                             @endforeach
                                         </select>
                                     </div>
+                                    {{-- แก้ไขจาก Lot No. → testmain.AdjFromLot (21/11/2569 ตามที่ผู้ใช้สั่ง) — วางใต้ "ปรับแก้ไขครั้งที่" --}}
+                                    <div class="col-md-3 offset-md-9">
+                                        <label class="form-label small mb-1">แก้ไขจาก Lot No. <span class="text-muted fw-normal">(เช่น 690112-1-2/01)</span></label>
+                                        <input type="text" name="AdjFromLot" class="form-control" maxlength="20">
+                                    </div>
                                 </div>
                             </div>
 
@@ -156,10 +161,13 @@
                                             @endforeach
                                         </select>
                                     </div>
+                                    {{-- คุณสมบัติ — เลือกได้หลายค่าเหมือน Chemical Safety (21/11/2569 ตามที่ผู้ใช้สั่ง) เก็บรวมใน testmain.pop คั่นด้วย ", "
+                                         hidden ทำให้ส่ง key มาเสมอ → ไม่เลือกอะไร = ล้างค่าเดิมได้ --}}
                                     <div class="col-md-2">
-                                        <label class="form-label small mb-1">คุณสมบัติ</label>
-                                        <select name="pop" class="form-select select2-tags">
-                                            <option value="">-- เลือก --</option>
+                                        <label class="form-label small mb-1">คุณสมบัติ <span class="text-muted fw-normal">(เลือกได้หลายค่า)</span></label>
+                                        <input type="hidden" name="pop[]" value="">
+                                        <select name="pop[]" multiple class="form-select select2-tags"
+                                                data-placeholder="เลือก หรือพิมพ์ค่าอื่นได้">
                                             @foreach ($options['pop'] as $opt)
                                                 <option>{{ $opt }}</option>
                                             @endforeach

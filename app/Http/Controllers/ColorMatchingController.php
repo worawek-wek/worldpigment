@@ -21,6 +21,7 @@ class ColorMatchingController extends Controller
         'ColorChar', 'ApprovedLot', 'ChemSafety', 'Brand',
         'ZnstEBS', // คำนวณ Znst+EBS ร่วมในชิ้นงาน (20/10/2569)
         'ResinSource', 'CustResinKg', // เม็ดพลาสติกที่ใช้เทียบสี (02/11/2569)
+        'AdjFromLot', // แก้ไขจาก Lot No. (21/11/2569)
     ];
 
     // ─── 4 ช่องที่ต่างกันในแต่ละใบ เมื่อสร้างใบส่ง ต.ย. หลายใบพร้อมกัน (ตาราง "รายการตัวอย่าง", 29/10/2569) ───
@@ -40,7 +41,8 @@ class ColorMatchingController extends Controller
         $data['options'] = [
             'Type_Work' => $this->distinctOptions('Type_Work'),
             'Model'     => $this->distinctOptions('Model'),
-            'pop'       => $this->distinctOptions('pop'),
+            // pop (คุณสมบัติ) เลือกได้หลายค่าแบบ ChemSafety → แตกเป็นตัวเลือกรายตัว (21/11/2569)
+            'pop'       => $this->distinctMultiOptions('pop'),
             'Adj'       => $this->distinctOptions('Adj'),
             'ColorChar'  => $this->distinctOptions('ColorChar'),
             // ChemSafety เก็บได้หลายค่าในคอลัมน์เดียว → แตกออกเป็นตัวเลือกรายตัว (29/08/2569)
@@ -688,6 +690,10 @@ class ColorMatchingController extends Controller
         // ฟอร์มที่ไม่มีช่องนี้ (modal-sd) จะไม่ส่ง key มา → ไม่แตะค่าเดิม
         if ($request->has('ChemSafety')) {
             $payload['ChemSafety'] = $this->joinMulti($request->input('ChemSafety'));
+        }
+        // คุณสมบัติ (pop) เลือกได้หลายค่าเหมือน ChemSafety (21/11/2569 ตามที่ผู้ใช้สั่ง) — คอลัมน์ขยายเป็น varchar(255) แล้ว
+        if ($request->has('pop')) {
+            $payload['pop'] = $this->joinMulti($request->input('pop'));
         }
 
         // เม็ดพลาสติกที่ใช้เทียบสี (02/11/2569) — ฟอร์ม CM ส่ง key มาเสมอผ่าน hidden เพื่อให้ล้างค่าได้
