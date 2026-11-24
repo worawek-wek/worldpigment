@@ -30,17 +30,20 @@
             <tr>
                 <th style="width:3%">#</th>
                 <th style="width:5%">หน่วย</th>
-                <th style="width:9%">เลขที่ใบสั่ง</th>
-                <th style="width:10%">เลขที่ใบเบิก</th>
-                <th style="width:13%">รหัสสินค้า</th>
-                <th style="width:7%">Lot No.</th>
+                <th style="width:8%">เลขที่ใบสั่ง</th>
+                <th style="width:8%">เลขที่ใบเบิก</th>
+                <th style="width:10%">รหัสสินค้า</th>
+                <th style="width:6%">Lot No.</th>
                 <th style="width:6%">เลขที่เครื่องจักร</th>
-                <th style="width:7%">น้ำหนัก PO</th>
-                <th style="width:8%">น้ำหนักผลิต</th>
-                <th style="width:8%">น.น.บรรจุได้</th>
-                <th style="width:7%">สูญเสีย (กก.)</th>
+                <th style="width:6%">น้ำหนัก PO</th>
+                <th style="width:7%">น้ำหนักผลิต</th>
+                <th style="width:7%">น.น.บรรจุได้</th>
+                <th style="width:6%">สูญเสีย (กก.)</th>
                 <th style="width:7%">สูญเสีย (%)</th>
-                <th style="width:10%">วันที่ผลิตเสร็จ</th>
+                {{-- Custwant / SendDate เพิ่ม 24/11/2569 — ความกว้างรวมยัง 100% --}}
+                <th style="width:7%">Custwant</th>
+                <th style="width:7%">SendDate</th>
+                <th style="width:7%">วันที่ผลิตเสร็จ</th>
             </tr>
         </thead>
         <tbody>
@@ -58,10 +61,12 @@
                     <td class="r">{{ $n2($it->weight_produced) }}</td>
                     <td class="r {{ $cls($it->loss_pct) }}">{{ $n2($it->loss_kg) }}</td>
                     <td class="r {{ $cls($it->loss_pct) }}">{{ $it->loss_pct !== null ? number_format($it->loss_pct, 2).'%' : '-' }}</td>
+                    <td class="c">{{ $dmy($it->custwant) }}</td>
+                    <td class="c">{{ $dmy($it->senddate) }}</td>
                     <td class="c">{{ $dmy($it->end_date) }}</td>
                 </tr>
             @empty
-                <tr><td colspan="13" class="c">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td></tr>
+                <tr><td colspan="15" class="c">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td></tr>
             @endforelse
             @if($total > 0)
                 <tr class="total">
@@ -71,7 +76,7 @@
                     <td class="r">{{ number_format($sum['produced'], 2) }}</td>
                     <td class="r">{{ number_format($sum['loss_kg'], 2) }}</td>
                     <td class="r">{{ $sum['loss_pct'] !== null ? number_format($sum['loss_pct'], 2).'%' : '-' }}</td>
-                    <td></td>
+                    <td colspan="3"></td>
                 </tr>
             @endif
         </tbody>

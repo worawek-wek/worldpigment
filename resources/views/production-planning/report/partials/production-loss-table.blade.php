@@ -32,6 +32,8 @@
             <th>นน.บรรจุได้</th>
             <th class="col-loss">สูญเสีย (กก.)</th>
             <th class="col-loss">สูญเสีย (%)</th>
+            <th>Custwant</th>
+            <th>SendDate</th>
             <th>วันที่ผลิตเสร็จ</th>
             <th>บรรจุล่าสุด</th>
         </tr>
@@ -51,6 +53,8 @@
                 <td class="text-end" data-order="{{ (float) $it->weight_produced }}">{{ $n2($it->weight_produced) }}</td>
                 <td class="text-end col-loss {{ $pctClass($it->loss_pct) }}" data-order="{{ $it->loss_kg ?? -999999 }}">{{ $n2($it->loss_kg) }}</td>
                 <td class="text-end col-loss {{ $pctClass($it->loss_pct) }}" data-order="{{ $it->loss_pct ?? -999999 }}">{{ $it->loss_pct !== null ? number_format($it->loss_pct, 2).'%' : '-' }}</td>
+                <td class="text-center" data-order="{{ $it->custwant ?? '' }}">{{ $dmy($it->custwant) }}</td>
+                <td class="text-center" data-order="{{ $it->senddate ?? '' }}">{{ $dmy($it->senddate) }}</td>
                 <td class="text-center" data-order="{{ $it->end_date ?? '' }}">{{ $dmy($it->end_date) }}</td>
                 <td class="text-center" data-order="{{ $it->pk_last ?? '' }}">
                     {{ $dmy($it->pk_last, 'd/m/y H:i') }}

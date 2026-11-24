@@ -1033,6 +1033,9 @@ class ReportController extends Controller
                 'tb_planning.inplan',
                 'tb_planning.end_date',          // วันที่ผลิตเสร็จ
                 'tb_planning.end_job',
+                'tb_planning.senddate',          // วันที่กำหนดทบทวน (ค่าล่าสุด) — เพิ่ม 24/11/2569
+                // Custwant: item → fallback header (แบบเดียวกับรายงานการขาดวัตถุดิบ) — เพิ่ม 24/11/2569
+                \Illuminate\Support\Facades\DB::raw('COALESCE(tb_planning.custwant, tb_planning_header.custwant) as custwant'),
                 'tb_planning_header.orderno',
                 \Illuminate\Support\Facades\DB::raw($deptSql.' as dept'),
                 // วันเวลาบรรจุล่าสุด + จำนวนครั้งที่บรรจุ (ตารางลูก tb_planning_packing)
@@ -1131,9 +1134,9 @@ class ReportController extends Controller
         $sheet->setTitle('สถิติสูญเสีย');
 
         $headers = ['#', 'หน่วย', 'เลขที่ใบสั่ง', 'เลขที่ใบเบิก', 'รหัสสินค้า', 'Lot No.', 'เลขที่เครื่องจักร', 'น้ำหนัก PO', 'น้ำหนักผลิต (TP)',
-            'นน.บรรจุได้', 'สูญเสีย (กก.)', 'สูญเสีย (%)', 'วันที่ผลิตเสร็จ', 'บรรจุล่าสุด', 'ครั้งที่บรรจุ'];
-        $cols    = range('A', 'O');
-        $lastCol = 'O';  // ตัด Inplan ออก + เพิ่มเลขที่เครื่องจักร (G) 10/11/2569
+            'นน.บรรจุได้', 'สูญเสีย (กก.)', 'สูญเสีย (%)', 'Custwant', 'SendDate', 'วันที่ผลิตเสร็จ', 'บรรจุล่าสุด', 'ครั้งที่บรรจุ'];
+        $cols    = range('A', 'Q');
+        $lastCol = 'Q';  // ตัด Inplan ออก + เพิ่มเลขที่เครื่องจักร (G) 10/11/2569 · เพิ่ม Custwant (M) / SendDate (N) 24/11/2569
         $str     = \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING;
         $d       = fn ($v, $f = 'd/m/Y') => $v ? \Carbon\Carbon::parse($v)->format($f) : '';
 
@@ -1166,9 +1169,11 @@ class ReportController extends Controller
             $sheet->setCellValue("J{$r}", (float) $it->weight_produced);
             $sheet->setCellValue("K{$r}", $it->loss_kg);
             $sheet->setCellValue("L{$r}", $it->loss_pct !== null ? $it->loss_pct / 100 : null);
-            $sheet->setCellValue("M{$r}", $d($it->end_date));
-            $sheet->setCellValue("N{$r}", $d($it->pk_last, 'd/m/Y H:i'));
-            $sheet->setCellValue("O{$r}", (int) $it->pk_count ?: '');
+            $sheet->setCellValue("M{$r}", $d($it->custwant));
+            $sheet->setCellValue("N{$r}", $d($it->senddate));
+            $sheet->setCellValue("O{$r}", $d($it->end_date));
+            $sheet->setCellValue("P{$r}", $d($it->pk_last, 'd/m/Y H:i'));
+            $sheet->setCellValue("Q{$r}", (int) $it->pk_count ?: '');
             $r++;
         }
 
