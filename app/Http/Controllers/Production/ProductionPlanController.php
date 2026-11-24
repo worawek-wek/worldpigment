@@ -104,6 +104,9 @@ class ProductionPlanController extends Controller
             ->editColumn('weight_produced', fn ($row) => $row->weight_produced !== null && $row->weight_produced !== ''
                 ? number_format((float) $row->weight_produced, 2)
                 : '-')
+            // ส่งคืนเม็ด Resin / เลขที่ใบส่ง (24/11/2569) — ว่าง = แสดง - · ไม่อยู่ใน rawColumns ⇒ Yajra escape ให้เอง
+            ->editColumn('resin_return', fn ($row) => ($row->resin_return ?? '') !== '' ? $row->resin_return : '-')
+            ->editColumn('delivery_no', fn ($row) => ($row->delivery_no ?? '') !== '' ? $row->delivery_no : '-')
             // เลขที่ใบเบิก: ดึงจาก red_bill_code (ว่าง = แสดง -)
             ->addColumn('red_bill_code', fn ($row) => $row->red_bill_code ?: '-')
             // สถานะภายใน: สถานะของ planning item แถวนี้เอง (planning_status ของแถว)
@@ -312,6 +315,7 @@ class ProductionPlanController extends Controller
             'Custwant',
             // 'Quantity' (tb_planning.quantity = น้ำหนัก PO) → น้ำหนัก TP (tb_planning.weight) — 09/11/2569 ตามที่ผู้ใช้สั่ง
             'วันเวลาบรรจุเสร็จ', 'Itemno', 'น้ำหนัก TP', 'MachineNo', 'สถานะภายใน',
+            'ส่งคืนเม็ด Resin', 'เลขที่ใบส่ง', // tb_planning.resin_return / delivery_no — 24/11/2569
         ];
     }
 
@@ -324,8 +328,8 @@ class ProductionPlanController extends Controller
         $sheet->setTitle('วางแผนการผลิต');
 
         $headers = $this->reportHeaders();
-        $cols    = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
-        $lastCol = 'L';
+        $cols    = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N'];
+        $lastCol = 'N';
 
         // หัวรายงาน
         $sheet->setCellValue('A1', 'รายงานวางแผนการผลิต');
@@ -381,6 +385,9 @@ class ProductionPlanController extends Controller
             $sheet->setCellValue("J{$r}", $row->weight !== null ? number_format($row->weight, 2) : '-');
             $sheet->setCellValueExplicit("K{$r}", $row->machine_no ?: '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
             $sheet->setCellValue("L{$r}", $status);
+            // ส่งคืนเม็ด Resin / เลขที่ใบส่ง (24/11/2569)
+            $sheet->setCellValueExplicit("M{$r}", ($row->resin_return ?? '') !== '' ? $row->resin_return : '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit("N{$r}", ($row->delivery_no ?? '') !== '' ? $row->delivery_no : '-', \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
             $r++;
         }
 
@@ -794,7 +801,10 @@ class ProductionPlanController extends Controller
             'weight_produced'    => 'nullable|numeric|min:0',
             'red_bill_code'      => 'nullable|string|max:255',
             'cycles'             => 'nullable|string|max:25',
-            'end_job'            => 'nullable|in:Y,N',
+            // ส่งคืนเม็ด Resin / เลขที่ใบส่ง (24/11/2569)
+            'resin_return'       => 'nullable|string|max:255',
+            'delivery_no'        => 'nullable|string|max:50',
+            'end_job'          => 'nullable|in:Y,N',
             'empno'              => 'nullable|string|max:50|exists:emp,empno',
             'machine_no'         => 'nullable|string|max:255',
             'plan_type'          => 'nullable|string|max:255',
@@ -861,7 +871,7 @@ class ProductionPlanController extends Controller
         // ย้ายไปตารางลูก tb_planning_packing (sync ผ่าน syncPackings) — เก็บได้หลายแถวต่อ 1 planning
         $fields = $request->only([
             'planning_header_id', 'company', 'itemno', 'quantity', 'lot', 'weight',
-            'weight_produced', 'red_bill_code', 'cycles', 'end_job', 'empno',
+            'weight_produced', 'red_bill_code', 'cycles', 'resin_return', 'delivery_no', 'end_job', 'empno',
             'machine_no', 'plan_type', 'planning_status', 'inplan', 'work_shift', 'start_date', 'start_time', 'end_date', 'end_time',
             'qc_date', 'qc_time', 'qc_status',
             'mdate', 'custwant', 'senddate', 'remark', 'shortage_remark', 'planning_remark'

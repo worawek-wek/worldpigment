@@ -23,20 +23,23 @@
         <thead>
             <tr>
                 <th style="width: 3%;">#</th>
-                <th style="width: 8%;">Orderno</th>
-                <th style="width: 8%;">เลขที่ใบเบิก</th>
+                <th style="width: 7%;">Orderno</th>
+                <th style="width: 7%;">เลขที่ใบเบิก</th>
                 <th style="width: 5%;">Company</th>
-                <th class="col-inplan" style="width: 9%;">Inplan</th>
+                <th class="col-inplan" style="width: 7%;">Inplan</th>
                 {{-- 12/11/2569: วันที่กำหนดทบทวนล่าสุด (tb_planning.senddate) — ความกว้างทุกคอลัมน์รวม 100% --}}
-                <th style="width: 8%;">SendDate</th>
-                <th class="col-custwant" style="width: 9%;">Custwant</th>
+                <th style="width: 7%;">SendDate</th>
+                <th class="col-custwant" style="width: 7%;">Custwant</th>
                 {{-- 14/11/2569: วันเวลาบรรจุเสร็จ กว้างขึ้น + ไม่ตัดบรรทัด · Company / Itemno / น้ำหนัก TP แคบลง (รวมยัง 100%) --}}
-                <th style="width: 16%;">วันเวลาบรรจุเสร็จ</th>
-                <th style="width: 8%;">Itemno</th>
+                <th style="width: 14%;">วันเวลาบรรจุเสร็จ</th>
+                <th style="width: 7%;">Itemno</th>
                 {{-- เดิม Quantity (tb_planning.quantity) → น้ำหนัก TP (tb_planning.weight) 09/11/2569 --}}
                 <th style="width: 6%;">น้ำหนัก TP</th>
-                <th style="width: 9%;">MachineNo</th>
-                <th style="width: 11%;">สถานะภายใน</th>
+                <th style="width: 7%;">MachineNo</th>
+                <th style="width: 9%;">สถานะภายใน</th>
+                {{-- 24/11/2569: ส่งคืนเม็ด Resin / เลขที่ใบส่ง — คอลัมน์อื่นแคบลงให้รวมยัง 100% --}}
+                <th style="width: 8%;">ส่งคืนเม็ด Resin</th>
+                <th style="width: 6%;">เลขที่ใบส่ง</th>
             </tr>
         </thead>
         <tbody>
@@ -63,10 +66,12 @@
                     <td class="text-end">{{ $row->weight !== null ? number_format($row->weight, 2) : '-' }}</td>
                     <td class="text-center">{{ $row->machine_no ?: '-' }}</td>
                     <td>{{ $row->inner_status_text }} ({{ $row->end_job_label }})</td>
+                    <td>{{ ($row->resin_return ?? '') !== '' ? $row->resin_return : '-' }}</td>
+                    <td class="text-center">{{ ($row->delivery_no ?? '') !== '' ? $row->delivery_no : '-' }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="12" class="text-center">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td>
+                    <td colspan="14" class="text-center">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td>
                 </tr>
             @endforelse
         </tbody>

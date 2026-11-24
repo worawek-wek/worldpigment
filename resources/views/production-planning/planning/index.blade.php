@@ -196,6 +196,9 @@
                                         {{-- <th class="col-1">Quantity</th> --}}
                                         <th class="col-1">วันเวลาบรรจุเสร็จ</th>
                                         <th class="col-1">นน.ผลิตได้รวม</th>
+                                        {{-- 24/11/2569: tb_planning.resin_return / delivery_no --}}
+                                        <th class="col-1">ส่งคืนเม็ด Resin</th>
+                                        <th class="col-1">เลขที่ใบส่ง</th>
                                         <th class="col-1">สถานะ</th>
                                         <th class="col-1">Manage</th>
                                     </tr>
@@ -437,6 +440,9 @@
                 { 'className': "text-center", data: 'packing_display', name: 'packing_display', orderable: true, searchable: false },
                 // นน.ผลิตได้รวม = tb_planning.weight_produced (21/10/2569)
                 { 'className': "text-end", data: 'weight_produced', name: 'tb_planning.weight_produced', orderable: true, searchable: false },
+                // ส่งคืนเม็ด Resin / เลขที่ใบส่ง (24/11/2569) — ต้องตรงกับ <th> ด้านบน
+                { 'className': "text-left", data: 'resin_return', name: 'tb_planning.resin_return', orderable: true, searchable: false },
+                { 'className': "text-center", data: 'delivery_no', name: 'tb_planning.delivery_no', orderable: true, searchable: false },
                 // สถานะภายในรวมจาก planning หลายแถว (คำนวณฝั่ง PHP) → sort ที่ SQL ไม่ได้
                 { 'className': "text-center", data: 'inner_status', name: 'tb_planning.planning_status', orderable: true, searchable: false },
                 { 'className': "text-center", data: 'btnedit', name: 'btnedit', orderable: false, searchable: false },

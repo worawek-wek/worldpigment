@@ -173,6 +173,25 @@
                            class="form-control" placeholder="รอบการผลิต">
                 </div>
             </div>
+            {{-- ส่งคืนเม็ด Resin (ข้อความอิสระ) + เลขที่ใบส่ง — tb_planning.resin_return / delivery_no (24/11/2569 ตามที่ผู้ใช้สั่ง) --}}
+            <div class="col-md-4 of-row">
+                <label class="form-label">ส่งคืนเม็ด Resin</label>
+                <div class="of-ctl">
+                    <input type="text" name="resin_return" maxlength="255"
+                           value="{{ $planning_item ? ($planning_item->resin_return ?? '') : '' }}"
+                           class="form-control">
+                </div>
+            </div>
+        </div>
+        <div class="row gx-3 gy-2 mt-0">
+            <div class="col-md-4 offset-md-8 of-row">
+                <label class="form-label">เลขที่ใบส่ง</label>
+                <div class="of-ctl">
+                    <input type="text" name="delivery_no" maxlength="50"
+                           value="{{ $planning_item ? ($planning_item->delivery_no ?? '') : '' }}"
+                           class="form-control">
+                </div>
+            </div>
         </div>
         <div class="row gx-3 gy-2 mt-0">
             <div class="col-md-4 of-row">
