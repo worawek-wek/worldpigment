@@ -157,7 +157,7 @@
         /* ข้อความยาว (รายละเอียด 30 ตัวขึ้นไป / รหัสยาว) ตัดขึ้นบรรทัดใหม่ในช่อง ไม่ล้นไปช่องข้าง ๆ */
         table.items td { overflow-wrap: anywhere; word-break: break-word; }
         table.items th, table.items td { padding: 4px 7px; vertical-align: top; }
-        table.items thead th { text-align: center; /* 16/11/2569 ตามที่ผู้ใช้สั่ง: หัวคอลัมน์จัดกึ่งกลาง (เดิม left) */ font-weight: bold; line-height: 1.25; }
+        table.items thead th { text-align: center; /* 16/11/2569 ตามที่ผู้ใช้สั่ง: หัวคอลัมน์จัดกึ่งกลาง (เดิม left) */ font-weight: bold; line-height: 1.1; /* 25/11/2569 ตามที่ผู้ใช้สั่ง: ลดระยะบรรทัด (เดิม 1.25) */ }
         table.items thead th { border-top: 1px solid #000; border-bottom: 1px solid #000; } /* 19/11/2569 ตามที่ผู้ใช้สั่ง: หัวตารางมีเส้นบน-ล่าง */
         /* 20/11/2569 หัวตาราง 2 ชั้น: ไม่มีเส้นคั่นระหว่างหัวกลุ่มกับแถว ปัจจุบัน|ใหม่ (เส้นใต้หัวกลุ่มเอาออกตามที่ผู้ใช้สั่ง)
            · หัวที่กินสูง 2 ชั้นจัดกึ่งกลางแนวตั้ง */
