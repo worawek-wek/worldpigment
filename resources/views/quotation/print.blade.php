@@ -277,8 +277,7 @@
     @endif
 
     {{-- ตารางรายการ — คอลัมน์ตาม col_config (ผู้ใช้กำหนดเอง) --}}
-    {{-- ความกว้างคอลัมน์ (10/11/2569 ตามที่ผู้ใช้สั่ง) — สินค้า 20 · รายละเอียด 35 · หมายเหตุ 20 · ช่องอื่น 15 (เป็นสัดส่วน)
-         รวมเป็น 100% ของคอลัมน์ที่แสดงจริง ⇒ 5 คอลัมน์ (สินค้า/รายละเอียด/ราคาปัจจุบัน/ราคาใหม่/รวม VAT) = 20/35/15/15/15 พอดี --}}
+    {{-- ความกว้างคอลัมน์ — ดู $colFixed ด้านล่าง (25/11/2569: รายละเอียดยืดตามจำนวนคอลัมน์) --}}
     @php
         // 20/11/2569 ตามที่ผู้ใช้สั่ง: หัวตาราง 2 ชั้น — คอลัมน์คู่ "X ปัจจุบัน" + "X ใหม่" ที่อยู่ติดกัน
         // (EN: "Current X" + "New X") → แถวบน X คลุม 2 ช่อง · แถวล่าง ปัจจุบัน | ใหม่ (Current | New)
@@ -290,22 +289,46 @@
             }
             return preg_match('/^(.*\S)\s+\(?(ปัจจุบัน|ใหม่)\)?$/u', $t, $m) ? [$m[1], $m[2]] : null;
         };
-        $grpStart = []; $grpSub = []; // index → ชื่อกลุ่ม · index → ป้ายแถวล่าง
+        // $grpStart: index → [ชื่อกลุ่ม (escape แล้ว), จำนวนช่องที่คลุม, มีเส้นใต้?] · $grpSub: index → ป้ายแถวล่าง (HTML)
+        $grpStart = []; $grpSub = [];
+        $brkUnitHead = fn ($s) => $headEn ? e($s) : preg_replace('/\s*(\()/u', '<br>$1', e($s), 1);
         for ($i = 0; $i < count($colConfig) - 1; $i++) {
             $a = $splitPair($colConfig[$i]); $b = $splitPair($colConfig[$i + 1]);
             if ($a && $b && $a[0] === $b[0] && in_array($a[1], ['ปัจจุบัน', 'Current'], true) && in_array($b[1], ['ใหม่', 'New'], true)) {
-                $grpStart[$i] = $a[0];
-                $grpSub[$i] = $a[1]; $grpSub[$i + 1] = $b[1];
+                // 25/11/2569 ตามที่ผู้ใช้สั่ง (Form 2.1): ราคา ปัจจุบัน → ราคา ใหม่ → รวม Vat ติดกัน
+                // ⇒ แถวบน "ปัจจุบัน" (1 ช่อง) | "ใหม่" (คลุม ราคา + รวม Vat) มีเส้นใต้ · แถวล่าง ราคา | ราคา | รวม Vat (บาท/กก)
+                $v = $colConfig[$i + 2] ?? null;
+                if ($colConfig[$i]['key'] === 'price_kg' && $colConfig[$i + 1]['key'] === 'new_price' && ($v['key'] ?? null) === 'price_vat') {
+                    $vl = trim($headEn ? ($v['label_en'] ?? $v['label']) : $v['label']);
+                    $vl = $headEn ? preg_replace('/^New\s+/u', '', $vl) : preg_replace('/\s+\(?ใหม่\)?$/u', '', $vl);
+                    if (!str_contains($vl, '(')) {
+                        $vl .= $headEn ? ' (THB/kg)' : ' (บาท/กก)';
+                    }
+                    $grpStart[$i]     = [e($a[1]), 1, true];
+                    $grpStart[$i + 1] = [e($b[1]), 2, true];
+                    $grpSub[$i] = $brkUnitHead($a[0]); $grpSub[$i + 1] = $brkUnitHead($b[0]); $grpSub[$i + 2] = $brkUnitHead($vl);
+                    $i += 2;
+                    continue;
+                }
+                $grpStart[$i] = [$brkUnitHead($a[0]), 2, false];
+                $grpSub[$i] = e($a[1]); $grpSub[$i + 1] = e($b[1]);
                 $i++;
             }
         }
         $hasGrp = !empty($grpStart);
 
-        $colWeights = ['code' => 20, 'name' => 35, 'remark' => 20];
-        $colW = array_map(fn ($c) => $colWeights[$c['key']] ?? 15, $colConfig);
-        // 20/11/2569 ตามที่ผู้ใช้สั่ง: 2 ช่องในหัวกลุ่มแคบลง (15 → 10) ให้ ปัจจุบัน|ใหม่ ชิดกันขึ้น ไม่ดูเหมือนแยก 3 คอลัมน์
+        // 25/11/2569 ตามที่ผู้ใช้สั่ง: ช่องอื่นกว้างคงที่ (% ของหน้า) · ช่องรายละเอียด (name) ยืดรับพื้นที่ที่เหลือ
+        // ⇒ คอลัมน์น้อย รายละเอียดกว้างขึ้นเอง · ช่องในหัวกลุ่ม ปัจจุบัน|ใหม่ แคบกว่าปกติ (10) ให้ดูเป็นกลุ่มเดียวกัน
+        $colFixed = ['code' => 11, 'delivery_qty' => 12, 'remark' => 14];
+        $colW = array_map(fn ($c) => $colFixed[$c['key']] ?? 11, $colConfig);
         foreach (array_keys($grpSub) as $gi) {
             $colW[$gi] = 10;
+        }
+        $nameIdx = array_search('name', array_column($colConfig, 'key'), true);
+        if ($nameIdx !== false) {
+            $colW[$nameIdx] = 0;
+            // เหลือไม่ถึง 20% (คอลัมน์เยอะมาก) → รายละเอียดได้ 20 แล้วย่อทุกช่องตามสัดส่วนให้รวมเป็น 100%
+            $colW[$nameIdx] = max(20, 100 - array_sum($colW));
         }
         $colWSum = array_sum($colW) ?: 1;
     @endphp
@@ -319,8 +342,8 @@
             <tr>
                 @foreach ($colConfig as $ci => $c)
                     @if (isset($grpStart[$ci]))
-                        {{-- หัวกลุ่ม (คลุม 2 ช่อง) — ภาษาไทยหน่วยในวงเล็บขึ้นบรรทัดใหม่เหมือนหัวอื่น --}}
-                        <th colspan="2" class="th-group">{!! $headEn ? e($grpStart[$ci]) : preg_replace('/\s*(\()/u', '<br>$1', e($grpStart[$ci]), 1) !!}</th>
+                        {{-- หัวกลุ่ม — ภาษาไทยหน่วยในวงเล็บขึ้นบรรทัดใหม่เหมือนหัวอื่น · ไม่มีเส้นใต้ (25/11/2569 ตามที่ผู้ใช้สั่ง) --}}
+                        <th @if($grpStart[$ci][1] > 1) colspan="{{ $grpStart[$ci][1] }}" @endif class="th-group">{!! $grpStart[$ci][0] !!}</th>
                         @continue
                     @endif
                     @if (isset($grpSub[$ci]))
@@ -359,7 +382,7 @@
                 {{-- แถวล่างของหัวกลุ่ม: ปัจจุบัน | ใหม่ (20/11/2569) --}}
                 <tr>
                     @foreach ($grpSub as $sub)
-                        <th class="th-sub">{{ $sub }}</th>
+                        <th class="th-sub">{!! $sub !!}</th>
                     @endforeach
                 </tr>
             @endif
