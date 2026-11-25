@@ -176,6 +176,8 @@
         table.items th.col-left, table.items td.col-left { text-align: left; }
         /* รหัสสินค้าใช้ฟอนต์เดียวกับทั้งเอกสาร (เดิม monospace — 10/11/2569) */
         .code { font-family: inherit; }
+        /* 25/11/2569 ตามที่ผู้ใช้สั่ง: รหัสสินค้าไม่ตกบรรทัด (ความกว้างช่องคำนวณจากรหัสยาวสุด — ดู $colFixed['code']) */
+        table.items td.code { white-space: nowrap; overflow-wrap: normal; word-break: normal; }
         tfoot th { border-top: 1px solid #000; }
 
         /* ส่วนท้าย (หมายเหตุ + ลายเซ็น) — ระยะห่างจากตารางอย่างน้อย 20px (เดิมเป็น margin-top ของ .footer-info) */
@@ -320,6 +322,11 @@
         // 25/11/2569 ตามที่ผู้ใช้สั่ง: ช่องอื่นกว้างคงที่ (% ของหน้า) · ช่องรายละเอียด (name) ยืดรับพื้นที่ที่เหลือ
         // ⇒ คอลัมน์น้อย รายละเอียดกว้างขึ้นเอง · ช่องในหัวกลุ่ม ปัจจุบัน|ใหม่ แคบกว่าปกติ (10) ให้ดูเป็นกลุ่มเดียวกัน
         $colFixed = ['code' => 11, 'delivery_qty' => 12, 'remark' => 14];
+        // 25/11/2569 ตามที่ผู้ใช้สั่ง: รหัสสินค้าห้ามตกบรรทัด → ช่องสินค้ากว้างตามรหัสที่ยาวที่สุดในใบ
+        // แบบฟิตพอดีรหัส (ตามที่ผู้ใช้สั่ง): ตัวหนา 18px ≈ 1.4% ของความกว้างตารางต่อตัวอักษร + padding ~2.2%
+        // อย่างน้อย 11 เท่าเดิม (รหัส 7 หลักทั่วไปไม่เปลี่ยน)
+        $maxCodeLen = collect($items)->map(fn ($it) => mb_strlen(trim((string) ($it->cells['code'] ?? ''))))->max() ?: 0;
+        $colFixed['code'] = max(11, round($maxCodeLen * 1.4 + 2.2, 1));
         $colW = array_map(fn ($c) => $colFixed[$c['key']] ?? 11, $colConfig);
         foreach (array_keys($grpSub) as $gi) {
             $colW[$gi] = 10;
