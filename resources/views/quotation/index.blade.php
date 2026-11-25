@@ -265,6 +265,10 @@
                     </select>
                 </div>
                 <div class="d-flex align-items-center">
+                    {{-- 25/11/2569 ตามที่ผู้ใช้สั่ง: สลับแสดงตารางแบบ DB (คอลัมน์ดิบของ qmast) ↔ แบบปกติ --}}
+                    <button type="button" id="btnDbView" class="btn btn-sm btn-label-secondary me-3" onclick="toggleDbView()">
+                        <i class="ti ti-database me-1"></i><span class="lbl">แสดงแบบตาราง DB</span>
+                    </button>
                     <label class="form-label small fw-medium mb-0 me-2">แสดง</label>
                     <select name="limit" class="form-select form-select-sm p_search" style="width: 90px;"
                         onchange='loadData("{{$page_url}}/datatable")'>
@@ -1281,7 +1285,8 @@
         // copyFrom = เลขที่ใบต้นแบบ (มาจาก "คัดลอกเป็นใบใหม่") — ใช้แค่ทำชื่อหัว modal
         function quotationCreateNo(copyFrom){
             var $btn = $('#btnCreateQno').prop('disabled', true);
-            $.post("{{ $page_url }}/create", {_token: '{{ csrf_token() }}', letterhead: $('#q_letterhead').val()})
+            // copy_from: คัดลอก → server ออกเลข <เลขเดิม>/1, /2 … (25/11/2569)
+            $.post("{{ $page_url }}/create", {_token: '{{ csrf_token() }}', letterhead: $('#q_letterhead').val(), copy_from: copyFrom || ''})
                 .done(function(res){
                     if (!res.ok) { Swal.fire('ไม่สำเร็จ', res.error || 'ไม่ทราบสาเหตุ', 'error'); return; }
                     qCreator = null;   // ใบที่เพิ่งสร้างเอง — server ไม่ถามรหัสผ่าน (session)
@@ -1603,7 +1608,17 @@
                 var v = $(this).val();
                 if (v !== '' && v !== null) data[$(this).attr('name')] = v;
             });
+            if (qDbView) data.view_mode = 'db';   // โหมดตาราง DB (ไม่ใช่ตัวกรอง → ไม่นับ/ไม่ล้างตอนรีเซ็ต)
             return data;
+        }
+
+        // 25/11/2569 สลับตารางรายการ: แบบปกติ ↔ แบบตาราง DB (แถวดิบของ qmast) — ตัวกรอง/การเรียงคงเดิม
+        var qDbView = false;
+        function toggleDbView(){
+            qDbView = !qDbView;
+            $('#btnDbView').toggleClass('btn-label-secondary', !qDbView).toggleClass('btn-primary', qDbView)
+                .find('.lbl').text(qDbView ? 'แสดงแบบปกติ' : 'แสดงแบบตาราง DB');
+            loadData("{{$page_url}}/datatable");
         }
 
         // อัปเดตปุ่มล้างตัวกรองตามจำนวน filter ที่ใช้อยู่ (ไม่นับ limit)

@@ -81,12 +81,27 @@ class QuotationController extends Controller
 
         $this->applyFilters($results, $request);
 
+        // 25/11/2569 ตามที่ผู้ใช้สั่ง: โหมด "ตาราง DB" — แสดงคอลัมน์ดิบของ qmast ตามที่เก็บใน DB
+        // (ตัวกรอง/การเรียง/แบ่งหน้าเหมือนเดิม แค่เลือกเฉพาะ qmast.*)
+        $dbMode = $request->view_mode === 'db';
+        if ($dbMode) {
+            $results->select('qmast.*');
+        }
+
         $limit = @$request['limit'] ?: 15;
         $results = $results->paginate($limit);
 
         $data['list_data'] = $results;
         $data['sort_col']  = $sortKey;
         $data['sort_dir']  = $sortDir;
+        if ($dbMode) {
+            // ลำดับคอลัมน์ตาม SELECT * (= ลำดับในตารางจริง) · ไม่มีแถว → ถาม schema แทน
+            $first = $results->first();
+            $data['db_columns'] = $first
+                ? array_keys($first->getAttributes())
+                : \Illuminate\Support\Facades\Schema::getColumnListing('qmast');
+            return view('quotation.table-db', $data);
+        }
         return view('quotation.table', $data);
     }
 
@@ -258,6 +273,18 @@ class QuotationController extends Controller
         return $head . str_pad($max + 1, 4, '0', STR_PAD_LEFT);
     }
 
+    // เลขที่ของใบที่คัดลอก: <เลขฐาน>/<n> — n = ลำดับ /n มากสุดของเลขฐานนี้ + 1 (เริ่ม /1)
+    private function nextCopyQno(string $base): string
+    {
+        $max = DB::table('qmast')
+            ->whereRaw('TRIM(Qno) LIKE ?', [str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $base) . '/%'])
+            ->pluck('Qno')
+            ->map(fn ($q) => preg_match('#/(\d+)$#', trim($q), $m) ? (int) $m[1] : 0)
+            ->max() ?? 0;
+
+        return $base . '/' . ($max + 1);
+    }
+
     // หัวกระดาษที่ใช้เป็น prefix ของเลขที่ได้
     private const LETTERHEADS = ['WH', 'WPC', 'WPI'];
 
@@ -289,8 +316,13 @@ class QuotationController extends Controller
             $row['created_by']      = (string) $account->getKey();
         }
 
+        // 25/11/2569 ตามที่ผู้ใช้สั่ง: คัดลอกเป็นใบใหม่ → เลขที่ = เลขเดิม/1 (มี /1 แล้ว → /2, /3 …)
+        // คัดลอกจากใบที่เป็น /n อยู่แล้ว → ใช้เลขฐานเดิม (WH698590/1 → WH698590/2 ไม่ใช่ /1/1)
+        $copyFrom = trim((string) $request->input('copy_from', ''));
+        $copyBase = $copyFrom !== '' ? preg_replace('#/\d+$#', '', $copyFrom) : '';
+
         for ($try = 0; $try < 5; $try++) {
-            $qno = $this->nextQnoFor($letterhead);
+            $qno = $copyBase !== '' ? $this->nextCopyQno($copyBase) : $this->nextQnoFor($letterhead);
             $id  = DB::table('qmast')->insertGetId($row + ['Qno' => $qno]);
 
             // qmast เป็น MyISAM (ล็อกแถวไม่ได้) และไม่มี unique index ที่ Qno
