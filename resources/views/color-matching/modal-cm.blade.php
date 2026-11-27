@@ -80,20 +80,21 @@
                                     </span>
                                 </div>
 
+                                {{-- ทุกช่องอยู่บรรทัดเดียวกัน (col-md = แบ่งเท่ากัน) + ถอดวงเล็บตัวอย่างใน label ออก 27/11/2569 ตามที่ผู้ใช้สั่ง --}}
                                 <div class="row gx-3 gy-2">
-                                    <div class="col-md-3">
-                                        <label class="form-label small mb-1">เลขที่ใบนำส่งเทียบสี <span class="text-muted fw-normal">(เช่น 26/0001)</span></label>
+                                    <div class="col-md">
+                                        <label class="form-label small mb-1">เลขที่ใบนำส่งเทียบสี</label>
                                         <input type="text" name="SendNo" class="form-control" required>
                                         {{-- ข้อความเตือนเลขที่ซ้ำ (09/11/2569) — เติมโดย cmSendNoCheck() --}}
                                         <div class="invalid-feedback cm-sendno-msg"></div>
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md">
                                         <label class="form-label small mb-1">วันที่ส่งเทียบสี</label>
                                         <input type="text" name="DsendT"
                                             class="form-control flatpickr-date"
                                             value="{{ date('d/m/Y') }}">
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md">
                                         <label class="form-label small mb-1">ประเภทงาน</label>
                                         <select name="Type_Work" class="form-select select2-tags">
                                             <option value="">-- เลือก --</option>
@@ -102,7 +103,13 @@
                                             @endforeach
                                         </select>
                                     </div>
-                                    <div class="col-md-3">
+                                    {{-- แก้ไขจาก Lot No. → testmain.AdjFromLot (21/11/2569 ตามที่ผู้ใช้สั่ง)
+                                         สลับตำแหน่งกับ "ปรับแก้ไขครั้งที่" 27/11/2569 ตามที่ผู้ใช้สั่ง — Lot No. อยู่แถวบน, ปรับแก้ไขครั้งที่ อยู่ใต้ --}}
+                                    <div class="col-md">
+                                        <label class="form-label small mb-1">แก้ไขจาก Lot No.</label>
+                                        <input type="text" name="AdjFromLot" class="form-control" maxlength="20">
+                                    </div>
+                                    <div class="col-md">
                                         <label class="form-label small mb-1 text-danger">
                                             <i class="ti ti-asterisk-simple"></i>
                                             ปรับแก้ไขครั้งที่
@@ -112,11 +119,6 @@
                                                 <option>{{ $opt }}</option>
                                             @endforeach
                                         </select>
-                                    </div>
-                                    {{-- แก้ไขจาก Lot No. → testmain.AdjFromLot (21/11/2569 ตามที่ผู้ใช้สั่ง) — วางใต้ "ปรับแก้ไขครั้งที่" --}}
-                                    <div class="col-md-3 offset-md-9">
-                                        <label class="form-label small mb-1">แก้ไขจาก Lot No. <span class="text-muted fw-normal">(เช่น 690112-1-2/01)</span></label>
-                                        <input type="text" name="AdjFromLot" class="form-control" maxlength="20">
                                     </div>
                                 </div>
                             </div>
@@ -162,8 +164,10 @@
                                         </select>
                                     </div>
                                     {{-- คุณสมบัติ — เลือกได้หลายค่าเหมือน Chemical Safety (21/11/2569 ตามที่ผู้ใช้สั่ง) เก็บรวมใน testmain.pop คั่นด้วย ", "
-                                         hidden ทำให้ส่ง key มาเสมอ → ไม่เลือกอะไร = ล้างค่าเดิมได้ --}}
-                                    <div class="col-md-2">
+                                         hidden ทำให้ส่ง key มาเสมอ → ไม่เลือกอะไร = ล้างค่าเดิมได้
+                                         ขึ้นบรรทัดใหม่ + ยาวเต็มแถว (col-12) 27/11/2569 ตามที่ผู้ใช้สั่ง --}}
+                                    <div class="w-100"></div>
+                                    <div class="col-12">
                                         <label class="form-label small mb-1">คุณสมบัติ <span class="text-muted fw-normal">(เลือกได้หลายค่า)</span></label>
                                         <input type="hidden" name="pop[]" value="">
                                         <select name="pop[]" multiple class="form-select select2-tags"
