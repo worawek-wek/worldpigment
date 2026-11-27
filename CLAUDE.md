@@ -48,6 +48,7 @@ worldpigment/
 │   │   ├── QuotationController.php
 │   │   ├── CustomerController.php   # ฐานข้อมูลลูกค้า customer/contact/naddress/engname — CRUD (24/08/2569) · ช่องเครดิตเลือกจาก tb_credit_term (26/10/2569)
 │   │   ├── CustomerStatusController.php  # ขอเปลี่ยนแปลง ข้อมูล Black List / เปลี่ยนแปลงเครดิต + อนุมัติด้วยรหัส — ใบขอเก็บที่ appvcredit (02-03/11/2569)
+│   │   ├── ComplaintController.php  # เมนู ระบบ Complaint & NCR ต่อจาก C-ฐานข้อมูลลูกค้า — รายการ + ฟอร์ม CRUD แบบทั่วไป (26/11/2569) — ตารางหลัก nc (+ result, treat)
 │   │   ├── ReportController.php
 │   │   ├── UserController.php
 │   │   ├── PermissionController.php
@@ -68,7 +69,8 @@ worldpigment/
 │   ├── product_price.php        # ตารางเงื่อนไขคิดราคาขายจากราคาทุน (04/08/2569)
 │   │                            # — mul/div/add เป็นแค่ "ค่าตั้งต้น" ผู้ใช้แก้ทับได้ (10/08/2569)
 │   ├── color_matching.php       # ตัวเลือกผลการทดสอบตัวอย่างสี (testmain.TyResp) (10/08/2569)
-│   └── holiday.php              # วันหยุดประจำสัปดาห์ของ HolidayService (01/09/2569)
+│   ├── holiday.php              # วันหยุดประจำสัปดาห์ของ HolidayService (01/09/2569)
+│   └── complaint.php            # ระบบ Complaint & NCR — ตัวเลือกสรุปสาเหตุ A–I (26/11/2569)
 ├── database/
 │   ├── migrations/
 │   └── seeders/
@@ -82,6 +84,7 @@ worldpigment/
 │   ├── quotation.php
 │   ├── order.php                # ใบสั่งซื้อ morder/suborder (12/08/2569)
 │   ├── customer.php             # ฐานข้อมูลลูกค้า customer/contact/naddress (24/08/2569)
+│   ├── complaint.php            # ระบบ Complaint & NCR — nc/result/treat (26/11/2569)
 │   ├── report.php
 │   ├── permission.php
 │   ├── product.php              # ข้อมูลสินค้า tb_products (07/08/2569)
@@ -144,7 +147,7 @@ php artisan migrate --seed
 
 `routes/web.php` เป็นจุดเริ่มต้น แต่ route ส่วนใหญ่แยกอยู่ใน**ไฟล์ตาม feature** ในโฟลเดอร์ `routes/` และถูกดึงเข้ามาด้วย `@include_once(...)` จาก*ภายใน* group `Route::middleware('auth')` ใน `web.php`:
 
-- `color-matching.php`, `quotation.php`, `saleinfo.php`, `pricerule.php`, `colorrate.php`, `order.php`, `customer.php`, `report.php`, `permission.php`, `product.php`, `holiday.php`, `worker.php`, `production.php`
+- `color-matching.php`, `quotation.php`, `saleinfo.php`, `pricerule.php`, `colorrate.php`, `order.php`, `customer.php`, `complaint.php`, `report.php`, `permission.php`, `product.php`, `holiday.php`, `worker.php`, `production.php`
 
 ดังนั้น route ในไฟล์เหล่านี้จึงถูกป้องกันด้วย `auth` โดยปริยายจากตำแหน่งที่มัน include เข้ามา — **ห้าม** ครอบ `auth` ซ้ำอีก
 
@@ -1142,6 +1145,46 @@ Auth เป็นแบบ session-based; middleware `loggedin` (`app/Http/Middl
 **ยังไม่ทำ:** กล่อง **"AList / ในเครือ"** (subform ขวาบนของฟอร์ม Access) — ไล่ดูทุกตารางใน DB แล้ว**ยังหาที่เก็บไม่เจอ** (ตาราง `table1` ที่ชื่อคล้ายเป็นรายการสถานะการผลิต ไม่เกี่ยวกัน) ⇒ ต้องถามลูกค้าว่าข้อมูล "บริษัทในเครือ" เก็บที่ไหน
 
 ⚠ **ความเสี่ยงที่ยังค้างอยู่** (เหมือน `POST order/save`): route `customer/save` + `customer/delete` ป้องกันแค่ `auth` + สิทธิ์ระดับเมนู (`Customer`) — **ไม่มีสิทธิ์แยกสำหรับการเขียน/ลบ** ใครเข้าเมนูนี้ได้ก็แก้ข้อมูลลูกค้าและลบได้ และ **ไม่มี audit trail** ว่าใครแก้ (ตาราง `customer` ไม่มีคอลัมน์ผู้แก้ไข/เวลาแก้ไข)
+
+## ระบบ Complaint & NCR (เมนู "ระบบ Complaint & NCR", `/complaint`) — 26/11/2569
+
+`ComplaintController` + `routes/complaint.php` + view `complaint/index.blade.php` · menu key **`Complaint`** ต่อจาก `Customer` ใน `config/menu.php` (พนักงานต้องติ๊กเมนูนี้ให้ role ก่อน) · **ปรับตามสเปกฟอร์มของผู้ใช้แล้ว (ดูหัวข้อย่อยด้านล่าง)** · ค่าคงที่อยู่ที่ `config/complaint.php`
+
+**ตาราง (legacy, InnoDB utf8mb4 — ผู้ใช้บอกว่าตารางหลักคือ `nc`):**
+- **`nc`** 2,358 แถว (NCRDate 2003 → ปัจจุบัน, ปี 2026 = 58 แถว) · 1 แถว = 1 เรื่องร้องเรียน/NCR · คอลัมน์: `NCRNo` (เช่น `DB377` = แผนก + เลข · ว่าง 313 / `"--"` 269 = ยังไม่ออกเลข · ซ้ำ 9 เลข) · `NCRDate` · `NCPtype` (ว่างทุกแถว) · `OffSpec` (0/1) · `Dept` (MB/DB/QC/CP/TN/WH/WA/CU/DV/VE/SPP/QA/MR/MK/PC…) · `Subject` · `ComplainNO` (เลขร้องเรียน ซ้ำข้ามปี/แผนกได้) · `shall` · **`degree` = ผลตรวจสอบ → ตาราง `result`** · `custno`/`custname` · `ProdNo` · `LotNo` · `QTY` · `CauseType` (ตัวอักษร A–I บางแถวหลายตัวคั่นคอมมา — **ยังไม่รู้ความหมาย**) · `Cause` (สาเหตุ) · `Correct`/`CorrBY` (แก้ไข) · `Protect`/`ProtBy` (ป้องกัน) · `MGRcomment` · `SubjectGRP` (กลุ่มปัญหา เช่น ไม่เหมือน/จุดดำ/ไม่กระจาย)
+- 🔴 **`nc` เดิมไม่มี PK → เพิ่ม `id` INT AUTO_INCREMENT PRIMARY KEY FIRST แล้ว** (migration `2026_11_26_100000_add_id_to_nc_table`, idempotent, **รันแล้ว** บน `203.146.170.155` / `zwek_worldpigment` 26/11/2569 · id 1..2358 ครบ · สำรองข้อมูลก่อนรันไว้ใน scratchpad ของ session)
+- **`result`** 4 แถว (master ของ `nc.degree`): `T` จริง · `F` ไม่จริง · `S` บริการ · `C` ยกเลิก
+- **`treat`** 98 แถว — ค่าใช้จ่ายการแก้ไขต่อ NCR ผูกด้วย `NCRNo` (ไม่ซ้ำใน treat, ตรงกับ nc ครบ — ⚠ แต่ NCRNo ใน nc ซ้ำ/เป็น `"--"` ได้) · `DamageNo` · `damageCOST` · `TreatRaw` · `TreatProcess` · `TreatQC` · `TreatPack` · `claim` · `TreatNo` · `TreatKG` · ไม่มี PK
+**หน้าจอแบบทั่วไป (26/11/2569 ตามที่ผู้ใช้สั่ง "ทำแบบทั่วไปไปก่อน" — รอรูปฟอร์ม Access เดิมมาปรับผังทีหลัง):**
+- Model `App\Models\Nc` (`nc`, `$timestamps=false`, `degreeOptions()` จาก `result`, `DEGREE_BADGES`, `isRealNcrNo()` = ไม่ว่างและไม่ใช่ `--`)
+- route `complaint.*`: `index` · `datatable` (Yajra serverSide) · `edit` (ฟอร์มเข้า modal) · `customer/{code}` (เติมชื่อลูกค้า — route ของตัวเองเพราะสิทธิ์คุมด้วย namespace เมนู) · `store` · `delete`
+- หน้ารายการ `complaint/index.blade.php`: ค้นหา (NCRNo/ComplainNO/Subject/ลูกค้า/สินค้า/Lot) + แผนก + ผลตรวจสอบ (`__none` = รอผล) + Off Spec + ช่วงวันที่ `NCRDate` · เรียงเริ่มต้นวันที่ใหม่→เก่า
+- ฟอร์ม `complaint/form.blade.php` (label ซ้าย `.of-form`): ทุกคอลัมน์ของ nc (ยกเว้น `NCPtype` ที่ว่างทุกแถว) + ค่าใช้จ่ายการแก้ไขจาก `treat` · แผนก/กลุ่มปัญหา/ประเภทสาเหตุ เป็นช่องข้อความ + datalist จากค่าที่มีจริง · `max` ตาม schema
+- `store()`: เลขที่ NCR จริงห้ามซ้ำ (ตรวจเฉพาะตอนเพิ่ม/เปลี่ยนเลข — ข้อมูลเดิมซ้ำ 9 เลขยังบันทึกได้) · กรอก treat ได้เฉพาะเมื่อมีเลข NCR จริง และเลขต้องไม่เกิน 10 ตัว (`treat.NCRNo` varchar(10)) · treat: มีแถวแล้ว = update · ยังไม่มี = insert เมื่อมีค่าไม่เป็น 0 · เปลี่ยนเลข NCR = ย้ายแถว treat ตาม (ถ้าเลขใหม่ยังไม่มี treat และไม่มี nc อื่นใช้เลขเดิม) · `destroy()` ลบ treat ตามเมื่อไม่มี nc อื่นใช้เลขนั้น
+- ทดสอบผ่าน controller บน server จริงแล้ว (26/11/2569 ตามที่ผู้ใช้สั่ง): ขาอ่าน + 422 + เพิ่ม → แก้ไขพร้อม treat → เปลี่ยนเลข NCR (treat ย้ายตาม) → กันเลขซ้ำ → ลบ (treat ลบตาม) · ลบข้อมูลทดสอบแล้ว (nc 2,358 / treat 98 เท่าเดิม · AUTO_INCREMENT ของ nc ขยับไป 2360) · ⚠ `store()` เขียนทุกช่อง — ยิงโดยไม่ส่งช่องไหน ช่องนั้นถูกล้าง (ฟอร์มส่งครบอยู่แล้ว) · ยังไม่ได้กดในเบราว์เซอร์ · ⚠ ไม่มีสิทธิ์เขียน/ลบแยก และไม่มี audit trail (ตารางไม่มีคอลัมน์ผู้บันทึก) · ยังไม่มีการออกเลข NCR อัตโนมัติ / รายงาน PDF
+**ปรับตามสเปกฟอร์มที่ผู้ใช้ส่งมา (รูปฟอร์ม Access + กระดาษข้อ 1–33) — 26/11/2569:**
+- **ช่องที่สเปกขีดฆ่า ไม่อยู่บนฟอร์มแล้ว:** 3 แผนก (`Dept`) · 13 ข้อกำหนด ISO (`shall`) · 18 ผู้แก้ไข (`CorrBY`) · 20 ผู้ป้องกัน (`ProtBy`) + `SubjectGRP` / `DamageNo` / `damageCOST` (ไม่อยู่ในสเปก) — `store()` ไม่แตะ ข้อมูลเดิมยังอยู่
+- **mapping:** 1 Complaint No `ComplainNO` (ปุ่ม "NCR ภายใน" = `config('complaint.internal_complain_text')`) · 2 วันที่รับเรื่อง `NCRDate` · 4/5 `custno`/`custname` (รหัส→ชื่อ `customer/{code}` · พิมพ์ชื่อ→datalist `customer-search` เลือกแล้วเติมรหัส) · 6 `ProdNo` · 7 `LotNo` · 8 `QTY` · 9 `Subject` · 10 ผล `degree` (ตาราง `result` — ⚠ สเปกเขียน X = ยกเลิก แต่ DB เก็บ `C`) · 11 `OffSpec` · 12 `NCRNo` (ไม่มี = บันทึกเป็น `"-"`) · 14 `CauseType` (A–I จาก `config('complaint.cause_types')` — ⚠ **คำอธิบายยังเป็น null รอผู้ใช้** · ค่าเดิมนอกรายการ เช่น `C,G` คงไว้ได้) + ถ้าเป็น `I` กรอก `CauseTypeRem` · 15 `Cause` (150) · 16 `CauseDate` (ฟอร์มโชว์ KPI ≤ `cause_kpi_days` = 2 วัน) · 17 `Correct` · 19 `Protect` · 21 `FollowUp` · 22 `MGRcomment` (100) · 23 `ProdAlert` · 24 `CloseDate` · 25 `treat.TreatNo` · 26 `TreatKG` · 27 `TreatDetail` · 28–32 `TreatRaw`/`TreatProcess`/`TreatQC`/`TreatPack`/`claim` · 33 ยอดรวม = ผลรวม 28–32 (ไม่เก็บ — `Nc::totalCostSql()`)
+- **migration `2026_11_26_110000_add_spec_columns_to_nc_treat`** (idempotent, **รันแล้ว** บน `203.146.170.155` / `zwek_worldpigment` · สำรอง nc + treat ไว้ใน scratchpad ของ session): nc เพิ่ม `CauseTypeRem` varchar(100) · `CauseDate` date · `FollowUp` varchar(200) · `ProdAlert` tinyint(1) default 0 · `CloseDate` date · treat เพิ่ม `TreatDetail` varchar(30) · ค่า 28–32 int → **decimal(12,2)** (ผลรวมเดิมตรงกันหลังแปลง)
+- วันที่ในฟอร์ม/ตาราง/Excel เป็น `d/m/y` (DD/MM/YY ตามสเปก) · `parseDate()` รับปี 2 หลัก (= 20yy) / 4 หลัก / Y-m-d
+- ฟอร์มขึ้นคำเตือน (ไม่บล็อก) ตาม 3 กรณีในสเปก: มี Complaint + จริง → ควรมี NCR · ไม่จริง/บริการ → ไม่ควรมี NCR · NCR ภายใน → ควรมี NCR
+- ล้างเลข NCR ทั้งที่มี treat ผูกอยู่ = 422 (กันใบแก้ไขหลุด)
+- **ตารางรายการ** เรียงคอลัมน์ตามเลขในวงกลมบนกระดาษสเปก (①–⑮) · ตัวกรอง: ค้นหา · ผล · ปิดประเด็น (`closed` Y/N จาก `CloseDate`) · Off Spec · ช่วงวันที่รับเรื่อง
+- **Export Excel (`complaint.export_excel`, .xlsx)** 4 แบบ (`EXPORT_TYPES`): `date` / `product` / `customer` / `ncr` (เฉพาะที่มี NCR จริง เรียงวันที่ → NCR No.) + ช่วงวันที่รับเรื่อง · คอลัมน์ = ข้อ 1–24 (เว้นที่ขีดฆ่า) + 33 · ⚠ **ตีความเอง:** "เรียงจาก Complaint No น้อย → มาก → NCR ภายใน" = ลำดับรองรองจากคีย์หลัก (เลขล้วนก่อน แล้วค่าที่ไม่ใช่ตัวเลขต่อท้าย)
+- ทดสอบผ่าน controller บน server จริงแล้ว (เพิ่ม/แก้ไขพร้อม treat ทศนิยม · ด่าน 422 · Excel 4 แบบ · ลบข้อมูลทดสอบแล้ว) · ยังไม่ได้กดในเบราว์เซอร์
+**🔴 ฟอร์มทำใหม่ทั้งหมดตามผัง Access "NC : ฟอร์ม" — 26/11/2569 ตามที่ผู้ใช้สั่ง "อ้างอิงจากรูปนี้ก่อน ส่วนไหนที่กากบาทไม่ต้องใส่ ทำแค่นี้ก่อน"** (แทนฟอร์มตามสเปกข้อ 1–33 ด้านบน — เฉพาะ**ฟอร์ม** ตารางรายการ / Export Excel ยังเป็นชุดเดิม)
+- `complaint/form.blade.php` เรียงตามรูป (label อยู่บน): NCRNo · วันที่ออก NCR · ปัญหา / ผล · Off Spec · รหัสลูกค้า · ชื่อลูกค้า · เลขที่ใบร้องเรียน / รหัสสินค้า · LotNo · น้ำหนัก (กก.) · สรุปสาเหตุ / สาเหตุ / วิธีแก้ไข / วิธีป้องกัน / ความเห็น ผู้บริหาร (กล่องเหลือง) + กล่อง "ส่วนที่แก้ไข" (treat): NCRNo (แสดงอย่างเดียว ตามช่องบน) · เงิน claim · เลขที่ใบแก้ไข · ค่าวัตถุดิบ · น.น.แก้ไข
+- **ไม่มีบนฟอร์ม:** ที่กากบาท (`Dept` / `shall` / `CorrBY` / `ProtBy`) + ที่ไม่อยู่ในรูป (`SubjectGRP` · `CauseTypeRem` · `CauseDate` · `FollowUp` · `ProdAlert` · `CloseDate` · treat `TreatProcess`/`TreatQC`/`TreatPack`/`TreatDetail`/`damageCOST`/`DamageNo`) — **`store()` ไม่แตะคอลัมน์เหล่านี้** (ทดสอบแล้วว่าค่าเดิมคงอยู่) · คอลัมน์ที่เพิ่มด้วย migration `2026_11_26_110000` ยังอยู่ใน DB
+- เอาออกจากฟอร์มด้วย: ปุ่ม "NCR ภายใน" · คำเตือน 3 กรณี · KPI วันที่สรุปสาเหตุ · ยอดรวม 33 (JS ที่เกี่ยวข้องลบแล้ว) · คงไว้: รหัสลูกค้า → ชื่อ / ชื่อ → รหัส · NCRNo ว่าง = `-`
+- **รายการแนะนำลูกค้า (26/11/2569 ตามที่ผู้ใช้สั่ง):** พิมพ์ในช่องรหัสลูกค้าหรือชื่อลูกค้า → กล่อง `.nc-suggest` ใต้ช่องโชว์ "รหัส ชื่อ" สูงสุด 15 ราย (`complaint.customer_search`: รหัสขึ้นต้นด้วยคำค้น **หรือ** ชื่อมีคำค้น · รหัสตรงพอดีขึ้นก่อน → รหัสขึ้นต้น → เรียงรหัส · ตัวเลขพิมพ์ 1 ตัวก็ค้น ข้อความต้อง ≥ 2 ตัว) · คลิก หรือ ↑↓ + Enter = เติมทั้งรหัสและชื่อ · Esc ปิด · พิมพ์รหัสตรงกับลูกค้า = เติมชื่อเองแม้ไม่เลือกจากรายการ · พิมพ์ครบ 5 ตัวแต่ไม่พบ = กรอบแดง "ไม่พบรหัสลูกค้านี้" (ยังบันทึกได้ พิมพ์ชื่อเองได้) · datalist เดิมของช่องชื่อถูกลบ · JS ใน `complaint/index.blade.php` · ทดสอบ endpoint ผ่าน controller แล้ว ยังไม่ได้กดในเบราว์เซอร์
+- **รหัสสินค้า: รายการแนะนำ + ชื่อสินค้าใต้ช่อง (26/11/2569 ตามที่ผู้ใช้สั่ง — ชื่อแสดงอย่างเดียว ไม่มีช่อง input ไม่บันทึก):** ที่มา = **`uprice`** (ตาราง "กำหนดราคา") — ตรวจแล้วรหัสใน nc ตั้งแต่ 2024 มีใน uprice 144/150 (มีชื่อ 133) · `tb_products` มีแค่ 10 แถวใช้ไม่ได้ · `complaint.product_search` (ITEMNO ขึ้นต้นด้วยคำค้น 15 รายการ + `MAX(Label)`, ~70-100ms เพราะ uprice ไม่มี index ที่ ITEMNO) · `complaint.product_lookup` + `productName()` = `uprice.Label` แถว `DATE` ล่าสุด **ของลูกค้ารายนี้ก่อน** แล้วค่อยของลูกค้าใดก็ได้ (กติกาเดียวกับ `OrderController::itemLookup`) · `#nc_prod_name` ใต้ช่อง: ชื่อ / "(ไม่มีชื่อสินค้า)" / ตัวแดง "ไม่พบรหัสสินค้านี้" (ยังบันทึกได้) · เปิดใบเดิมชื่อขึ้นจาก server (`edit()` ส่ง `prodName`) · เปลี่ยนรหัสลูกค้าแล้วชื่อสินค้าคำนวณใหม่ · JS ใช้ `ncSuggest()` / `ncPick()` ตัวเดียวกับช่องลูกค้า
+- ความยาว `Cause` / `MGRcomment` กลับเป็นตาม schema (200)
+- **ช่องสรุปสาเหตุ = เลือกจากรายการ หรือพิมพ์เองได้ (27/11/2569 ตามที่ผู้ใช้สั่ง):** เดิมเป็น `<select>` A–I → เปลี่ยนเป็น `<input id="nc_causetype">` + ปุ่มลูกศร · รายการมาจาก `data-options` (= `config('complaint.cause_types')` ไม่ยิง server) แสดงใน `.nc-suggest` ใต้ช่อง (`ncCauseShow()` / `ncCausePick()` ใน `complaint/index.blade.php`) · คลิกช่อง/ปุ่ม = รายการทั้งหมด · พิมพ์ = กรองตามรหัสที่ขึ้นต้น · เลือกแล้วเคอร์เซอร์ไปท้ายข้อความให้พิมพ์ต่อได้ · ↑↓/Enter/Esc · 🔴 **ขยาย `nc.CauseType` varchar(5) → varchar(100)** (migration `2026_11_27_100000_widen_causetype_on_nc_table`, idempotent, **รันแล้ว** บน `203.146.170.155` / `zwek_worldpigment` 27/11/2569 · `down()` ไม่หดกลับ · สำรอง nc ไว้ใน scratchpad ของ session) · `store()` เลิกบังคับว่าต้องเป็น A–I (เหลือ `max:100`) · ทดสอบผ่าน controller แล้ว (ข้อความไทยยาวบันทึกได้ · เกิน 100 = 422 · ค่าเดิม `C,G` ขึ้นในช่อง · ลบข้อมูลทดสอบแล้ว) ยังไม่ได้กดในเบราว์เซอร์ · **รายการสูงขึ้นเท่ารายการของช่อง "ผล" (27/11/2569 ตามที่ผู้ใช้สั่ง):** กล่องได้ class `nc-suggest-cause` — แต่ละรายการ padding `.5rem .875rem` · ตัวอักษร `.9375rem` (เท่าช่องกรอก) · สูงสุด 400px (A–I 9 รายการไม่ต้องเลื่อน) · **รายการแนะนำลูกค้า/รหัสสินค้าสูงเท่ากันแล้ว (27/11/2569 ตามที่ผู้ใช้สั่ง)** — กฎ padding/ตัวอักษร/สูงสุด 400px ย้ายไปที่ `.nc-suggest` ทุกกล่อง · `.nc-suggest-cause` เหลือแค่ `min-width: 200px` · ถอด `py-1 px-2` ออกจากปุ่มรายการใน `ncSuggest()`
+- **ตาราง + Excel ตัดช่องที่ไม่อยู่บนฟอร์มออกแล้ว (26/11/2569 ตามที่ผู้ใช้สั่ง):** ตารางเหลือ วันที่ออก NCR · เลขที่ใบร้องเรียน · ลูกค้า · รหัสสินค้า · LotNo · ปัญหา · ผล (+Off Spec) · NCRNo · สรุปสาเหตุ · สาเหตุ · วิธีแก้ไข · วิธีป้องกัน (ตัวกรองปิดประเด็นถูกลบ) · Excel = 16 คอลัมน์ ป้ายเดียวกับฟอร์ม (ไม่มีเลขข้อ, รูปแบบ `num`/`wrap` ใน `$cols`) — ไม่มีข้อ 16/21/23/24/33 · ⚠ ข้อความ "ตาราง/Excel" ในหัวข้อสเปกข้อ 1–33 ด้านบนล้าสมัยแล้ว · ลบ `Nc::totalCostSql()` / `Nc::TREAT_MONEY` และค่า config ที่ไม่ใช้ (`cause_type_with_remark` / `internal_complain_text` / `cause_kpi_days`) แล้ว — `config/complaint.php` เหลือแค่ `cause_types` · **Excel เพิ่มส่วนที่แก้ไข 4 คอลัมน์ท้าย (Q–T) แล้ว (26/11/2569 ตามที่ผู้ใช้สั่ง):** เงิน claim · เลขที่ใบแก้ไข · ค่าวัตถุดิบ · น.น.แก้ไข — `leftJoin treat` ด้วย `TRIM(nc.NCRNo)` เฉพาะเลขจริง (treat มีแถว `--` ค้างอยู่) · ไม่มีแถว treat = ว่าง · ตรวจแล้ว: แถวไม่ซ้ำ (2,358 = nc) · ผลรวมค่าวัตถุดิบตรงกับ treat · `exportExcel()` ตั้ง `memory_limit` 512M เอง (ไม่กรองวันที่ = ทุกแถว เกิน 128M)
+- ทดสอบผ่าน controller บน server จริงแล้ว (render ฟอร์ม · เพิ่ม · แก้ไขแล้วคอลัมน์นอกฟอร์มไม่หาย · ลบข้อมูลทดสอบแล้ว) · ยังไม่ได้กดในเบราว์เซอร์
+
+
+
 
 ## ระบบกำหนดราคา (เมนู "กำหนดราคา", `/saleinfo`) — ย้ายมาเขียนลง `uprice` — 29/08/2569
 

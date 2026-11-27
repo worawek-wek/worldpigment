@@ -105,6 +105,7 @@ Route::middleware(['auth', 'access'])->group(function() {
     @include_once('colorrate.php');  // จัดการกลุ่มราคา (zcolorrate) — ราคาขั้นต่ำกลุ่ม A/B/C 19/09/2569
     @include_once('order.php');
     @include_once('customer.php');
+    @include_once('complaint.php');  // ระบบ Complaint & NCR (หน้ารอพัฒนา) — 26/11/2569
     @include_once('report.php');
     @include_once('permission.php');
     @include_once('product.php');   // ข้อมูลสินค้า (tb_products) — 07/08/2569

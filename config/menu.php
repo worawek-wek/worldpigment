@@ -127,6 +127,13 @@ return [
         'route_name' => 'customer.index',
         'permission' => 'customer read',
     ],
+    // ระบบ Complaint & NCR — ต่อจากฐานข้อมูลลูกค้า — เพิ่ม 26/11/2569 (ตอนนี้เป็นหน้ารอพัฒนา)
+    'Complaint' => [
+        'title' => 'ระบบ Complaint & NCR',
+        'icon' => 'ti-message-report',
+        'route_name' => 'complaint.index',
+        'permission' => 'complaint read',
+    ],
     'Report' => [
         'title' => 'R-รายงาน',
         'icon' => 'ti-report',
